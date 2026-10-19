@@ -113,3 +113,8 @@ ABC-account sync (Gigya login, cross-app follows/history) is stretch **M3**, out
 - 2026-10-19 — Stakeholder: top level mirrors the ABC listen app. My ABC listen uses `topWeight('myabc')` (last) and
   declares `menuWeights`; Follow reaches the new section menus (D4) and audiobook menus (D5) via the registry, no M2
   work. #20 amended.
+- 2026-10-19 — M2 review rounds: follow block is always two rows (Follow + hint | ✓ Following + Unfollow) so stale
+  LMS item ids never flip state; FOLLOW/UNFOLLOW tokens replaced by FOLLOW_NAMED/FOLLOWING_NAMED/FOLLOW_HINT (line 90's
+  token list is superseded). Followed programs listed in follow order with 30-min tombstones for unfollowed programs
+  (A–Z ordering dropped: it shifted row ids). Orchestrator decisions after review findings on PR #35.
+
