@@ -18,7 +18,8 @@ package Plugins::ABCListen::Stations;
 #                                    /triplejhottest, /listen/doublej, /listen/classic, /listen/classic2,
 #                                    /listen/jazz, /listen/country, /kidslisten, /listen/news), and
 #                                    https://www.triplejunearthed.com/. Query, fragment and trailing
-#                                    '/' are ignored.
+#                                    '/' are ignored. abc.net.au/news (the ABC News website) is not
+#                                    NewsRadio.
 #   Stations->playable($id)          1 if the station can be listed and played: known; not HLS-only
 #                                    unless it has a mediahub stream; event-only services only while
 #                                    the cached event status says on air (unknown = 0). L5 extends it.
@@ -88,7 +89,6 @@ my @COLLECTIONS = (
 # network homes -> id (D1/D4 channel and externallink cards)
 my %HOME_SLUGS = (
 	radionational  => 'RN',
-	news           => 'NEWS',
 	triplej        => 'TRIPLEJ',
 	triplejhottest => 'H100',
 	doublej        => 'DOUBLEJ',
@@ -99,6 +99,10 @@ my %HOME_SLUGS = (
 	kidslisten     => 'KIDSLISTEN',
 	pacific        => 'RA_ML',
 );
+
+# network homes only under /listen/: abc.net.au/news is the ABC News website, not NewsRadio (whose
+# live slug, 'news', is in %LIVE_SLUGS)
+my %LISTEN_HOME_SLUGS = ( news => 'NEWS' );
 
 # live-page slugs of other services' streams (listed once, under their own id)
 my %ALIAS_SLUGS = ( katherine => 'LOCAL_DARWIN' );
@@ -241,11 +245,11 @@ sub _slugLookup {
 	$path =~ s/[?#].*//s;
 	my @seg = grep { length } split m{/}, lc $path;
 
-	my ( $live, $home );
+	my ( $live, $home, $listenHome );
 	if    ( @seg == 3 && $seg[1] eq 'live' )                       { $live = $seg[2] }    # /listen/live/x, /triplej/live/x
 	elsif ( @seg == 3 && $seg[0] eq 'listen' && $seg[2] eq 'live' ) { $home = $seg[1] }    # /listen/doublej/live
 	elsif ( @seg == 2 && $seg[1] eq 'live' )                       { $home = $seg[0] }    # /pacific/live
-	elsif ( @seg == 2 && $seg[0] eq 'listen' )                     { $home = $seg[1] }    # /listen/radionational
+	elsif ( @seg == 2 && $seg[0] eq 'listen' )                     { $home = $listenHome = $seg[1] }    # /listen/radionational, /listen/news
 	elsif ( @seg == 1 )                                            { $home = $seg[0] }    # /triplej, /kidslisten
 
 	if ( defined $live ) {
@@ -254,7 +258,9 @@ sub _slugLookup {
 		return ();
 	}
 
-	return defined $home && $HOME_SLUGS{$home} ? ( $HOME_SLUGS{$home} ) : ();
+	return ( $HOME_SLUGS{$home} ) if defined $home && $HOME_SLUGS{$home};
+	return ( $LISTEN_HOME_SLUGS{$listenHome} ) if defined $listenHome && $LISTEN_HOME_SLUGS{$listenHome};
+	return ();
 }
 
 # ---------------------------------------------------------------------------
