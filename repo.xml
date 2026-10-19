@@ -4,13 +4,13 @@
 <extensions>
   <details><title lang="EN">SqueezeABCListen plugin repository</title></details>
   <plugins>
-    <plugin name="ABCListen" version="0.1.0" minTarget="8.3" maxTarget="*">
+    <plugin name="ABCListen" version="0.2.0" minTarget="8.3" maxTarget="*">
       <title lang="EN">ABC listen</title>
       <desc lang="EN">Unofficial plugin for ABC listen (Australian Broadcasting Corporation radio): all live ABC radio stations, plus programs and episodes (by network, A–Z and type), Home collections and search. Not affiliated with or endorsed by the ABC.</desc>
       <category>radio</category>
       <icon>https://raw.githubusercontent.com/wilsonwaters/SqueezeABCListen/main/ABCListen/HTML/EN/plugins/ABCListen/html/images/icon.png</icon>
-      <url>https://github.com/wilsonwaters/SqueezeABCListen/releases/download/v0.1.0/ABCListen-0.1.0.zip</url>
-      <sha>cacbeb99b7273d215fc6bae2189dc63ec394b3a1</sha>
+      <url>https://github.com/wilsonwaters/SqueezeABCListen/releases/download/v0.2.0/ABCListen-0.2.0.zip</url>
+      <sha>64527ef74cb8f9f59742899feffd086d8b16c64f</sha>
       <link>https://github.com/wilsonwaters/SqueezeABCListen</link>
       <creator>Wilson Waters</creator>
     </plugin>
