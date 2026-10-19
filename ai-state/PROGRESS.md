@@ -12,12 +12,14 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - release: R1 #9 · R2 #15 · R3 #17
 
 ## Currently in flight
-- #9 R1 → PR #24 — review APPROVE; fix agent addressing 1 minor (concurrency could drop a version bump) + 4 nits; then merge + cut v0.1.0
-- #3 F2 → PR #25 — runtime PASS; review: fix agent narrowing the resolve eval, rate-limiting metadata warnings, header docs, PR-body footer
-- #7 F3 (API.pm) — implementation in progress
-- Attribution scrub of issue/PR text in progress (stakeholder rule)
+- #7 F3 → PR #27 (API.pm data client) — review + live drift probe running
+- Attribution scrub of issue/PR text (stakeholder rule)
 
 ## Last completions
+- #3 F2 merged (PR #25, squash 6791521): `abclisten://` protocol handler, kind registry; stations on stable URLs.
+  Runtime PASS; review fixes (resolve eval scoped to kind code, rate-limited metadata warnings, contract notes).
+- R1 merged (PR #24, squash fb010bc): packaging, repo.xml, release.yml (review fixes: no dropped version bumps).
+  #9 stays open until v0.1.0 is cut (after F3 merges; CHANGELOG [0.1.0] to include F2/F3/M1).
 - #11 M1 merged (PR #26, squash 9f041ce, first commit fully under the new authorship rule): settings page,
   homeState pref. Review: code APPROVE (blocker was a connector-appended footer, removed); runtime PASS (Default +
   Material, keyboard, axe on the select = 0 violations).
@@ -46,7 +48,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - Streams + master plans committed (6 streams, 20 v1 tasks + 3 stretch). Material Skin 6.4.14 added to testbed.
 
 ## Next
-- Review + runtime-verify each wave-1 PR as it lands; merge; then wave 2 = L1, O1, O2 (after F2+F3); cut v0.1.0 after R1.
+- Merge F3 → update CHANGELOG [0.1.0] → dispatch release.yml → verify install from the GitHub repo.xml on the testbed.
+- Wave 2 in parallel once F3 merges: L1 (#2), O1 (#12), O2 (#16).
 
 ## Plan revisions
 - 2026-10-19 — Stakeholder: podcasts prominent → D2 makes "Podcasts" top-level (#6 comment).
