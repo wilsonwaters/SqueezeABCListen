@@ -12,9 +12,10 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - release: R1 #9 · R2 #15 · R3 #17
 
 ## Currently in flight
-- #44 D6 podcasts A–Z letter groups — implementation
-- #4 L2 program on air — implementation
-- #37 F5 cardRef names · #40 O7 Hottest 100 in A–Z · #14 L5 higher-quality live — implementation
+- #4 L2 program on air — PR #47 in review + runtime check
+- #40 O7 Hottest 100 in A–Z — PR #46 in review
+- #14 L5 higher-quality live — implementation (resumed after F5 merged)
+- Queued (cap 3): #44 D6 podcasts A–Z letter groups (implementer paused), then L3, L4, O4, D5, F6, R2, R3
 
 ## Interruptions
 - 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
@@ -25,6 +26,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   F5, O7; L5 and D6 held until those finish. New cap: ≤3 concurrent agents.
 
 ## Last completions
+- #37 F5 merged (PR #45, squash 1adab5b): cardRef uses image alt text as a name only when it spells the card's slug
+  (430 fixture cards diffed in review: only the intended 16 names change). check.sh passes on main.
 - #22 D4 merged (PR #43, squash 990f709): News, Sport, Kids listen (full section), Audiobooks. Integrated with D2/M2
   by an integration agent; review fixes applied. **Top level now mirrors the ABC listen app.**
 - #6 D2 merged (PR #42, squash e7e058d): top-level Podcasts + Popular now (integration agent merged main/M2 first).
