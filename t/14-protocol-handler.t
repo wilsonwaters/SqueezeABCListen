@@ -7,8 +7,8 @@
 # callback, 20 s timeout), containment (only the kind's code runs in resolve's eval; a dying
 # scanner or LMS callback, sync or async resolve: LMS's callback runs exactly once and no resolve
 # failure is reported), new() with and without redir, getMetadataFor layering (fallback <
-# resolve meta < kind metadata) and its bounded meta map, getCurrentTitle/getIcon/isRemote, and
-# onStream/onStop dispatch. Also the F2 slice: Live->init registers the `live` kind for the 5
+# resolve meta < kind metadata), its bounded meta map and its rate-limited WARN for a dying kind
+# metadata, getCurrentTitle/getIcon/isRemote, and onStream/onStop dispatch. Also the F2 slice: Live->init registers the `live` kind for the 5
 # stations (Icecast URL at play time, name and image as metadata).
 
 use strict;
@@ -735,6 +735,35 @@ subtest 'getMetadataFor: a kind metadata that dies or returns a non-hash -> fall
 		is_deeply( $meta, { title => 'ABC listen', cover => ICON, icon => ICON }, "$label: the fallback" );
 		ok( logged_like( WARN => qr/\Q$url\E.*metadata bug/ ), "$label: the exception is logged at WARN with the URL" ) if $label eq 'dies';
 	}
+};
+
+subtest 'getMetadataFor: a dying kind metadata is logged at WARN at most once a minute per URL' => sub {
+	reset_all();
+	setTime(1792500000);
+	register_kind( { url => $A }, metadata => sub { die "metadata bug\n" } );
+	my ( $one, $two ) = ( 'abclisten://live/RATE_ONE', 'abclisten://live/RATE_TWO' );
+	my $warns = sub { my $url = shift; logged_like( WARN => qr/\Q$url\E.*metadata bug/ ) };
+	my $fallback = { title => 'ABC listen', cover => ICON, icon => ICON };
+
+	is_deeply( $PH->getMetadataFor( undef, $one ), $fallback, 'the fallback' ) for 1 .. 5;
+	is( $warns->($one), 1, '5 calls in a row: one WARN' );
+	is( logged_like( DEBUG => qr/\Q$one\E.*metadata bug/ ), 4, '... the other 4 at DEBUG' );
+
+	advanceTime(59);
+	$PH->getMetadataFor( undef, $one );
+	is( $warns->($one), 1, 'after 59 s: still one WARN' );
+	$PH->getMetadataFor( undef, $two ) for 1 .. 2;
+	is( $warns->($two), 1, 'another URL: its own WARN, once' );
+
+	advanceTime(1);
+	$PH->getMetadataFor( undef, $one ) for 1 .. 3;
+	is( $warns->($one), 2, 'after 60 s: a second WARN, once' );
+	is( $warns->($two), 1, 'the other URL: unchanged' );
+
+	advanceTime(59);
+	$PH->getMetadataFor( undef, $two );
+	is( $warns->($two), 2, 'the other URL, 60 s after its WARN: a second WARN' );
+	is( $warns->($one), 2, '... the first URL: unchanged' );
 };
 
 subtest 'getMetadataFor: arguments, client, foreign URLs' => sub {

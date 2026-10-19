@@ -47,7 +47,8 @@ package Plugins::ABCListen::ProtocolHandler;
 #   metadata($client, $url, $id) -> \%meta                        ($client may be undef)
 #     Synchronous, no network, cheap: LMS calls it for every status and display refresh.
 #     Returns any of { title, artist, album, cover, duration }. Only non-empty scalar values
-#     are used; a non-hash result, or an exception (logged), counts as no metadata.
+#     are used; a non-hash result, or an exception, counts as no metadata. An exception is
+#     logged at WARN at most once a minute per URL (METADATA_WARN_INTERVAL), at DEBUG otherwise.
 #
 #   onStream($client, $song, $id)    onStop($song, $id)           (optional)
 #     LMS's onStream/onStop for a song whose current track is a URL of this kind, plus the
@@ -95,6 +96,9 @@ use Plugins::ABCListen::Util;
 
 use constant RESOLVE_TIMEOUT => 20;     # seconds a kind's resolve may take
 use constant META_MAX        => 100;    # resolve meta is kept for this many URLs (oldest evicted)
+
+use constant METADATA_WARN_INTERVAL => 60;    # seconds between WARNs for a URL whose kind metadata dies
+
 use constant BAD_URL       => 'PLUGIN_ABCLISTEN_BAD_URL';
 use constant UNAVAILABLE   => 'PLUGIN_ABCLISTEN_UNAVAILABLE';
 use constant STREAM_FAILED => 'PLUGIN_ABCLISTEN_STREAM_FAILED';
@@ -107,6 +111,9 @@ my %IMPL_KEYS = ( resolve => 1, metadata => 1, onStream => 0, onStop => 0 );
 my %KINDS;         # kind => { resolve, metadata, onStream?, onStop? }
 my %META;          # abclisten:// URL => meta of its last resolve (non-empty scalar values only)
 my @META_ORDER;    # the URLs in %META, oldest first
+
+my %METADATA_WARNED;    # abclisten:// URL => time its kind metadata's last failure was logged at WARN
+
 # ---------------------------------------------------------------------------
 # Kind registry
 # ---------------------------------------------------------------------------
@@ -437,12 +444,35 @@ sub getMetadataFor {
 
 	if ($kind) {
 		my $kindMeta = eval { $kind->{metadata}->( $client, $url, $parsed->{id} ) };
-		$log->warn("Metadata for $url failed: $@") if $@;
+		_metadataFailed( $url, $@ ) if $@;
 
 		%meta = ( %meta, _textFields($kindMeta) ) if ref $kindMeta eq 'HASH';
 	}
 
 	return \%meta;
+}
+
+# A kind's metadata died for $url. getMetadataFor runs for every status and display refresh (about
+# once a second per UI), so this is logged at WARN at most once per METADATA_WARN_INTERVAL for a
+# URL, and at DEBUG in between.
+sub _metadataFailed {
+	my ( $url, $error ) = @_;
+
+	my $now    = Time::HiRes::time();
+	my $recent = sub { my $age = $now - $_[0]; $age >= 0 && $age < METADATA_WARN_INTERVAL };
+
+	if ( defined $METADATA_WARNED{$url} && $recent->( $METADATA_WARNED{$url} ) ) {
+		main::DEBUGLOG && $log->is_debug && $log->debug("Metadata for $url failed: $error");
+		return;
+	}
+
+	# forget the URLs whose interval is over, so the map stays small
+	delete @METADATA_WARNED{ grep { !$recent->( $METADATA_WARNED{$_} ) } keys %METADATA_WARNED };
+	$METADATA_WARNED{$url} = $now;
+
+	$log->warn( "Metadata for $url failed (logged at WARN at most once every " . METADATA_WARN_INTERVAL . " s for this URL): $error" );
+
+	return;
 }
 
 sub getCurrentTitle {
