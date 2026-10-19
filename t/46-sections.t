@@ -247,7 +247,7 @@ subtest 'Home is unchanged: same collections and hero as D1; the carousel only a
 	);
 	is( scalar @{ $page->{hero} }, 4, 'hero unchanged' );
 	ok( !grep( { exists $_->{kind} } @{ $page->{collections} } ), 'no kind on Home collections' );
-	is_deeply( [ sort keys %$page ], [qw(collections hero stale stationCards stations)], 'new keys only: stations, stationCards' );
+	is_deeply( [ sort keys %$page ], [qw(categoriesId collections hero stale stationCards stations)], 'new keys only: stations, stationCards (D4), categoriesId (D6)' );
 };
 
 # ---------------------------------------------------------------------------

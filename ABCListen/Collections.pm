@@ -64,6 +64,12 @@ package Plugins::ABCListen::Collections;
 #                             supported embedded cards all map to live stations (Sport's "Radio
 #                             Stations"), so a section can list them inline.
 #       An untitled StandardCollection keeps title undef; collectionItem names it Featured.
+#     D6 adds one key (callers that don't use it ignore it):
+#         categoriesId        the id of the page's categories collection: the first
+#                             StandardCollection with podcast category cards, by podcasts()'s
+#                             rule (_categoryCards: dynamiccollection cards whose path ends in a
+#                             numeric page id); undef when that collection has no id; absent
+#                             when no StandardCollection has such cards. Home leaves it out.
 #   home($cb)  = page('/listen', $cb).
 #
 #   items($collectionId, $offset, $size, $cb, \%extraQuery)
@@ -159,7 +165,8 @@ package Plugins::ABCListen::Collections;
 #             { rootMetaCollectionId => the MetaCollection's id, metaInMeta => 'false' };
 #         the first StandardCollection with dynamiccollection cards -> categories: per card
 #             id = the numeric last segment of articleLink (none: left out), title = cardTitle,
-#             image = the card image, fallbackPath = articleLink's site path.
+#             image = the card image, fallbackPath = articleLink's site path. (The same rule,
+#             _categoryCards, gives page()'s categoriesId; D6.)
 #       Missing parts are empty lists (callers decide: Discover shows LOAD_FAILED / the static list).
 #   staticCategories() -> the 8 podcast categories of 2026-10-19 as above (image undef), in ABC's
 #       order: the fallback when the podcasts page fails or lists none.
@@ -173,10 +180,12 @@ package Plugins::ABCListen::Collections;
 #   withImages(\@collections, $cb) -> $cb->(\@copies)  (never an error)
 #       Copies of the collections; each one without an image gets the image of the first
 #       supported card of its first page (items($id, 0, PAGE_SIZE, ..., query): the same request,
-#       and cache entry, as opening it). Waits at most IMAGE_DEADLINE (3 s); fetch errors and late
-#       answers leave the image undef (collectionItem then uses the plugin icon).
+#       and cache entry, as opening it), at most IMAGE_CONCURRENCY (4) at a time, in order (D6).
+#       Waits at most IMAGE_DEADLINE (3 s); fetch errors and late answers leave the image undef
+#       (collectionItem then uses the plugin icon). Lookups still queued or in flight at the
+#       deadline carry on and warm the cache for the menus.
 #
-# Owned by the discovery stream (D1 creates; D2 and D4 extend additively).
+# Owned by the discovery stream (D1 creates; D2, D4 and D6 extend additively).
 
 use strict;
 use warnings;
@@ -206,6 +215,7 @@ use constant IMAGE_PX         => 300;
 use constant PODCASTS_PATH       => '/listen/podcasts';    # D2
 use constant RECOMMENDATIONS_TTL => 3600;                  # D2 recommendations()
 use constant IMAGE_DEADLINE      => 3;                     # D2 withImages(), seconds
+use constant IMAGE_CONCURRENCY   => 4;                     # D6 withImages(): first pages loading at once
 
 use constant LOAD_FAILED => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
 use constant EMPTY       => 'PLUGIN_ABCLISTEN_EMPTY_COLLECTION';
@@ -344,6 +354,10 @@ sub _standardCollection {
 
 	my $id = _digits( $props->{id} );
 	$id = _digits( $component->{key} ) unless defined $id;
+
+	# D6: the first StandardCollection with category cards is the page's categories collection
+	$page->{categoriesId} = $id if !exists $page->{categoriesId} && _categoryCards($props);
+
 	return unless defined $id;
 
 	my ($first) = grep { _target($_) } grep {defined} map { Plugins::ABCListen::API::cardRef($_) } _list( $props->{items} );
@@ -651,13 +665,20 @@ sub _parsePodcasts {
 		elsif ( $component->{component} eq 'StandardCollection' && !( $categories && @$categories ) ) {
 			$categories = [
 				map { { id => _leaf( $_->{path} ), title => $_->{title}, image => $_->{image}, fallbackPath => $_->{path} } }
-				grep { $_->{type} eq 'dynamiccollection' && defined _leaf( $_->{path} ) }
-				grep {defined} map { Plugins::ABCListen::API::cardRef($_) } _list( _hash( $component->{componentProps} )->{items} )
+				_categoryCards( _hash( $component->{componentProps} ) )
 			];
 		}
 	}
 
 	return { collections => $collections || [], categories => $categories || [], stale => _hash($info)->{stale} ? 1 : 0 };
+}
+
+# A StandardCollection's podcast category cards: its dynamiccollection card refs whose path ends in
+# a numeric page id. podcasts() lists the first such collection's; page() names it categoriesId (D6).
+sub _categoryCards {
+	my $props = shift;
+	return grep { $_->{type} eq 'dynamiccollection' && defined _leaf( $_->{path} ) }
+		grep {defined} map { Plugins::ABCListen::API::cardRef($_) } _list( $props->{items} );
 }
 
 # A MetaCollection's sub-collections: [{ id, title, query }], those with itemsCount 0 left out.
@@ -727,7 +748,7 @@ sub withImages {
 
 	return $once->( \@copies ) unless @pending;
 
-	my ( $left, $finished, $timer ) = ( scalar @pending, 0 );
+	my ( $active, $finished, $pumping, $timer, $pump ) = ( 0, 0, 0 );
 
 	my $finish = sub {
 		return if $finished++;
@@ -742,22 +763,45 @@ sub withImages {
 		$finish->();
 	} );
 
-	for my $collection (@pending) {
-		my $settled = 0;
-		my $done    = sub {
-			my $result = shift;
-			return if $settled++;
-			my ($card) = grep { defined $_->{image} && _target($_) } _list( _hash($result)->{cards} );
-			$collection->{image} = $card->{image} if $card && !$finished;
-			$finish->() unless --$left;
-		};
+	# D6: at most IMAGE_CONCURRENCY first pages at a time (as _resolveNames' NAME_CONCURRENCY);
+	# lookups still queued at the deadline carry on and warm the cache the menus use.
+	$pump = sub {
+		return if $pumping;
+		$pumping = 1;
 
-		eval { items( $collection->{id}, 0, PAGE_SIZE, $done, $collection->{query} ); 1 } or do {
-			$log->warn( "ABC listen: collection image lookup for $collection->{id} failed: " . ( $@ || 'unknown error' ) );
-			$done->( {} );
-		};
-	}
+		while ( $active < IMAGE_CONCURRENCY && @pending ) {
+			my $collection = shift @pending;
+			my $settled    = 0;
+			$active++;
 
+			my $done = sub {
+				my $result = shift;
+				return if $settled++;
+				$active--;
+
+				my ($card) = grep { defined $_->{image} && _target($_) } _list( _hash($result)->{cards} );
+				$collection->{image} = $card->{image} if $card && !$finished;
+
+				$pump->() if $pump;
+			};
+
+			eval { items( $collection->{id}, 0, PAGE_SIZE, $done, $collection->{query} ); 1 } or do {
+				$log->warn( "ABC listen: collection image lookup for $collection->{id} failed: " . ( $@ || 'unknown error' ) );
+				$done->( {} );
+			};
+		}
+
+		$pumping = 0;
+
+		if ( !$active && !@pending ) {
+			undef $pump;    # no more lookups: break the closure's reference to itself
+			$finish->();
+		}
+
+		return;
+	};
+
+	$pump->();
 	return;
 }
 

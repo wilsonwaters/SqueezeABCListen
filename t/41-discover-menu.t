@@ -3,7 +3,8 @@
 # collection menus of Plugins::ABCListen::Collections, offline (SimpleAsyncHTTP stub fails any
 # unrouted URL; fake clock): the Home and Podcasts items (exact keys, weights, menuWeights, no
 # network) and their place at the top; Home's root (Featured, Popular now, Popular in sport, then
-# the home collections in page order without the home "Categories" collection; Featured omitted
+# the home collections in page order without the home "Categories" collection, found by
+# podcasts()'s rule rather than its id (D6); Featured omitted
 # without a mappable hero item; no request beyond the home page); collection menus (20 per page + More… with the right offsets, last page
 # without More…, missing total, empty / null / past-the-end pages, API errors, the depth limit);
 # the home Categories collection -> True Crime (dynamiccollection leaf ids); Radio Stations with and without L1's live
@@ -95,7 +96,8 @@ sub fresh {
 	route( "$SITE/listen/search", file => 'foundation/listen-search.trimmed.html', headers => { 'Content-Type' => 'text/html' } );
 }
 
-sub to_json { JSON::PP->new->utf8->canonical->encode( $_[0] ) }
+sub to_json   { JSON::PP->new->utf8->canonical->encode( $_[0] ) }
+sub json_file { JSON::PP::decode_json( fixture( $_[0] ) ) }
 
 sub route_home { route( "$NEXT/listen.json", file => 'discovery/nextdata-listen-home.trimmed.json', headers => $JSON_TYPE ) }
 
@@ -250,6 +252,48 @@ subtest 'Home root: Featured, Popular now, Popular in sport, then the home colle
 	check_names( $items, 'Home' );
 	check_names( $featured->{items}, 'Featured' );
 	is( scalar warnings_from_collections(), 0, 'no WARN or ERROR' );
+};
+
+subtest 'Home root (D6): the categories collection is found by podcasts()\'s rule (category cards), not by its id' => sub {
+	my $home       = json_file('discovery/nextdata-listen-home.trimmed.json');
+	my @components = @{ $home->{pageProps}->{data}->{componentsContent} };
+	my ($categories) = grep { ( $_->{key} // '' ) eq '14123152' } @components;
+	my ($picks)      = grep { ( $_->{key} // '' ) eq '103194114' } @components;
+	my $with = sub {
+		my %replace = @_;
+		my @list = map { exists $replace{ $_->{key} // '' } ? @{ $replace{ $_->{key} } } : $_ } @components;
+		route_json( "$NEXT/listen.json", { pageProps => { data => { componentsContent => \@list } } } );
+	};
+	my $copy = sub {
+		my ( $component, $id, $title ) = @_;
+		return { %$component, key => $id, componentProps => { %{ $component->{componentProps} }, id => $id, defined $title ? ( title => $title ) : () } };
+	};
+	my $ids = sub { [ map { $_->{passthrough}->[0]->{id} } grep { $_->{url} && $_->{url} == $COLL_MENU } @{ $_[0] } ] };
+
+	fresh();
+	$with->( 14123152 => [ $copy->( $categories, '99999999' ) ] );
+	my $items = home_root();
+	is_deeply( names($items), [ $FEATURED, $POPULAR, $SPORT, @HOME_TITLES ], 'ABC re-creates "Categories" with a new id (99999999): still not listed under Home' );
+	ok( !( grep { $_ eq '99999999' } @{ $ids->($items) } ), '(no link to 99999999)' );
+
+	fresh();
+	$with->(
+		103194114 => [ $copy->( $categories, '555', 'Browse' ), $picks ],
+		14123152  => [ $copy->( $picks, '14123152', 'Not categories' ) ],
+	);
+	$items = home_root();
+	ok( !( grep { $_ eq '555' } @{ $ids->($items) } ), 'the first collection with category cards (555) is the one left out' );
+	is( ( grep { $_->{name} eq 'Not categories' } @$items )[0]->{passthrough}->[0]->{id}, '14123152', 'a collection with id 14123152 but no category cards is listed' );
+
+	fresh();
+	$with->( 103194114 => [ $copy->( $categories, '555', 'Browse' ), $picks ] );
+	$items = home_root();
+	ok( !( grep { $_ eq '555' } @{ $ids->($items) } ), 'two collections with category cards: the first (555) is left out ...' );
+	ok( ( grep { $_ eq '14123152' } @{ $ids->($items) } ), '... the second (14123152) is listed (podcasts() also uses the first)' );
+
+	fresh();
+	$with->( 14123152 => [] );
+	is_deeply( names( home_root() ), [ $FEATURED, $POPULAR, $SPORT, @HOME_TITLES ], 'no categories collection: every collection listed' );
 };
 
 subtest 'Home root: Featured omitted when no hero item maps; collection link fallbacks' => sub {
