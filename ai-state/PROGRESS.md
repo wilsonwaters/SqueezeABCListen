@@ -1,21 +1,25 @@
 # Project Progress
 
 ## Phase
-Phase 1 — Kickoff (2026-10-19).
+Phase 1 → 2 — Kickoff complete; stream decomposition + master planning in flight (2026-10-19).
 
 ## Currently in flight
-- Research: ABC listen API reverse-engineering → `ai-state/research/abc-listen-api.md` (+ `abc-samples/`)
-- Research: existing LMS/other-ecosystem ABC integrations → `ai-state/research/ecosystem.md`
-- Research: Lyrion plugin standards + reuse inventory from SqueezeRTRFM → `ai-state/research/lms-plugin-guide.md`
-- Dev env: port SqueezeRTRFM testbed (local LMS + squeezelite) → `dev/`, `ai-state/RUNBOOK.md`
+- Planning agent: stream decomposition + per-stream master plans → `ai-state/streams.md`, `ai-state/streams/*/master-plan.md`
 
 ## Last completions
-- Initial commit on `main` (README, Apache-2.0 LICENSE, .gitignore).
-- Draft `ai-state/brief.md`.
+- Research committed: `research/abc-listen-api.md` (+ 31 fixtures), `research/ecosystem.md`, `research/lms-plugin-guide.md`.
+- Dev testbed committed (`dev/`, `RUNBOOK.md`): local LMS 9.1.1 + squeezelite "DevPlayer" running in the container.
+- Brief updated with findings: no ABC audio requires login; Icecast (streamguys) live streams + MP3/AAC
+  episodes play in the testbed; mediahub + /geo-001/ blocked from the container's US egress.
+
+## Key findings
+- No existing LMS plugin for ABC listen (official repo list checked). Closest: Radio Now Playing (metadata only),
+  built-in Podcasts (RSS shows only), Music Assistant ABC provider (9 music stations, live only).
+- Data: ABC website's internal `core-next/api` JSON + Next.js `_next/data/<buildId>` + Algolia public search key.
+  ABC's official terminus API needs a private key (not usable).
 
 ## Next
-- Finalise brief with research findings; stream decomposition → `streams.md`.
-- Per-stream master plans; file first batch of issues.
+- Review streams; file labels + first batch of issues; start execution with the first vertical slice.
 
 ## Active blockers
-- None.
+- None. Stakeholder decisions with defaults in OPEN-QUESTIONS §1 (login), §2 (authorship), §4 (live quality).
