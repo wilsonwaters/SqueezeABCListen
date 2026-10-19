@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 # Every plugin module (ABCListen/**/*.pm) compiles and loads against the t/lib Slim:: stubs
-# without warnings, the top-level module set is exactly the one F1 ships, and the base classes
+# without warnings, the top-level module set is exactly the expected one (@EXPECTED), and the base classes
 # are the LMS ones.
 
 use strict;
@@ -11,14 +11,14 @@ use Test::More;
 
 use File::Find;
 
-my @EXPECTED = qw(Discover Episode HTTP Live MyABC OnDemand Plugin ProtocolHandler Search Util);
+my @EXPECTED = qw(Discover Episode HTTP Live MyABC OnDemand Plugin ProtocolHandler Search Settings Util);
 
 my @modules;
 find( { no_chdir => 1, wanted => sub { push @modules, $File::Find::name if /\.pm$/ } }, 'ABCListen' );
 @modules = sort @modules;
 
 my @topLevel = sort map { m{^ABCListen/(\w+)\.pm$} ? $1 : () } @modules;
-is_deeply( \@topLevel, \@EXPECTED, 'ABCListen/*.pm is exactly the 10 F1 modules' ) or diag "found: @topLevel";
+is_deeply( \@topLevel, \@EXPECTED, 'ABCListen/*.pm is exactly the expected modules (F1 + M1 Settings)' ) or diag "found: @topLevel";
 
 for my $file (@modules) {
 	# ABCListen/Foo.pm is loaded as Plugins/ABCListen/Foo.pm through the t/lib/Plugins/ABCListen symlink
