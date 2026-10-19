@@ -12,15 +12,15 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - release: R1 #9 · R2 #15 · R3 #17
 
 ## Currently in flight
-- #9 R1 → PR #24 (packaging, repo.xml, release.yml) — under review; v0.1.0 to be cut post-merge
-- #3 F2 → PR #25 (abclisten:// protocol handler) — under review + runtime verification
-- #11 M1 → PR #26 (settings page, homeState) — under review + runtime verification. Re-committed by the
-  orchestrator as one clean commit on `feat/M1-settings-page` (the implementer's local branch had an
-  old-author commit it was not permitted to rewrite).
+- #9 R1 → PR #24 — review APPROVE; fix agent addressing 1 minor (concurrency could drop a version bump) + 4 nits; then merge + cut v0.1.0
+- #3 F2 → PR #25 — runtime PASS; review: fix agent narrowing the resolve eval, rate-limiting metadata warnings, header docs, PR-body footer
 - #7 F3 (API.pm) — implementation in progress
 - Attribution scrub of issue/PR text in progress (stakeholder rule)
 
 ## Last completions
+- #11 M1 merged (PR #26, squash 9f041ce, first commit fully under the new authorship rule): settings page,
+  homeState pref. Review: code APPROVE (blocker was a connector-appended footer, removed); runtime PASS (Default +
+  Material, keyboard, axe on the select = 0 violations).
 - #1 F1 merged (PR #21, squash 161ae6a): installable slice — ABC listen → Radio → 5 national stations play; weighted
   top-level hook API (`Util::topWeight`, optional `menuWeights()`); HTTP/Util; harness (833 assertions); check.sh; CI.
   Review APPROVE (10 deliberate breakages all caught); runtime verification PASS in Default + Material skins.
