@@ -19,9 +19,11 @@ Core capabilities:
 2. **Programs → episodes** — browse ABC listen programs (by station/channel, category, A–Z) and their
    episodes with artwork, synopsis, broadcast date and duration; play any episode.
 3. **Discovery** — the curated ABC listen collections (home-page featured items, categories) and search.
-4. **Optional ABC login** — the plugin must be fully usable **without** logging in. If an ABC account
-   unlocks extra functionality (e.g. followed programs / "continue listening"), support it as an opt-in
-   setting, implemented securely (see Open Questions).
+4. **No login required** — the plugin must be fully usable **without** logging in. Research
+   (`research/abc-listen-api.md` §Authentication) found **no ABC listen audio is gated behind an ABC account**;
+   login only syncs followed programs / listening history across ABC apps. The plugin therefore provides
+   local, per-LMS "followed programs" without any ABC account; ABC-account sync is deferred
+   (OPEN-QUESTIONS §1).
 
 ## Users
 
@@ -71,8 +73,15 @@ Core capabilities:
 - Because the stakeholder cannot start servers inside the container, a dev-environment sub-agent owns
   starting/stopping the local LMS (deviation from the orchestrator manual's "user starts the dev env" rule).
 - No `gh` CLI: the board is GitHub Issues/PRs driven through the GitHub MCP tools.
-- The container's internet egress exits outside Australia; any ABC geo-restriction found during testing is
-  recorded, and the affected behaviour is verified by the stakeholder on pi14.
+- The container's internet egress exits in the **US**; ABC's `mediahubaustralia.com` live streams and
+  `/geo-001/` (Australia-only) episode audio return 403 here. Live playback is verified in the container via
+  ABC's `abc.streamguys1.com` Icecast streams; geo-restricted behaviour is verified by the stakeholder on pi14.
+
+## Research inputs (read these before planning or implementing)
+
+- `ai-state/research/abc-listen-api.md` (+ `abc-samples/` fixtures) — ABC listen data sources and playback formats.
+- `ai-state/research/lms-plugin-guide.md` — Lyrion plugin process, module layout, reuse inventory from SqueezeRTRFM.
+- `ai-state/research/ecosystem.md` — existing integrations, BBC Sounds-style UX patterns, differentiators.
 
 ## Out of scope
 
