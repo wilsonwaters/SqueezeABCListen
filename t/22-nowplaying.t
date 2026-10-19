@@ -314,17 +314,26 @@ subtest 'cached and lastGood' => sub {
 
 	# ABC's EPG lags its schedule: while a refresh is in flight, the ended program is still the latest answer
 	resetStubs();
+	route( epg_url('RN'), file => 'live/bff-epgNowPlaying-RN-now.json' );
+	setTime( $RN_END - 60 );
+	now_cb('RN');    # ABC reports it a minute before its end
+	resetStubs();
 	route( epg_url('RN'), file => 'live/bff-epgNowPlaying-RN-now.json', defer => 1 );
-	advanceTime(60);
+	setTime( $RN_END + 30 );
+	is( $NP->lastGood('RN'), undef, 'ended, no refresh in flight: undef' );
 	now_cb('RN');
 	is( $NP->lastGood('RN')->{title}, 'The Radio National Hour', 'lastGood: the ended program while its refresh is in flight' );
 	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
 	is( $NP->cached('RN')->{title}, 'The Radio National Hour', 'ABC still answers the ended program: cached (60 s)' );
 	advanceTime(60);
 	is( $NP->lastGood('RN'), undef, '... no refresh in flight: lastGood undef' );
-	setTime( $RN_END + 900 );
+	setTime( $RN_END + 7200 );
 	now_cb('RN');
-	is( $NP->lastGood('RN'), undef, '15 min after its end: undef even while a refresh is in flight' );
+	is( $NP->lastGood('RN'), undef, 'ABC last reported it over 15 min ago: undef even while a refresh is in flight' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	advanceTime(60);
+	now_cb('RN');
+	is( $NP->lastGood('RN')->{title}, 'The Radio National Hour', 'ABC reports a program that ended 2 h ago (stale EPG): kept while refreshing' );
 	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
 
 	reset_all();

@@ -12,8 +12,8 @@ package Plugins::ABCListen::NowPlaying;
 #   NowPlaying->programNext($id, $cb)   the same for /next; fetched only when asked for (song info).
 #   NowPlaying->cached($id)             the fresh "now" program, or undef
 #   NowPlaying->lastGood($id)           the last "now" program fetched, while its end is still in the
-#                                       future (also while a refresh is in flight, up to MAX_TTL
-#                                       after its end: ABC's EPG lags its schedule), else undef
+#                                       future, or while its refresh is in flight if ABC reported it
+#                                       within MAX_TTL (ABC's EPG lags its schedule), else undef
 #                                       (menus and metadata at a deadline or after a failure)
 #   parse($data, $id)                   pure: the decoded epgNowPlaying body -> $program or undef
 #   timeSlot($program)                  pure: '6:00am–9:00am' (server local time), the start time
@@ -63,7 +63,7 @@ use constant EN_DASH => "\x{2013}";
 my $log = logger('plugin.abclisten');
 
 my %CACHE;        # "$variant:$id" => { program => $program | undef, error => $message | undef, expires }
-my %LAST_GOOD;    # $id => $program ("now" only)
+my %LAST_GOOD;    # $id => { program, at (when ABC last reported it) } ("now" only)
 my %WAITERS;      # "$variant:$id" => [ callbacks ] while queued or in flight
 my %FAILURES;     # "$variant:$id" => consecutive failed requests
 my @QUEUE;        # [ $variant, $id ] waiting for a request slot
@@ -101,16 +101,18 @@ sub lastGood {
 
 	return undef unless _isServiceId($id);
 
-	my $program = $LAST_GOOD{$id} or return undef;
+	my $last    = $LAST_GOOD{$id} or return undef;
+	my $program = $last->{program};
 	return undef unless defined $program->{end};
 
 	my $now = time();
 	return {%$program} if $program->{end} > $now;
 
-	# ABC's EPG lags behind its schedule (by minutes, CDN max-age ~3 min): while the refresh is in
-	# flight, the program it replaces is still ABC's latest answer, so Now Playing doesn't flicker
-	# to the station name between the cache expiring and the refresh landing
-	return {%$program} if $WAITERS{"now:$id"} && $now - $program->{end} < MAX_TTL;
+	# ABC's EPG lags behind its schedule (minutes for most services, hours for some time-zone
+	# versions): while the refresh is in flight, the program ABC last reported (within MAX_TTL) is
+	# still its latest answer, so Now Playing doesn't flicker to the station name between the cache
+	# expiring and the refresh landing
+	return {%$program} if $WAITERS{"now:$id"} && $now - $last->{at} < MAX_TTL;
 
 	return undef;
 }
@@ -261,7 +263,7 @@ sub _settle {
 		$CACHE{$key} = { program => $program, expires => $now + $ttl };
 
 		if ( $variant eq 'now' ) {
-			if   ($program) { $LAST_GOOD{$id} = $program }
+			if   ($program) { $LAST_GOOD{$id} = { program => $program, at => $now } }
 			else            { delete $LAST_GOOD{$id} }
 		}
 
