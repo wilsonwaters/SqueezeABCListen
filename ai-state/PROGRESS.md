@@ -12,8 +12,7 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - release: R1 #9 · R2 #15 · R3 #17
 
 ## Currently in flight
-- #2 L1 → PR #32: review REQUEST_CHANGES (commit the StationData generator; capital-sort test; /news ≠ NewsRadio;
-  distinct Sport Extra names) — fix agent working
+- #6 D2 top-level Podcasts + Popular now — implementation dispatched (stakeholder priority)
 - #20 M2 → PR #35: stale Follow id could unfollow — fix agent applying orchestrator design (Follow row becomes
   "✓ Following" text; Unfollow on its own row)
 - #18 O3 → PR #36: review + runtime spot check running
@@ -26,6 +25,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   in-flight agents (L1, O3, D1, D3, M2, O6 review, IC-1) resumed from their saved state. Lesson: ≤5 concurrent agents.
 
 ## Last completions
+- #2 L1 merged (PR #32, squash 5d262e2): all live stations (101 services, generated StationData.pm with committed
+  generator `scripts/gen-station-data.py`), Radio menus, live resolver with bitrate. 85/85 playable swept.
 - #5 D1 merged (PR #33, squash 4d9b90d): collection engine + top-level Home. Review APPROVE; runtime PASS.
   Follow-ups: D4 (#22) amendment (byPageSlug by path, checkOnAir, %FETCHERS, header fix, dying-callback test);
   new F5 (#37) cardRef alt-text naming.
@@ -74,6 +75,9 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - Streams + master plans committed (6 streams, 20 v1 tasks + 3 stretch). Material Skin 6.4.14 added to testbed.
 
 ## Next
+- v0.2.0 = all live stations + Programs browse/play + Home + AAC seek: after F4 (#34) merges → system verification on
+  main → version bump + CHANGELOG → release → install-from-GitHub check.
+- Unblocked queue (≤5 agents at once): D4 (#22, News/Sport/Kids listen/Audiobooks), L2 (#4), F5 (#37), L5 (#14).
 - As wave 2 PRs land: review + runtime-verify + merge. Then wave 3: L2, L5, O3, D1, D3, M2 (deps per streams.md).
 - Integration checkpoint IC-1 after L1/O1/O2 (cluster integration agent); system verification after ~10 merges.
 
