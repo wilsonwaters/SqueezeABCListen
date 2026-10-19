@@ -61,7 +61,7 @@ sub feed {
 	my %declare = %{ $impl{declare} || {} };
 
 	no strict 'refs';
-	no warnings 'redefine';
+	no warnings qw(redefine once);
 	local *Plugins::ABCListen::Live::menuItems;
 	local *Plugins::ABCListen::OnDemand::menuItems;
 	local *Plugins::ABCListen::Discover::menuItems;
