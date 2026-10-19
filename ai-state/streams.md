@@ -7,9 +7,9 @@ and the SqueezeRTRFM planning output (format/granularity reference). Status valu
 | Stream | Outcome | Capabilities | Cross-stream deps | Size | Status |
 |---|---|---|---|---|---|
 | **foundation** | An installable "ABC listen" plugin skeleton that plays live radio on day 1, with stable `abclisten://` playback URLs and one robust ABC data client every feature builds on. | Installable skeleton (`install.xml`, OPMLBased `Plugin.pm` tag `abclisten` menu `radios`, strings, icon); frozen 5-hook menu API; `HTTP.pm`/`Util.pm` (URL + episode-metadata contracts, ISO-8601 with offsets); ported LMS-free test harness, `scripts/check.sh`, CI; `abclisten://` protocol handler with a per-kind resolver registry (live/episode), alternates + failure tokens; `API.pm`: BFF, `_next/data` with buildId discovery/refresh, Algolia (runtime key discovery, hourly budget), PAPI, music API, caching, coalescing, image/rich-text/card helpers. | Provides hooks, PH registry, API client, harness to every stream. | M (3 tasks) | planned |
-| **live** | Every ABC listen live station (national, music, sport, local radio by state, time-zone versions) is listed with artwork and plays, showing the program on air, the current song on music stations, and a per-station schedule. | Static station catalogue + runtime `.pls` stream resolution (Icecast, never HLS); Live radio menus (networks, sport, local by state with home state first, time-zone versions); program on air (`epgNowPlaying`) in menus and Now Playing; live metadata push engine; song now-playing + recently played (music API); station submenu with Today/Yesterday/7-day schedule linking to catch-up programs; optional higher-quality live setting (mediahub / PlayHLS). | F1, F2, F3; L4 needs O2 (`programItem`); L5 needs M1 (settings page) | L (5 tasks) | planned |
+| **live** | Every ABC listen live station (national, music, sport, local radio by state, time-zone versions) is listed with artwork and plays, showing the program on air, the current song on music stations, and a per-station schedule. | Static station catalogue + runtime `.pls` stream resolution (Icecast, never HLS); top-level **Radio** menu (networks, sport, local by state with home state first, time-zone versions); program on air (`epgNowPlaying`) in menus and Now Playing; live metadata push engine; song now-playing + recently played (music API); station submenu with Today/Yesterday/7-day schedule linking to catch-up programs; optional higher-quality live setting (mediahub / PlayHLS). | F1, F2, F3; L4 needs O2 (`programItem`); L5 needs M1 (settings page) | L (5 tasks) | planned |
 | **ondemand** | Users browse ABC listen programs (by network, A–Z, type) and their episodes with artwork, synopsis, date and duration, and play any available episode (seekable, favouritable). | `abclisten://episode/<id>` resolver (episode Next data → renditions; MP3/AAC choice by availability windows; restricted/expired/geo messages); Programs → network → program → episodes menus; public `programItem`/`episodeItem` builders + program-menu extension registry; A–Z and by-type program index (Algolia); episode extras (segments, tracklist). | F2, F3; supplies builders to live (L4), discovery, myabc | L (4 tasks) | planned |
-| **discovery** | Users explore ABC listen the way the website presents it: featured home collections, categories, popular now, podcasts collections, and search (also inside LMS global search). | Generic collection engine (home Next data → collections → cards → typed items); Featured/Discover menus; podcast categories, recommendations ("This Week's Most Listened"), podcasts page collections; Algolia search (programs + playable episodes) + `Slim::Menu::GlobalSearch` provider. | F3; O2 builders (hard); L1 `stationItem` + O1 playback (soft) | M (3 tasks) | planned |
+| **discovery** | Users explore ABC listen the way the ABC listen app presents it: **Home** (featured + home collections, popular now), a top-level **Podcasts** menu, the **News, Sport, Kids listen and Audiobooks** section menus (live stations, curated collections, programs), audiobook chapters, and **Search** (also inside LMS global search). | Generic collection engine (any section page's Next data → collections → cards → typed items); Home; podcast categories, recommendations, podcasts page collections; section menus (MetaCollection, program aggregation, live-station components); audiobook chapters from Algolia via the program-menu registry; Algolia search (programs + playable episodes) + `Slim::Menu::GlobalSearch` provider. | F3; O2 builders + registry (hard); L1 `stationItem` + O1 playback + O3 `programsByType` (soft) | L (5 tasks) | planned |
 | **myabc** | Users personalise the plugin without any ABC account: a settings page (home state), and locally followed programs with a "Latest episodes" feed. | `Settings.pm` + `basic.html` (owner sections), `homeState` pref; follow/unfollow from program menus and song info; "My ABC listen" menu (latest from followed, followed programs). ABC-account sync is stretch (OPEN-QUESTIONS #1). | F1; M2 needs O2 (program-menu registry) | S–M (2 tasks) | planned |
 | **release** | Anyone can install ABCListen from one repository URL; releases are reproducible and automated; v1.0.0 ships with docs, screenshots and a scripted acceptance test. | Port of REF packaging: `build.sh`, `check-package.sh`, `update-repo-xml.pl`, `repo.xml` (placeholder sha), `release.yml`, `lms-repo-install.sh`, CHANGELOG/RELEASING; README (install, usage, screenshots, troubleshooting, limitations); `docs/official-repository.md`; `scripts/smoke.sh` JSON-RPC acceptance test; v0.1.0 → v0.2.0 → v1.0.0; clean-profile install from GitHub. | R1 needs F1; R2 needs every shipping task | M (3 tasks) | planned |
 
@@ -33,35 +33,42 @@ Not streams: `dev/` (local LMS 9.1.1 + squeezelite "DevPlayer" test bed — dev-
 | F3 | ABC data client `API.pm`: BFF, `_next/data` + buildId, Algolia (key discovery, budget), PAPI, music API, cache/coalesce, helpers; endpoint drift script | M | F1 | Must | 1 |
 | R1 | Packaging + repo.xml + release workflow + README install; cut v0.1.0; local repo-install test | M | F1 | Must | 1 |
 | M1 | Settings page (`Settings.pm`, `basic.html` owner sections) + `homeState` pref; `optionsURL` | S | F1 | Should | 1 |
-| L1 | All live stations: catalogue, `.pls` resolution, Live radio menus (networks, sport, local by state, time-zone versions), live resolver | M (upper) | F2, F3 | Must | 2 |
+| L1 | All live stations: catalogue, `.pls` resolution, top-level **Radio** menu (networks, sport, local by state, time-zone versions), live resolver | M (upper) | F2, F3 | Must | 2 |
 | O1 | Episode playback engine: `abclisten://episode/<id>` resolver, rendition choice, availability/geo errors, metadata, seek, favourites | M (upper; highest technical risk) | F2, F3 | Must | 2 |
 | O2 | Programs → network → program → episodes browse; public `programItem`/`episodeItem`; program-menu registry; episode meta cache | M (upper) | F3 | Must | 2 |
 | L2 | Program on air: `NowPlaying.pm`, menu on-air lines, `LiveMetadata.pm` poll/push engine (program mode), song-info "On air" | M | L1 | Must | 3 |
 | L5 | Higher-quality live setting (`standard` / `mediahub` / `hls` via PlayHLS) with automatic Icecast fallback | M | L1, M1 | Should | 3 |
 | O3 | All programs A–Z and by type (Algolia program index, Algolia-down fallback) | M | O2 | Must | 3 |
-| D1 | Collection engine + Discover → Featured/home collections (cards → program/episode/station/collection items) | M | F3, O2 (soft L1, O1) | Must | 3 |
-| D3 | Search (Algolia programs + playable episodes) + LMS global search provider | M | F3, O2 (soft O1) | Must | 3 |
+| D1 | Collection engine (generic `page($path)`) + top-level **Home** → Featured/home collections (cards → program/episode/station/collection items) | M | F3, O2 (soft L1, O1) | Must | 3 |
+| D3 | Top-level **Search** (Algolia programs + playable episodes) + LMS global search provider | M | F3, O2 (soft O1) | Must | 3 |
 | M2 | Followed programs: follow/unfollow (program menu + song info), My ABC listen → Latest episodes / Followed programs | M | O2 (soft O1, M1) | Should | 3 |
 | L3 | Now-playing songs on music stations (music API track mode, last-good, recently played) | M | L2 | Must | 4 |
 | L4 | Station submenu: listen live + Today/Yesterday/7-day schedule linking to catch-up programs | M | L2, O2 | Should | 4 |
 | O4 | Episode extras: segments (playable), tracklist, "More from <program>", episode song info | M | O1, O2 | Could | 4 |
-| D2 | Top-level Podcasts menu (podcast collections, 8 categories, A–Z) + Popular now (recommendations) | M | D1 (soft O3) | Must | 4 |
+| D2 | Top-level **Podcasts** menu (podcast collections, 8 categories, A–Z) + Popular now / Popular in sport in Home | M | D1 (soft O3) | Must | 4 |
+| D4 | Section menus **News, Sport, Kids listen** (full section), **Audiobooks**: top-level items rendered from the ABC section pages + static extras | M (upper) | D1 (soft L1, O1, O3, D5) | Must | 4 |
+| D5 | Audiobook chapters (Algolia) in every audiobook program menu via O2's registry; Play all | M (lower) | O2 (soft O1; a route: D3, O3 or D4) | Should | 4 |
 | R2 | `scripts/smoke.sh` acceptance test; README usage/screenshots/troubleshooting; official-repo guide; CHANGELOG | M | all shipping tasks | Must | 5 |
 | R3 | v1.0.0 via workflow; clean-profile install from GitHub repo.xml; smoke pass; final verification; pi14 checklist | S | R2 | Must | 6 |
 | _L6_ | _Stretch (out of v1): own HLS protocol handler (MPEG-TS → ADTS) for 221–246 kbps live, HLS-only stations, live rewind_ | L | L1, L5 | Stretch | – |
 | _O5_ | _Stretch: episodes older than the newest 250 (Algolia), hide expired catch-up AAC before listing_ | M | O2, O3 | Stretch | – |
 | _M3_ | _Stretch (out of v1, OPEN-QUESTIONS #1): ABC account (Gigya) sync of follows/history_ | L | M2 | Stretch | – |
 
-20 v1 tasks (2 S, 18 M) + 3 stretch. Every task leaves the plugin installable and runnable after merge.
+22 v1 tasks (2 S, 20 M) + 3 stretch. Every task leaves the plugin installable and runnable after merge. D4 and D5 were
+added on 2026-10-19 (app-style navigation; see Changelog).
+
+**Final top level** (stakeholder direction 2026-10-19; mirrors the ABC listen app, ordered by `Util::topWeight`):
+Home (D1/D2, 10) · Radio (L1, 20) · Podcasts (D2, 30) · News (D4, 40) · Sport (D4, 50) · Kids listen (D4, 60) ·
+Audiobooks (D4, 70) · Programs (O2/O3, 75) · Search (D3, 80) · My ABC listen (M2, 90).
 
 ## Success criteria → tasks
 
 | # | Brief criterion | Delivered by | Verified at |
 |---|---|---|---|
-| 1 | Every ABC listen live station listed with artwork and plays audio | F1 (5 stations play); F2 (stable `abclisten://live` URLs, favourites); L1 (all stations, artwork, Icecast resolution, Wide Bay via mediahub); L5 (mediahub/PlayHLS option; HLS-only stations playable with PlayHLS) | IC-1 (container sweep of every Icecast station); pi14 (mediahub, Wide Bay, HLS-only) |
-| 2 | Browse programs and episodes (artwork + description + date + duration visible in the web UI) and play an episode | O2 (by network, episode rows/submenus); O3 (A–Z, by type); D2 (by category); O1 (playback, seek, favourites); O4 (segments/tracklist) | IC-2; IC-5 |
+| 1 | Every ABC listen live station listed with artwork and plays audio | F1 (5 stations play); F2 (stable `abclisten://live` URLs, favourites); L1 (all stations under Radio, artwork, Icecast resolution, Wide Bay via mediahub); D4 (section stations: NewsRadio in News, sport stations in Sport, Kids listen live in Kids listen); L5 (mediahub/PlayHLS option; HLS-only stations playable with PlayHLS) | IC-1 (container sweep of every Icecast station); pi14 (mediahub, Wide Bay, HLS-only) |
+| 2 | Browse programs and episodes (artwork + description + date + duration visible in the web UI) and play an episode | O2 (by network, episode rows/submenus); O3 (A–Z, by type); D2 (by category); D4 (section programs incl. all Kids listen programs); D5 (audiobook chapters); O1 (playback, seek, favourites); O4 (segments/tracklist) | IC-2; IC-5 |
 | 3 | Program on air for live stations, now-playing songs on music stations, episode/program descriptions | L2 (program on air: menus + Now Playing); L3 (songs + recently played); O2 (program/episode descriptions); L4 (schedule synopses); O4 (tracklists) | IC-4 |
-| 4 | Discovery: featured collections/categories and search browsable | D1 (featured/home collections); D2 (categories, popular now, podcasts); D3 (search + global search) | IC-5 |
+| 4 | Discovery: featured collections/categories and search browsable (navigation mirrors the ABC listen app) | D1 (Home: featured/home collections); D2 (Podcasts: categories, podcast collections; popular now); D4 (News, Sport, Kids listen, Audiobooks sections); D3 (Search + global search) | IC-5 |
 | 5 | Works without logging in; login-only features optional and secure | All tasks use keyless public endpoints only (no login code in v1, OPEN-QUESTIONS #1); M2 (local follows, no credentials); R3 (clean profile, no prefs/credentials, full smoke pass) | R3 |
 | 6 | Install via the repository URL in LMS settings | R1 (pipeline, repo.xml, v0.1.0, local repo-install test); IC-3 (v0.2.0 from raw GitHub URL on clean profile); R3 (v1.0.0 from GitHub URL) | R1, IC-3, R3 |
 | 7 | Automated tests + independent review + runtime verification on a real LMS | F1 (harness + CI); every task (unit tests, review agent, runtime check on the testbed); R2 (`scripts/smoke.sh`); R3 (final system verification; stakeholder runs smoke on pi14) | every PR; R3 |
@@ -80,13 +87,15 @@ graph LR
   L1 --> L2 & L5
   M1 --> L5
   L2 --> L3 & L4
-  O2 --> L4 & O3 & D1 & D3 & M2
+  O2 --> L4 & O3 & D1 & D3 & M2 & D5
   O1 & O2 --> O4
-  D1 --> D2
-  L1 -. soft .-> D1
-  O1 -. soft .-> D1 & D3 & M2
+  D1 --> D2 & D4
+  L1 -. soft .-> D1 & D4
+  O1 -. soft .-> D1 & D3 & M2 & D4 & D5
+  O3 -. soft .-> D2 & D4
+  D5 -. soft .-> D4
   M1 -. soft .-> M2
-  L3 & L4 & L5 & O3 & O4 & D2 & D3 & M2 & R1 --> R2
+  L3 & L4 & L5 & O3 & O4 & D2 & D3 & D4 & D5 & M2 & R1 --> R2
   R2 --> R3
 ```
 
@@ -99,8 +108,10 @@ Integration checkpoints (run by the orchestrator's runtime-verification agent, n
   GitHub `repo.xml` → criterion 6 preview (stakeholder may try on pi14).
 - **IC-4** (after L2 + L3): live context in Now Playing (program on talk stations, songs on music stations) in Default
   + Material + `status` JSON → criterion 3.
-- **IC-5** (after O3 + D1 + D2 + D3 + M2): A–Z, categories, featured, popular, search (plugin + global), follow →
-  criteria 2 and 4.
+- **IC-5** (after O3 + D1 + D2 + D3 + D4 + D5 + M2): walk all ten top-level entries (Home, Radio, Podcasts, News, Sport,
+  Kids listen, Audiobooks, Programs, Search, My ABC listen) in Default + Material + `menu:1`; A–Z, categories, featured,
+  popular, section collections, Kids listen live + programs, audiobook chapters (geo message in the container), search
+  (plugin + global), follow → criteria 2 and 4.
 
 | Wave | Tasks (parallel) | Starts when |
 |---|---|---|
@@ -108,7 +119,7 @@ Integration checkpoints (run by the orchestrator's runtime-verification agent, n
 | 1 | **F2, F3, R1, M1** ← _first parallel batch_ | F1 merged |
 | 2 | L1, O1, O2 | L1/O1: F2 + F3 merged; O2: F3 merged |
 | 3 | L2, L5, O3, D1, D3, M2 | L1 / L1+M1 / O2 merged |
-| 4 | L3, L4, O4, D2 | L2 / L2+O2 / O1+O2 / D1 merged |
+| 4 | L3, L4, O4, D2, D4, D5 | L2 / L2+O2 / O1+O2 / D1 / D1 / O2 + one route (D3 or O3) merged |
 | 5 | R2 | all shipping tasks merged (or descoped) |
 | 6 | R3 | R2 merged |
 
@@ -117,19 +128,31 @@ Testbed prerequisites (dev-env agent, during wave 1; not stream tasks): **P1** i
 libhtml-parser-perl shellcheck` (check.sh deps) to `dev/setup.sh` + RUNBOOK; **P3** (optional, for L5) PlayHLS +
 ffmpeg in the testbed.
 
-Critical paths (7 steps each): F1 → F3 → O2 → D1 → D2 → R2 → R3 and F1 → F2 → L1 → L2 → L3 → R2 → R3. Core criteria
-1, 2 and 6 are met after wave 2 + IC-1/IC-2/IC-3.
+Critical paths (7 steps each): F1 → F3 → O2 → D1 → D2/D4 → R2 → R3 and F1 → F2 → L1 → L2 → L3 → R2 → R3. Core
+criteria 1, 2 and 6 are met after wave 2 + IC-1/IC-2/IC-3. D2 and D4 share `Discover.pm` (`menuItems`/`menuWeights`
+only) in wave 4: the second to merge rebases.
 
-Priority / descope order: **Must** F1, F2, F3, R1, L1, O1, O2, L2, L3, O3, D1, D2, D3, R2, R3 · **Should** M1, M2, L4,
-L5 · **Could** O4 · **Stretch** L6, O5, M3. If time is short cut O4, then L5, then L4, then M2 (M1 only if L5 and M2
-are both cut).
+Priority / descope order: **Must** F1, F2, F3, R1, L1, O1, O2, L2, L3, O3, D1, D2, D3, D4, R2, R3 · **Should** M1, M2,
+L4, L5, D5 · **Could** O4 · **Stretch** L6, O5, M3. If time is short cut O4, then L5, then D5 (Audiobooks then lists
+books without chapters; they play only in Australia anyway), then L4, then M2 (M1 only if L5 and M2 are both cut).
 
 ## Cross-stream contracts (fixed here; owners implement, consumers code against them)
 
-1. **Hook API (F1, frozen).** `Plugin.pm` calls `Class->init()` (inside `eval`) and async
-   `Class->menuItems($client, $cb, $args)` for `qw(Live OnDemand Discover Search MyABC)` in that order and concatenates
-   the items. Each hook calls `$cb->(\@items)` exactly once; a hook that dies, misbehaves or misses `HOOK_TIMEOUT` (25 s)
-   becomes one error text item. Final top level: **Live radio · Programs · Discover · Search ABC listen · My ABC listen**.
+1. **Hook API (F1, frozen; as implemented in PR #21).** `Plugin.pm` calls `Class->init()` (inside `eval`) and async
+   `Class->menuItems($client, $cb, $args)` for `qw(Live OnDemand Discover Search MyABC)` in that order. Each hook calls
+   `$cb->(\@items)` exactly once; a hook may return **several** top-level items. Top-level items may carry `weight`:
+   `Plugin.pm` merges every hook's items and **stable-sorts on `weight`** (missing or non-numeric = 100; ties keep hook
+   order, then each hook's own order) and strips the key from shallow copies. Canonical weights live in
+   `Plugins::ABCListen::Util::topWeight($name)`: home 10, radio 20, podcasts 30, news 40, sport 50, kids 60, audiobooks 70,
+   programs 75, search 80, myabc 90 (unknown name → undef; `DEFAULT_TOP_WEIGHT` 100). A hook may implement optional
+   `Class->menuWeights()` returning the weights it uses; a hook that dies, misbehaves or misses `HOOK_TIMEOUT` (25 s)
+   becomes one error text item sorted at its lowest declared weight (else 100). **Every hook that returns top-level items
+   declares `menuWeights()`**: Live (radio), OnDemand (programs), Discover (home, podcasts, news, sport, kids,
+   audiobooks), Search (search), MyABC (myabc). Final top level: **Home · Radio · Podcasts · News · Sport · Kids listen ·
+   Audiobooks · Programs · Search · My ABC listen**. F1 seeded the top-level names `PLUGIN_ABCLISTEN_HOME` (Home),
+   `_RADIO` (Radio), `_NEWS` (News), `_KIDS` (Kids listen), `_AUDIOBOOKS` (Audiobooks), `_PROGRAMS_AZ` (Programs (A–Z),
+   unused unless the orchestrator prefers it over O2's `_PROGRAMS`) and reuses `_PODCASTS` (D2), `_SPORT` (L1), `_MY_ABC`
+   (M2), `_SEARCH` (D3, now "Search"); later tasks reuse these, never duplicate them.
 2. **URL contract (F1 `Util.pm`).** `abclisten://live/<SERVICE_ID>` (upper-case PAPI/BFF id, e.g. `TRIPLEJ`,
    `TRIPLEJ_PERTH`, `LOCAL_SYDNEY`) and `abclisten://episode/<coremediaId>` (numeric; covers `audioepisode`, `audio`,
    `audiosegment`). `Util::liveUrl`, `episodeUrl`, `parseUrl` → `{kind, id}` or undef. Favourites/presets only ever
@@ -150,14 +173,22 @@ are both cut).
    `__N_REDIRECT`), `algolia` (runtime appId/key/index discovery from `/listen/search`, hourly budget → error
    `PLUGIN_ABCLISTEN_RATE_LIMITED`), `papi`, `music`, `text`; all `($…, $cb, $ecb, \%opts)` with exactly one callback;
    opts `ttl`, `stale_ok`, `quiet`. Pure helpers `imageUrl`, `richText`, `coreMediaRef`, `cardRef`, `sitePath`.
+   `cardRef`'s `id` is the card's **`cardId`** (document id) when numeric, else the `articleLink` leaf, else the
+   `contentUri` id (kept as `uriId`): curated `contentUri` ids are often teaser ids, some dynamic (research §6.1).
+   `sitePath` accepts `www.abc.net.au` and `abc.net.au`.
 6. **On-demand builders (O2, `OnDemand.pm`).** `programItem($client, \%program)` (program = `{title, path, id?, image?,
    description?, network?}`; `path` required) → OPML `link`; `episodeItem($client, \%episode)` (meta-cache shape; `id`
    required) → `link` with `play => abclisten://episode/<id>` and writes the meta cache;
    `registerProgramMenuProvider(sub { my ($client, $program, $cb) = @_; $cb->(\@items) })` → extra items at the top of
-   every program menu (used by M2).
+   every program menu (used by M2's Follow and D5's audiobook Chapters; registration order Discover before MyABC).
+   Providers receive the program hash merged with `Programs->program` detail `{id, title, template, restricted,
+   episodeCollectionId}` (`template` = `programTemplate`, `restricted` = `webDistributionRestricted`); a program with no
+   episode collection and `restricted` true (ABC audiobooks) shows no "No episodes available" row.
 7. **Live builders (L1, `Live.pm`/`Stations.pm`).** `Live->stationItem($client, $serviceId)` → playable station item
-   (or undef); `Stations->byPageSlug($slug)` → service id (for `coremedia://channel` cards whose `articleLink` is
-   `/listen/live/<slug>`).
+   (or undef for unknown/hidden/off-air/HLS-only); `Stations->byPageSlug($slugOrUrl)` → service id for live-page links
+   (`/listen/live/<slug>`, `/triplej/live/<slug>`), network homes (`/listen/radionational/`, `/triplej/`, `/kidslisten/`,
+   `/pacific/live/`, …) and `abc.net.au` links without `www`. Consumers: D1 (Home "Radio Stations"), D4 (News, Sport,
+   Kids listen station rows; may override `line2`/`description` on a copy), L4.
 8. **Prefs (`plugin.abclisten`).** `homeState` ('' | ACT | NSW | NT | QLD | SA | TAS | VIC | WA; '' behaves as NSW;
    owner M1, read by L1/L4), `liveQuality` (`standard` | `mediahub` | `hls`; owner L5, default `standard`), `followed`
    (array; owner M2). Each owner calls `$prefs->init` for its own keys in its hook `init`; readers treat undef as the
@@ -167,8 +198,9 @@ are both cut).
 
 1. **`Plugin.pm` is frozen after F1** (hook list, `abclisten` PH registration, log category). **`ProtocolHandler.pm` is
    frozen after F2.** Changes need orchestrator sign-off.
-2. **`strings.txt`**: F1 creates `# === <ID> ===` sections for every task and pre-seeds all tokens named in the master
-   plans; a task edits only inside its own section (new tokens appended there, flagged in the PR).
+2. **`strings.txt`**: F1 creates `# === <ID> ===` sections for the 20 original tasks and pre-seeds all tokens named in
+   the master plans (plus the top-level names, contract 1); a task edits only inside its own section (new tokens
+   appended there, flagged in the PR). Tasks added later (D4, D5) append their own new section at the end.
 3. **`install.xml`**: `<version>` changes only in release commits (the release workflow triggers on it); `optionsURL` is
    added once by M1.
 4. **`Settings.pm` / `basic.html`** (M1): owner sections (`<!-- === L5 === -->` in v1; future owners add their own);
@@ -177,7 +209,10 @@ are both cut).
    `episodeItem`/`_episodeMenu`; `programItem`/`_programMenu` stay with O2 (M2 uses the registry, never edits).
    `Live.pm`: L1 creates; L2 owns `_stationItem` text (line2/description); L4 (after L2) owns `_stationItem` type and
    `_stationMenu`. `LiveMetadata.pm`: L2 creates, L3 extends (track mode). `Stations.pm`: L1 creates, L5 extends stream
-   candidates. `Discover.pm`: D1 creates, D2 extends the root list.
+   candidates. `Discover.pm`: D1 creates (Home item, `menuWeights`); D2 owns Home's root list and adds the Podcasts
+   item; D4 only appends `Sections->topItems`/`Sections->menuWeights` to `menuItems`/`menuWeights`; D5 only adds an
+   `Audiobooks->init` call to `init`. `Collections.pm`: D1 creates (`page`, `items`, `itemFor`); D2 and D4 extend it
+   additively (D4: section component types). `Sections.pm`: D4. `Audiobooks.pm`: D5.
 6. **Tests**: prefixes `t/1x` foundation, `t/2x` live, `t/3x` ondemand, `t/4x` discovery, `t/5x` myabc, `t/9x`
    release; fixtures in `t/data/<stream>/` copied from `research/abc-samples/` (trimmed, shape unedited) plus
    synthetic edge cases; `t/lib` stubs change additively only; `prove`/CI never touch the network.
@@ -196,7 +231,7 @@ are both cut).
 | `ABCListen/Live.pm`, `Stations.pm` | F1 (stub), L1 | live | rule 5 |
 | `ABCListen/NowPlaying.pm`, `LiveMetadata.pm`, `Tracks.pm`, `Schedule.pm` | L2, L2, L3, L4 | live | rule 5 |
 | `ABCListen/OnDemand.pm`, `Programs.pm`, `Episode.pm`, `ProgramIndex.pm` | F1 (stub), O2, F1 (stub; `OnDemand->init` calls `Episode->init`) → O1, O3 | ondemand | rule 5; O1 never edits `OnDemand.pm` |
-| `ABCListen/Discover.pm`, `Collections.pm`, `Search.pm` | F1 (stubs), D1, D3 | discovery | rule 5 |
+| `ABCListen/Discover.pm`, `Collections.pm`, `Search.pm`, `Sections.pm`, `Audiobooks.pm` | F1 (stubs), D1, D3, D4, D5 | discovery | rule 5 |
 | `ABCListen/MyABC.pm`, `Settings.pm`, `Follow.pm`, `HTML/EN/plugins/ABCListen/settings/basic.html` | F1 (stub), M1, M2, M1 | myabc | rule 4 |
 | `t/lib/**`, `scripts/check.sh`, `scripts/lint-strings.pl`, `.github/workflows/ci.yml` | F1 | foundation | stubs additive; R1 may append to check.sh/ci.yml |
 | `repo.xml`, `scripts/{build,check-package,update-repo-xml,changelog-section,lms-repo-install,smoke}.*`, `.github/workflows/release.yml`, `README.md`, `RELEASING.md`, `CHANGELOG.md`, `docs/` | R1/R2 | release | features don't edit |
@@ -240,6 +275,18 @@ are both cut).
    `/listen/search`, not committed in code (FQ3); it is already present in `research/` docs.
 8. **Release commit identity** (OPEN-QUESTIONS #2) decides who `release.yml` commits `repo.xml` as (R1).
 9. **Plugin icon** — ABC logos are trademarks; default a neutral self-made icon (FQ1).
+10. **Audiobooks** — ABC's website plays no audiobooks (`webDistributionRestricted`, AU-only rights, app-only per ABC's
+    FAQ); chapters are in Algolia with `/geo-001/` MP3s. Default: list them (D4) and play them where the CDN allows, i.e.
+    in Australia (D5; pi14-verified); elsewhere O1's "only available in Australia" message. Stakeholder confirmation:
+    OPEN-QUESTIONS #5.
 
 ## Changelog
 - 2026-10-19 — Initial decomposition (stream-planning sub-agent): 6 streams, 20 v1 tasks + 3 stretch.
+- 2026-10-19 — Stakeholder direction: top level mirrors the ABC listen app (Home, Radio, Podcasts, News, Sport, Kids
+  listen, Audiobooks, Programs, Search, My ABC listen). Contract 1 updated to F1's implemented hook API (PR #21: `weight`,
+  `Util::topWeight`, optional `menuWeights`, several items per hook, seeded top-level strings); Discover → Home (D1),
+  Live radio → Radio (L1), Search ABC listen → Search (D3). Section pages probed live (research §6.1): new **D4** (#22)
+  section menus News/Sport/Kids listen/Audiobooks, new **D5** (#23) audiobook chapters (ABC's web has no chapter list).
+  Contracts 5 (`cardRef` id = `cardId`; `sitePath` host variants), 6 (provider input incl. `template`/`restricted`) and
+  7 (`byPageSlug` network homes) amended; Radio gets no "section extras" (`/listen/radio` holds only station
+  collections). 22 v1 tasks. Plan-revision + backlog-reconciliation sub-agent; open issues amended by comment.

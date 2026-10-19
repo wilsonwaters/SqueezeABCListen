@@ -1,7 +1,7 @@
 # Master Plan — live
 
 ## Goal
-From **ABC listen → Live radio** users find every ABC listen live station — national and music networks, sport, local
+From **ABC listen → Radio** (top-level, `topWeight('radio')`; the app's Radio tab) users find every ABC listen live station — national and music networks, sport, local
 radio by state (home state first) and the time-zone versions ABC offers — each with its logo, and play it natively
 (Icecast AAC via `abclisten://live/<SERVICE_ID>`, never HLS). While a station plays, LMS shows the **program on air**
 (title, presenters, image) and, on music stations, the **current song** (artist, title, cover), plus song-info extras
@@ -17,7 +17,8 @@ container (stakeholder-verified on pi14).
 - Uses: hook API (`Live->init`, `Live->menuItems`), PH kind registry (`live` kind, alternates, `failToken`,
   `onStream`/`onStop`), `API.pm` (`bff`, `text`, `music`, `imageUrl`), `Util` URL contract and date helpers, prefs
   `homeState` (M1) and `liveQuality` (own, L5).
-- Provides: `Live->stationItem($client, $serviceId)`, `Stations->byPageSlug($slug)`, `Stations->get($serviceId)`
+- Provides: `Live->stationItem($client, $serviceId)`, `Stations->byPageSlug($slugOrUrl)` (live pages, network homes,
+  `abc.net.au` without `www`), `Stations->get($serviceId)`
   (for D1 channel cards and L4); station records `{id, name, group, network, state, tz, slug, hlsSlug, mount,
   mediahub, logo, musicStation, hlsOnly, eventOnly, synopsis}`.
 
@@ -25,7 +26,7 @@ container (stakeholder-verified on pi14).
 
 | ID | Summary | Size | Depends on | Status |
 |---|---|---|---|---|
-| L1 | All live stations: `Stations.pm` catalogue + runtime `.pls` resolution (Icecast; mediahub alternate; HLS-only/off-air handling); Live radio menus (networks, sport, local by state, time-zone versions; home state first / home-state variants); `live` kind resolver | M (upper) | F2, F3 | planned |
+| L1 | All live stations: `Stations.pm` catalogue + runtime `.pls` resolution (Icecast; mediahub alternate; HLS-only/off-air handling); top-level **Radio** menu (networks, sport, local by state, time-zone versions; home state first / home-state variants); `live` kind resolver | M (upper) | F2, F3 | planned |
 | L2 | Program on air: `NowPlaying.pm` (`epgNowPlaying` now/next), on-air line2/description in menus, `LiveMetadata.pm` per-player poll/push engine (program mode), song-info "On air" | M | L1 | planned |
 | L3 | Now-playing songs on music stations: `Tracks.pm` (music API now + recent plays), LiveMetadata track mode with program fallback and last-good, song-info "Recently played" | M | L2 | planned |
 | L4 | Station submenu: `Schedule.pm` (BFF schedule per service/date/tz); station rows become link+play → Listen live, on air, Today, Yesterday, 5 earlier days; past programs link to catch-up via `OnDemand->programItem` | M | L2, O2 | planned |
@@ -52,11 +53,15 @@ container (stakeholder-verified on pi14).
     `PLUGIN_ABCLISTEN_LIVE_OFF_AIR` and hidden from menus.
   - Optional runtime enrichment: BFF national/state collections (cached 24 h, `stale_ok`) override titles/logos/order
     for known ids; unknown ids are logged at INFO and ignored (catalogue stays authoritative).
-  - `byPageSlug`, `get`, `playable($id)` (L5 extends for `hls`).
+  - `byPageSlug`, `get`, `playable($id)` (L5 extends for `hls`). `byPageSlug` also maps network-home slugs
+    (`radionational`, `triplej`, `triplejhottest`, `doublej`, `classic`, `classic2`, `jazz`, `country`, `kidslisten`,
+    `pacific`) and `abc.net.au` links without `www` (D1/D4 station cards).
 - **`live` kind** (registered in `Live->init`, replaces F2's stub): `resolve` → `{url => first candidate, alternates =>
   rest, failToken => 'PLUGIN_ABCLISTEN_LIVE_FAILED'}`; `metadata` → `{title => station name, artist => 'ABC listen',
   cover => logo}` (L2 replaces with program data).
-- **`Live.pm` menus** (`menuItems` → one link **Live radio**):
+- **`Live.pm` menus** (`menuItems` → one link **Radio**, `PLUGIN_ABCLISTEN_RADIO`, `weight => Util::topWeight('radio')`;
+  F1's `menuWeights` kept). `/listen/radio` holds only station MetaCollections (probe 2026-10-19), so Radio is exactly
+  this station tree — no section extras:
   - Networks (catalogue order) first, then links **Sport**, **Local radio**, **Time-zone versions**.
   - Local radio → 8 states (home state first, labelled "(your state)"; `homeState` '' behaves as NSW) → stations
     sorted with the capital-city station first, then A–Z.
@@ -71,7 +76,7 @@ container (stakeholder-verified on pi14).
   `File1`, 404; candidate ordering, mediahub normalisation, never `.m3u8`; event-only on/off air), `t/21-live-menu.t`
   (group shapes and exact item keys; home-state ordering and variant substitution for each state; hidden HLS-only/off-air
   entries; exactly-one callback).
-- **Runtime**: Default + Material screenshots of Live radio, Local radio → Queensland, Time-zone versions (logos visible);
+- **Runtime**: Default + Material screenshots of Radio, Local radio → Queensland, Time-zone versions (logos visible);
   `menu:1` JSON-RPC shapes; **sweep script** (agent scratchpad, not committed) plays every listed station through
   `["playlist","play","abclisten://live/<ID>"]` for ≥ 5 s and records `mode`/`time` → all Icecast stations PASS; Wide Bay
   and off-air/HLS-only behave as specified; set `homeState` WA via JSON-RPC → WA first and triple j resolves to
@@ -97,7 +102,7 @@ container (stakeholder-verified on pi14).
   `t/23-live-metadata.t` (fake clock: first metadata call triggers fetch; program end re-fetch + `newmetadata`; error
   back-off; stop/URL change stops polling; sync-group master; no leaked timers).
 - **Runtime**: play RN → `status` `current_title`/`playlist_loop[0].title` = current program (matches abc.net.au) and
-  `artwork_url` = program image; Default + Material Now Playing screenshots; Live radio list via `menu:1` shows on-air
+  `artwork_url` = program image; Default + Material Now Playing screenshots; Radio list via `menu:1` shows on-air
   lines; song info shows synopsis; clean `server.log`. Program-change transition covered by unit tests.
 
 ### L3 — now-playing songs on music stations
@@ -134,7 +139,7 @@ container (stakeholder-verified on pi14).
 - **Tests** `t/26-schedule.t` (RN day fixture; day boundaries across AEST/AEDT/ACST/AWST with a UTC server clock; empty
   day; old-style program URLs), `t/27-station-menu.t` (station row is link+play; submenu shape; programItem called with
   the right path; future rows not links).
-- **Runtime**: Default + Material: Live radio → Radio National → Today lists the schedule; open a past program →
+- **Runtime**: Default + Material: Radio → Radio National → Today lists the schedule; open a past program →
   episodes (O2) → play one (O1); the station row's play control still plays live; a station favourite saved before L4
   still plays; Yesterday for a WA local station uses Perth dates. **pi14**: AU-only schedule differences (if any).
 
@@ -161,10 +166,14 @@ container (stakeholder-verified on pi14).
 - **F3**: `API::bff` (collections, epgNowPlaying, schedule), `API::text` (`.pls`), `API::music`, `API::imageUrl`.
 - **myabc**: reads `homeState` (M1); L5 adds its section to M1's settings page.
 - **ondemand**: L4 links schedule rows through `OnDemand->programItem` (O2 contract); live never touches episode URLs.
-- **discovery**: D1 maps `coremedia://channel` cards via `Stations->byPageSlug` + `Live->stationItem`.
+- **discovery**: D1 (Home "Radio Stations") maps `channel`/`externallink` cards via `Stations->byPageSlug` +
+  `Live->stationItem`; D4 builds the News (NEWS), Sport (sport live pages) and Kids listen (KIDSLISTEN, variants only
+  where playable) station rows with `stationItem`, overriding `line2`/`description` on copies for Sport events. L2's
+  on-air text and L4's link+play rows therefore appear in those sections too.
 - **release**: R2's `smoke.sh` plays a national and a local station and checks program/song metadata; README documents
   56 kbps, HLS-only stations, mediahub, PlayHLS, RNP coexistence, `faad` on old players.
-- **Strings** (pre-seeded by F1): L1 `PLUGIN_ABCLISTEN_LIVE_RADIO`, `PLUGIN_ABCLISTEN_SPORT`,
+- **Strings** (pre-seeded by F1): F1's top-level `PLUGIN_ABCLISTEN_RADIO` ("Radio"); L1 `PLUGIN_ABCLISTEN_LIVE_RADIO`
+  (defined, unused since the rename), `PLUGIN_ABCLISTEN_SPORT` (also D4's top-level Sport),
   `PLUGIN_ABCLISTEN_LOCAL_RADIO`, `PLUGIN_ABCLISTEN_TIMEZONE_VERSIONS`, `PLUGIN_ABCLISTEN_STATE_{ACT,NSW,NT,QLD,SA,TAS,VIC,WA}`,
   `PLUGIN_ABCLISTEN_YOUR_STATE`, `PLUGIN_ABCLISTEN_CITY_TIME`, `PLUGIN_ABCLISTEN_LIVE_FAILED`,
   `PLUGIN_ABCLISTEN_LIVE_HLS_ONLY`, `PLUGIN_ABCLISTEN_LIVE_OFF_AIR`; L2 `PLUGIN_ABCLISTEN_ON_AIR`,
@@ -194,6 +203,11 @@ container (stakeholder-verified on pi14).
 | LQ6 | Schedule rows with old-style program URLs (`/radionational/programs/<slug>/`). | `API::nextData` follows `__N_REDIRECT`; if the program page still fails, the row is text. | L4 |
 | LQ7 | Old Squeezebox players without AAC decode need LMS `faad` transcoding — acceptable? | Yes; README troubleshooting (R2). | L1 (non-blocking) |
 | LQ8 | Does Radio Now Playing (installed by many users) double-push metadata for our streams? | Our `abclisten://` PH metadata should win; L3 verifies if RNP can be installed in the testbed, else documents. | L3 |
+| LQ9 | Should the Radio menu also show `/listen/radio`'s program collections (a "section extras" registry)? | Resolved 2026-10-19: no — the live probe shows the page holds only the national and local station MetaCollections, which L1 already lists. Programs stay under Programs/Home; no cross-stream registry or file change. | – |
 
 ## Changelog
 - 2026-10-19 — Initial master plan (stream-planning sub-agent).
+- 2026-10-19 — Stakeholder: top level mirrors the ABC listen app. L1's top-level item is **Radio**
+  (`PLUGIN_ABCLISTEN_RADIO`, `topWeight('radio')`, F1's `menuWeights`); no Radio section extras (LQ9: `/listen/radio`
+  holds only station collections). `byPageSlug` maps network homes + `abc.net.au` host variants for D1/D4;
+  `stationItem` also feeds D4's News/Sport/Kids listen rows. Plan-revision sub-agent; #2, #4, #10, #14 amended.

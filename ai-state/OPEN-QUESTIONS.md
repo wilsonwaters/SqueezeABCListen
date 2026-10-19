@@ -32,6 +32,19 @@ Unresolved product/technical decisions and what they block. Resolved items move 
    optional setting in the live stream and confirmed by the stakeholder on pi14.
    _Blocks: nothing in v1._
 
+5. **Audiobooks — list and play them?** ABC's website plays no audiobooks: book pages are `webDistributionRestricted`
+   and its FAQ says audiobooks are Australia-only and streamed only in the ABC listen app (Australian app stores). The
+   chapters are in ABC's public search index with `/geo-001/` MP3 URLs that the CDN serves only to Australian IPs
+   (`research/abc-listen-api.md` §6.1). **Default decision (pending stakeholder confirmation):** list audiobooks under
+   the Audiobooks section (D4 #22) and play chapters where the CDN allows, i.e. on pi14 in Australia (D5 #23); outside
+   Australia the plugin shows "only available in Australia". Alternative: list them with an Australia-only note but
+   never play them (drop D5).
+   _Blocks: nothing (D5 is Should; dropping it only removes chapter lists)._
+
 ## Resolved
+
+- **Top-level Programs label** (2026-10-19, orchestrator decision): the entry is labelled **"Programs"** (its submenu
+  offers By network / A–Z / By type). F1 seeded the text "Programs (A–Z)"; O2 (#16) changes that token's EN text to
+  "Programs" rather than adding a new token.
 
 _(none yet)_

@@ -7,7 +7,7 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - foundation: F1 #1 · F2 #3 · F3 #7
 - live: L1 #2 · L2 #4 · L3 #8 · L4 #10 · L5 #14
 - ondemand: O1 #12 · O2 #16 · O3 #18 · O4 #19
-- discovery: D1 #5 · D2 #6 · D3 #13 (D4 section menus: pending)
+- discovery: D1 #5 · D2 #6 · D3 #13 · D4 #22 · D5 #23
 - myabc: M1 #11 · M2 #20
 - release: R1 #9 · R2 #15 · R3 #17
 
@@ -50,6 +50,13 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   Audiobooks, + Programs, Search, My ABC listen). F1 amended in flight (weighted top-level ordering via
   `Util::topWeight`, "Live radio" → "Radio"). Plan-revision + backlog-reconciliation agent to follow once the last
   spec batch is filed (new section-menus task for News/Sport/Kids listen/Audiobooks; Discover → Home).
+- 2026-10-19 — Plan revision + backlog reconciliation done (sub-agent): section pages probed live (research §6.1, 7 new
+  fixtures); contract 1 rewritten to F1's implemented hook API (`weight`, `topWeight`, `menuWeights`); Discover → Home,
+  Live radio → Radio, Search ABC listen → Search; new **D4 #22** (News/Sport/Kids listen/Audiobooks section menus, M)
+  and **D5 #23** (audiobook chapters from Algolia — ABC's web lists none; Should); Radio gets no section extras
+  (`/listen/radio` holds only station collections); `cardRef` ids = `cardId` (curated teaser ids, some dynamic). All six
+  master plans + `streams.md` changelogged; amendment comments on #2–#7, #9, #10, #12–#20; titles of #2, #5, #6, #13
+  renamed. 22 v1 tasks; wave 4 = L3, L4, O4, D2, D4, D5. New stakeholder question: OPEN-QUESTIONS #5 (audiobooks).
 
 ## Active blockers
 - None. Stakeholder decisions with defaults in OPEN-QUESTIONS §1 (login), §2 (authorship), §4 (live quality).

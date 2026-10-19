@@ -1,7 +1,8 @@
 # Master Plan — ondemand
 
 ## Goal
-From **ABC listen → Programs** users browse ABC listen programs **by network**, **A–Z** and **by type**, open a program
+From **ABC listen → Programs** (top-level, `topWeight('programs')` = 75: after the app-style sections, before Search)
+users browse ABC listen programs **by network**, **A–Z** and **by type**, open a program
 (artwork, description, presenters, network) and its episodes (artwork, synopsis, broadcast date, duration — newest
 first, up to ABC's 250), and play any available episode. Playback goes through `abclisten://episode/<id>`, resolved at
 play time from ABC's episode data with the right rendition for its availability window, so episodes are seekable,
@@ -42,6 +43,9 @@ Extras: playable segments and tracklists. The stream also supplies the **program
      `PLUGIN_ABCLISTEN_EPISODE_RESTRICTED`; nothing in window → `PLUGIN_ABCLISTEN_EPISODE_EXPIRED`; unknown id →
      `PLUGIN_ABCLISTEN_EPISODE_NOT_FOUND`; URL containing `/geo-001/` → `failToken => 'PLUGIN_ABCLISTEN_EPISODE_GEO'`
      ("only available in Australia") so a 403 at scan time reads correctly.
+  4. **No episode document** (audiobook chapters: their page 308s to the book page, which has no `documentProps`)
+     → one Algolia lookup by objectID retrieving `mediaRenditions`/`dates`, choosing from the hit's renditions (geo
+     `failToken`), before `NOT_FOUND`. `/news/<date>/<slug>/<id>` audio documents resolve normally (verified).
 - **`episode` kind** (registered from `Episode->init`): `metadata` → `{title => episode title, artist => program title,
   album => network or program, cover => episode image (600 px) || program image || icon, duration}` from the meta cache;
   URL fallback "ABC listen episode". Never touches `$song->duration`/`startOffset`.
@@ -64,22 +68,27 @@ Extras: playable segments and tracklists. The stream also supplies the **program
     `total` → program refs via `API::cardRef` (`coremedia://teaser/<id>` tolerated); cache 6 h, `stale_ok`.
   - `program($path, $cb)` → `API::nextData($path)` → `{id, title (heroImageWithCTAPrepared.heading), description
     (richText(heroDescriptionPrepared)), presenters, image, network (attributionLinksPrepared), episodeCollectionId
-    (programCollectionPrepared.id), total, firstEpisodes}`; cache 6 h.
+    (programCollectionPrepared.id), total, firstEpisodes, template (programTemplate), restricted
+    (webDistributionRestricted)}`; cache 6 h.
   - `episodes($collectionId, $offset, $size, $cb)` → `bff('episodesWithSegments/x', {collectionId, offset, size})` →
     episode refs `{id (contentUri), docType, title (cardTitle), description, path (articleLink), date
     (cardAttributionPrepared.publishedDate), duration (cardMediaIndicatorPrepared.duration), image, presenters,
     segments[]}`; cache 15 min; `total` capped at 250.
 - **`OnDemand.pm`** (rewrite of the F1 stub; keeps `init` calling `Episode->init`):
-  - `menuItems` → one link **Programs** → `_programsRoot`: **By network** → networks → programs (A–Z within network).
+  - `menuItems` → one link **Programs** (`weight => topWeight('programs')`; `menuWeights` declared) → `_programsRoot`:
+    **By network** → networks → programs (A–Z within network).
   - `programItem` → `type link`, name = title, `image`, line2 = network, `description`, `url => \&_programMenu`.
-  - `_programMenu`: description (`textarea`), "Presented by …", network; then registry extras (M2 Follow); then
+  - `_programMenu`: description (`textarea`), "Presented by …", network; then registry extras (M2 Follow, D5 audiobook
+    Chapters; providers get the program merged with its detail incl. `id`, `template`, `restricted`); then
     episodes newest first: first 50 + **More episodes…** link loading the next 50 (to ABC's 250).
   - `episodeItem` → `type link` + `play => abclisten://episode/<id>` (no `on_select`), name "Mon 19 Oct – <title>" (date
     in name for the Default skin), line2 "<date> · <duration>", `image` (episode, else program), `duration`; writes the
     episode meta cache. `_episodeMenu`: "Play episode" (`type audio`, `on_select play`, `favorites_title`), synopsis
     (`textarea`), "Broadcast <date> · <duration>" text.
   - Empty/error: "No episodes available" / `PLUGIN_ABCLISTEN_LOAD_FAILED` text items; every feed answers exactly once
-    (REF `_respond`/`_textFeed` pattern).
+    (REF `_respond`/`_textFeed` pattern). A program with no episode collection and `restricted` true (ABC audiobooks:
+    `programTemplate: audiobook`, `programCollectionPrepared: null`) shows no "No episodes available" row — D5's
+    registry provider lists its chapters.
 - **Tests** `t/32-programs.t` (fixtures `bff-programAggregationCollection-rn`, `nextdata-program-scienceshow`,
   `bff-episodesWithSegments-scienceshow` + synthetic: missing images/presenters, teaser cards, rich-text edge cases,
   empty collection, 250 cap), `t/33-ondemand-menus.t` (exact item keys for program/episode rows and submenus; paging;
@@ -97,18 +106,20 @@ Extras: playable segments and tracklists. The stream also supplies the **program
   lists, flagged with a text note.
 - **Menus** (`_programsRoot`, owned from now on): **All programs A–Z** → letters A–Z and "0–9" with counts → programs
   (`programItem`; sorting ignores a leading "The"); **By type** → Podcasts, Catch-up radio, Music, News briefings,
-  Audiobooks, Other (from `programType`).
+  Audiobooks, Other (from `programType`). Public `programsByType($client, $cb, $typeKey)` feeds D2's Podcasts → All
+  podcasts A–Z and D4's Audiobooks → All audiobooks A–Z.
 - **Tests** `t/34-program-index.t` (fixture `algolia-programs-list`; grouping, "The" sorting, digits, missing types,
   fallback path, cache/last-good).
 - **Runtime**: Programs → All programs A–Z → S → The Science Show → episodes → play; By type → Audiobooks lists programs
-  (geo note for audiobooks); counts ≈ ABC's ~720 programs; Default + Material screenshots.
+  (20 books; chapters only once D5 is merged — ABC's web has no chapter list; geo note); counts ≈ ABC's ~720 programs;
+  Default + Material screenshots.
 
 ### O4 — episode extras
 - Segments: episodes whose card has `segments[]` show **Segments (N)** in `_episodeMenu`; each segment is an
   `episodeItem` (`abclisten://episode/<segmentId>`, docType `audiosegment`, resolved by O1).
 - Tracklist: on opening an episode menu, lazily `API::nextData(<episode path>)` → `tracklistPrepared` → **Tracklist (N)**
   text rows "Artist – Title" (with relative time when `timestampRelative` exists); none → "No tracklist".
-- "More from <program>" (`programItem`) in the episode menu — for episodes reached from Discover/Search/My ABC.
+- "More from <program>" (`programItem`) in the episode menu — for episodes reached from Home/sections/Search/My ABC.
 - Episode song info (TrackInfo provider, registered in `Episode->init`): synopsis, program link, tracklist while an
   `abclisten://episode/` track plays.
 - **Tests** `t/35-episode-extras.t` (segment rows; tracklist parse incl. missing timestamps; "More from" present only
@@ -122,10 +133,12 @@ Extras: playable segments and tracklists. The stream also supplies the **program
   `ProtocolHandler.pm`.
 - **F3**: `nextData` (program/episode documents, buildId refresh), `bff` (aggregation collections, episodes),
   `algolia` (O3), `cardRef`/`richText`/`imageUrl`/`sitePath`.
-- **Episode meta cache**: written by `episodeItem` (all callers), O1 resolver, D3 (seeded renditions); read by O1, O4.
-- **Builders for other streams**: L4 (schedule → `programItem`), D1/D2 (collection cards), D3 (search results), M2
-  (followed programs, latest episodes; Follow item via `registerProgramMenuProvider`). Consumers never construct episode
-  URLs or OPML shapes themselves.
+- **Episode meta cache**: written by `episodeItem` (all callers), O1 resolver, D3 and D5 (seeded renditions); read by O1,
+  O4.
+- **Builders for other streams**: L4 (schedule → `programItem`), D1/D2/D4 (Home, Podcasts and section cards), D3
+  (search results), D5 (audiobook chapters via `episodeItem`; Chapters link via `registerProgramMenuProvider`), M2
+  (followed programs, latest episodes; Follow item via the registry). Consumers never construct episode URLs or OPML
+  shapes themselves.
 - **Builder ownership** (`OnDemand.pm`): O2 creates all; O3 then owns `_programsRoot`; O4 owns `episodeItem` and
   `_episodeMenu`; `programItem`/`_programMenu`/registry stay O2's.
 - **Release**: R2 smoke plays and seeks an episode; README documents availability windows, geo restriction, 250 cap.
@@ -156,7 +169,12 @@ Extras: playable segments and tracklists. The stream also supplies the **program
 | OQ4 | Collection ids for NewsRadio, Classic 2, Radio Australia/Pacific program lists. | O2 discovers via `nextData('/<network>/programs')` if cheap; else those networks are reachable via A–Z/By type only. | O2 |
 | OQ5 | Episode row text: duration in the Default-skin `name` too? | No — date in name; duration in line2 and the episode submenu (meets criterion 2 via the submenu). | O2 |
 | OQ6 | Hide likely-expired catch-up episodes (AAC-only programs > 28 days) at list time? | No (needs per-episode data); play-time message instead; stretch O5. | O2 |
-| OQ7 | Audiobooks and BBC co-productions are often `/geo-001/` — label them in lists? | No list label (needs per-episode data); geo message at play time; README note. | O1, O3 |
+| OQ7 | Audiobooks and BBC co-productions are often `/geo-001/` — label them in lists? | No list label (needs per-episode data); geo message at play time; README note. D4's Audiobooks section carries one "play only in Australia" text item. | O1, O3 |
+| OQ8 | Audiobook chapters have no episode document (page 308s to the book). How does O1 resolve one after the seeded window? | One Algolia objectID lookup with `mediaRenditions`/`dates`; choose from the hit (O1 #12 amendment). | O1 |
 
 ## Changelog
 - 2026-10-19 — Initial master plan (stream-planning sub-agent).
+- 2026-10-19 — Stakeholder: top level mirrors the ABC listen app; Programs uses `topWeight('programs')` and declares
+  `menuWeights`. Section-page probe: audiobooks have no web episode list → O2's `program()` adds `template`/`restricted`,
+  providers get the merged detail, no "No episodes" row for restricted programs without a collection; O1 resolves
+  chapters via an Algolia fallback (OQ8); O3's `programsByType` gains D4 as a consumer. #12, #16, #18, #19 amended.

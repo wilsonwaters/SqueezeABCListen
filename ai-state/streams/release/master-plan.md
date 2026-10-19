@@ -18,7 +18,7 @@ Everything is ported from SqueezeRTRFM v1.0.0 (`research/lms-plugin-guide.md` §
 | ID | Summary | Size | Depends on | Status |
 |---|---|---|---|---|
 | R1 | Packaging & distribution: `build.sh`, `check-package.sh`, `update-repo-xml.pl`, `changelog-section.sh`, `lms-repo-install.sh`, `repo.xml` (placeholder sha), `release.yml`, CI package checks, README install section, RELEASING.md, CHANGELOG.md; local repo-install test; cut v0.1.0 | M | F1 | planned |
-| R2 | `scripts/smoke.sh` acceptance test (+ CLI test with fake JSON-RPC); README usage tour, screenshots, limitations, troubleshooting, compatibility, privacy; `docs/official-repository.md`; CHANGELOG for all shipped tasks | M | all shipping tasks (L1–L5, O1–O4, D1–D3, M1–M2, R1) or their descoping | planned |
+| R2 | `scripts/smoke.sh` acceptance test (15 checks incl. the 10-entry top level, sections, Kids listen live; + CLI test with fake JSON-RPC); README usage tour in top-level order, screenshots, limitations, troubleshooting, compatibility, privacy; `docs/official-repository.md`; CHANGELOG for all shipped tasks | M | all shipping tasks (L1–L5, O1–O4, D1–D5, M1–M2, R1) or their descoping | planned |
 | R3 | v1.0.0: version bump → workflow release; clean-profile install from raw GitHub `repo.xml`; `smoke.sh` pass; final system verification (Default + Material); pi14 acceptance checklist | S | R2 | planned |
 
 ### R1 — packaging, repo.xml, automated release, v0.1.0
@@ -60,20 +60,25 @@ Everything is ported from SqueezeRTRFM v1.0.0 (`research/lms-plugin-guide.md` §
 ### R2 — acceptance smoke test + user docs
 - **`scripts/smoke.sh <lms-url> <player-mac> [--skip-live] [--station <SERVICE_ID>] [--local <SERVICE_ID>]`** (bash +
   curl + jq; walks menus **by name**; prints PASS/FAIL/SKIP per check; non-zero exit on FAIL):
-  1. server up; 2. player connected; 3. plugin enabled; 4. Radio lists "ABC listen"; 5. top level is Live radio,
-  Programs, Discover, Search ABC listen, My ABC listen; 6. a national station plays (`time` advances ≥ 5 s) and `status`
-  shows program/song metadata ≠ the station name (default `TRIPLEJ`); 7. a local station plays (default
-  `LOCAL_SYDNEY`); 8. Programs → By network → first program → first episode plays and seeks (`time 600` → ≥ 600);
-  9. All programs A–Z non-empty; 10. Discover → first collection non-empty; 11. search "science" returns ≥ 1 program
-  and ≥ 1 episode; 12. follow a program → listed under My ABC listen → unfollow (state restored). Live checks `SKIP`
-  with `--skip-live`.
+  1. server up; 2. player connected; 3. plugin enabled; 4. LMS Radio lists "ABC listen"; 5. top level is exactly
+  **Home, Radio, Podcasts, News, Sport, Kids listen, Audiobooks, Programs, Search, My ABC listen** (minus descoped);
+  6. a national station plays from **Radio** (`time` advances ≥ 5 s) and `status` shows program/song metadata ≠ the
+  station name (default `TRIPLEJ`); 7. a local station plays (default `LOCAL_SYDNEY`; Radio → Local radio); 8. Programs
+  → By network → first program → first episode plays and seeks (`time 600` → ≥ 600); 9. All programs A–Z non-empty;
+  10. Home → first collection non-empty; 11. Search "science" returns ≥ 1 program and ≥ 1 episode; 12. follow a
+  program → listed under My ABC listen → unfollow (state restored); 13. Podcasts → New & Noteworthy non-empty; 14. News,
+  Sport, Kids listen and Audiobooks each list ≥ 1 non-text item; 15. the Kids listen live station
+  (`abclisten://live/KIDSLISTEN`) plays from Kids listen. Live checks (6, 7, 15) `SKIP` with `--skip-live`.
+  `SMOKE: 15/15`.
 - **Tests** `t/96-smoke-strings.t` (menu names in smoke.sh equal strings.txt values), `t/97-smoke-cli.t` (smoke.sh
   against a fake JSON-RPC server: pass, fail and skip paths; port REF `t/19`).
-- **README**: usage tour (Live radio incl. local/time-zone versions and schedules; Programs by network/A–Z/type;
-  Discover; Search incl. LMS global search; My ABC listen and settings); screenshots (Default + Material) in
-  `docs/images/` (small PNGs); now-playing behaviour; limitations (56 kbps default live and the quality setting,
-  HLS-only/event-only stations, newest-250 episodes, catch-up AAC ~28-day expiry, Australia-only audio, unofficial ABC
-  endpoints may change); troubleshooting (`faad` for older players, Radio Now Playing coexistence, raising
+- **README**: usage tour in top-level order (Home; Radio incl. local/time-zone versions and schedules; Podcasts; News;
+  Sport; Kids listen — live station, featured, all programs, Kids & Families podcasts, Books for Kids, News Time;
+  Audiobooks incl. chapters/Play all/Australia-only; Programs by network/A–Z/type; Search incl. LMS global search; My
+  ABC listen and settings); ≥ 9 screenshots (Default + Material) in `docs/images/` (small PNGs) incl. the 10-entry top
+  level in both skins, Kids listen and a book's Chapters; now-playing behaviour; limitations (56 kbps default live and the quality setting,
+  HLS-only/event-only stations incl. Kids listen time-zone versions, newest-250 episodes, catch-up AAC ~28-day expiry,
+  Australia-only audio incl. all audiobooks, unofficial ABC endpoints may change); troubleshooting (`faad` for older players, Radio Now Playing coexistence, raising
   `plugin.abclisten` log level, Algolia "busy" message, "not available" messages); compatibility (tested on 9.1.x;
   claims 8.3+); privacy (no ABC login; follows stored locally in LMS prefs); self-test with `smoke.sh`; disclaimer.
 - `docs/official-repository.md` (port REF; re-check `ABCListen` is unused in the official `extensions.xml`;
@@ -90,10 +95,14 @@ Everything is ported from SqueezeRTRFM v1.0.0 (`research/lms-plugin-guide.md` §
   `lms-repo-install.sh`); `scripts/smoke.sh` passes; plugin prefs contain only defaults/follows — no credentials
   (criterion 5); restore the dev setup afterwards.
 - Final system verification by the runtime-verification agent: every success criterion walked in Default + Material and
-  via `menu:1` JSON-RPC; `server.log` clean.
+  via `menu:1` JSON-RPC, including the 10-entry top level in both skins; `server.log` clean.
 - Draft the **pi14 acceptance checklist** for the orchestrator's handoff: add the repo URL and install; run `smoke.sh`
-  against pi14; `liveQuality` = mediahub; ABC Wide Bay; a `/geo-001/` episode; an AU schedule/EPG spot check; a hardware
-  player (AAC/`faad`); optional PlayHLS.
+  against pi14; **walk each top-level entry** (Home, Radio, Podcasts, News, Sport, Kids listen, Audiobooks, Programs,
+  Search, My ABC listen) — **Kids listen specifically**: live station plays, Featured/Latest Programs episode plays, all
+  Kids listen programs → episode plays, Kids & Families podcasts, Books for Kids → Chapters → chapter plays, News Time;
+  `liveQuality` = mediahub; ABC Wide Bay (Radio → Local radio → Queensland); a `/geo-001/` episode and an audiobook
+  chapter with Play all (Audiobooks → a book → Chapters); an AU schedule/EPG spot check (Radio → Radio National →
+  Today); Podcasts → Browse by category in Material; a hardware player (AAC/`faad`); optional PlayHLS.
 
 ## Integration points
 - **foundation**: R1 appends package checks to F1's `scripts/check.sh` and `ci.yml`; `install.xml` is
@@ -126,3 +135,8 @@ Everything is ported from SqueezeRTRFM v1.0.0 (`research/lms-plugin-guide.md` §
 
 ## Changelog
 - 2026-10-19 — Initial master plan (stream-planning sub-agent).
+- 2026-10-19 — Stakeholder: top level mirrors the ABC listen app. R2's smoke test checks the 10-entry top level (Home,
+  Radio, Podcasts, News, Sport, Kids listen, Audiobooks, Programs, Search, My ABC listen) and adds Podcasts, sections
+  and Kids listen live checks (15 total); README tour/screenshots follow the new top level; R3's final verification and
+  pi14 checklist walk every top-level entry, Kids listen in detail, and audiobook chapters. R2 now also waits for D4
+  (#22) and D5 (#23). #9, #15, #17 amended.

@@ -3,7 +3,8 @@
 ## Goal
 Deliver the small, frozen platform every ABC listen feature builds on:
 1. **F1** — the first merge is a thin vertical slice: an installable plugin that puts **"ABC listen"** in the LMS Radio
-   menu with **5 national live stations that play** on DevPlayer, plus the frozen 5-hook menu API, shared HTTP/time
+   menu with **5 national live stations that play** on DevPlayer (under ABC listen → **Radio**), plus the frozen 5-hook
+   menu API with weighted top-level ordering, shared HTTP/time
    helpers and the ported LMS-free test harness + `scripts/check.sh` + CI.
 2. **F2** — stable `abclisten://` playback URLs through one thin protocol handler with a per-kind resolver registry, so
    live (L*) and on-demand (O*) plug in playback without ever editing the handler; favourites survive restarts.
@@ -17,7 +18,7 @@ Packaging, `repo.xml`, the release workflow and user docs are the **release** st
 
 | ID | Summary | Size | Depends on | Status |
 |---|---|---|---|---|
-| F1 | Installable vertical slice: Radio → "ABC listen" → "Live radio" with 5 playable national stations; frozen hook API + module stubs; `HTTP.pm`, `Util.pm` contracts; ported test harness; `scripts/check.sh`; CI | M (upper; review plan like an L) | – | planned |
+| F1 | Installable vertical slice: Radio → "ABC listen" → "Radio" with 5 playable national stations; frozen hook API (weighted top level, `menuWeights`) + module stubs; `HTTP.pm`, `Util.pm` contracts (incl. `topWeight`); ported test harness; `scripts/check.sh`; CI | M (upper; review plan like an L) | – | in progress (PR #21) |
 | F2 | `abclisten://` protocol handler framework: kind registry (resolve/metadata/onStream/onStop), alternates + failure tokens, scan-callback wrapping, `getMetadataFor` dispatch; slice stations move to `abclisten://live/<ID>`; favourites replay | M | F1 | planned |
 | F3 | ABC data client `API.pm` (BFF, `_next/data` with buildId, Algolia with runtime key discovery + hourly budget, PAPI, music API, text) + caching/coalescing/last-good + pure helpers; `scripts/abc-endpoints-check.sh` drift probe | M | F1 | planned |
 
@@ -36,7 +37,14 @@ F2 and F3 are independent (wave 1, in parallel with R1 and M1).
   `qw(Live OnDemand Discover Search MyABC)` (each `init` in `eval`; async join; exactly-once; `HOOK_TIMEOUT` 25 s;
   failing hook → one error text item). Registers `abclisten` → `Plugins::ABCListen::ProtocolHandler` (so F2 never
   touches `Plugin.pm`).
-- Hook stubs: `Live.pm` → `menuItems` returns one link **"Live radio"** containing triple j, Double J, Radio National,
+  **Amended in flight (2026-10-19, stakeholder: app-style top level; as implemented in PR #21):** top-level items may
+  carry `weight`; `Plugin.pm` merges all hooks' items and stable-sorts on it (missing/non-numeric = 100, ties keep hook
+  order then item order) and strips the key from shallow copies; a hook may return several top-level items and may
+  implement optional `menuWeights()` — a failing hook's error item sorts at its lowest declared weight, else 100.
+  `Util::topWeight($name)`: home 10, radio 20, podcasts 30, news 40, sport 50, kids 60, audiobooks 70, programs 75,
+  search 80, myabc 90 (`DEFAULT_TOP_WEIGHT` 100). Every hook that returns top-level items declares `menuWeights()`.
+- Hook stubs: `Live.pm` → `menuItems` returns one link **"Radio"** (`PLUGIN_ABCLISTEN_RADIO`, `weight =>
+  topWeight('radio')`, plus `Live->menuWeights`; renamed from "Live radio" in flight) containing triple j, Double J, Radio National,
   ABC Classic, ABC Jazz as `type audio`, `on_select play` items with plain StreamGuys URLs
   (`https://abc.streamguys1.com/live/<mount>/icecast.audio`, mounts `triplejnsw`, `doublejnsw`, `rnnsw`, `classicfmnsw`,
   `abcjazz`), `favorites_url`/`favorites_icon`, station logo if a crop-param wcms URL is at hand else the plugin icon.
@@ -56,7 +64,8 @@ F2 and F3 are independent (wave 1, in parallel with R1 and M1).
     undef (service id `[A-Z0-9_]+`; episode id digits).
   - Episode-metadata cache contract `setEpisodeMeta`/`getEpisodeMeta` (shape in `streams.md` contract 3; TTL 30 days;
     merging writes keep existing non-empty fields).
-- `strings.txt`: EN only; header comment as REF; `# === <ID> ===` sections for every task (F1…R3) pre-seeded with
+- `strings.txt`: EN only; header comment as REF; `# === <ID> ===` sections for the 20 original tasks (F1…R3; later
+  tasks such as D4/D5 append their own section) pre-seeded with
   every token listed in the master plans' integration points.
 - Icon: 512×512 PNG at `ABCListen/HTML/EN/plugins/ABCListen/html/images/icon.png` (FQ1).
 
@@ -81,8 +90,8 @@ notice if missing locally). `.github/workflows/ci.yml` installs `libxml2-utils l
 shellcheck curl jq` and runs check.sh on PRs and `main`.
 
 **Runtime demo** (testbed lock): `dev/link-plugin.sh --restart`; `["pref","plugin.state:ABCListen","?"]` → `enabled`;
-`["radios",0,50]` lists "ABC listen"; `["abclisten","items",0,50]` → "Live radio"; drill in → 5 stations; play triple j →
-`mode=play`, `time` advancing over 10 s; Default skin screenshot of Radio → ABC listen → Live radio (icon visible);
+`["radios",0,50]` lists "ABC listen"; `["abclisten","items",0,50]` → "Radio"; drill in → 5 stations; play triple j →
+`mode=play`, `time` advancing over 10 s; Default skin screenshot of Radio → ABC listen → Radio (icon visible);
 `server.log` has no `plugin.abclisten` errors. JSON-RPC with `menu:1` shows the same items.
 
 ### F2 — `abclisten://` protocol handler framework
@@ -131,8 +140,10 @@ shellcheck curl jq` and runs check.sh on PRs and `main`.
   - Pure helpers: `imageUrl($preparedOrUrl, $px)` (wcms: keep crop params, set `width`/`height`; never strip crop
     params; `resize.abcradio.net.au`: pick nearest `srcSet` size; other URLs unchanged); `richText($descriptor)`
     (flatten `type:"text"` nodes, paragraph breaks); `coreMediaRef('coremedia://program/123')` → `('program', 123)`;
-    `cardRef($card)` → `{type, id, title, tagline, path, image, date, duration, programId, docType}` (program cards: name
-    from `cardImagePrepared.alt` when `cardTitle` is an editorial tagline — FQ4); `sitePath($absOrRelUrl)`.
+    `cardRef($card)` → `{type, id, uriId, title, tagline, path, image, date, duration, programId, docType, description}`
+    (`id` = `cardId` when numeric, else the `articleLink` leaf, else the `contentUri` id — curated `contentUri` ids are
+    often teaser ids, some dynamic; program cards: name from `cardImagePrepared.alt` when `cardTitle` is an editorial
+    tagline — FQ4); `sitePath($absOrRelUrl)` (accepts `www.abc.net.au` and `abc.net.au`).
 - `scripts/abc-endpoints-check.sh` (bash + curl + jq; manual, never in CI): one request per endpoint family (listen
   search page/buildId, a `_next/data` program page, `episodesWithSegments`, `collection`, `epgNowPlaying`,
   `musicNowPlaying`/music API, `schedule`, PAPI services, Algolia query, one `.pls`) asserting the JSON paths our
@@ -147,7 +158,9 @@ shellcheck curl jq` and runs check.sh on PRs and `main`.
   `$HTTPS_PROXY`) + `scripts/check.sh` green; L1/O2 exercise `API.pm` in LMS.
 
 ## Integration points
-- **Hook API (frozen in F1)**: Live (L1–L5), OnDemand (O1–O4), Discover (D1–D2), Search (D3), MyABC (M1–M2).
+- **Hook API (frozen in F1)**: Live (L1–L5; top-level Radio), OnDemand (O1–O4; Programs), Discover (D1, D2, D4, D5;
+  Home, Podcasts, News, Sport, Kids listen, Audiobooks), Search (D3; Search), MyABC (M1–M2; My ABC listen). Each
+  declares `menuWeights()` for its `Util::topWeight` names.
 - **PH registry (frozen in F2)**: `live` kind from `Live->init` (F2 stub → L1/L2/L3/L5), `episode` kind from
   `Episode->init` (called by `OnDemand->init`; O1, O4). L5 relies on `alternates` + `hls` candidate flag; O1 relies on `failToken` for the geo
   message.
@@ -181,3 +194,9 @@ shellcheck curl jq` and runs check.sh on PRs and `main`.
 
 ## Changelog
 - 2026-10-19 — Initial master plan (stream-planning sub-agent).
+- 2026-10-19 — F1 amended in flight (stakeholder: top level mirrors the ABC listen app): weighted top-level ordering
+  (`weight`, `Util::topWeight`, optional `menuWeights()` for failing-hook placement, several items per hook), "Live radio"
+  → "Radio", top-level strings seeded (Home, Radio, News, Kids listen, Audiobooks, Programs (A–Z); `_SEARCH` now
+  "Search"; 95 tokens); contract 1 in `streams.md` updated to match PR #21. F3: `cardRef` id = `cardId` (curated teaser
+  ids, some dynamic) + `uriId`; `sitePath` accepts `abc.net.au` without `www` (section-page probe, research §6.1; #7
+  amended). Plan-revision sub-agent.

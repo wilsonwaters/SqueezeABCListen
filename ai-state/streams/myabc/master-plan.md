@@ -52,13 +52,14 @@ ABC-account sync (Gigya login, cross-app follows/history) is stretch **M3**, out
   program `path`, deduped, cap 200, oldest dropped with an INFO log); `follow(\%program)`, `unfollow($path)`,
   `isFollowed($path)`, `list()` (A–Z). `MyABC->init` does `$prefs->init({followed => []})`.
 - **Program menus**: `OnDemand->registerProgramMenuProvider` adds **Follow this program** / **Unfollow this program**
-  at the top of every program menu (Programs, A–Z, Discover, Search, schedule links — all via `programItem`). The item
+  at the top of every program menu (Programs, A–Z, Home, Podcasts, sections, Search, schedule links — all via `programItem`). The item
   is an OPML action (`type => 'link'`, coderef url) that toggles and answers with one confirmation text item
   (`showBriefly`, `nextWindow => 'parent'`; MQ2).
 - **Song info**: `Slim::Menu::TrackInfo` provider for `abclisten://episode/` tracks → Follow/Unfollow "<program>"
   (program path from the episode meta cache: canonical episode path minus its last two segments, MQ3; hidden when
   unknown).
-- **`MyABC.pm`** `menuItems` → link **My ABC listen** →
+- **`MyABC.pm`** `menuItems` → link **My ABC listen** (`weight => topWeight('myabc')`, the last top-level entry;
+  `MyABC->menuWeights` declared) →
   - **Latest episodes**: for each followed program `Programs->program(path)` → `Programs->episodes(collectionId, 0, 5)`
     (≤ 4 concurrent, per-program failures skipped and logged), merged newest-first, max 50, built with
     `OnDemand->episodeItem` (name prefixed with the program title); cache 15 min.
@@ -74,12 +75,14 @@ ABC-account sync (Gigya login, cross-app follows/history) is stretch **M3**, out
   `["pref","plugin.abclisten:followed","?"]` holds only program refs (no personal data, no credentials).
 
 ## Integration points
-- **F1 hook API**: `MyABC` is the last top-level hook; `MyABC->init` creates the settings page (M1) and inits
+- **F1 hook API**: `MyABC` returns the last top-level item (weight 90, contract 1); `MyABC->init` creates the settings page (M1) and inits
   `homeState`/`followed`. myabc never edits `Plugin.pm`.
 - **live**: L1/L4 read `homeState` (undef/'' ⇒ NSW behaviour); L5 adds the `liveQuality` section to `basic.html` and
   appends to the `Settings.pm` prefs list (rule 4 in `streams.md`).
 - **ondemand**: M2 depends on O2's builders, `Programs` data API and `registerProgramMenuProvider`; it never edits
-  `OnDemand.pm`. Programs reached from discovery (D1–D3) and schedules (L4) get Follow automatically.
+  `OnDemand.pm`. Programs reached from Home, Podcasts, the News/Sport/Kids listen/Audiobooks sections, Search (D1–D5)
+  and schedules (L4) get Follow automatically; audiobook menus show D5's Chapters link before Follow (registration
+  order Discover → MyABC).
 - **foundation**: `install.xml` `optionsURL` (M1, sanctioned); `Slim::Web::Settings` stub exists from F1.
 - **release**: README documents home state, follows (local, server-wide), and that no ABC login exists in v1.
 - **Strings** (pre-seeded by F1): M1 `PLUGIN_ABCLISTEN_HOME_STATE`, `PLUGIN_ABCLISTEN_HOME_STATE_DESC`,
@@ -107,3 +110,6 @@ ABC-account sync (Gigya login, cross-app follows/history) is stretch **M3**, out
 
 ## Changelog
 - 2026-10-19 — Initial master plan (stream-planning sub-agent).
+- 2026-10-19 — Stakeholder: top level mirrors the ABC listen app. My ABC listen uses `topWeight('myabc')` (last) and
+  declares `menuWeights`; Follow reaches the new section menus (D4) and audiobook menus (D5) via the registry, no M2
+  work. #20 amended.
