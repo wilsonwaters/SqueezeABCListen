@@ -39,7 +39,8 @@ if (selector === undefined && isMaterial) selector = '#main-toolbar';
 
 const browser = await chromium.launch({ headless: true });
 try {
-  const page = await browser.newPage({ viewport: { width, height } });
+  // Material throws on the container's default locale (en-US@posix) and then renders no dialogs or player status.
+  const page = await browser.newPage({ viewport: { width, height }, locale: 'en-AU' });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   const resp = await page.goto(url, { waitUntil, timeout });

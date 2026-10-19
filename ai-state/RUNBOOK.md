@@ -429,3 +429,14 @@ PLUGIN_SRC=<worktree>/ABCListen /home/user/SqueezeABCListen/dev/link-plugin.sh -
 ```
 
 Stale locks (> 60 min) are broken automatically. Keep lock hold times short.
+
+## Gotchas learned during execution
+- **Material + headless Chromium locale.** Material throws `RangeError: Invalid language tag: en-US@posix` with the
+  container's default locale and then opens no dialogs and shows no player status. `dev/browser/screenshot.mjs` now
+  creates its page with `locale: 'en-AU'`; scratch Playwright scripts must set a locale too.
+- **Installing from GitHub works from the container.** Release assets and raw `repo.xml` download both via
+  `$HTTPS_PROXY` and via LMS's proxychains route (R1 RQ7), so the one-URL install can be tested here against the real
+  GitHub `repo.xml`.
+- **Testbed lock etiquette.** Hold the lock only while touching LMS (link → checks → restore → release). Long holds
+  (M1 held it ~80 min) stall every other agent; acquire waits up to 30 min and breaks locks older than 60 min.
+
