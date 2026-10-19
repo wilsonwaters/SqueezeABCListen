@@ -42,8 +42,13 @@ Unresolved product/technical decisions and what they block. Resolved items move 
   anywhere — commits, PRs, issues, comments, docs or code. All commits are authored and committed as
   `Wilson Waters <wilsonwaters@users.noreply.github.com>` (including the release workflow's `repo.xml` commit); no
   attribution trailers or generated-by footers. PRs are squash-merged with an explicit clean commit message.
-  Commits made before this instruction carry the old author/trailers; rewriting `main` needs a force-push, which is
-  the stakeholder's call.
+  Commits made before this instruction carry the old author/trailers; the stakeholder chose to **leave existing
+  history as is** (no force-push).
+  **Mechanics for every agent:** the GitHub MCP connector appends a generated-by footer to anything it *creates*
+  (PR bodies, issues, comments) but not on *updates* — so every create must be followed by a re-read and an edit that
+  removes the footer. Squash-merge with an explicit clean commit message (GitHub then adds no co-author lines).
+  Feature-branch commits that can't be rewritten (permission-denied) are handled by re-committing the tree as one
+  clean commit on a fresh branch — never by rewriting pushed history.
 
 - **Top-level Programs label** (2026-10-19, orchestrator decision): the entry is labelled **"Programs"** (its submenu
   offers By network / A–Z / By type). F1 seeded the text "Programs (A–Z)"; O2 (#16) changes that token's EN text to
