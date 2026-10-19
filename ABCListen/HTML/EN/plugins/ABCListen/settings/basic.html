@@ -1,0 +1,27 @@
+[% PROCESS settings/header.html %]
+
+[%# Owner sections (ai-state/streams.md, parallel-work rule 4): each owner edits only between its own
+    open/close marker pair; a new owner adds its own pair below the last one. %]
+<!-- === M1 === -->
+	[%# id = the pref name (core convention): the settings footer binds its validator to the element with
+	    that id, and the Classic/Material footer throws a script error if there is none. The setting
+	    WRAPPER's title is a plain div, so the select is named by aria-label. %]
+	[% WRAPPER setting title="PLUGIN_ABCLISTEN_HOME_STATE" desc="PLUGIN_ABCLISTEN_HOME_STATE_DESC" %]
+		<select class="stdedit" name="pref_homeState" id="homeState" aria-label="[% 'PLUGIN_ABCLISTEN_HOME_STATE' | string | html %]">
+			<option value=""[% IF prefs.pref_homeState == '' %] selected="selected"[% END %]>[% 'PLUGIN_ABCLISTEN_HOME_STATE_NONE' | string | html %]</option>
+			<option value="ACT"[% IF prefs.pref_homeState == 'ACT' %] selected="selected"[% END %]>[% 'PLUGIN_ABCLISTEN_STATE_ACT' | string | html %]</option>
+			<option value="NSW"[% IF prefs.pref_homeState == 'NSW' %] selected="selected"[% END %]>[% 'PLUGIN_ABCLISTEN_STATE_NSW' | string | html %]</option>
+			<option value="NT"[% IF prefs.pref_homeState == 'NT' %] selected="selected"[% END %]>[% 'PLUGIN_ABCLISTEN_STATE_NT' | string | html %]</option>
+			<option value="QLD"[% IF prefs.pref_homeState == 'QLD' %] selected="selected"[% END %]>[% 'PLUGIN_ABCLISTEN_STATE_QLD' | string | html %]</option>
+			<option value="SA"[% IF prefs.pref_homeState == 'SA' %] selected="selected"[% END %]>[% 'PLUGIN_ABCLISTEN_STATE_SA' | string | html %]</option>
+			<option value="TAS"[% IF prefs.pref_homeState == 'TAS' %] selected="selected"[% END %]>[% 'PLUGIN_ABCLISTEN_STATE_TAS' | string | html %]</option>
+			<option value="VIC"[% IF prefs.pref_homeState == 'VIC' %] selected="selected"[% END %]>[% 'PLUGIN_ABCLISTEN_STATE_VIC' | string | html %]</option>
+			<option value="WA"[% IF prefs.pref_homeState == 'WA' %] selected="selected"[% END %]>[% 'PLUGIN_ABCLISTEN_STATE_WA' | string | html %]</option>
+		</select>
+	[% END %]
+<!-- === /M1 === -->
+
+<!-- === L5 === -->
+<!-- === /L5 === -->
+
+[% PROCESS settings/footer.html %]

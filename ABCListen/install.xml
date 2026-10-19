@@ -9,6 +9,7 @@
 	<category>radio</category>
 	<defaultState>enabled</defaultState>
 	<icon>plugins/ABCListen/html/images/icon.png</icon>
+	<optionsURL>plugins/ABCListen/settings/basic.html</optionsURL>
 	<homepageURL>https://github.com/wilsonwaters/SqueezeABCListen</homepageURL>
 	<targetApplication>
 		<id>Lyrion Music Server</id>
