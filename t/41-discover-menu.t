@@ -1,13 +1,15 @@
 #!/usr/bin/perl
-# Plugins::ABCListen::Discover (top-level "Home", D1) and the collection menus of
-# Plugins::ABCListen::Collections, offline (SimpleAsyncHTTP stub fails any unrouted URL; fake
-# clock): the Home item (exact keys, weight, menuWeights, no network) and its place at the top;
-# Home's root (Featured, then the home collections in page order; Featured omitted without a
-# mappable hero item); collection menus (20 per page + More… with the right offsets, last page
+# Plugins::ABCListen::Discover (top-level "Home", D1; "Podcasts" and Home's root, D2) and the
+# collection menus of Plugins::ABCListen::Collections, offline (SimpleAsyncHTTP stub fails any
+# unrouted URL; fake clock): the Home and Podcasts items (exact keys, weights, menuWeights, no
+# network) and their place at the top; Home's root (Featured, Popular now, Popular in sport, then
+# the home collections in page order without the home "Categories" collection; Featured omitted
+# without a mappable hero item; no request beyond the home page); collection menus (20 per page + More… with the right offsets, last page
 # without More…, missing total, empty / null / past-the-end pages, API errors, the depth limit);
-# Categories -> True Crime (dynamiccollection leaf ids); Radio Stations with and without L1's live
+# the home Categories collection -> True Crime (dynamiccollection leaf ids); Radio Stations with and without L1's live
 # API; the keys the menu:1 (Jive) rendering relies on; readable names everywhere; exactly one
-# callback on every path.
+# callback on every path. The Podcasts menu itself: t/42-categories.t; Popular now /
+# Popular in sport: t/43-recommendations.t.
 #
 # Fixtures: t/data/discovery/ (see t/40-collections.t) and the F3 search page
 # t/data/foundation/listen-search.trimmed.html (buildId build-3afcd04f).
@@ -51,17 +53,21 @@ my $ICON        = Plugins::ABCListen::Util::ICON;
 my $JSON_TYPE   = { 'Content-Type' => 'application/json' };
 my $CLIENT      = ABCListenTest::FakeClient->new('00:00:00:00:00:01');
 my $HOME_ROOT   = \&Plugins::ABCListen::Discover::_homeRoot;
+my $PODCASTS    = \&Plugins::ABCListen::Discover::_podcastsRoot;
+my $RECS_MENU   = \&Plugins::ABCListen::Discover::_recommendationsMenu;
 my $COLL_MENU   = \&Plugins::ABCListen::Collections::_collectionMenu;
 my $LOAD_FAILED = string('PLUGIN_ABCLISTEN_LOAD_FAILED');
 my $EMPTY       = string('PLUGIN_ABCLISTEN_EMPTY_COLLECTION');
 my $MORE        = string('PLUGIN_ABCLISTEN_MORE');
 my $FEATURED    = string('PLUGIN_ABCLISTEN_FEATURED');
+my $POPULAR     = string('PLUGIN_ABCLISTEN_POPULAR_NOW');
+my $SPORT       = string('PLUGIN_ABCLISTEN_POPULAR_SPORT');
 
 my @HOME_TITLES = (
 	"Today's Top Picks", 'Top 100 Australian Books', 'Radio Stations', 'Latest News', 'Most Popular Podcasts',
 	'True Crime & Investigations', 'Health & Wellbeing', 'Society & Culture', 'Music For Every Mood',
-	'Looking For Something New?', 'Relax & Sleep', 'Categories',
-);
+	'Looking For Something New?', 'Relax & Sleep',
+);    # the page's 13th collection, "Categories" (14123152), is listed under Podcasts instead
 
 Slim::Utils::Log->addLogCategory( { category => 'plugin.abclisten', defaultLevel => 'WARN', description => 'PLUGIN_ABCLISTEN' } );
 
@@ -149,45 +155,59 @@ sub warnings_from_collections { grep { $_->{level} =~ /WARN|ERROR/ && $_->{messa
 
 # ---------------------------------------------------------------------------
 
-subtest 'menuItems: one "Home" link, weight 10, no network; menuWeights' => sub {
+subtest 'menuItems: "Home" (weight 10) and "Podcasts" (weight 30) links, no network; menuWeights' => sub {
 	fresh();
 	my $c = collector();
 	$DISCOVER->menuItems( undef, $c->cb, {} );
 	is( $c->count, 1, 'one callback' );
 	is_deeply(
 		[ $c->args(0) ],
-		[ [ { name => 'Home', type => 'link', url => $HOME_ROOT, image => $ICON, weight => 10 } ] ],
-		'exact keys: name "Home", type link, url _homeRoot, plugin icon, weight'
+		[ [
+			{ name => 'Home',     type => 'link', url => $HOME_ROOT, image => $ICON, weight => 10 },
+			{ name => 'Podcasts', type => 'link', url => $PODCASTS,  image => $ICON, weight => 30 },
+		] ],
+		'exact keys: name, type link, url (_homeRoot / _podcastsRoot), plugin icon, weight'
 	);
-	is( ( $c->args(0) )[0]->[0]->{name}, string('PLUGIN_ABCLISTEN_HOME'), 'name from PLUGIN_ABCLISTEN_HOME' );
-	is( ( $c->args(0) )[0]->[0]->{weight}, Plugins::ABCListen::Util::topWeight('home'), 'weight = Util::topWeight("home")' );
-	is_deeply( [ $DISCOVER->menuWeights ], [ Plugins::ABCListen::Util::topWeight('home') ], 'menuWeights = (topWeight("home"))' );
+	my ( $home, $podcasts ) = @{ ( $c->args(0) )[0] };
+	is( $home->{name}, string('PLUGIN_ABCLISTEN_HOME'), 'Home: name from PLUGIN_ABCLISTEN_HOME' );
+	is( $home->{weight}, Plugins::ABCListen::Util::topWeight('home'), 'Home: weight = Util::topWeight("home")' );
+	is( $podcasts->{name}, string('PLUGIN_ABCLISTEN_PODCASTS'), 'Podcasts: name from PLUGIN_ABCLISTEN_PODCASTS' );
+	is( $podcasts->{weight}, Plugins::ABCListen::Util::topWeight('podcasts'), 'Podcasts: weight = Util::topWeight("podcasts")' );
+	is_deeply( [ $DISCOVER->menuWeights ], [ map { Plugins::ABCListen::Util::topWeight($_) } qw(home podcasts) ], 'menuWeights = (topWeight("home"), topWeight("podcasts"))' );
 	is( scalar requests(), 0, 'no HTTP request' );
 	ok( eval { $DISCOVER->init; 1 }, 'init is harmless' );
 
 	$c = collector();
 	$DISCOVER->menuItems( $CLIENT, $c->cb, {} );
-	is( ( $c->args(0) )[0]->[0]->{name}, 'Home', 'with a client too' );
+	is_deeply( names( ( $c->args(0) )[0] ), [ 'Home', 'Podcasts' ], 'with a client too' );
 };
 
-subtest 'top level: Home is first (weight 10)' => sub {
+subtest 'top level: Home first (10), Podcasts after Radio (30)' => sub {
 	fresh();
 	my $c = collector();
 	Plugins::ABCListen::Plugin::toplevel( undef, $c->cb, { params => {} } );
 	is( $c->count, 1, 'one callback' );
 	my $items = items_of($c);
 	is( $items->[0]->{name}, 'Home', 'Home first' );
-	is_deeply( names($items), [ 'Home', 'Radio', 'Programs', 'Search' ], 'Home, Radio, Programs, Search (D3) (My ABC listen adds nothing yet)' );
-	ok( !exists $items->[0]->{weight}, 'weight removed by Plugin.pm' );
+	is_deeply( names($items), [ 'Home', 'Radio', 'Podcasts', 'Programs', 'Search' ], 'Home, Radio, Podcasts, Programs, Search (D3) (My ABC listen adds nothing yet)' );
+	ok( !( grep { exists $_->{weight} } @$items ), 'weights removed by Plugin.pm' );
 	is( scalar requests(), 0, 'no HTTP request for the top level' );
 };
 
-subtest 'Home root: Featured, then the home collections in page order' => sub {
+subtest 'Home root: Featured, Popular now, Popular in sport, then the home collections in page order' => sub {
 	fresh();
 	route_home();
 	my $items = home_root();
 
-	is_deeply( names($items), [ $FEATURED, @HOME_TITLES ], 'Featured, then every home StandardCollection in page order without "Explore Video Podcasts"' );
+	is_deeply(
+		names($items),
+		[ $FEATURED, 'Popular now', 'Popular in sport', @HOME_TITLES ],
+		'Featured, Popular now, Popular in sport, then every home StandardCollection in page order without "Explore Video Podcasts" and "Categories"'
+	);
+	is_deeply( [ map { [ $_->{url}, $_->{passthrough} ] } @$items[ 1, 2 ] ], [ [ $RECS_MENU, ['homepagePopularNow'] ], [ $RECS_MENU, ['homepageSports'] ] ], 'Popular now / Popular in sport open the recommendations homepagePopularNow / homepageSports' );
+	is_deeply( $items->[1], { name => $POPULAR, type => 'link', url => $RECS_MENU, passthrough => ['homepagePopularNow'], image => $ICON }, 'Popular now: exact keys (static link, plugin icon)' );
+	is( $SPORT, 'Popular in sport', '(PLUGIN_ABCLISTEN_POPULAR_SPORT text)' );
+	is_deeply( [ map { $_->{url} } requests() ], [ "$SITE/listen/search", "$NEXT/listen.json" ], 'building the root fetches only the home page (Popular now / in sport fetch nothing until opened)' );
 
 	my $featured = $items->[0];
 	is( $featured->{type}, 'link', 'Featured is a link' );
@@ -213,6 +233,8 @@ subtest 'Home root: Featured, then the home collections in page order' => sub {
 	);
 	like( $popular->{image}, qr{\Ahttps://live-production\.wcms\.abc-cdn\.net\.au/0b00910f69470533fe28ab472d099166\?.*width=300}, 'the first card\'s artwork' );
 	ok( !( grep { !$_->{image} } @$items ), 'every root item has an image' );
+	ok( !( grep { $_->{passthrough} && ref $_->{passthrough}->[0] eq 'HASH' && $_->{passthrough}->[0]->{id} eq '14123152' } @$items ), 'the home "Categories" collection (14123152) is not listed' );
+	ok( !( grep { $_->{name} =~ /\A(?:Categories|Browse by category|Podcasts)\z/ } @$items ), 'no Categories, Browse by category or Podcasts entry under Home (they are in the top-level Podcasts menu)' );
 	ok( !( grep { exists $_->{description} } @$items, @{ $featured->{items} } ), 'no description on any browse item (LMS menu rule 1)' );
 	check_names( $items, 'Home' );
 	check_names( $featured->{items}, 'Featured' );
@@ -230,23 +252,25 @@ subtest 'Home root: Featured omitted when no hero item maps; collection link fal
 	] } } } );
 
 	my $items = home_root();
-	is_deeply( names($items), [$FEATURED], 'no Featured entry: the only item is the untitled collection, named "Featured" rather than blank' );
-	is( $items->[0]->{url}, $COLL_MENU, '(it is the collection link)' );
-	is( $items->[0]->{image}, $ICON, 'no card image: the plugin icon' );
+	is_deeply( names($items), [ $POPULAR, $SPORT, $FEATURED ], 'no Featured entry: Popular now, Popular in sport, then the untitled collection, named "Featured" rather than blank' );
+	is( $items->[2]->{url}, $COLL_MENU, '(it is the collection link)' );
+	is( $items->[2]->{image}, $ICON, 'no card image: the plugin icon' );
 
 	fresh();
 	route_json( "$NEXT/listen.json", { pageProps => { data => { componentsContent => [ { component => 'AppStoreCTA', componentProps => {} } ] } } } );
-	is_deeply( home_root(), [ { name => $EMPTY, type => 'text' } ], 'nothing to list: one "Nothing here right now" text item, never an empty list' );
+	is_deeply( names( home_root() ), [ $POPULAR, $SPORT ], 'no home collections: Popular now and Popular in sport, never an empty list' );
 };
 
 subtest 'Home root: page errors; last-good copy' => sub {
 	fresh();
 	route( "$NEXT/listen.json", code => 500, content => 'down' );
-	is_deeply( home_root(), [ { name => $LOAD_FAILED, type => 'text' } ], 'ABC down, nothing cached: one LOAD_FAILED text item' );
+	my $items = home_root();
+	is_deeply( names($items), [ $POPULAR, $SPORT, $LOAD_FAILED ], 'ABC down, nothing cached: Popular now, Popular in sport, then one LOAD_FAILED item' );
+	is_deeply( $items->[2], { name => $LOAD_FAILED, type => 'text' }, '(a text item)' );
 
 	fresh();
 	route( "$NEXT/listen.json", code => 429, content => 'slow' );
-	is_deeply( home_root(), [ { name => string('PLUGIN_ABCLISTEN_RATE_LIMITED'), type => 'text' } ], 'the API token\'s text (RATE_LIMITED)' );
+	is_deeply( home_root()->[2], { name => string('PLUGIN_ABCLISTEN_RATE_LIMITED'), type => 'text' }, 'the API token\'s text (RATE_LIMITED)' );
 
 	fresh();
 	route_home();
@@ -418,14 +442,13 @@ subtest 'Today\'s Top Picks: episodes play directly (menu:1 shape keys)' => sub 
 	check_names( $items, "Today's Top Picks" );
 };
 
-subtest 'Categories -> True Crime: program links (dynamiccollection leaf id)' => sub {
+subtest 'home Categories collection -> True Crime: program links (dynamiccollection leaf id)' => sub {
 	fresh();
-	route_home();
 	route_collection( 14123152,  0, 'bff-collection-14123152-categories.trimmed.json' );
 	route_collection( 104142226, 0, 'bff-collection-104142226-true-crime-category.trimmed.json' );
 
-	my ($categories) = grep { $_->{name} eq 'Categories' } @{ home_root() };
-	my $list = items_of( open_item($categories) );
+	# no longer listed under Home (D2: Podcasts -> Browse by category, t/42), but the engine still pages it
+	my $list = items_of( feed( $COLL_MENU, $CLIENT, { id => '14123152', title => 'Categories' }, 0, 1 ) );
 	is_deeply( names($list), [ 'News & Analysis', 'True Crime', 'Sport', 'For Kids & Families', 'History', 'Society & Culture', $MORE ], 'the category links (trimmed fixture: 6 of 18, then More…)' );
 
 	my ($trueCrime) = grep { $_->{name} eq 'True Crime' } @$list;
