@@ -27,7 +27,7 @@ sub page { 'plugins/ABCListen/settings/basic.html' }
 
 # Append-only: later owners add their pref names at the end (L5: liveQuality).
 sub prefs {
-	return ( $prefs, qw(homeState) );
+	return ( $prefs, qw(homeState liveQuality) );
 }
 
 # LMS's base handler puts a value its validator rejects into the page's warning ("... is not a valid

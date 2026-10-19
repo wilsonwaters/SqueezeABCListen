@@ -22,6 +22,15 @@
 <!-- === /M1 === -->
 
 <!-- === L5 === -->
+	[%# Live stream quality. id = the pref name and aria-label, as in M1's section. An invalid stored
+	    value selects nothing, so the browser shows Standard (what plays) and a save stores it. No HLS
+	    option until L6 (issue #14). %]
+	[% WRAPPER setting title="PLUGIN_ABCLISTEN_LIVE_QUALITY" desc="PLUGIN_ABCLISTEN_LIVE_QUALITY_DESC" %]
+		<select class="stdedit" name="pref_liveQuality" id="liveQuality" aria-label="[% 'PLUGIN_ABCLISTEN_LIVE_QUALITY' | string | html %]">
+			<option value="standard"[% IF prefs.pref_liveQuality == 'standard' %] selected="selected"[% END %]>[% 'PLUGIN_ABCLISTEN_LIVE_QUALITY_STANDARD' | string | html %]</option>
+			<option value="mediahub"[% IF prefs.pref_liveQuality == 'mediahub' %] selected="selected"[% END %]>[% 'PLUGIN_ABCLISTEN_LIVE_QUALITY_MEDIAHUB' | string | html %]</option>
+		</select>
+	[% END %]
 <!-- === /L5 === -->
 
 [% PROCESS settings/footer.html %]
