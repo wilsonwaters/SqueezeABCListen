@@ -7,7 +7,8 @@
 # audiosegment cards keep their docType; cards without an image get the builder default; other
 # card types are skipped; {} / no items / only unsupported cards -> "Nothing here right now";
 # HTTP errors -> LOAD_FAILED / RATE_LIMITED; the last-good list after a failure (stale_ok);
-# exactly one callback on every path; Home's Popular now link opens the menu.
+# exactly one callback on every path; a caller's callback that dies inside recommendations() is
+# called once and logged (D6); Home's Popular now link opens the menu.
 #
 # Fixtures (t/data/discovery/):
 #   bff-recommendations-homepagePopularNow.json  GET /core-next/api/recommendations/listen/homepagePopularNow
@@ -292,6 +293,31 @@ subtest 'exactly one callback on every path' => sub {
 	route_recs('homepagePopularNow');
 	$c = menu( 'homepagePopularNow', undef );
 	is( scalar @{ items_of($c) }, 2, 'without a client ($client undef): the same rows' );
+};
+
+subtest 'recommendations(): a caller\'s callback that dies is called once and logged (D6)' => sub {
+	for my $case (
+		[ 'ABC answers',               'homepagePopularNow', sub { route_recs('homepagePopularNow') } ],
+		[ 'cache hit (synchronous)',   'homepagePopularNow', sub { route_recs('homepagePopularNow'); $COL->recommendations( 'homepagePopularNow', sub { } ); Slim::Utils::Log->resetMessages } ],
+		[ 'HTTP error',                'homepagePopularNow', sub { route( "$RECS/homepagePopularNow", code => 500, content => 'down' ) } ],
+		[ 'bad JSON',                  'homepagePopularNow', sub { route( "$RECS/homepagePopularNow", code => 200, headers => $JSON_TYPE, content => 'not json' ) } ],
+		[ 'a bad name (no request)',   '../collection/x',    sub { } ],
+	) {
+		my ( $label, $name, $setup ) = @$case;
+		fresh();
+		$setup->();
+
+		my @args;
+		my $calls = 0;
+		ok( eval { $COL->recommendations( $name, sub { $calls++; push @args, [@_]; die "caller broke\n" } ); 1 }, "$label: the die does not escape recommendations()" ) or diag $@;
+		is( $calls, 1, "$label: the callback is called once, never a second time with an error" );
+		is( ref $args[0]->[0], 'HASH', "$label: with the result hash" );
+
+		my @logged = grep { $_->{message} =~ /caller broke/ } Slim::Utils::Log->messages( category => 'plugin.abclisten' );
+		is( scalar @logged, 1, "$label: logged once" );
+		is( $logged[0]->{level}, 'ERROR', "$label: at ERROR" );
+		like( $logged[0]->{message}, qr/\AABC listen collections callback failed: caller broke/, "$label: as a failing callback" );
+	}
 };
 
 subtest 'Home -> Popular now / Popular in sport open these menus' => sub {

@@ -5,8 +5,10 @@
 # URL; fake clock): the podcasts page -> 3 sub-collections + 8 categories (leaf ids, names,
 # images); the static category list when the page fails or lists none; the menu order (New &
 # Noteworthy, Most Popular Podcasts, Award Winning Podcasts, Browse by category, All podcasts
-# A–Z) with and without programsByType (a stub), and with O3's own; sub-collection requests with rootMetaCollectionId
-# and metaInMeta; artwork from each sub-collection's first page (3 s deadline, shared cache);
+# A–Z) with and without programsByTypeAZ (a stub); All podcasts A–Z's letter groups with O3's own
+# index (D6: letter rows, counts adding up to programsByType's podcasts, each letter's rows);
+# sub-collection requests with rootMetaCollectionId and metaInMeta; artwork from each
+# sub-collection's first page (3 s deadline, at most 4 at a time (D6), shared cache);
 # Browse by category -> True Crime paging (offsets, More…) -> O2's program menu; the category
 # page fallback when a category id gives nothing; items() unchanged without the extra hash;
 # readable names, icons, text items for empty/failure states; exactly one callback everywhere.
@@ -20,7 +22,8 @@
 #   nextdata-category-true-crime.json           GET /_next/data/build-3afcd04f/listen/listenapp/true-crime/104142226.json
 #                                               (pageProps.data only; 3 of 16 cards)
 # plus t/data/foundation/listen-search.trimmed.html (buildId build-3afcd04f) and O3's
-# t/data/ondemand/algolia-programs-list.json (the program index behind programsByType).
+# t/data/ondemand/algolia-programs-list.json (the program index behind programsByType); D6's
+# letter-group tests build synthetic Algolia hit lists (hit()).
 
 use strict;
 use warnings;
@@ -159,12 +162,12 @@ sub collection_requests { grep {m{/collection/x}} urls() }
 
 sub warnings_logged { grep { $_->{level} =~ /WARN|ERROR/ && $_->{message} !~ /nextData \/listen\/programs\// } Slim::Utils::Log->messages( category => 'plugin.abclisten' ) }
 
-# O3's programsByType: absent, or a recording stub
+# OnDemand's programsByTypeAZ (D6): absent, or a recording stub
 my @AZ_CALLS;
 sub with_az {
 	my $code = shift;
 	no warnings qw(redefine once);
-	local *Plugins::ABCListen::OnDemand::programsByType = sub {
+	local *Plugins::ABCListen::OnDemand::programsByTypeAZ = sub {
 		my ( $class, $client, $cb, $type ) = @_;
 		push @AZ_CALLS, [ $class, $client, $type ];
 		$cb->( [ { name => 'A Very British Cult', type => 'link', url => $PROGRAM, passthrough => [ { path => '/listen/programs/a-very-british-cult' } ] } ] );
@@ -175,9 +178,60 @@ sub with_az {
 sub without_az {
 	my $code = shift;
 	no warnings 'once';
-	local *Plugins::ABCListen::OnDemand::programsByType;
+	local *Plugins::ABCListen::OnDemand::programsByTypeAZ;
 	return $code->();
 }
+
+# ---- D6: the program index behind All podcasts A–Z (synthetic Algolia hits) ----
+
+my $ALGOLIA = 'https://TESTAPPID-dsn.algolia.net/1/indexes/listen_prod_all/query';
+my $LETTER  = \&Plugins::ABCListen::OnDemand::_letterFeed;
+my $SERIAL  = 7000;
+
+sub hit {
+	my ( $title, $slug, $network, $type ) = @_;
+	my $n = ++$SERIAL;
+	return {
+		objectID     => "coremedia://program/$n",
+		title        => $title,
+		canonicalURL => "https://www.abc.net.au/listen/programs/$slug/",
+		infoSource   => $network,
+		programType  => $type,
+	};
+}
+
+# 8 podcasts (two titled "Breakfast", two with a leading "The", one starting with a digit) and 3
+# programs of other types, which All podcasts A–Z never lists.
+sub route_index {
+	my @hits = (
+		hit( 'The Science Show',       'scienceshow',          'ABC Radio National', 'podcast' ),
+		hit( 'Sunday Extra',           'sundayextra',          'ABC Radio National', 'catch-up' ),
+		hit( 'science friction',       'science-friction',     'ABC Radio National', 'podcast' ),
+		hit( 'Conversations',          'conversations',        'ABC Listen',         'podcast' ),
+		hit( 'Saturday Night Country', 'saturdaynightcountry', 'ABC Country',        'music' ),
+		hit( 'The Case Of',            'the-case-of',          'ABC Listen',         'Podcast' ),
+		hit( '7.30',                   '730',                  'ABC News Podcasts',  'podcast' ),
+		hit( 'Unravel',                'unravel',              'ABC Listen',         'podcast' ),
+		hit( 'Ukulele Hour',           'ukulele-hour',         'ABC Listen',         undef ),
+		hit( 'Breakfast',              'breakfast-sydney',     'ABC Sydney',         'podcast' ),
+		hit( 'Breakfast',              'breakfast-perth',      'ABC Perth',          'podcast' ),
+	);
+	route_json( $ALGOLIA, { hits => \@hits, nbHits => scalar @hits } );
+}
+
+sub algolia_requests { grep { $_ eq $ALGOLIA } urls() }
+
+# OnDemand->$method($client, $cb, $type) through a collector
+sub by_type {
+	my ( $method, $type, $client ) = @_;
+	my $c = collector();
+	Plugins::ABCListen::OnDemand->$method( $client, $c->cb, $type );
+	return $c;
+}
+
+sub paths { [ map { $_->{passthrough}->[0]->{path} } @{ $_[0] } ] }
+
+sub text_item { { name => $_[0], type => 'text' } }
 
 # ---------------------------------------------------------------------------
 # podcasts() / staticCategories()
@@ -363,12 +417,12 @@ subtest 'Podcasts: New & Noteworthy, Most Popular Podcasts, Award Winning Podcas
 	is_deeply( [ map { $_->{message} =~ /collectionId=11511926/ ? 'the failed request' : $_->{message} } warnings_logged() ], ['the failed request'], 'no WARN or ERROR beyond API.pm logging the failed Award Winning request' );
 };
 
-subtest 'Podcasts: All podcasts A–Z only while OnDemand can programsByType (O3); it lists programsByType(..., "podcast")' => sub {
+subtest 'Podcasts: All podcasts A–Z only while OnDemand can programsByTypeAZ; it lists programsByTypeAZ(..., "podcast")' => sub {
 	fresh();
 	route_podcasts();
 	route_sub_collections();
 	my $items = without_az( sub { podcasts_root() } );
-	is_deeply( names($items), [ 'New & Noteworthy', 'Most Popular Podcasts', 'Award Winning Podcasts', 'Browse by category' ], 'O3 not merged (no programsByType): no A–Z entry' );
+	is_deeply( names($items), [ 'New & Noteworthy', 'Most Popular Podcasts', 'Award Winning Podcasts', 'Browse by category' ], 'no programsByTypeAZ: no A–Z entry' );
 
 	fresh();
 	route_podcasts();
@@ -376,12 +430,12 @@ subtest 'Podcasts: All podcasts A–Z only while OnDemand can programsByType (O3
 	@AZ_CALLS = ();
 	with_az( sub {
 		$items = podcasts_root();
-		is( $items->[-1]->{name}, 'All podcasts A–Z', 'with programsByType: the A–Z entry is last' );
+		is( $items->[-1]->{name}, 'All podcasts A–Z', 'with programsByTypeAZ: the A–Z entry is last' );
 
 		my $c = open_item( $items->[-1] );
 		is( $c->count, 1, 'A–Z: one callback' );
-		is_deeply( names( items_of($c) ), ['A Very British Cult'], 'answers programsByType\'s items' );
-		is_deeply( \@AZ_CALLS, [ [ 'Plugins::ABCListen::OnDemand', $CLIENT, 'podcast' ] ], 'called once as OnDemand->programsByType($client, $cb, "podcast")' );
+		is_deeply( names( items_of($c) ), ['A Very British Cult'], 'answers programsByTypeAZ\'s items' );
+		is_deeply( \@AZ_CALLS, [ [ 'Plugins::ABCListen::OnDemand', $CLIENT, 'podcast' ] ], 'called once as OnDemand->programsByTypeAZ($client, $cb, "podcast")' );
 
 		$c = feed( $PODCASTS_AZ, undef );
 		is( $AZ_CALLS[-1]->[1], undef, 'without a client: $client undef' );
@@ -390,32 +444,115 @@ subtest 'Podcasts: All podcasts A–Z only while OnDemand can programsByType (O3
 	fresh();
 	{
 		no warnings qw(redefine once);
-		local *Plugins::ABCListen::OnDemand::programsByType = sub { die "index broke\n" };
+		local *Plugins::ABCListen::OnDemand::programsByTypeAZ = sub { die "index broke\n" };
 		my $c = feed( $PODCASTS_AZ, $CLIENT );
-		is_deeply( [ $c->calls ], [ [ { items => [ { name => $LOAD_FAILED, type => 'text' } ] } ] ], 'programsByType dying: one LOAD_FAILED text item' );
+		is_deeply( [ $c->calls ], [ [ { items => [ { name => $LOAD_FAILED, type => 'text' } ] } ] ], 'programsByTypeAZ dying: one LOAD_FAILED text item' );
 	}
 };
 
-subtest 'All podcasts A–Z with O3\'s own programsByType: the rows By type -> Podcasts shows' => sub {
-	plan skip_all => 'OnDemand->programsByType (O3) is not there' unless Plugins::ABCListen::OnDemand->can('programsByType');
-
+subtest 'All podcasts A–Z (D6): letter rows; the counts add up to the podcasts; each letter opens its podcasts' => sub {
 	fresh();
-	Plugins::ABCListen::ProgramIndex::_reset() if Plugins::ABCListen::ProgramIndex->can('_reset');
-	route( 'https://TESTAPPID-dsn.algolia.net/1/indexes/listen_prod_all/query', file => 'ondemand/algolia-programs-list.json', headers => $JSON_TYPE );
+	Plugins::ABCListen::ProgramIndex::_reset();
+	route_index();
 	route_podcasts();
 	route_sub_collections();
 
-	my $items = podcasts_root();
-	is( $items->[-1]->{name}, 'All podcasts A–Z', 'O3 merged: the A–Z entry is listed, last' );
+	my $entry = podcasts_root()->[-1];
+	is( $entry->{name}, 'All podcasts A–Z', 'the A–Z entry, last' );
 
-	my $c = open_item( $items->[-1] );
+	my $c = open_item($entry);
 	is( $c->count, 1, 'one callback' );
-	my $direct = collector();
-	Plugins::ABCListen::OnDemand->programsByType( $CLIENT, $direct->cb, 'podcast' );
-	is_deeply( items_of($c), ( $direct->args(0) )[0], 'exactly programsByType($client, $cb, "podcast")\'s rows (Algolia fixture, cached after the first call)' );
-	cmp_ok( scalar @{ items_of($c) }, '>=', 1, '>= 1 podcast' );
-	ok( !( grep { !$_->{url} || $_->{url} != $PROGRAM } @{ items_of($c) } ), 'each opens O2\'s program -> episodes menu' );
-	check_names( items_of($c), 'All podcasts A–Z' );
+	my $letters = items_of($c);
+	is_deeply( names($letters), [ 'B (2)', 'C (2)', 'S (2)', 'U (1)', "0\x{2013}9 (1)" ], 'letters A..Z with podcasts, then 0–9; empty letters omitted; programs of other types not counted' );
+	is( ( grep { $_->{name} =~ /\A(?:[A-Z]|0\x{2013}9) \([0-9]+\)\z/ } @$letters ), scalar @$letters, 'every name matches ^([A-Z]|0–9) \(\d+\)$ (as Programs -> All programs A–Z)' );
+	is_deeply( $letters->[2], { name => 'S (2)', type => 'link', url => $LETTER, passthrough => [ 's', 'podcast' ], image => $ICON }, 'letter row: exact keys (O3\'s letter feed, passthrough [letter, type])' );
+	is_deeply( $letters->[-1]->{passthrough}, [ '0-9', 'podcast' ], '0–9 row passthrough' );
+	ok( !( grep { exists $_->{description} } @$letters ), 'no description on the letter rows' );
+	check_names( $letters, 'letters' );
+
+	my ($podcasts) = by_type( programsByType => 'podcast', $CLIENT )->args(0);
+	my $sum = 0;
+	$sum += ( $_->{name} =~ /\(([0-9]+)\)\z/ )[0] for @$letters;
+	is( $sum, scalar @$podcasts, 'the counts add up to the podcasts programsByType lists (8)' );
+	is( $sum, 8, '(8 podcasts)' );
+
+	my %rows  = map { $_->{passthrough}->[0] => items_of( open_item( $_, $CLIENT ) ) } @$letters;
+	my %count = map { $_->{passthrough}->[0] => ( $_->{name} =~ /\(([0-9]+)\)\z/ )[0] } @$letters;
+	is_deeply( names( $rows{b} ), [ 'Breakfast (ABC Perth)', 'Breakfast (ABC Sydney)' ], 'B: the two Breakfasts, named by network as in programsByType' );
+	is_deeply( names( $rows{c} ), [ 'The Case Of', 'Conversations' ], 'C: a leading "The" ignored ("Podcast" counts as podcast)' );
+	is_deeply( names( $rows{s} ), [ 'science friction', 'The Science Show' ], 'S: sortKey order; The Science Show under S; no catch-up or music programs' );
+	is_deeply( names( $rows{u} ), ['Unravel'], 'U: Unravel (Ukulele Hour is not a podcast)' );
+	is_deeply( names( $rows{'0-9'} ), ['7.30'], '0–9: 7.30' );
+
+	for my $letter ( map { $_->{passthrough}->[0] } @$letters ) {
+		my %in = map { $_ => 1 } @{ paths( $rows{$letter} ) };
+		is_deeply( $rows{$letter}, [ grep { $in{ $_->{passthrough}->[0]->{path} } } @$podcasts ], "$letter: exactly programsByType's rows for those podcasts (keys, names, order)" );
+		is( scalar @{ $rows{$letter} }, $count{$letter}, "$letter: as many rows as its count" );
+	}
+	is_deeply( [ sort map { @{ paths($_) } } values %rows ], [ sort @{ paths($podcasts) } ], 'together, the letters list every podcast once' );
+	ok( !( grep { !$_->{url} || $_->{url} != $PROGRAM } map {@$_} values %rows ), 'each podcast opens O2\'s program -> episodes menu' );
+	check_names( [ map {@$_} values %rows ], 'podcasts' );
+	is( scalar algolia_requests(), 1, 'one Algolia request for the letters, every letter and programsByType (cached)' );
+
+	is_deeply( names( items_of( feed( $PODCASTS_AZ, undef ) ) ), names($letters), 'without a client: the same letters' );
+};
+
+subtest 'programsByTypeAZ (D6): empty, fallback, unknown type and index errors answer as programsByType; once; never dies' => sub {
+	my $NO_PROGRAMS    = string('PLUGIN_ABCLISTEN_NO_PROGRAMS');
+	my $INDEX_FALLBACK = string('PLUGIN_ABCLISTEN_INDEX_FALLBACK');
+
+	fresh();
+	Plugins::ABCListen::ProgramIndex::_reset();
+	route_index();
+
+	my $c = by_type( programsByTypeAZ => 'news' );
+	is( $c->count, 1, 'no programs of the type: one callback' );
+	is_deeply( ( $c->args(0) )[0], [ text_item($NO_PROGRAMS) ], 'no programs of the type: programsByType\'s NO_PROGRAMS item' );
+	is_deeply( ( by_type( programsByTypeAZ => 'music' )->args(0) )[0], [ { name => 'S (1)', type => 'link', url => $LETTER, passthrough => [ 's', 'music' ], image => $ICON } ], 'another type: its own letters' );
+	is_deeply( items_of( feed( $LETTER, undef, 'x', 'podcast' ) ), [ text_item($NO_PROGRAMS) ], 'a letter without podcasts (stale link): NO_PROGRAMS' );
+	is_deeply( names( items_of( feed( $LETTER, undef, 's' ) ) ), [ 'Saturday Night Country', 'science friction', 'The Science Show', 'Sunday Extra' ], 'without a type: Programs -> All programs A–Z\'s letter, unchanged' );
+
+	for my $key ( 'Podcasts', '', undef ) {
+		my $label = defined $key ? "'$key'" : 'undef';
+		Slim::Utils::Log->resetMessages;
+		$c = by_type( programsByTypeAZ => $key );
+		is( $c->count, 1, "type $label: one callback" );
+		is_deeply( ( $c->args(0) )[0], [ text_item($LOAD_FAILED) ], "type $label: LOAD_FAILED" );
+		ok( ( grep { $_->{level} eq 'WARN' && $_->{message} =~ /unknown program type/ } Slim::Utils::Log->messages ), "type $label: WARN" );
+	}
+	is_deeply( items_of( feed( $LETTER, undef, 's', 'nope' ) ), [ text_item($LOAD_FAILED) ], 'a letter of an unknown type: LOAD_FAILED' );
+
+	my $calls = 0;
+	ok( eval { Plugins::ABCListen::OnDemand->programsByTypeAZ( undef, sub { $calls++; die "D2 broke\n" }, 'podcast' ); 1 }, 'a callback that dies: no die' ) or diag $@;
+	is( $calls, 1, 'a callback that dies: called once' );
+	$calls = 0;
+	ok( eval { $LETTER->( undef, sub { $calls++; die "LMS broke\n" }, {}, 's', 'podcast' ); 1 }, 'a letter, callback dies: no die' ) or diag $@;
+	is( $calls, 1, 'a letter, callback dies: called once' );
+
+	{
+		no warnings 'redefine';
+		local *Plugins::ABCListen::OnDemand::_bucket = sub { die "bucket broke\n" };
+		$c = by_type( programsByTypeAZ => 'podcast' );
+		is_deeply( [ $c->calls ], [ [ [ text_item($LOAD_FAILED) ] ] ], 'building the letters dies: one LOAD_FAILED item' );
+		$c = feed( $LETTER, undef, 's', 'podcast' );
+		is_deeply( [ $c->calls ], [ [ [ text_item($LOAD_FAILED) ] ] ], 'building a letter dies: one LOAD_FAILED item' );
+	}
+
+	fresh();
+	Plugins::ABCListen::ProgramIndex::_reset();
+	route( $ALGOLIA, code => 500 );
+	route( qr{/programAggregationCollection/}, code => 500 );
+	is_deeply( [ by_type( programsByTypeAZ => 'podcast' )->calls ], [ [ [ text_item($LOAD_FAILED) ] ] ], 'index error: one LOAD_FAILED item' );
+	is_deeply( [ feed( $LETTER, undef, 's', 'podcast' )->calls ], [ [ [ text_item($LOAD_FAILED) ] ] ], 'index error, a letter: one LOAD_FAILED item' );
+	is_deeply( [ feed( $PODCASTS_AZ, $CLIENT )->calls ], [ [ [ text_item($LOAD_FAILED) ] ] ], 'index error, All podcasts A–Z: one LOAD_FAILED item' );
+
+	fresh();
+	Plugins::ABCListen::ProgramIndex::_reset();
+	route( $ALGOLIA, code => 500 );
+	route( qr{/programAggregationCollection/x\?collectionId=11474038&}, file => 'ondemand/bff-programAggregationCollection-rn.json', headers => $JSON_TYPE );
+	route( qr{/programAggregationCollection/}, code => 500 );
+	is_deeply( ( by_type( programsByTypeAZ => 'podcast' )->args(0) )[0], [ text_item($INDEX_FALLBACK) ], 'fallback mode (types unknown): programsByType\'s note only' );
+	is_deeply( items_of( feed( $LETTER, undef, 's', 'podcast' ) ), [ text_item($INDEX_FALLBACK) ], 'fallback mode, a letter: the note only' );
 };
 
 subtest 'Podcasts: the page fails -> LOAD_FAILED, the static categories, A–Z; missing parts' => sub {
@@ -548,6 +685,56 @@ subtest 'withImages: first supported card\'s image; the 3 s deadline; errors; on
 	}
 	is_deeply( [ $c->calls ], [ [ [ { id => 1 }, { id => 2 } ] ] ], 'items() dying: no images, one callback' );
 	is( scalar Slim::Utils::Timers->pending, 0, 'the deadline timer is gone' );
+};
+
+subtest 'withImages (D6): at most 4 first pages at a time; the rest start as answers come in; a plain function too' => sub {
+	my $route_slow = sub {
+		route_json( qr{collectionId=$_&}, { collection => { items => [ program_card( 100 + $_, "https://img.test/$_.jpg" ) ] } }, defer => 1 ) for 1 .. 6;
+	};
+	my @collections = map { { id => $_ } } 1 .. 6;
+	my @withImages  = map { { id => $_, image => "https://img.test/$_.jpg" } } 1 .. 6;
+
+	fresh();
+	$route_slow->();
+	my $c = collector();
+	$COL->withImages( [@collections], $c->cb );
+	is_deeply( [ collection_requests() ], [ map {"$BFF_COLL?collectionId=$_&offset=0&size=20"} 1 .. 4 ], '6 collections: the first 4 first pages requested, in order' );
+	is( scalar Slim::Networking::SimpleAsyncHTTP->deferred, 4, '4 in flight' );
+	is( Slim::Networking::SimpleAsyncHTTP->completeDeferred, 4, 'the 4 answer ...' );
+	is_deeply( [ collection_requests() ], [ map {"$BFF_COLL?collectionId=$_&offset=0&size=20"} 1 .. 6 ], '... and the other 2 start' );
+	is( scalar Slim::Networking::SimpleAsyncHTTP->deferred, 2, '(2 in flight)' );
+	is( $c->count, 0, 'no answer before the last one' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is( $c->count, 1, 'one callback once all 6 answered' );
+	is_deeply( ( $c->args(0) )[0], \@withImages, 'every collection gets its image' );
+	is( scalar Slim::Utils::Timers->pending, 0, 'the deadline timer is gone' );
+
+	fresh();
+	$route_slow->();
+	$c = collector();
+	$COL->withImages( [@collections], $c->cb );
+	advanceTime(3);
+	is( $c->count, 1, 'all 6 slow: answered at the 3 s deadline' );
+	is_deeply( ( $c->args(0) )[0], \@collections, 'without images' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is( scalar collection_requests(), 6, 'the queued 2 still start after the deadline (they warm the cache the menus use)' );
+	is( scalar Slim::Networking::SimpleAsyncHTTP->deferred, 2, 'still never more than 4 in flight' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is( $c->count, 1, 'late answers: no second callback' );
+	is_deeply( ( $c->args(0) )[0], \@collections, 'nor a changed answer' );
+
+	fresh();
+	route_json( qr{collectionId=$_&}, { collection => { items => [ program_card( 100 + $_, "https://img.test/$_.jpg" ) ] } } ) for 1 .. 6;
+	$c = collector();
+	$COL->withImages( [@collections], $c->cb );
+	is_deeply( [ $c->calls ], [ [ \@withImages ] ], 'answers at once (cache hits, synchronous): one callback, every image' );
+	is( scalar collection_requests(), 6, 'one request each' );
+
+	fresh();
+	route_json( qr{collectionId=1&}, { collection => { items => [ program_card( 101, 'https://img.test/1.jpg' ) ] } } );
+	$c = collector();
+	Plugins::ABCListen::Collections::withImages( [ { id => 1 } ], $c->cb );
+	is_deeply( [ $c->calls ], [ [ [ { id => 1, image => 'https://img.test/1.jpg' } ] ] ], 'called as a plain function: the same answer' );
 };
 
 # ---------------------------------------------------------------------------

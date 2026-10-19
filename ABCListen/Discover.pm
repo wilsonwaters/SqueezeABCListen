@@ -19,7 +19,9 @@ package Plugins::ABCListen::Discover;
 #        is fetched until one is opened (_recommendationsMenu);
 #     4. one link per home collection, in page order (Collections->collectionItem at level 0:
 #        ABC's title, the first supported card's image, else the plugin icon), except the home
-#        "Categories" collection (14123152): the categories live under Podcasts.
+#        "Categories" collection (the page's categoriesId: found by podcasts()'s rule, not by its
+#        id, so a re-created collection stays out; 14123152 on 2026-10-19, D6): the categories
+#        live under Podcasts.
 #     The page fails (and no last-good copy is cached): 2 and 3, then one text item with the
 #     error token's text (LOAD_FAILED) in place of 1 and 4.
 #   Popular now / Popular in sport (_recommendationsMenu): Collections->recommendations ->
@@ -37,8 +39,11 @@ package Plugins::ABCListen::Discover;
 #        link per podcast category (level 1, image = the category card's, else the plugin icon),
 #        from the podcasts page, else Collections->staticCategories. A category pages its page id
 #        (collection/x), falling back to its page's first collection (fallbackPath);
-#     3. "All podcasts A–Z" (PLUGIN_ABCLISTEN_PODCASTS_AZ): OnDemand->programsByType($client, $cb,
-#        'podcast') (O3); only listed while OnDemand can('programsByType').
+#     3. "All podcasts A–Z" (PLUGIN_ABCLISTEN_PODCASTS_AZ): OnDemand->programsByTypeAZ($client, $cb,
+#        'podcast') (D6): letter rows "<L> (<n>)" A..Z then "0–9 (<n>)", as Programs -> All
+#        programs A–Z (O3's bucket rule: a leading "The" ignored, 0–9 last), the counts adding up
+#        to the podcasts; a letter opens its podcasts (programsByType's rows). Only listed while
+#        OnDemand can('programsByTypeAZ').
 #   Every feed calls back exactly once. Keys the menus don't know in page results are ignored.
 #
 # Ownership (ai-state/streams.md rule 5): D1 creates this; D2 owns Home's root list and adds the
@@ -58,9 +63,6 @@ use Plugins::ABCListen::Util;
 
 use constant LOAD_FAILED => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
 use constant EMPTY       => 'PLUGIN_ABCLISTEN_EMPTY_COLLECTION';
-
-# The home page's "Categories" collection: listed under Podcasts -> Browse by category instead.
-use constant HOME_CATEGORIES_ID => '14123152';
 
 my $log = logger('plugin.abclisten');
 
@@ -141,8 +143,11 @@ sub _homeItems {
 
 	return [ @items, _textItem( $client, $page->{error} ) ] if $page->{error};
 
+	# the page's categories collection (Collections: podcasts()'s rule, D6) is listed under Podcasts
+	my $categories = $page->{categoriesId};
+
 	push @items, grep {defined} map { Plugins::ABCListen::Collections->collectionItem( $client, $_, 0 ) }
-		grep { ref $_ eq 'HASH' && ( $_->{id} // '' ) ne HOME_CATEGORIES_ID }
+		grep { ref $_ eq 'HASH' && !( defined $categories && ( $_->{id} // '' ) eq $categories ) }
 		@{ ref $page->{collections} eq 'ARRAY' ? $page->{collections} : [] };
 
 	return \@items;
@@ -228,7 +233,7 @@ sub _podcastsItems {
 		image => ( grep { $_ ne Plugins::ABCListen::Util::ICON } map { $_->{image} } @links )[0] || Plugins::ABCListen::Util::ICON,
 	};
 
-	if ( Plugins::ABCListen::OnDemand->can('programsByType') ) {
+	if ( Plugins::ABCListen::OnDemand->can('programsByTypeAZ') ) {
 		push @items, {
 			name  => cstring( $client, 'PLUGIN_ABCLISTEN_PODCASTS_AZ' ),
 			type  => 'link',
@@ -240,12 +245,13 @@ sub _podcastsItems {
 	return \@items;
 }
 
-# All podcasts A–Z: O3's list of programs of type podcast (it answers $cb->(\@items) once).
+# All podcasts A–Z (D6): the podcasts grouped by letter, as Programs -> All programs A–Z
+# (OnDemand->programsByTypeAZ answers $cb->(\@items) once).
 sub _podcastsAZ {
 	my ( $client, $cb, $args ) = @_;
 	my $once = _once($cb);
 
-	_try( $client, $once, sub { Plugins::ABCListen::OnDemand->programsByType( $client, $once, 'podcast' ) } );
+	_try( $client, $once, sub { Plugins::ABCListen::OnDemand->programsByTypeAZ( $client, $once, 'podcast' ) } );
 
 	return;
 }

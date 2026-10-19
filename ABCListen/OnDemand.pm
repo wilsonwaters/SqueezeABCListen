@@ -91,6 +91,18 @@ package Plugins::ABCListen::OnDemand;
 #   Never dies ($cb dying is logged; it is not called again). Public from O3 on: change only
 #   additively.
 #
+# Plugins::ABCListen::OnDemand->programsByTypeAZ($client, $cb, $typeKey)                (D6; used by D2)
+#   programsByType grouped by letter, as All programs A–Z groups the index. Class method; $client
+#   may be undef. Calls $cb->(\@items) EXACTLY ONCE, with an array ref:
+#     - the letter rows of the type's programs: "<L> (<n>)" for A..Z, then "0–9 (<n>)", letters
+#       without programs omitted (All programs A–Z's bucket rule and row keys, passthrough
+#       [<letter>, $typeKey]); the counts add up to the rows programsByType($typeKey) lists. A
+#       letter opens that letter's rows of programsByType($typeKey) (same keys, names, order);
+#       a letter without programs of the type (a stale link) is one NO_PROGRAMS text item;
+#     - fallback mode, no programs of that type, an unknown $typeKey (WARN) or an index error:
+#       programsByType's one text item (INDEX_FALLBACK, NO_PROGRAMS, LOAD_FAILED).
+#   Never dies ($cb dying is logged; it is not called again).
+#
 # Program menu (_programMenu) order: description (textarea) · "Presented by A, B" · network
 # (Programs->program attribution title) · provider extras · the newest 50 episodes · "More
 # episodes…" (the next 50, to ABC's 250). No episodes: "No episodes available", except for a
@@ -106,7 +118,9 @@ package Plugins::ABCListen::OnDemand;
 # textarea into the window), so items O4 adds go after it.
 #
 # Ownership: O2 creates everything; O3 then owns _programsRoot, O4 owns episodeItem/_episodeMenu;
-# programItem, _programMenu and the provider registry stay with O2.
+# programItem, _programMenu and the provider registry stay with O2. D6 added programsByTypeAZ inside
+# O3's section (programsByType's core moved to _byType; _letterRows/_bucketRows are shared with
+# All programs A–Z, whose menus are unchanged).
 
 use strict;
 use warnings;
@@ -238,6 +252,21 @@ my %TYPE_LABEL = map { $_->[0] => $_->[1] } @TYPES;
 
 sub programsByType {
 	my ( $class, $client, $cb, $typeKey ) = @_;
+	_byType( $client, $cb, $typeKey, sub { _programRows( $client, shift ) } );
+	return;
+}
+
+# D6: the type's letter rows (see the header); its letters open _letterFeed with the type.
+sub programsByTypeAZ {
+	my ( $class, $client, $cb, $typeKey ) = @_;
+	_byType( $client, $cb, $typeKey, sub { _letterRows( $client, shift, $typeKey ) } );
+	return;
+}
+
+# programsByType's core (D6: shared with programsByTypeAZ and a type's letters):
+# $cb->($build->(\@refs of the type)) once, or programsByType's text item.
+sub _byType {
+	my ( $client, $cb, $typeKey, $build ) = @_;
 	my $once = _once($cb);
 
 	eval {
@@ -255,7 +284,7 @@ sub programsByType {
 				return [ _textItem( $client, INDEX_FALLBACK ) ] if $index->{fallback};    # types are unknown
 
 				my @refs = grep { Plugins::ABCListen::ProgramIndex::typeKey( $_->{programType} ) eq $typeKey } @{ $index->{items} };
-				return @refs ? _programRows( $client, \@refs ) : [ _textItem( $client, NO_PROGRAMS ) ];
+				return @refs ? $build->( \@refs ) : [ _textItem( $client, NO_PROGRAMS ) ];
 			};
 
 			if ( ref $items ne 'ARRAY' ) {
@@ -287,31 +316,41 @@ sub _azFeed {
 			return _textFeed( $client, $once, LOAD_FAILED ) if $index->{error};
 
 			_respond( $client, $once, sub {
-				my %count;
-				$count{ _bucket($_) }++ for @{ $index->{items} };
-
 				my @items;
 				push @items, _textItem( $client, INDEX_FALLBACK ) if $index->{fallback};
-
-				for my $bucket ( grep { $count{$_} } 'a' .. 'z', DIGITS ) {
-					push @items, {
-						name        => ( $bucket eq DIGITS ? '0' . ENDASH . '9' : uc $bucket ) . " ($count{$bucket})",
-						type        => 'link',
-						url         => \&_letterFeed,
-						passthrough => [$bucket],
-						image       => Plugins::ABCListen::Util::ICON,
-					};
-				}
-
+				push @items, @{ _letterRows( $client, $index->{items} ) };
 				return \@items;
 			} );
 		} );
 	} );
 }
 
-# One letter's programs.
+# The letter rows of $refs: "<L> (<n>)" for a..z, then "0–9 (<n>)", empty letters omitted, each
+# opening _letterFeed with passthrough [$bucket] or, for one type's letters (D6), [$bucket, $typeKey].
+sub _letterRows {
+	my ( $client, $refs, $typeKey ) = @_;
+
+	my %count;
+	$count{ _bucket($_) }++ for @$refs;
+
+	return [ map {
+		+{
+			name        => ( $_ eq DIGITS ? '0' . ENDASH . '9' : uc $_ ) . " ($count{$_})",
+			type        => 'link',
+			url         => \&_letterFeed,
+			passthrough => [ $_, defined $typeKey ? $typeKey : () ],
+			image       => Plugins::ABCListen::Util::ICON,
+		}
+	} grep { $count{$_} } 'a' .. 'z', DIGITS ];
+}
+
+# One letter's programs; with a type key (D6: programsByTypeAZ's letters), that letter's rows of
+# programsByType($typeKey), answered as programsByType answers.
 sub _letterFeed {
-	my ( $client, $cb, $args, $bucket ) = @_;
+	my ( $client, $cb, $args, $bucket, $typeKey ) = @_;
+
+	return _byType( $client, $cb, $typeKey, sub { _bucketRows( $client, shift, $bucket ) } ) if defined $typeKey;
+
 	my $once = _once($cb);
 
 	_try( $client, $once, sub {
@@ -320,12 +359,16 @@ sub _letterFeed {
 
 			return _textFeed( $client, $once, LOAD_FAILED ) if $index->{error};
 
-			_respond( $client, $once, sub {
-				my @refs = grep { defined $bucket && _bucket($_) eq $bucket } @{ $index->{items} };
-				return @refs ? _programRows( $client, \@refs ) : [ _textItem( $client, NO_PROGRAMS ) ];
-			} );
+			_respond( $client, $once, sub { _bucketRows( $client, $index->{items}, $bucket ) } );
 		} );
 	} );
+}
+
+# The program rows of the refs in $bucket, else one NO_PROGRAMS text item.
+sub _bucketRows {
+	my ( $client, $refs, $bucket ) = @_;
+	my @refs = grep { defined $bucket && _bucket($_) eq $bucket } @$refs;
+	return @refs ? _programRows( $client, \@refs ) : [ _textItem( $client, NO_PROGRAMS ) ];
 }
 
 # By type: the types with their counts, in @TYPES order (fallback: only the note).

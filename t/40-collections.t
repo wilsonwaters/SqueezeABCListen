@@ -2,7 +2,8 @@
 # Plugins::ABCListen::Collections (D1 collection engine), offline (SimpleAsyncHTTP stub, fake clock):
 # page()/home() parsing (component order, hero normalisation, ignored and unknown components,
 # collections without a supported card omitted, stale and buildId-drift paths through API.pm,
-# section pages), items() (title/total/count/cards, cache, null/empty/error), the itemFor
+# section pages, the categoriesId key by podcasts()'s rule (D6)), items()
+# (title/total/count/cards, cache, null/empty/error), the itemFor
 # dispatcher per card type (recording stubs for programItem / episodeItem / stationItem /
 # byPageSlug; cardId ids; dynamiccollection leaf ids; station slug candidates; teaser and hero
 # path rules; skipped types; depth limit; dying builders) and itemsFor (duplicates, FQ4 program
@@ -289,6 +290,41 @@ subtest 'page(): collections without an id or without a supported card are omitt
 		[ [ '6', 'Key id', undef ], [ '8', undef, undef ] ],
 		'kept: id from key when componentProps.id is missing; untitled kept (title undef); image of the first SUPPORTED card (none here)'
 	);
+};
+
+subtest 'page(): categoriesId (D6) - the first StandardCollection with podcast category cards, podcasts()\'s rule' => sub {
+	fresh();
+	route_home();
+	my ($home) = run('home')->args(0);
+	is( $home->{categoriesId}, '14123152', 'Home: "Categories" (14123152), whose cards are dynamiccollections with a page id' );
+
+	route( "$NEXT/listen/podcasts.json", file => 'discovery/nextdata-listen-podcasts.json', headers => $JSON_TYPE );
+	my ($podcastsPage) = run( 'page', '/listen/podcasts' )->args(0);
+	my ($podcasts)     = run('podcasts')->args(0);
+	is( $podcastsPage->{categoriesId}, '14123152', 'the podcasts page: the collection whose cards podcasts() lists as categories' );
+	is( scalar @{ $podcasts->{categories} }, 8, '(podcasts(): its 8 categories)' );
+
+	my $category = card( 'coremedia://dynamiccollection/14129462', articleLink => '/listen/listenapp/true-crime/104142226' );
+	for my $case (
+		[ 'a new id (ABC re-created it)', [ collection_component( 1, 'Picks', card('coremedia://audio/8') ), collection_component( 99999999, 'Categories', $category ) ], '99999999' ],
+		[ 'two such collections: the first', [ collection_component( 5, 'Browse', $category ), collection_component( 6, 'Categories', $category ) ], '5' ],
+		[ 'mixed cards count', [ collection_component( 7, 'Mixed', card('coremedia://audio/8'), $category ) ], '7' ],
+	) {
+		fresh();
+		route_json( "$NEXT/listen.json", page_with( @{ $case->[1] } ) );
+		is( ( run('home')->args(0) )[0]->{categoriesId}, $case->[2], "$case->[0]: $case->[2]" );
+	}
+
+	for my $case (
+		[ 'no category cards',                            [ collection_component( 1, 'Picks', card('coremedia://audio/8') ) ] ],
+		[ 'a dynamiccollection card without a page id',   [ collection_component( 2, 'Odd', card( 'coremedia://dynamiccollection/3', articleLink => '/listen/listenapp/true-crime' ), card('coremedia://audio/8') ) ] ],
+		[ 'category cards in a MetaCollection only',      [ { component => 'MetaCollection', componentProps => { items => [ { id => '4', title => 'Sub' } ] } } ] ],
+	) {
+		fresh();
+		route_json( "$NEXT/listen.json", page_with( @{ $case->[1] } ) );
+		my ($page) = run('home')->args(0);
+		ok( !exists $page->{categoriesId}, "$case->[0]: no categoriesId" );
+	}
 };
 
 subtest 'page(\'/listen\') gives the same result as home()' => sub {
