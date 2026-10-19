@@ -12,7 +12,7 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - release: R1 #9 · R2 #15 · R3 #17
 
 ## Currently in flight
-- Integration agent phase B: D4 (PR #43, approved) onto main (with D2+M2) + D4 review fixes
+- #44 D6 podcasts A–Z letter groups — implementation
 - #4 L2 program on air — implementation
 - #37 F5 cardRef names · #40 O7 Hottest 100 in A–Z · #14 L5 higher-quality live — implementation
 
@@ -22,6 +22,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   in-flight agents (L1, O3, D1, D3, M2, O6 review, IC-1) resumed from their saved state. Lesson: ≤5 concurrent agents.
 
 ## Last completions
+- #22 D4 merged (PR #43, squash 990f709): News, Sport, Kids listen (full section), Audiobooks. Integrated with D2/M2
+  by an integration agent; review fixes applied. **Top level now mirrors the ABC listen app.**
 - #6 D2 merged (PR #42, squash e7e058d): top-level Podcasts + Popular now (integration agent merged main/M2 first).
 - v0.2.0 install from GitHub verified on the testbed (PASS).
 - #20 M2 merged (PR #35, squash 2911dbf): followed programs + My ABC listen (3 review rounds; stale-id safe).
