@@ -14,6 +14,10 @@ plugin. The goal:
 
 Core capabilities:
 
+0. **Navigation mirrors the ABC listen app/site** (stakeholder direction, 2026-10-19). Top-level menu, in order:
+   **Home, Radio, Podcasts, News, Sport, Kids listen, Audiobooks**, followed by plugin-specific
+   **Programs (A–Z / by network / by type), Search, My ABC listen**. Podcasts must be prominent and fully browsable.
+
 1. **Live stations** — every ABC listen live channel (national networks, music networks, local radio),
    with station artwork, the program currently on air, and now-playing song metadata where ABC publishes it.
 2. **Programs → episodes** — browse ABC listen programs (by station/channel, category, A–Z) and their

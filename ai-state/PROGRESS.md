@@ -33,5 +33,12 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 ## Next
 - After F1 merges: wave 1 = F2, F3, R1, M1 in parallel.
 
+## Plan revisions
+- 2026-10-19 — Stakeholder: podcasts prominent → D2 makes "Podcasts" top-level (#6 comment).
+- 2026-10-19 — Stakeholder: top-level menu mirrors the ABC listen app (Home, Radio, Podcasts, News, Sport, Kids listen,
+  Audiobooks, + Programs, Search, My ABC listen). F1 amended in flight (weighted top-level ordering via
+  `Util::topWeight`, "Live radio" → "Radio"). Plan-revision + backlog-reconciliation agent to follow once the last
+  spec batch is filed (new section-menus task for News/Sport/Kids listen/Audiobooks; Discover → Home).
+
 ## Active blockers
 - None. Stakeholder decisions with defaults in OPEN-QUESTIONS §1 (login), §2 (authorship), §4 (live quality).
