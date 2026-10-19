@@ -6,9 +6,8 @@
 # hooks that never call back (timeout), concurrent requests and errors in the feed callback
 # itself. The weighted top-level order: items from all hooks merged and stable-sorted by their
 # `weight` (missing = 100), weights stripped, a failing hook's error item at its declared weight.
-# Also the F1 hook stubs: the top-level "Radio" link with its 5 stations (exact item keys; since
-# F2 their url and favorites_url are abclisten://live/<ID>), and the empty
-# OnDemand/Discover/Search/MyABC hooks.
+# Also the hooks' top level: the "Radio" link (since L1 a feed; its menus are in
+# t/21-live-menu.t), and the empty OnDemand/Discover/Search/MyABC hooks.
 
 use strict;
 use warnings;
@@ -260,40 +259,8 @@ subtest 'default feed: "Home", "Radio" and "Programs" links; the other hooks add
 	is( $live->{type}, 'link', 'a link' );
 	is( $live->{image}, $ICON, 'with the plugin icon' );
 	ok( !exists $live->{weight}, 'its weight was used for sorting and removed' );
-	is( ref $live->{items}, 'ARRAY', 'with its items inline' );
-
-	my @stations = (
-		[ 'triple j',       'abclisten://live/TRIPLEJ', $ICON ],
-		[ 'Double J',       'abclisten://live/DOUBLEJ', $ICON ],
-		[ 'Radio National', 'abclisten://live/RN',
-			'https://live-production.wcms.abc-cdn.net.au/556166359443f9aaa26ce7b905c4a29f?impolicy=wcms_crop_resize&cropH=500&cropW=500&xPos=0&yPos=0&width=862&height=862' ],
-		[ 'ABC Classic',    'abclisten://live/CLASSIC', $ICON ],
-		[ 'ABC Jazz',       'abclisten://live/JAZZ',    $ICON ],
-	);
-
-	is_deeply(
-		$live->{items},
-		[
-			map {
-				my ( $name, $url, $image ) = @$_;
-				{
-					name           => $name,
-					type           => 'audio',
-					on_select      => 'play',
-					url            => $url,
-					favorites_url  => $url,
-					image          => $image,
-					favorites_icon => $image,
-				}
-			} @stations
-		],
-		'5 stations in order, exact keys: name, type, url, on_select, favorites_url, favorites_icon, image'
-	);
-
-	is_deeply( [ map { $_->{name} } @{ $live->{items} } ], [ 'triple j', 'Double J', 'Radio National', 'ABC Classic', 'ABC Jazz' ], 'station names and order' );
-	for my $station ( @{ $live->{items} } ) {
-		like( $station->{$_}, qr{\Aabclisten://live/[A-Z0-9_]+\z}, "$station->{name}: $_ is a stable abclisten://live/ URL (never a stream URL)" ) for qw(url favorites_url);
-	}
+	is_deeply( [ sort keys %$live ], [qw(image name type url)], 'keys: name, type, url, image (since L1 the stations are a feed: t/21-live-menu.t)' );
+	is( ref $live->{url}, 'CODE', 'its url is the Radio feed' );
 	check_names( $items, 'top level' );
 };
 
