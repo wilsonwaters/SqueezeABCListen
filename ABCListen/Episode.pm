@@ -17,13 +17,23 @@ package Plugins::ABCListen::Episode;
 #          canonical page for any episode, segment or news audio id (OQ1, spiked 2026-10-19).
 #       3. A page without an episode document (an audiobook chapter redirects to its book), or a
 #          failed generic path: ONE Algolia lookup by objectID. A hit with renditions is chosen
-#          from directly (dates.mediaDownload*/mediaStreaming* are the windows); a hit without
-#          them gives the page to fetch. No hit: EPISODE_NOT_FOUND.
+#          from directly (dates.mediaDownload*/mediaStreaming* are the windows, the 1x1 crop of
+#          defaultThumbnail the image); a hit without them gives the page to fetch. No hit:
+#          EPISODE_NOT_FOUND.
 #     A failed request answers from the cached renditions of any age if there are some, else
 #     with the API's token (LOAD_FAILED or RATE_LIMITED). Every request has a 6 s timeout, and an
 #     18 s deadline answers before the handler's 20 s resolve timeout (from the cached renditions
 #     if any, else LOAD_FAILED). Whatever arrives later is still cached, never answered twice.
-#     What is fetched is merged into the metadata cache (contract-3 keys; windows as epochs).
+#     What is fetched is merged into the metadata cache (contract-3 keys; windows as epochs;
+#     renditions as { url, mime, bitrate, fileSize }, fileSize only when ABC gives one). A
+#     restricted or not yet released episode closes the cached windows (availableTo and
+#     downloadAvailableTo = now), so that fallback answers EPISODE_EXPIRED rather than playing
+#     renditions cached earlier.
+#
+#   Bitrates (O6): ABC gives its AAC renditions bitrate 0. An AAC rendition whose bitrate is 0 or
+#     missing gets fileSize x 8 / duration / 1000 kbps (3 decimals; e.g. 353,025,904 B over
+#     10,799 s: 261.525), cached with the renditions. Without a fileSize or a duration it stays
+#     as it was, and the stream stays unseekable.
 #
 #   Choosing a rendition (ai-state/research/abc-listen-api.md §4.3), at _now():
 #     - webDistributionRestricted: EPISODE_RESTRICTED, whatever the renditions;
@@ -39,16 +49,26 @@ package Plugins::ABCListen::Episode;
 #   episode kind metadata($client, $url, $id): synchronous, no network, never dies. From the
 #     metadata cache: title, artist = programTitle, album = network (if a writer stored one)
 #     else programTitle, cover = image at 600 px (else the plugin icon), duration. Without an
-#     entry: the "ABC listen episode" title and the icon. Seeking and the progress bar are left
-#     to LMS's remote scan: the song's duration and start offset are never set here.
+#     entry: the "ABC listen episode" title and the icon.
 #
-# Owned by the ondemand stream (O1).
+#   episode kind onStream($client, $song, $id) (O6): LMS seeks in a remote stream only when the
+#     song has a bitrate and a duration (Slim::Player::Protocols::HTTP canSeek, getSeekData), and
+#     its remote scan finds neither for ADTS AAC (Scanner::Remote parseAACHeader sets only the
+#     sample rate). So a current track without a duration gets the cached episode duration, and
+#     one without a bitrate gets the cached (or derived) bitrate of the rendition being streamed
+#     ($song->streamUrl, or the track's redir after a redirect), in bps. Fill-only: a value LMS
+#     set (an MP3's, from its headers) is never overwritten, so filling again (once per player in
+#     a sync group, again after a seek) changes nothing. The song's own duration and start
+#     offset are never set (the "never set song duration" rule, narrowed to this fill for O6).
+#
+# Owned by the ondemand stream (O1, O6).
 
 use strict;
 use warnings;
 
 use Time::HiRes ();
 
+use Slim::Music::Info;
 use Slim::Utils::Log;
 use Slim::Utils::Strings;
 use Slim::Utils::Timers;
@@ -92,6 +112,7 @@ sub init {
 		episode => {
 			resolve  => sub { my ( $client, $id, $cb ) = @_; __PACKAGE__->resolve( $id, $cb ) },
 			metadata => \&_kindMetadata,
+			onStream => \&_onStream,
 		}
 	);
 
@@ -194,7 +215,7 @@ sub _lookup {
 			query                => '',
 			filters              => join( ' OR ', map {qq{objectID:"coremedia://$_/$id"}} @AUDIO_TYPES ),
 			hitsPerPage          => 1,
-			attributesToRetrieve => [qw(objectID canonicalURL title programTitle programID duration dates mediaRenditions)],
+			attributesToRetrieve => [qw(objectID canonicalURL title programTitle programID duration dates mediaRenditions defaultThumbnail)],
 		},
 		sub { _hit( $state, shift ) },
 		sub { _failed( $state, 'the search index lookup', shift ) },
@@ -379,7 +400,7 @@ sub _parseDocument {
 		image                 => _documentImage($doc),
 		date                  => _epoch( $dateline->{publishedDate} ),
 		duration              => _positive( $doc->{duration} ),
-		renditions            => _renditions( $doc->{renditions}, 'MIMEType' ),
+		renditions            => _renditions( $doc->{renditions}, 'MIMEType', $doc->{duration} ),
 		availableFrom         => _epoch( $doc->{availableFrom} ),
 		availableTo           => _epoch( $doc->{availableTo} ),
 		downloadAvailableFrom => _epoch( $doc->{downloadAvailableFrom} ),
@@ -400,9 +421,10 @@ sub _parseHit {
 		programTitle          => _text( $hit->{programTitle} ),
 		programId             => _digits( $hit->{programID} ),
 		path                  => Plugins::ABCListen::API::sitePath( $hit->{canonicalURL} ),
+		image                 => _hitImage( $hit->{defaultThumbnail} ),
 		date                  => _epoch( $dates->{publicationDate} ),
 		duration              => _positive( $hit->{duration} ),
-		renditions            => _renditions( $hit->{mediaRenditions}, 'contentType' ),
+		renditions            => _renditions( $hit->{mediaRenditions}, 'contentType', $hit->{duration} ),
 		availableFrom         => _epoch( $dates->{mediaStreamingAvailableFrom} ),
 		availableTo           => _epoch( $dates->{mediaStreamingAvailableTo} ),
 		downloadAvailableFrom => _epoch( $dates->{mediaDownloadAvailableFrom} ),
@@ -453,15 +475,52 @@ sub _thumbnail {
 	return undef;
 }
 
-# [ { url, <$mimeKey>, bitrate } ] -> [ { url, mime, bitrate } ] (entries without a URL dropped).
+# An Algolia hit's defaultThumbnail ({ <ratio> => URL }): its 1x1 crop, if any.
+sub _hitImage {
+	my $thumbnail = shift;
+	return ref $thumbnail eq 'HASH' && _isUrl( $thumbnail->{'1x1'} ) ? $thumbnail->{'1x1'} : undef;
+}
+
+# [ { url, <$mimeKey>, bitrate, fileSize } ] -> [ { url, mime, bitrate, fileSize } ] (entries
+# without a URL dropped; fileSize only when positive). An AAC rendition without a bitrate gets
+# the one derived from its fileSize and the episode's $duration (_kbps).
 sub _renditions {
-	my ( $list, $mimeKey ) = @_;
+	my ( $list, $mimeKey, $duration ) = @_;
 	return [] unless ref $list eq 'ARRAY';
 
-	return [
-		map { { url => $_->{url}, mime => _mime( $_->{$mimeKey} ), bitrate => _bitrate( $_->{bitrate} ) } }
-		grep { ref $_ eq 'HASH' && _isUrl( $_->{url} ) } @$list
-	];
+	my @renditions;
+
+	for my $entry ( grep { ref $_ eq 'HASH' && _isUrl( $_->{url} ) } @$list ) {
+		my %rendition = ( url => $entry->{url}, mime => _mime( $entry->{$mimeKey} ), bitrate => _bitrate( $entry->{bitrate} ) );
+
+		my $fileSize = _positive( $entry->{fileSize} );
+		$rendition{fileSize} = $fileSize if defined $fileSize;
+
+		my $kbps = _kbps( \%rendition, $duration );
+		$rendition{bitrate} = $kbps if defined $kbps;
+
+		push @renditions, \%rendition;
+	}
+
+	return \@renditions;
+}
+
+# A rendition's bitrate in kbps: its own when positive; else, for AAC only, fileSize x 8 /
+# duration / 1000 (3 decimals); else undef (no fileSize or duration, or zero: nothing derived).
+sub _kbps {
+	my ( $rendition, $duration ) = @_;
+
+	my $bitrate = _positive( $rendition->{bitrate} );
+	return $bitrate if defined $bitrate;
+
+	my $mime = _mime( $rendition->{mime} );
+	return undef unless defined $mime && $mime eq $AAC;
+
+	my $fileSize = _positive( $rendition->{fileSize} );
+	$duration = _positive($duration);
+	return undef unless defined $fileSize && defined $duration;
+
+	return sprintf( '%.3f', $fileSize * 8 / $duration / 1000 ) + 0;
 }
 
 # ---------------------------------------------------------------------------
@@ -470,7 +529,9 @@ sub _renditions {
 
 # Merge a fetched episode into the metadata cache. The renditions, their windows and seenAt (what
 # the 6 h shortcut plays from) only when they say what plays: not for a restricted episode or one
-# not released yet (the cache has no field for either), nor without renditions.
+# not released yet (the cache has no field for either), nor without renditions. Such an episode
+# closes the cached windows instead (both = now): renditions cached earlier (e.g. seeded by
+# Search) then answer EPISODE_EXPIRED when a later request fails, instead of playing.
 sub _remember {
 	my ( $id, $episode, $now ) = @_;
 
@@ -478,7 +539,10 @@ sub _remember {
 
 	my $notYet = grep { defined $_ && $_ > $now } map { _epoch( $episode->{$_} ) } qw(availableFrom downloadAvailableFrom);
 
-	if ( !$episode->{restricted} && !$notYet && @{ $episode->{renditions} } ) {
+	if ( $episode->{restricted} || $notYet ) {
+		$meta{availableTo} = $meta{downloadAvailableTo} = $now;
+	}
+	elsif ( @{ $episode->{renditions} } ) {
 		$meta{renditions}          = $episode->{renditions};
 		$meta{availableTo}         = _bound( $episode->{availableTo} );
 		$meta{downloadAvailableTo} = _bound( $episode->{downloadAvailableTo} );
@@ -560,6 +624,53 @@ sub _fallbackTitle {
 
 	my $title = Slim::Utils::Strings::cstring( $client, TITLE );
 	return defined $title && length $title ? $title : Plugins::ABCListen::Util::DISPLAY_NAME;
+}
+
+# ---------------------------------------------------------------------------
+# The episode kind's onStream: fill the track's empty duration and bitrate, so LMS can seek
+# ---------------------------------------------------------------------------
+
+sub _onStream {
+	my ( $client, $song, $id ) = @_;
+
+	my $track = $song && $song->currentTrack or return;
+
+	my ( $secs, $bitrate ) = ( $track->secs, $track->bitrate );
+	return if $secs && $bitrate;    # LMS knows both (an MP3): nothing to fill
+
+	my $entry = _entry($id) or return;
+
+	my $duration = _positive( $entry->{duration} );
+	my $kbps     = _streamKbps( $entry, $duration, $song->streamUrl, $track->can('redir') ? $track->redir : undef );
+
+	# fill-only: what LMS set is never overwritten
+	Slim::Music::Info::setDuration( $track, $duration ) if !$track->secs && defined $duration;
+	Slim::Music::Info::setBitrate( $track, int( $kbps * 1000 + 0.5 ) ) if !$track->bitrate && defined $kbps;
+
+	main::INFOLOG && $log->is_info && $log->info( "Episode $id: LMS gave the stream "
+			. ( $secs    ? "duration $secs s" : 'no duration' ) . ' and '
+			. ( $bitrate ? "bitrate $bitrate bps" : 'no bitrate' )
+			. '; from the metadata cache it now has duration ' . ( $track->secs ? $track->secs . ' s' : 'unknown' )
+			. ' and bitrate ' . ( $track->bitrate ? $track->bitrate . ' bps' : 'unknown' ) );
+
+	return;
+}
+
+# The kbps (cached, or derived by _kbps) of the cached rendition being streamed: the one whose URL
+# is one of @urls (the song's stream URL, and the URL before a redirect); undef if none has one.
+sub _streamKbps {
+	my ( $entry, $duration, @urls ) = @_;
+
+	my %streaming = map { ( $_ => 1 ) } grep { defined $_ && !ref $_ && length $_ } @urls;
+
+	for my $rendition ( ref $entry->{renditions} eq 'ARRAY' ? @{ $entry->{renditions} } : () ) {
+		next unless ref $rendition eq 'HASH' && defined $rendition->{url} && !ref $rendition->{url} && $streaming{ $rendition->{url} };
+
+		my $kbps = _kbps( $rendition, $duration );
+		return $kbps if defined $kbps;
+	}
+
+	return undef;
 }
 
 # ---------------------------------------------------------------------------

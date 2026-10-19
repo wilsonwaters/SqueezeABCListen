@@ -10,21 +10,30 @@
 # rate limiting, transport errors with and without cached renditions, the 18 s deadline with a
 # late result cached, invalid ids, concurrent resolves, stale buildId, non-audio documents); the
 # metadata cache write (contract-3 keys only, epochs, seenAt, merged); exactly one callback.
+# O6: AAC bitrates derived from fileSize and duration (and not without them), an AAC-only Algolia
+# hit with different download and streaming windows, a restricted or not yet released document
+# closing the cached windows (the fallback answers EXPIRED), the chapter cover from the hit's
+# defaultThumbnail, a non-geo primary with a geo alternate, the request options on every path.
 #
 # Fixtures in t/data/ondemand/ are raw response bodies as served:
 #   nextdata-episode-scienceshow-mp3.trimmed.json   GET /_next/data/<buildId>/listen/programs/scienceshow/trees-potatoes-brendan-may-step/107266790.json
 #   nextdata-episode-classic-drive-aac.trimmed.json GET /_next/data/<buildId>/listen/programs/classic-drive/classic-drive/107174638.json
 #   nextdata-episode-old-2024.trimmed.json          GET /_next/data/<buildId>/listen/programs/scienceshow/the-science-show/103022914.json
 #       (research copies in ai-state/research/abc-samples/: the {_fixture_note, data} wrapper stripped,
-#        data re-wrapped as {"pageProps": {"data": ...}}, shapes unedited)
+#        data re-wrapped as {"pageProps": {"data": ...}}, shapes unedited. One value edited for O6:
+#        the 2024 hero image's xPos 134 -> 684, so it differs from the thumbnail's large 1x1 crop)
 #   nextdata-program-audiobook.trimmed.json         GET /_next/data/build-3afcd04f/listen/audiobooks/the-dictionary-of-lost-words-page.json
 #       (research copy; its pageProps re-wrapped as {"pageProps": ...})
 # Recorded for O1 (2026-10-19, OQ1 spike, buildId build-3afcd04f):
 #   nextdata-generic-107266790.json   GET /_next/data/build-3afcd04f/listen/programs/x/x/107266790.json (308 to the canonical page)
 #   nextdata-generic-106353760.json   GET /_next/data/build-3afcd04f/listen/programs/x/x/106353760.json (audiobook chapter: 308 to its book)
 #   nextdata-generic-1-404.json       GET /_next/data/build-3afcd04f/listen/programs/x/x/1.json (404 {"notFound":true})
-#   algolia-objectid-106353760.json   POST .../1/indexes/listen_prod_all/query, the objectID lookup O1 sends for 106353760
-#                                     (the Prologue chapter of algolia-audiobook-chapters.trimmed.json, with programTitle)
+# Recorded for O6 (2026-10-19), POST .../1/indexes/listen_prod_all/query, the objectID lookup O6 sends
+# (attributesToRetrieve with defaultThumbnail), pretty-printed:
+#   algolia-objectid-106353760.json   the Prologue chapter of algolia-audiobook-chapters.trimmed.json, with
+#                                     programTitle and defaultThumbnail (re-recorded; O1's had no defaultThumbnail)
+#   algolia-objectid-107174638.json   Classic Drive: AAC only (bitrate 0, fileSize), download window to 2200,
+#                                     streaming window 28 days
 # Shared: foundation/listen-search.trimmed.html (F3's recorded search page: buildId build-3afcd04f, Algolia TESTAPPID).
 # Synthetic cases are built in this file from the recorded documents (edit_doc).
 
@@ -69,16 +78,21 @@ my $DRIVE      = '107174638';
 my $DRIVE_PATH = '/listen/programs/classic-drive/classic-drive/107174638';
 my $DRIVE_AAC  = "$MEDIA/audio/02/pj/Z/2j.aac";
 my $DRIVE_IMG  = 'https://live-production.wcms.abc-cdn.net.au/1a5e40456cd704992f3f4fd7252a97b6?impolicy=wcms_crop_resize&cropH=1688&cropW=1688&xPos=656&yPos=0&width=862&height=862';
+my $DRIVE_SIZE = 353_025_904;    # the AAC's fileSize (bytes); duration 10,799 s
+my $DRIVE_KBPS = 261.525;        # 353,025,904 x 8 / 10,799 / 1000, 3 decimals
 
-my $OLD      = '103022914';
-my $OLD_PATH = '/listen/programs/scienceshow/the-science-show/103022914';
-my $OLD_MP3  = "$MEDIA/audio/01/pp/Z/3i.mp3";
-my $OLD_HERO = 'https://live-production.wcms.abc-cdn.net.au/23b56445f570798642596347fe3a35f9?impolicy=wcms_crop_resize&cropH=1362&cropW=1362&xPos=134&yPos=0&width=862&height=862';
+my $OLD       = '103022914';
+my $OLD_PATH  = '/listen/programs/scienceshow/the-science-show/103022914';
+my $OLD_MP3   = "$MEDIA/audio/01/pp/Z/3i.mp3";
+my $OLD_HERO  = 'https://live-production.wcms.abc-cdn.net.au/23b56445f570798642596347fe3a35f9?impolicy=wcms_crop_resize&cropH=1362&cropW=1362&xPos=684&yPos=0&width=862&height=862';
+my $OLD_THUMB = 'https://live-production.wcms.abc-cdn.net.au/23b56445f570798642596347fe3a35f9?impolicy=wcms_crop_resize&cropH=1362&cropW=1362&xPos=134&yPos=0&width=862&height=862';
 
 my $CHAPTER      = '106353760';
 my $CHAPTER_PATH = '/listen/audiobooks/the-dictionary-of-lost-words-page/prologue-february-1886/106353760';
 my $BOOK_PATH    = '/listen/audiobooks/the-dictionary-of-lost-words-page';
 my $CHAPTER_MP3  = "$MEDIA/geo-001/audio/02/j6/Z/rr.mp3";
+my $CHAPTER_IMG  = 'https://live-production.wcms.abc-cdn.net.au/d69f290a96e32fb4674bad70b4211043?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862';
+my $CHAPTER_COVER = 'https://live-production.wcms.abc-cdn.net.au/d69f290a96e32fb4674bad70b4211043?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=600&height=600';
 
 my $EXPIRED      = 'PLUGIN_ABCLISTEN_EPISODE_EXPIRED';
 my $RESTRICTED   = 'PLUGIN_ABCLISTEN_EPISODE_RESTRICTED';
@@ -188,7 +202,7 @@ subtest 'parse: Science Show MP3 episode -> metadata cache entry' => sub {
 			description         => 'And palm oil producers in South-East Asia have changed their ways, considering the environment more than they did. Brendan May is turning his attention now to nickel mines in tropical countries.',
 			date                => iso('2026-10-17T01:00:00+00:00'),
 			duration            => 3276,
-			renditions          => [ { url => $SCIENCE_MP3, mime => 'audio/mpeg', bitrate => 192 } ],
+			renditions          => [ { url => $SCIENCE_MP3, mime => 'audio/mpeg', bitrate => 192, fileSize => 78642070 } ],
 			availableTo         => iso('2026-11-14T01:00:00+00:00'),
 			downloadAvailableTo => $OPEN_END,
 			seenAt              => $T,
@@ -209,8 +223,11 @@ subtest 'parse: Classic Drive AAC episode (duplicate mpegurl entry kept in the c
 		[ 'Classic Drive', 'Classic Drive', '8812254', $DRIVE_PATH, $DRIVE_IMG, 10799, iso('2026-10-19T04:00:00+00:00') ], 'title, program, id, path, program image, duration, date' );
 	is_deeply(
 		$m->{renditions},
-		[ { url => $DRIVE_AAC, mime => 'audio/aac', bitrate => 0 }, { url => $DRIVE_AAC, mime => 'application/vnd.apple.mpegurl', bitrate => 0 } ],
-		'renditions normalised to {url, mime, bitrate}'
+		[
+			{ url => $DRIVE_AAC, mime => 'audio/aac',                     bitrate => $DRIVE_KBPS, fileSize => $DRIVE_SIZE },
+			{ url => $DRIVE_AAC, mime => 'application/vnd.apple.mpegurl', bitrate => 0,           fileSize => $DRIVE_SIZE },
+		],
+		'renditions normalised to {url, mime, bitrate, fileSize}; the AAC\'s bitrate 0 derived (O6), the mpegurl entry\'s left'
 	);
 	is( $m->{availableTo}, iso('2026-11-16T04:00:00+00:00'), 'availableTo as an epoch' );
 };
@@ -221,6 +238,9 @@ subtest 'parse: 2024 episode (hero image wins; MP3 after availableTo)' => sub {
 
 	is_deeply( candidates($r), [$OLD_MP3], 'MP3 still plays (downloadAvailableTo 2200) although availableTo passed in 2024' );
 	my $m = getEpisodeMeta($OLD);
+	my $thumbnail = edit_doc( undef, 'nextdata-episode-old-2024.trimmed.json' )->{pageProps}->{data}->{documentProps}->{thumbnailLink}->{cropInfo}->[0]->{value}->[0];
+	is_deeply( [ @$thumbnail{qw(ratio url)} ], [ '1x1', $OLD_THUMB ], 'the fixture has a large 1x1 thumbnail crop ...' );
+	isnt( $OLD_HERO, $OLD_THUMB, '... that differs from its hero image (O6 fixture edit)' );
 	is( $m->{image},        $OLD_HERO,                               'hero image first' );
 	is( $m->{title},        'H. G. Wells – father of science fiction', 'title' );
 	is( $m->{programTitle}, 'The Science Show',                      'program' );
@@ -383,6 +403,11 @@ subtest 'matrix: restricted and geo-001' => sub {
 	fresh();
 	$r = answer( resolve_doc( edit_doc( sub { $_[0]->{renditions} = [ rendition( $geoAac, 'audio/aac', 0 ), rendition( $geoMp3, 'audio/mpeg', 192 ) ] } ) ), 'geo both' );
 	is_deeply( [ candidates($r), $r->{failToken} ], [ [ $geoMp3, $geoAac ], $GEO ], 'MP3 + AAC both geo: both tried, then the geo message' );
+
+	fresh();
+	$r = answer( resolve_doc( edit_doc( sub { $_[0]->{renditions} = [ rendition( $geoAac, 'audio/aac', 0 ), rendition( $SCIENCE_MP3, 'audio/mpeg', 192 ) ] } ) ), 'non-geo + geo' );
+	is_deeply( [ candidates($r), $r->{failToken} ], [ [ $SCIENCE_MP3, $geoAac ], $GEO ],
+		'non-geo MP3 primary, geo AAC alternate: both tried; if both fail, the geo message (the alternate may have failed for being geo)' );
 };
 
 # ---- resolution paths ----
@@ -434,7 +459,7 @@ subtest 'stale seenAt (> 6 h) -> the cached path is fetched: exactly one _next/d
 	is_deeply( [ map { $_->{url} } data_requests() ], [ data_url($SCIENCE_PATH) ], 'one _next/data request, for the cached path' );
 	is( scalar( algolia_requests() ), 0, 'no Algolia request' );
 	is( getEpisodeMeta($SCIENCE)->{seenAt}, $T, 'seenAt refreshed' );
-	is_deeply( getEpisodeMeta($SCIENCE)->{renditions}, [ { url => $SCIENCE_MP3, mime => 'audio/mpeg', bitrate => 192 } ], 'renditions replaced' );
+	is_deeply( getEpisodeMeta($SCIENCE)->{renditions}, [ { url => $SCIENCE_MP3, mime => 'audio/mpeg', bitrate => 192, fileSize => 78642070 } ], 'renditions replaced' );
 };
 
 subtest 'no cached path (OQ1): the generic path, redirected by ABC to the canonical page' => sub {
@@ -467,9 +492,9 @@ subtest 'generic path fails -> one Algolia objectID lookup -> its page -> the do
 			query                => '',
 			filters              => qq{objectID:"coremedia://audioepisode/$SCIENCE" OR objectID:"coremedia://audio/$SCIENCE" OR objectID:"coremedia://audiosegment/$SCIENCE"},
 			hitsPerPage          => 1,
-			attributesToRetrieve => [qw(objectID canonicalURL title programTitle programID duration dates mediaRenditions)],
+			attributesToRetrieve => [qw(objectID canonicalURL title programTitle programID duration dates mediaRenditions defaultThumbnail)],
 		},
-		'the POST body holds the three-objectID filter, one hit, the attributes needed'
+		'the POST body holds the three-objectID filter, one hit, the attributes needed (defaultThumbnail: O6)'
 	);
 	is( ( data_requests() )[-1]->{url}, data_url($SCIENCE_PATH), 'then the page the hit names' );
 };
@@ -523,6 +548,7 @@ subtest 'audiobook chapter (#12 amendment): cached chapter path -> book page -> 
 
 	my $r = answer( resolve_id($CHAPTER), 'chapter' );
 	is_deeply( [ @$r{qw(url alternates failToken)} ], [ $CHAPTER_MP3, [], $GEO ], 'the geo MP3 with failToken EPISODE_GEO (not RESTRICTED: the book flag is not the chapter\'s)' );
+	is( $r->{meta}->{cover}, $CHAPTER_COVER, 'the metadata cover is the hit\'s defaultThumbnail (1x1, at 600 px), not the plugin icon (O6)' );
 	is( scalar( algolia_requests() ), 1, 'exactly one Algolia request' );
 	is_deeply( [ map { $_->{url} } data_requests() ], [ data_url($CHAPTER_PATH), data_url($BOOK_PATH) ], 'the chapter page redirected to the book; the canonicalURL is not fetched again' );
 
@@ -535,9 +561,10 @@ subtest 'audiobook chapter (#12 amendment): cached chapter path -> book page -> 
 			programTitle        => 'The Dictionary of Lost Words',
 			programId           => '106353766',
 			path                => $CHAPTER_PATH,
+			image               => $CHAPTER_IMG,
 			date                => iso('2026-04-01T13:00:00+00:00'),
 			duration            => 257,
-			renditions          => [ { url => $CHAPTER_MP3, mime => 'audio/mpeg', bitrate => 320 } ],
+			renditions          => [ { url => $CHAPTER_MP3, mime => 'audio/mpeg', bitrate => 320, fileSize => 10547937 } ],
 			availableTo         => iso('2027-04-01T13:00:00+00:00'),
 			downloadAvailableTo => iso('2027-04-01T13:00:00+00:00'),
 			seenAt              => $T,
@@ -702,6 +729,127 @@ subtest 'metadata cache write: contract-3 keys only, epochs, seenAt, merged over
 	is( $m->{title},   $SCIENCE_TITLE,       'a new value replaces the old one' );
 	is( $m->{seenAt},  $T,                   'seenAt = now' );
 	ok( ( !grep { defined $m->{$_} && $m->{$_} !~ /\A[0-9]+\z/ } qw(date availableTo downloadAvailableTo seenAt) ), 'times are epoch seconds' );
+};
+
+# ---- O6: AAC bitrates, stale renditions, request options ----
+
+subtest 'O6 bitrate: AAC without one -> fileSize x 8 / duration / 1000 kbps; nothing derived otherwise' => sub {
+	my $size = 117_936_000;    # x 8 / 3276 s (the Science Show's duration) / 1000 = 288 kbps
+
+	fresh();
+	resolve_doc( edit_doc( sub {
+		$_[0]->{renditions} = [
+			{ url => "$MEDIA/a.aac", MIMEType => 'audio/aac',  fileSize => $size },                  # no bitrate
+			{ url => "$MEDIA/b.aac", MIMEType => 'audio/aac',  fileSize => $size, bitrate => 0 },
+			{ url => "$MEDIA/c.aac", MIMEType => 'audio/aac',  fileSize => $size, bitrate => 96 },   # ABC's own: kept
+			{ url => "$MEDIA/d.aac", MIMEType => 'audio/aac',  bitrate  => 0 },                      # no fileSize
+			{ url => "$MEDIA/e.aac", MIMEType => 'audio/aac',  fileSize => 0, bitrate => 0 },        # zero fileSize
+			{ url => "$MEDIA/f.mp3", MIMEType => 'audio/mpeg', fileSize => $size, bitrate => 0 },    # MP3: never derived
+		];
+	} ) );
+	is_deeply( [ map { $_->{bitrate} } @{ getEpisodeMeta($SCIENCE)->{renditions} } ], [ 288, 288, 96, 0, 0, 0 ], 'derived for AAC with a fileSize only; ABC\'s bitrate and MP3s untouched' );
+	is_deeply( [ map { $_->{fileSize} } @{ getEpisodeMeta($SCIENCE)->{renditions} } ], [ ($size) x 3, undef, undef, $size ], 'fileSize cached when positive' );
+
+	for my $case ( [ 'duration 0', sub { $_[0]->{duration} = 0 } ], [ 'no duration', sub { delete $_[0]->{duration} } ] ) {
+		fresh( iso('2026-10-20T12:00:00Z') );
+		my $r = answer( resolve_doc( edit_doc( $case->[1], 'nextdata-episode-classic-drive-aac.trimmed.json' ), $DRIVE, $DRIVE_PATH ), $case->[0] );
+		is( $r->{url}, $DRIVE_AAC, "$case->[0]: the AAC still plays" );
+		is( getEpisodeMeta($DRIVE)->{renditions}->[0]->{bitrate}, 0, "$case->[0]: no bitrate derived (it stays unseekable, no error)" );
+	}
+};
+
+subtest 'O6 Algolia: an AAC-only hit with different download and streaming windows (recorded Classic Drive hit)' => sub {
+	for my $case (
+		[ '2026-10-20T12:00:00Z', [$DRIVE_AAC], 'inside the streaming window' ],
+		[ '2026-11-16T04:00:00Z', $EXPIRED,     'streaming window over: the download window (to 2200) is not the AAC\'s' ],
+		[ '2026-10-19T03:59:59Z', $EXPIRED,     'before the windows open' ],
+	) {
+		my ( $when, $want, $name ) = @$case;
+		fresh( iso($when) );
+		serve( "/listen/programs/x/x/$DRIVE", fixture('ondemand/nextdata-generic-1-404.json'), code => 404 );
+		serve_algolia( fixture('ondemand/algolia-objectid-107174638.json') );
+
+		my $r = answer( resolve_id($DRIVE), $name );
+		if ( ref $want ) { is_deeply( candidates($r), $want, "$name: the AAC" ) }
+		else             { is_deeply( $r, { error => $want }, "$name: $want" ) }
+		is( scalar( data_requests() ), 1, "$name: chosen from the hit (the page it names is not fetched)" );
+	}
+
+	fresh( iso('2026-10-20T12:00:00Z') );
+	serve( "/listen/programs/x/x/$DRIVE", fixture('ondemand/nextdata-generic-1-404.json'), code => 404 );
+	serve_algolia( fixture('ondemand/algolia-objectid-107174638.json') );
+	answer( resolve_id($DRIVE), 'cached' );
+	my $m = getEpisodeMeta($DRIVE);
+	is_deeply( $m->{renditions}->[0], { url => $DRIVE_AAC, mime => 'audio/aac', bitrate => $DRIVE_KBPS, fileSize => $DRIVE_SIZE }, 'the hit\'s AAC: bitrate derived from its fileSize and duration' );
+	is_deeply( [ @$m{qw(availableTo downloadAvailableTo image)} ], [ iso('2026-11-16T04:00:00+00:00'), $OPEN_END, $DRIVE_IMG ], 'both windows cached; the image is the defaultThumbnail 1x1' );
+};
+
+subtest 'O6 stale renditions: a restricted or not yet released document closes the cached windows -> fallback EXPIRED' => sub {
+	my $seeded = {
+		path        => $SCIENCE_PATH,
+		renditions  => [ { url => $SCIENCE_MP3, mime => 'audio/mpeg', bitrate => 192 } ],
+		availableTo => $OPEN_END, downloadAvailableTo => $OPEN_END, seenAt => $T - 7 * 3600,    # seeded by Search, > 6 h ago
+	};
+
+	for my $case (
+		[ 'restricted',       sub { $_[0]->{webDistributionRestricted} = JSON::PP::true },                                     $RESTRICTED ],
+		[ 'not released yet', sub { $_[0]->{availableFrom} = $_[0]->{downloadAvailableFrom} = '2026-10-21T00:00:00+00:00' }, $EXPIRED ],
+	) {
+		my ( $name, $edit, $token ) = @$case;
+
+		fresh();
+		setEpisodeMeta( $SCIENCE, dclone($seeded) );
+		serve( $SCIENCE_PATH, edit_doc($edit) );
+		is_deeply( answer( resolve_id($SCIENCE), $name ), { error => $token }, "$name: $token" );
+
+		my $entry = getEpisodeMeta($SCIENCE);
+		is_deeply( [ @$entry{qw(availableTo downloadAvailableTo seenAt)} ], [ $T, $T, $T - 7 * 3600 ], "$name: both cached windows closed (now); seenAt kept" );
+
+		# later, the document request fails: the cached renditions answer EXPIRED instead of playing
+		fresh( $T + 60 );
+		setEpisodeMeta( $SCIENCE, $entry );
+		route( data_url($SCIENCE_PATH), error => 'Timed out waiting for data' );
+		is_deeply( answer( resolve_id($SCIENCE), "$name, then a failed request" ), { error => $EXPIRED }, "$name, then a failed request: EXPIRED, not the seeded MP3" );
+
+		# ... and so does the 18 s deadline
+		fresh( $T + 60 );
+		setEpisodeMeta( $SCIENCE, $entry );
+		serve( $SCIENCE_PATH, edit_doc(), defer => 1 );
+		my $c = resolve_id($SCIENCE);
+		advanceTime(18);
+		is_deeply( [ $c->count, ( $c->args(0) )[0] ], [ 1, { error => $EXPIRED } ], "$name, then no answer within 18 s: EXPIRED" );
+		Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	}
+};
+
+subtest 'request options on every path: documents ttl 3600 + timeout 6 (the generic guess quiet), the lookup timeout 6' => sub {
+	my @calls;
+	my ( $nextData, $algolia ) = ( \&Plugins::ABCListen::API::nextData, \&Plugins::ABCListen::API::algolia );
+	no warnings 'redefine';
+	local *Plugins::ABCListen::API::nextData = sub { push @calls, [ nextData => $_[0], { %{ $_[3] || {} } } ]; goto &$nextData };
+	local *Plugins::ABCListen::API::algolia  = sub { push @calls, [ algolia  => undef, { %{ $_[3] || {} } } ]; goto &$algolia };
+
+	my %document = ( ttl => 3600, timeout => 6 );
+
+	fresh();
+	answer( resolve_doc( doc('nextdata-episode-scienceshow-mp3.trimmed.json') ), 'cached path' );
+	is_deeply( \@calls, [ [ nextData => $SCIENCE_PATH, {%document} ] ], 'the cached path: ttl 3600, timeout 6, not quiet' );
+
+	fresh();
+	@calls = ();
+	serve( "/listen/programs/x/x/$SCIENCE", fixture('ondemand/nextdata-generic-1-404.json'), code => 404 );
+	serve_algolia( { hits => [ { objectID => "coremedia://audioepisode/$SCIENCE", canonicalURL => "$SITE$SCIENCE_PATH" } ] } );
+	serve( $SCIENCE_PATH, doc('nextdata-episode-scienceshow-mp3.trimmed.json') );
+	answer( resolve_id($SCIENCE), 'generic, lookup, page' );
+	is_deeply(
+		\@calls,
+		[
+			[ nextData => "/listen/programs/x/x/$SCIENCE", { %document, quiet => 1 } ],
+			[ algolia  => undef,                           { timeout => 6 } ],
+			[ nextData => $SCIENCE_PATH,                   {%document} ],
+		],
+		'the generic path: ttl 3600, timeout 6, quiet; the Algolia lookup: timeout 6; the page the hit names: ttl 3600, timeout 6'
+	);
 };
 
 done_testing();
