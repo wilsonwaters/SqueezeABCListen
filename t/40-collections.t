@@ -2,7 +2,8 @@
 # Plugins::ABCListen::Collections (D1 collection engine), offline (SimpleAsyncHTTP stub, fake clock):
 # page()/home() parsing (component order, hero normalisation, ignored and unknown components,
 # collections without a supported card omitted, stale and buildId-drift paths through API.pm,
-# section pages, the categoriesId key by podcasts()'s rule (D6)), items()
+# section pages, the categoriesId key by podcasts()'s rule (D6; D7: every supported card a category
+# card, at least 2; a collection without an id still decides)), items()
 # (title/total/count/cards, cache, null/empty/error), the itemFor
 # dispatcher per card type (recording stubs for programItem / episodeItem / stationItem /
 # byPageSlug; cardId ids; dynamiccollection leaf ids; station slug candidates; teaser and hero
@@ -305,10 +306,17 @@ subtest 'page(): categoriesId (D6) - the first StandardCollection with podcast c
 	is( scalar @{ $podcasts->{categories} }, 8, '(podcasts(): its 8 categories)' );
 
 	my $category = card( 'coremedia://dynamiccollection/14129462', articleLink => '/listen/listenapp/true-crime/104142226' );
+	my $comedy   = card( 'coremedia://dynamiccollection/14129490', articleLink => '/listen/listenapp/comedy/104141798' );
+	my $audio    = card('coremedia://audio/8');
+	my $program  = card( 'coremedia://program/9', articleLink => '/listen/programs/nine' );
+	my $article  = card( 'coremedia://article/10', articleLink => '/news/10' );
 	for my $case (
-		[ 'a new id (ABC re-created it)', [ collection_component( 1, 'Picks', card('coremedia://audio/8') ), collection_component( 99999999, 'Categories', $category ) ], '99999999' ],
-		[ 'two such collections: the first', [ collection_component( 5, 'Browse', $category ), collection_component( 6, 'Categories', $category ) ], '5' ],
-		[ 'mixed cards count', [ collection_component( 7, 'Mixed', card('coremedia://audio/8'), $category ) ], '7' ],
+		[ 'a new id (ABC re-created it)', [ collection_component( 1, 'Picks', $audio ), collection_component( 99999999, 'Categories', $category, $comedy ) ], '99999999' ],
+		[ 'two such collections: the first', [ collection_component( 5, 'Browse', $category, $comedy ), collection_component( 6, 'Categories', $comedy, $category ) ], '5' ],
+		# D7: one category card in an earlier, mixed collection no longer makes it the categories collection
+		[ 'D7: a mixed collection (1 category card) before the real one: the real one', [ collection_component( 7, 'Mixed', $audio, $program, $category ), collection_component( 8, 'Categories', $category, $comedy ) ], '8' ],
+		[ 'D7: a mixed collection (2 category cards) before the real one: the real one', [ collection_component( 7, 'Mixed', $category, $audio, $comedy ), collection_component( 8, 'Categories', $category, $comedy ) ], '8' ],
+		[ 'D7: unsupported cards (article, bad contentUri) do not count against it', [ collection_component( 9, 'Categories', $category, $article, { contentUri => 'nope' }, $comedy ) ], '9' ],
 	) {
 		fresh();
 		route_json( "$NEXT/listen.json", page_with( @{ $case->[1] } ) );
@@ -316,15 +324,28 @@ subtest 'page(): categoriesId (D6) - the first StandardCollection with podcast c
 	}
 
 	for my $case (
-		[ 'no category cards',                            [ collection_component( 1, 'Picks', card('coremedia://audio/8') ) ] ],
-		[ 'a dynamiccollection card without a page id',   [ collection_component( 2, 'Odd', card( 'coremedia://dynamiccollection/3', articleLink => '/listen/listenapp/true-crime' ), card('coremedia://audio/8') ) ] ],
+		[ 'no category cards',                            [ collection_component( 1, 'Picks', $audio ) ] ],
+		[ 'a dynamiccollection card without a page id',   [ collection_component( 2, 'Odd', card( 'coremedia://dynamiccollection/3', articleLink => '/listen/listenapp/true-crime' ), $audio ) ] ],
 		[ 'category cards in a MetaCollection only',      [ { component => 'MetaCollection', componentProps => { items => [ { id => '4', title => 'Sub' } ] } } ] ],
+		[ 'D7: one category card in a mixed collection',  [ collection_component( 7, 'Mixed', $audio, $category ) ] ],
+		[ 'D7: only one category card (at least 2)',      [ collection_component( 3, 'One', $category ), collection_component( 4, 'Same twice', $category, $category ) ] ],
 	) {
 		fresh();
 		route_json( "$NEXT/listen.json", page_with( @{ $case->[1] } ) );
 		my ($page) = run('home')->args(0);
 		ok( !exists $page->{categoriesId}, "$case->[0]: no categoriesId" );
 	}
+
+	# D7 (D6 review finding 2): a categories collection without an id, then one with an id
+	fresh();
+	route_json( "$NEXT/listen.json", page_with(
+		{ component => 'StandardCollection', key => 'no-id', componentProps => { title => 'Categories', items => [ $category, $comedy ] } },
+		collection_component( 8, 'Categories again', $comedy, $category ),
+	) );
+	my ($page) = run('home')->args(0);
+	ok( exists $page->{categoriesId}, 'no id, then one with an id: categoriesId present ...' );
+	is( $page->{categoriesId}, undef, '... and undef (the first categories collection decides; the second is not looked at)' );
+	is_deeply( [ map { $_->{id} } @{ $page->{collections} } ], ['8'], 'the second (8) stays in collections (the first has no id: omitted)' );
 };
 
 subtest 'page(\'/listen\') gives the same result as home()' => sub {

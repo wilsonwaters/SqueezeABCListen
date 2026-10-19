@@ -368,3 +368,9 @@ PLUGIN_ABCLISTEN_AUDIOBOOKS_AZ
 
 PLUGIN_ABCLISTEN_AUDIOBOOKS_AU_ONLY
 	EN	Audiobooks play only in Australia.
+
+# === D7 === All podcast categories; A–Z Other row
+
+# The A–Z row of programs whose title starts with a non-Latin letter (e.g. Chinese), after 0–9
+PLUGIN_ABCLISTEN_AZ_OTHER
+	EN	Other

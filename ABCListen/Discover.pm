@@ -29,21 +29,25 @@ package Plugins::ABCListen::Discover;
 #     date, so rows are named by title). Nothing listable: PLUGIN_ABCLISTEN_EMPTY_COLLECTION; an
 #     error: the token's text item.
 #
-#   Podcasts (_podcastsRoot): Collections->podcasts, then Collections->withImages on its
-#   sub-collections (each link shows its first card's artwork; at most 3 s) ->
+#   Podcasts (_podcastsRoot): Collections->podcasts, then, side by side, Collections->withImages on
+#   its sub-collections (each link shows its first card's artwork) and Collections->categories
+#   (D7: every podcast category); each answers within 3 s, so the menu waits at most 3 s after the
+#   page, as before D7 ->
 #     1. the podcasts page's collections in page order (New & Noteworthy, Most Popular Podcasts,
 #        Award Winning Podcasts on 2026-10-19), as collectionItem links at level 0 (paged with
 #        the MetaCollection query); none (page failed, MetaCollection missing): one text item
 #        with the error token's text (LOAD_FAILED);
 #     2. "Browse by category" (PLUGIN_ABCLISTEN_CATEGORIES), its items inline: one collectionItem
 #        link per podcast category (level 1, image = the category card's, else the plugin icon),
-#        from the podcasts page, else Collections->staticCategories. A category pages its page id
-#        (collection/x), falling back to its page's first collection (fallbackPath);
+#        in ABC's order: all of ABC's categories collection (18 on 2026-10-19; the podcasts page
+#        shows only the first 8), else the podcasts page's cards, else
+#        Collections->staticCategories (Collections->categories decides). A category pages its
+#        page id (collection/x), falling back to its page's first collection (fallbackPath);
 #     3. "All podcasts A–Z" (PLUGIN_ABCLISTEN_PODCASTS_AZ): OnDemand->programsByTypeAZ($client, $cb,
-#        'podcast') (D6): letter rows "<L> (<n>)" A..Z then "0–9 (<n>)", as Programs -> All
-#        programs A–Z (O3's bucket rule: a leading "The" ignored, 0–9 last), the counts adding up
-#        to the podcasts; a letter opens its podcasts (programsByType's rows). Only listed while
-#        OnDemand can('programsByTypeAZ').
+#        'podcast') (D6): letter rows "<L> (<n>)" A..Z, "0–9 (<n>)", then (D7) "Other (<n>)" for
+#        titles starting with a non-Latin letter, as Programs -> All programs A–Z (O3's bucket
+#        rule: a leading "The" ignored), the counts adding up to the podcasts; a letter opens its
+#        podcasts (programsByType's rows). Only listed while OnDemand can('programsByTypeAZ').
 #   Every feed calls back exactly once. Keys the menus don't know in page results are ignored.
 #
 # Ownership (ai-state/streams.md rule 5): D1 creates this; D2 owns Home's root list and adds the
@@ -204,10 +208,15 @@ sub _podcastsRoot {
 			_try( $client, $once, sub {
 				my $collections = $page->{error} || ref $page->{collections} ne 'ARRAY' ? [] : $page->{collections};
 
-				Plugins::ABCListen::Collections->withImages( $collections, sub {
-					my $withImages = shift;
-					_respond( $client, $once, sub { _podcastsItems( $client, $page, $withImages ) } );
-				} );
+				# D7: the sub-collections' artwork and every category, side by side (3 s each at most)
+				my ( $withImages, $categories, $pending ) = ( undef, undef, 2 );
+				my $join = sub {
+					return if --$pending;
+					_respond( $client, $once, sub { _podcastsItems( $client, $page, $withImages, $categories ) } );
+				};
+
+				Plugins::ABCListen::Collections->withImages( $collections, sub { $withImages = shift; $join->() } );
+				Plugins::ABCListen::Collections->categories( $page, sub { $categories = shift; $join->() } );
 			} );
 		} );
 	} );
@@ -216,12 +225,13 @@ sub _podcastsRoot {
 }
 
 sub _podcastsItems {
-	my ( $client, $page, $collections ) = @_;
+	my ( $client, $page, $collections, $categories ) = @_;
 
 	my @items = grep {defined} map { Plugins::ABCListen::Collections->collectionItem( $client, $_, 0 ) } @$collections;
 	push @items, _textItem( $client, $page->{error} || LOAD_FAILED ) unless @items;
 
-	my @categories = !$page->{error} && ref $page->{categories} eq 'ARRAY' ? @{ $page->{categories} } : ();
+	# D7: Collections->categories' list (collection, else page, else static); never an empty menu
+	my @categories = ref $categories eq 'ARRAY' ? @$categories : ();
 	@categories = Plugins::ABCListen::Collections->staticCategories unless @categories;
 
 	my @links = grep {defined} map { Plugins::ABCListen::Collections->collectionItem( $client, $_, 1 ) } @categories;
