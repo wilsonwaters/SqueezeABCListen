@@ -30,7 +30,7 @@ container (stakeholder-verified on pi14).
 | L2 | Program on air: `NowPlaying.pm` (`epgNowPlaying` now/next), on-air line2/description in menus, `LiveMetadata.pm` per-player poll/push engine (program mode), song-info "On air" | M | L1 | planned |
 | L3 | Now-playing songs on music stations: `Tracks.pm` (music API now + recent plays), LiveMetadata track mode with program fallback and last-good, song-info "Recently played" | M | L2 | planned |
 | L4 | Station submenu: `Schedule.pm` (BFF schedule per service/date/tz); station rows become link+play → Listen live, on air, Today, Yesterday, 5 earlier days; past programs link to catch-up via `OnDemand->programItem` | M | L2, O2 | planned |
-| L5 | Higher-quality live setting `liveQuality` (`standard` / `mediahub` / `hls` when PlayHLS is enabled), ordered candidates with automatic Icecast fallback, settings section; HLS-only stations playable with PlayHLS | M | L1, M1 | planned |
+| L5 | Higher-quality live setting `liveQuality` (`standard` / `mediahub`), ordered candidates with automatic Icecast fallback, settings section. `hls` dropped (see L5 section) | M | L1, M1 | merged (#49) |
 | _L6_ | _Stretch, out of v1: own HLS protocol handler (fetch media playlist, demux MPEG-TS → ADTS AAC) for 221–246 kbps live, HLS-only stations, live pause/rewind_ | L | L1, L5 | stretch |
 
 ### L1 — all live stations
@@ -145,6 +145,10 @@ container (stakeholder-verified on pi14).
   still plays; Yesterday for a WA local station uses Perth dates. **pi14**: AU-only schedule differences (if any).
 
 ### L5 — higher-quality live setting
+> **As built (PR #49):** only `standard` and `mediahub`. PlayHLS 1.01 can't play `abclisten://` stations (it has no
+> protocol handler and gives ffmpeg `$FILE$`, which F2 rewrites back to `abclisten://…`), so the `hls` parts below moved
+> to stretch L6. Unknown stored values play as `standard`. The original plan is kept below for reference.
+
 - Pref `liveQuality` (`standard` default | `mediahub` | `hls`), initialised in `Live->init`; section `<!-- === L5 === -->`
   in M1's `basic.html` (select + explanation: standard = 56 kbps, works everywhere; mediahub = ABC's own AAC streams,
   may be Australia-only; HLS = up to ~246 kbps, needs the PlayHLS plugin and ffmpeg — option disabled with a note when
@@ -216,3 +220,6 @@ container (stakeholder-verified on pi14).
   `getMetadataFor` ignores `wmaMeta`); `onStream` fires once per player in a sync group (filter to master); `resolve`
   candidates must be direct audio streams (not .pls). L1 should also supply `bitrate` (e.g. "56kbps CBR") in the live
   kind's metadata — first play after restart otherwise shows bitrate 0 (F2 runtime verification). #2, #4 amended.
+- 2026-10-19 — L2 merged (#47); L5 merged (#49) as `standard`/`mediahub` only — `hls` and HLS-only stations moved to
+  L6 (PlayHLS incompatible with F2's URL rewrite). L3 (#8) carries L2's review follow-ups and isolates L2's onStream
+  call in Live.pm. Follow-ups for M1/L5 settings in M3 (#52).

@@ -37,7 +37,7 @@ Not streams: `dev/` (local LMS 9.1.1 + squeezelite "DevPlayer" test bed — dev-
 | O1 | Episode playback engine: `abclisten://episode/<id>` resolver, rendition choice, availability/geo errors, metadata, seek, favourites | M (upper; highest technical risk) | F2, F3 | Must | 2 |
 | O2 | Programs → network → program → episodes browse; public `programItem`/`episodeItem`; program-menu registry; episode meta cache | M (upper) | F3 | Must | 2 |
 | L2 | Program on air: `NowPlaying.pm`, menu on-air lines, `LiveMetadata.pm` poll/push engine (program mode), song-info "On air" | M | L1 | Must | 3 |
-| L5 | Higher-quality live setting (`standard` / `mediahub` / `hls` via PlayHLS) with automatic Icecast fallback | M | L1, M1 | Should | 3 |
+| L5 | Higher-quality live setting (`standard` / `mediahub`; `hls` deferred to L6) with automatic Icecast fallback | M | L1, M1 | Should | 3 |
 | O3 | All programs A–Z and by type (Algolia program index, Algolia-down fallback) | M | O2 | Must | 3 |
 | D1 | Collection engine (generic `page($path)`) + top-level **Home** → Featured/home collections (cards → program/episode/station/collection items) | M | F3, O2 (soft L1, O1) | Must | 3 |
 | D3 | Top-level **Search** (Algolia programs + playable episodes) + LMS global search provider | M | F3, O2 (soft O1) | Must | 3 |
@@ -65,7 +65,7 @@ Audiobooks (D4, 70) · Programs (O2/O3, 75) · Search (D3, 80) · My ABC listen 
 
 | # | Brief criterion | Delivered by | Verified at |
 |---|---|---|---|
-| 1 | Every ABC listen live station listed with artwork and plays audio | F1 (5 stations play); F2 (stable `abclisten://live` URLs, favourites); L1 (all stations under Radio, artwork, Icecast resolution, Wide Bay via mediahub); D4 (section stations: NewsRadio in News, sport stations in Sport, Kids listen live in Kids listen); L5 (mediahub/PlayHLS option; HLS-only stations playable with PlayHLS) | IC-1 (container sweep of every Icecast station); pi14 (mediahub, Wide Bay, HLS-only) |
+| 1 | Every ABC listen live station listed with artwork and plays audio | F1 (5 stations play); F2 (stable `abclisten://live` URLs, favourites); L1 (all stations under Radio, artwork, Icecast resolution, Wide Bay via mediahub); D4 (section stations: NewsRadio in News, sport stations in Sport, Kids listen live in Kids listen); L5 (mediahub option with Icecast fallback; HLS deferred to L6) | IC-1 (container sweep of every Icecast station); pi14 (mediahub, Wide Bay, HLS-only) |
 | 2 | Browse programs and episodes (artwork + description + date + duration visible in the web UI) and play an episode | O2 (by network, episode rows/submenus); O3 (A–Z, by type); D2 (by category); D4 (section programs incl. all Kids listen programs); D5 (audiobook chapters); O1 (playback, seek, favourites); O4 (segments/tracklist) | IC-2; IC-5 |
 | 3 | Program on air for live stations, now-playing songs on music stations, episode/program descriptions | L2 (program on air: menus + Now Playing); L3 (songs + recently played); O2 (program/episode descriptions); L4 (schedule synopses); O4 (tracklists) | IC-4 |
 | 4 | Discovery: featured collections/categories and search browsable (navigation mirrors the ABC listen app) | D1 (Home: featured/home collections); D2 (Podcasts: categories, podcast collections; popular now); D4 (News, Sport, Kids listen, Audiobooks sections); D3 (Search + global search) | IC-5 |
@@ -74,8 +74,7 @@ Audiobooks (D4, 70) · Programs (O2/O3, 75) · Search (D3, 80) · My ABC listen 
 | 7 | Automated tests + independent review + runtime verification on a real LMS | F1 (harness + CI); every task (unit tests, review agent, runtime check on the testbed); R2 (`scripts/smoke.sh`); R3 (final system verification; stakeholder runs smoke on pi14) | every PR; R3 |
 
 Stakeholder-verified on pi14 (geo/IP-restricted, cannot pass in the US-egress container): mediahubaustralia live
-streams (L1 Wide Bay, L5 `mediahub`), `/geo-001/` episode audio (O1), ABC Cricket and other geo/HLS sport streams
-(L5 `hls`), AU-only EPG/schedule differences (L2, L4), final `scripts/smoke.sh` run (R3).
+streams (L1 Wide Bay, L5 `mediahub`), `/geo-001/` episode audio (O1), AU-only EPG/schedule differences (L2, L4), final `scripts/smoke.sh` run (R3).
 
 ## Dependency graph
 
@@ -193,7 +192,7 @@ books without chapters; they play only in Australia anyway), then L4, then M2 (M
    3 s deadline) when listing them (L1 review, PR #32). `/news` (ABC News website) is NOT NewsRadio; only `/listen/news`
    and the live slug `news` map to `NEWS`.
 8. **Prefs (`plugin.abclisten`).** `homeState` ('' | ACT | NSW | NT | QLD | SA | TAS | VIC | WA; '' behaves as NSW;
-   owner M1, read by L1/L4), `liveQuality` (`standard` | `mediahub` | `hls`; owner L5, default `standard`), `followed`
+   owner M1, read by L1/L4), `liveQuality` (`standard` | `mediahub`; owner L5, default `standard`; unknown stored values play as `standard`), `followed`
    (array; owner M2). Each owner calls `$prefs->init` for its own keys in its hook `init`; readers treat undef as the
    default. No credentials or tokens are ever stored.
 
@@ -275,7 +274,7 @@ books without chapters; they play only in Australia anyway), then L4, then M2 (M
 1. **"Every live station plays"** — six services have no Icecast stream (ABC Cricket [also geo-blocked], ABC Sport
    Rapid, ABC RLWC Rapid, Kids listen NT/QLD/SA/WA, **ABC Wide Bay**) and several sport services are event-only.
    Default: list a station only when it has a native path (Wide Bay via mediahub AAC, pi14-verified; Kids variants
-   hidden — the main Kids listen stream plays; Sport Rapid/RLWC Rapid/Cricket listed only with L5 `hls` + PlayHLS;
+   hidden — the main Kids listen stream plays; Sport Rapid/RLWC Rapid/Cricket not listed until L6 (PlayHLS can't play `abclisten://`, see OPEN-QUESTIONS §4);
    event-only services listed while ABC reports a stream). Full native HLS is stretch L6.
 2. **Which stations count** — PAPI has 108 services incl. hidden ones (`RN_vic`, `RN_tas`, `firstrun`, `dig`). Default:
    the ABC listen site's live lists (national networks + 8 state collections) plus the time-zone versions it offers.
@@ -304,3 +303,6 @@ books without chapters; they play only in Australia anyway), then L4, then M2 (M
   Contracts 5 (`cardRef` id = `cardId`; `sitePath` host variants), 6 (provider input incl. `template`/`restricted`) and
   7 (`byPageSlug` network homes) amended; Radio gets no "section extras" (`/listen/radio` holds only station
   collections). 22 v1 tasks. Plan-revision + backlog-reconciliation sub-agent; open issues amended by comment.
+- 2026-10-19 — L5 merged (PR #49) without the `hls` option: PlayHLS hands ffmpeg `$FILE$`, which F2 rewrites to
+  `abclisten://…`, so it can't play our stations. `liveQuality` is `standard` | `mediahub`; HLS-only stations and
+  higher-bitrate HLS wait for stretch L6 (own handler, or an F2 change so a convert rule gets the real URL).
