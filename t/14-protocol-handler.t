@@ -4,7 +4,9 @@
 # resolve error tokens, the candidate list: order, alternates after a failed scan, dedupe,
 # .m3u8 filter with the hls flag, failToken), the wrapped scan callback (streamUrl, title, cover,
 # URL restore, playlist update time) without a reference cycle, resolver robustness (dies, double
-# callback, 20 s timeout), new() with and without redir, getMetadataFor layering (fallback <
+# callback, 20 s timeout), containment (only the kind's code runs in resolve's eval; a dying
+# scanner or LMS callback, sync or async resolve: LMS's callback runs exactly once and no resolve
+# failure is reported), new() with and without redir, getMetadataFor layering (fallback <
 # resolve meta < kind metadata) and its bounded meta map, getCurrentTitle/getIcon/isRemote, and
 # onStream/onStop dispatch. Also the F2 slice: Live->init registers the `live` kind for the 5
 # stations (Icecast URL at play time, name and image as metadata).
@@ -452,6 +454,216 @@ subtest 'resolve never calls back -> STREAM_FAILED after 20 s; a late callback i
 	is( scalar Slim::Utils::Timers->pending, 0, 'the timeout timer is killed' );
 	advanceTime(5);
 	is( $c->count, 1, 'still one callback after 24 s' );
+};
+
+# ---- containment: only the kind's code runs in resolve's eval; LMS's callback runs exactly once ----
+
+# A fake remote scanner whose behaviour is chosen per URL ('*': any other URL; default ok):
+#   ok    answers a track          fail   answers '404 Not Found'
+#   die   dies before calling back late   calls back with a track, then dies
+#   twice calls back with a track twice
+sub scanner_by_url {
+	my %how = @_;
+
+	$Slim::Utils::Scanner::Remote::HANDLER = sub {
+		my ( $url, $args ) = @_;
+		my $how = $how{$url} || $how{'*'} || 'ok';
+
+		return $args->{cb}->( undef, '404 Not Found' ) if $how eq 'fail';
+		die "scanner bug\n" if $how eq 'die';
+
+		$args->{cb}->( FakeTrack->new( url => $url, title => $url ), undef );
+		$args->{cb}->( FakeTrack->new( url => $url, title => $url ), undef ) if $how eq 'twice';
+		die "scanner bug after the callback\n" if $how eq 'late';
+		return;
+	};
+
+	return;
+}
+
+# scanUrl($url) with an LMS callback that records its arguments and dies when $dying; returns
+# (whether scanUrl returned normally, the recorded calls, song).
+sub scan_dying_cb {
+	my ( $url, $dying ) = @_;
+	my $song  = FakeSong->new($url);
+	my @calls;
+	my $args = { client => $song->master, song => $song, cb => sub { push @calls, [@_]; die "song callback bug\n" if $dying } };
+	my $ok   = eval { $PH->scanUrl( $url, $args ); 1 };
+	diag $@ unless $ok;
+	return ( $ok, \@calls, $song );
+}
+
+sub resolve_failure_logged { logged_like( WARN => qr/Resolve for .* died/ ) }
+
+subtest 'the scanner dies after a synchronous resolve -> STREAM_FAILED once, logged as the scan, not the resolve' => sub {
+	reset_all();
+	scanner_by_url( '*' => 'die' );
+	register_kind( { url => $A, alternates => [$B] } );
+
+	my ( $c, $song );
+	ok( eval { ( $c, $song ) = scan($LIVE); 1 }, 'scanUrl does not die' ) or diag $@;
+	is( $c->count, 1, 'one callback' );
+	is_deeply( [ $c->args(0) ], [ undef, $STREAM_FAILED ], 'cb->(undef, STREAM_FAILED)' );
+	is_deeply( [ scanned() ], [$A], 'only the first candidate was scanned' );
+	ok( logged_like( WARN => qr/Scanning \Q$A\E for \Q$LIVE\E died: scanner bug/ ), 'logged at WARN as the scan of the candidate' );
+	ok( !resolve_failure_logged(), 'not reported as a resolve failure' );
+	ok( logged_like( INFO => qr/\Q$LIVE\E.*\Q$STREAM_FAILED\E/ ), 'the failure is logged at INFO with URL and token' );
+	is( $song->streamUrl, $LIVE, 'streamUrl untouched' );
+	is( scalar Slim::Utils::Timers->pending, 0, 'no timer left' );
+
+	reset_all();
+	scanner_by_url( $A => 'fail', $B => 'die' );
+	register_kind( { url => $A, alternates => [$B] } );
+	ok( eval { ($c) = scan($LIVE); 1 }, 'the scan of an alternate dies: scanUrl does not die' ) or diag $@;
+	is_deeply( [ scanned() ], [ $A, $B ], '... after the first candidate failed' );
+	is( $c->count, 1, '... one callback' );
+	is_deeply( [ $c->args(0) ], [ undef, $STREAM_FAILED ], '... cb->(undef, STREAM_FAILED)' );
+	ok( logged_like( WARN => qr/Scanning \Q$B\E for \Q$LIVE\E died: scanner bug/ ), '... logged at WARN as the scan of the alternate' );
+	ok( !resolve_failure_logged(), '... not reported as a resolve failure' );
+
+	reset_all();
+	scanner_by_url( '*' => 'late' );
+	register_kind( { url => $A } );
+	ok( eval { ( $c, $song ) = scan($LIVE); 1 }, 'the scanner dies after calling back: scanUrl does not die' ) or diag $@;
+	is( $c->count, 1, '... one callback' );
+	ok( ( $c->args(0) )[0], '... with the scanned track' );
+	is( $song->streamUrl, $A, '... streamUrl set' );
+	ok( logged_like( WARN => qr/Scanning \Q$A\E for \Q$LIVE\E died after the play callback: scanner bug after the callback/ ), '... logged at WARN as after the callback' );
+	ok( !resolve_failure_logged(), '... not reported as a resolve failure' );
+};
+
+subtest "LMS's callback dies -> it ran once; contained, logged as LMS's, not as a resolve or scan failure" => sub {
+	my @cases = (
+		[ 'a scanned track',         { url => $A },                   undef,           'track' ],
+		[ 'a resolve error token',   { error => 'PLUGIN_X' },         undef,           'PLUGIN_X' ],
+		[ 'every candidate failing', { url => $A, alternates => [$B] }, [ '*' => 'fail' ], $STREAM_FAILED ],
+	);
+	for my $case (@cases) {
+		my ( $label, $result, $scanner, $want ) = @$case;
+		reset_all();
+		scanner_by_url( @{ $scanner || [] } );
+		register_kind($result);
+
+		my ( $ok, $calls ) = scan_dying_cb( $LIVE, 1 );
+		ok( $ok, "$label: scanUrl does not die" );
+		is( scalar @$calls, 1, "$label: the callback ran once" );
+		if ( $want eq 'track' ) {
+			ok( $calls->[0][0], "$label: ... with the track" );
+		}
+		else {
+			is_deeply( $calls->[0], [ undef, $want ], "$label: ... with (undef, $want)" );
+		}
+		ok( logged_like( WARN => qr/LMS's play callback for \Q$LIVE\E died: song callback bug/ ), "$label: logged at WARN as LMS's callback" );
+		ok( !resolve_failure_logged(), "$label: not reported as a resolve failure" );
+		ok( !logged_like( WARN => qr/Scanning|Handling the scan/ ), "$label: not reported as a scan failure" );
+	}
+
+	reset_all();
+	my ( $ok, $calls ) = scan_dying_cb( 'abclisten://bogus/1', 1 );
+	ok( $ok, 'BAD_URL: scanUrl does not die' );
+	is_deeply( $calls, [ [ undef, $BAD_URL ] ], 'BAD_URL: the callback ran once' );
+
+	reset_all();
+	setTime(1792400000);
+	register_kind( sub { } );
+	( $ok, $calls ) = scan_dying_cb( $LIVE, 1 );
+	ok( eval { advanceTime(20); 1 }, 'resolve timeout: the timer does not die' ) or diag $@;
+	is_deeply( $calls, [ [ undef, $STREAM_FAILED ] ], 'resolve timeout: the callback ran once' );
+};
+
+subtest 'an asynchronous resolve still works; the play it starts never dies into the kind' => sub {
+	my $async = sub {
+		my $result = shift;
+		return sub {
+			my ( $client, $id, $cb ) = @_;
+			push @RESOLVES, [ $client, $id ];
+			Slim::Utils::Timers::setTimer( undef, time() + 1, sub { $cb->($result) } );
+		};
+	};
+
+	reset_all();
+	setTime(1792400000);
+	scanner();
+	register_kind( $async->( { url => $A, meta => { title => 'Async title' } } ) );
+
+	my ( $c, $song ) = scan($LIVE);
+	is( scalar @RESOLVES, 1, 'resolve called once' );
+	is( $c->count, 0, 'no callback before the answer' );
+	is( scalar( scanned() ), 0, 'nothing scanned before the answer' );
+	is( scalar Slim::Utils::Timers->pending, 2, "the kind's timer and the 20 s timeout" );
+	advanceTime(1);
+	is( $c->count, 1, 'one callback after the answer' );
+	my ($track) = $c->args(0);
+	ok( $track, '... with the scanned track' );
+	is_deeply( [ scanned() ], [$A], 'the answer is scanned' );
+	is( $song->streamUrl, $A, 'streamUrl is the stream URL' );
+	is( $track && $track->url,   $LIVE,         'track URL restored' );
+	is( $track && $track->title, 'Async title', 'track title from the resolve meta' );
+	is( scalar Slim::Utils::Timers->pending, 0, 'the timeout timer is killed' );
+	advanceTime(30);
+	is( $c->count, 1, 'still one callback after the timeout would have fired' );
+	is( scalar logged('WARN') + scalar logged('ERROR'), 0, 'no warnings or errors' );
+
+	reset_all();
+	setTime(1792400000);
+	scanner_by_url( '*' => 'die' );
+	register_kind( $async->( { url => $A } ) );
+	($c) = scan($LIVE);
+	ok( eval { advanceTime(1); 1 }, "the scanner dies: the die does not reach the kind's code" ) or diag $@;
+	is( $c->count, 1, '... one callback' );
+	is_deeply( [ $c->args(0) ], [ undef, $STREAM_FAILED ], '... cb->(undef, STREAM_FAILED)' );
+	ok( logged_like( WARN => qr/Scanning \Q$A\E for \Q$LIVE\E died: scanner bug/ ), '... logged at WARN as the scan' );
+	ok( !resolve_failure_logged(), '... not reported as a resolve failure' );
+
+	reset_all();
+	setTime(1792400000);
+	scanner();
+	register_kind( $async->( { url => $A } ) );
+	my ( $ok, $calls ) = scan_dying_cb( $LIVE, 1 );
+	ok( eval { advanceTime(1); 1 }, "LMS's callback dies: the die does not reach the kind's code" ) or diag $@;
+	is( scalar @$calls, 1, '... the callback ran once' );
+	ok( $calls->[0][0], '... with the track' );
+	ok( !resolve_failure_logged(), '... not reported as a resolve failure' );
+};
+
+subtest "exactly once: LMS's callback runs once on every resolve x scanner x callback path" => sub {
+	my $answer    = { url => $A, alternates => [$B] };
+	my %resolvers = (
+		'answers synchronously'       => sub { $_[2]->($answer) },
+		'answers asynchronously'      => sub { my $cb = $_[2]; Slim::Utils::Timers::setTimer( undef, time() + 1, sub { $cb->($answer) } ) },
+		'answers, then dies'          => sub { $_[2]->($answer); die "resolver bug\n" },
+		'dies'                        => sub { die "resolver bug\n" },
+		'answers twice'               => sub { $_[2]->($answer); $_[2]->( { error => 'PLUGIN_X' } ) },
+		'answers an error'            => sub { $_[2]->( { error => 'PLUGIN_X' } ) },
+		'never answers'               => sub { },
+	);
+	my %scanners = (
+		'scans'                    => [],
+		'first candidate fails'    => [ $A => 'fail' ],
+		'all fail'                 => [ '*' => 'fail' ],
+		'dies'                     => [ '*' => 'die' ],
+		'alternate dies'           => [ $A => 'fail', $B => 'die' ],
+		'dies after calling back'  => [ '*' => 'late' ],
+		'calls back twice'         => [ '*' => 'twice' ],
+	);
+
+	for my $r ( sort keys %resolvers ) {
+		for my $s ( sort keys %scanners ) {
+			for my $dying ( 0, 1 ) {
+				my $label = "resolve $r, scanner $s" . ( $dying ? ", LMS's callback dies" : '' );
+				reset_all();
+				setTime(1792400000);
+				scanner_by_url( @{ $scanners{$s} } );
+				register_kind( $resolvers{$r} );
+
+				my ( $ok, $calls ) = scan_dying_cb( $LIVE, $dying );
+				ok( $ok && eval { advanceTime(25); 1 }, "$label: nothing dies" ) or diag $@;
+				is( scalar @$calls, 1, "$label: LMS's callback ran exactly once" );
+				is( scalar Slim::Utils::Timers->pending, 0, "$label: no timer left" );
+				is( resolve_failure_logged() ? 1 : 0, $r =~ /dies/ ? 1 : 0, "$label: a resolve failure is reported only if resolve died" );
+			}
+		}
+	}
 };
 
 # ---- new ----

@@ -37,9 +37,12 @@ package Plugins::ABCListen::ProtocolHandler;
 #     hls => 1: LMS can't play HLS, so only the PlayHLS path (L5) may flag one. No candidate
 #     left: failToken. Each candidate is scanned by the core remote scanner (SUPER::scanUrl) in
 #     turn; the first that scans plays.
-#     Misbehaving resolvers are contained: if resolve dies, or doesn't call back within
-#     RESOLVE_TIMEOUT (20) seconds, the play fails with PLUGIN_ABCLISTEN_STREAM_FAILED; a second
-#     or late call of $cb is ignored.
+#     Misbehaving resolvers are contained: if resolve dies before calling back, or doesn't call
+#     back within RESOLVE_TIMEOUT (20) seconds, the play fails with
+#     PLUGIN_ABCLISTEN_STREAM_FAILED; a second or late call of $cb is ignored, and a die after
+#     the first call is logged (the answer counts). $cb never dies: only resolve itself runs in
+#     the eval that reports "Resolve for <url> died"; a synchronous answer is played after
+#     resolve returns.
 #
 #   metadata($client, $url, $id) -> \%meta                        ($client may be undef)
 #     Synchronous, no network, cheap: LMS calls it for every status and display refresh.
@@ -60,6 +63,11 @@ package Plugins::ABCListen::ProtocolHandler;
 #                 embedded in the stream is dropped, the track URL is the abclisten:// URL again
 #                 (byte for byte) and the playlist update time is bumped. Every failure calls
 #                 back (undef, $token) and is logged at INFO with the URL and the token.
+#                 LMS's callback runs exactly once on every path: if core code dies before it
+#                 (the scanner, or the scanned track or song), the play fails with
+#                 PLUGIN_ABCLISTEN_STREAM_FAILED and the die is logged at WARN as the scan's; a
+#                 die in LMS's callback is logged at WARN as LMS's and contained. Neither is
+#                 reported as a resolve failure.
 #   new           opens $song->streamUrl, except after a redirect (proxied streaming), where it
 #                 keeps the redirected URL to avoid a redirect loop.
 #   getMetadataFor  synchronous, no network, never dies. For abclisten:// URLs, these layers
@@ -87,7 +95,6 @@ use Plugins::ABCListen::Util;
 
 use constant RESOLVE_TIMEOUT => 20;     # seconds a kind's resolve may take
 use constant META_MAX        => 100;    # resolve meta is kept for this many URLs (oldest evicted)
-
 use constant BAD_URL       => 'PLUGIN_ABCLISTEN_BAD_URL';
 use constant UNAVAILABLE   => 'PLUGIN_ABCLISTEN_UNAVAILABLE';
 use constant STREAM_FAILED => 'PLUGIN_ABCLISTEN_STREAM_FAILED';
@@ -100,7 +107,6 @@ my %IMPL_KEYS = ( resolve => 1, metadata => 1, onStream => 0, onStop => 0 );
 my %KINDS;         # kind => { resolve, metadata, onStream?, onStop? }
 my %META;          # abclisten:// URL => meta of its last resolve (non-empty scalar values only)
 my @META_ORDER;    # the URLs in %META, oldest first
-
 # ---------------------------------------------------------------------------
 # Kind registry
 # ---------------------------------------------------------------------------
@@ -137,12 +143,18 @@ sub registerKind {
 sub scanUrl {
 	my ( $class, $url, $args ) = @_;
 
-	my $cb     = $args->{cb} || sub { };
+	# everything the play needs apart from $args (the scan callbacks may not refer to $args); cb
+	# is LMS's callback, wrapped to run exactly once (see _callbackOnce)
+	my $state = { url => $url, song => $args->{song} };
+	( $state->{cb}, $state->{calledBack} ) = _callbackOnce( $url, $args->{cb} );
+
+	my $cb     = $state->{cb};
 	my $parsed = Plugins::ABCListen::Util::parseUrl($url) or return _fail( $cb, $url, BAD_URL );
 	my $kind   = $KINDS{ $parsed->{kind} }               or return _fail( $cb, $url, UNAVAILABLE );
 
-	my $answered = 0;
-	my $timer;
+	my $answered  = 0;
+	my $inResolve = 1;
+	my ( $syncAnswer, $timer );
 
 	# resolve's callback. It isn't stored in $args, so it may refer to $args.
 	my $resolved = sub {
@@ -153,24 +165,35 @@ sub scanUrl {
 			return;
 		}
 
+		# a synchronous answer is played after resolve returns, outside the eval that guards the
+		# kind's code, so a die in the scanner or in LMS's callback isn't taken for the resolver's
+		if ($inResolve) {
+			$syncAnswer = [$result];
+			return;
+		}
+
 		if ($timer) {
 			Slim::Utils::Timers::killSpecific($timer);
 			undef $timer;
 		}
 
-		$class->_play( $url, $args, $result );
-	};
-
-	eval {
-		$kind->{resolve}->( $args->{client}, $parsed->{id}, $resolved );
-		1;
-	} or do {
-		$log->warn( "Resolve for $url died: " . ( $@ || 'unknown error' ) );
-		_fail( $cb, $url, STREAM_FAILED ) unless $answered++;
+		$class->_play( $state, $args, $result );
 		return;
 	};
 
-	return if $answered;
+	# only the kind's code runs in this eval
+	my $ok    = eval { $kind->{resolve}->( $args->{client}, $parsed->{id}, $resolved ); 1 };
+	my $error = $@;
+	$inResolve = 0;
+
+	if ( !$ok ) {
+		$log->warn( "Resolve for $url died: " . ( $error || 'unknown error' ) );
+
+		# an answer given before the die still counts
+		return _fail( $cb, $url, STREAM_FAILED ) unless $answered++;
+	}
+
+	return $class->_play( $state, $args, $syncAnswer->[0] ) if $syncAnswer;
 
 	$timer = Slim::Utils::Timers::setTimer( undef, Time::HiRes::time() + RESOLVE_TIMEOUT, sub {
 		undef $timer;
@@ -183,11 +206,57 @@ sub scanUrl {
 	return;
 }
 
+# LMS's scan callback, wrapped so that it runs at most once (a further call is ignored, at DEBUG).
+# An exception in it is LMS's own: it is logged as such and contained, so it never reaches the
+# kind's code, the scanner or _guard, and is never taken for a resolve or scan failure. Returns
+# the wrapper and a ref to a flag that is true once the callback has run.
+sub _callbackOnce {
+	my ( $url, $lmsCb ) = @_;
+
+	$lmsCb ||= sub { };
+	$url = '' unless defined $url;
+
+	my $calledBack = 0;
+
+	my $cb = sub {
+		if ( $calledBack++ ) {
+			main::DEBUGLOG && $log->is_debug && $log->debug("Ignoring a further play callback for $url");
+			return;
+		}
+
+		eval { $lmsCb->(@_); 1 } or $log->warn( "LMS's play callback for $url died: " . ( $@ || 'unknown error' ) );
+		return;
+	};
+
+	return ( $cb, \$calledBack );
+}
+
+# Run $code: core code on the way to LMS's callback (the remote scanner, the scanned track and the
+# song). If it dies, the exception is logged as $what's, and the play fails with STREAM_FAILED
+# unless LMS's callback already ran, so the callback runs exactly once whatever happens.
+sub _guard {
+	my ( $state, $what, $code ) = @_;
+
+	return if eval { $code->(); 1 };
+
+	my $error = $@ || 'unknown error';
+
+	if ( ${ $state->{calledBack} } ) {
+		$log->warn("$what for $state->{url} died after the play callback: $error");
+		return;
+	}
+
+	$log->warn("$what for $state->{url} died: $error");
+	_fail( $state->{cb}, $state->{url}, STREAM_FAILED );
+
+	return;
+}
+
 # resolve's answer: fail with its error token, or scan its candidates.
 sub _play {
-	my ( $class, $url, $args, $result ) = @_;
+	my ( $class, $state, $args, $result ) = @_;
 
-	my $cb = $args->{cb} || sub { };
+	my ( $url, $cb ) = @$state{qw(url cb)};
 
 	return _fail( $cb, $url, STREAM_FAILED ) unless ref $result eq 'HASH';
 	return _fail( $cb, $url, _isText( $result->{error} ) ? $result->{error} : STREAM_FAILED ) if exists $result->{error};
@@ -199,21 +268,15 @@ sub _play {
 
 	return _fail( $cb, $url, $failToken ) unless @candidates;
 
-	# everything the scan callbacks need, apart from $args itself: it holds the callback
+	# the args for each alternate's scan: a copy of $args, without LMS's callback
 	my %base = %$args;
 	delete $base{cb};
 
-	$class->_scan(
-		{
-			url        => $url,
-			cb         => $cb,
-			song       => $args->{song},
-			base       => \%base,
-			candidates => \@candidates,
-			failToken  => $failToken,
-		},
-		$args, 0
-	);
+	$state->{base}       = \%base;
+	$state->{candidates} = \@candidates;
+	$state->{failToken}  = $failToken;
+
+	$class->_scan( $state, $args, 0 );
 
 	return;
 }
@@ -251,43 +314,57 @@ sub _scan {
 	main::INFOLOG && $log->is_info && $log->info("Scanning $streamUrl for $url");
 
 	# the wrapped callback is stored in $args, so it must not refer to $args itself: that would be a
-	# reference cycle, leaking the args hash, the callback and the song on every play
+	# reference cycle, leaking the args hash, the callback and the song on every play. The scanner
+	# may call it later, from its own context, so it is guarded too.
 	$args->{cb} = sub {
-		my $track = shift;
-
-		if ( !$track ) {
-			my $error = shift;
-			main::INFOLOG && $log->is_info && $log->info( "Scan of $streamUrl for $url failed: " . ( defined $error ? $error : 'unknown error' ) );
-
-			if ( $i < $#{ $state->{candidates} } ) {
-				return $class->_scan( $state, { %{ $state->{base} } }, $i + 1 );
-			}
-
-			return _fail( $state->{cb}, $url, $state->{failToken} );
-		}
-
-		my $song = $state->{song};
-
-		# the scanned track's URL is the streamable (maybe redirected) URL
-		$song->streamUrl( $track->url ) if $song;
-
-		# the stored title is the item's, from getMetadataFor (no client)
-		$track->title( $class->getMetadataFor( undef, $url )->{title} );
-
-		# ignore cover art in the stream, so getMetadataFor's cover is shown
-		$track->cover(0);
-
-		# from now on the track is the abclisten:// URL, byte for byte, so playlist and favourites
-		# matching keep working
-		$track->url($url);
-
-		# the web UI only refreshes the playlist when this changes
-		$song->master->currentPlaylistUpdateTime( Time::HiRes::time() ) if $song;
-
-		$state->{cb}->( $track, @_ );
+		my @answer = @_;
+		_guard( $state, "Handling the scan of $streamUrl", sub { $class->_scanned( $state, $i, @answer ) } );
+		return;
 	};
 
-	$class->SUPER::scanUrl( $streamUrl, $args );
+	_guard( $state, "Scanning $streamUrl", sub { $class->SUPER::scanUrl( $streamUrl, $args ) } );
+
+	return;
+}
+
+# The scanner's answer for candidate $i: after a failed scan, on to the next candidate (or
+# failToken); otherwise set up the track and the song, and call LMS's callback.
+sub _scanned {
+	my ( $class, $state, $i, $track, @rest ) = @_;
+
+	my $url       = $state->{url};
+	my $streamUrl = $state->{candidates}->[$i];
+
+	if ( !$track ) {
+		my $error = $rest[0];
+		main::INFOLOG && $log->is_info && $log->info( "Scan of $streamUrl for $url failed: " . ( defined $error ? $error : 'unknown error' ) );
+
+		if ( $i < $#{ $state->{candidates} } ) {
+			return $class->_scan( $state, { %{ $state->{base} } }, $i + 1 );
+		}
+
+		return _fail( $state->{cb}, $url, $state->{failToken} );
+	}
+
+	my $song = $state->{song};
+
+	# the scanned track's URL is the streamable (maybe redirected) URL
+	$song->streamUrl( $track->url ) if $song;
+
+	# the stored title is the item's, from getMetadataFor (no client)
+	$track->title( $class->getMetadataFor( undef, $url )->{title} );
+
+	# ignore cover art in the stream, so getMetadataFor's cover is shown
+	$track->cover(0);
+
+	# from now on the track is the abclisten:// URL, byte for byte, so playlist and favourites
+	# matching keep working
+	$track->url($url);
+
+	# the web UI only refreshes the playlist when this changes
+	$song->master->currentPlaylistUpdateTime( Time::HiRes::time() ) if $song;
+
+	$state->{cb}->( $track, @rest );
 
 	return;
 }
