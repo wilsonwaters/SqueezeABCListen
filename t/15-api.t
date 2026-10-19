@@ -2,6 +2,8 @@
 # Plugins::ABCListen::API network functions, offline (SimpleAsyncHTTP stub, fake clock): URL
 # building per function; siteConfig parse, 6 h cache, force and coalescing; nextData buildId
 # refresh (one refresh per 60 s, one retry only if the buildId changed) and __N_REDIRECT handling;
+# F4: page paths spelled as ABC serves them (lower-case, escapes lower-case, non-ASCII encoded), a
+# 307 that LMS can't follow, and HTTP 308 (legacy program paths) followed by its Location;
 # Algolia headers, cache, rolling budget, 401/403 re-discovery, 429, no-config and no-key logging;
 # coalescing with deferred responses; ttl / stale_ok / quiet; exactly one callback on every path.
 #
@@ -36,6 +38,12 @@
 #   next-data-404.html             GET https://www.abc.net.au/_next/data/build-00000000/listen.json (404 text/html, trimmed)
 #   nextdata-redirect-relative.json GET https://www.abc.net.au/_next/data/build-3afcd04f/listen/programs/scienceshow/x/107266790.json
 #   music-400.json                 GET https://music.abcradio.net.au/api/v1/plays/rn/now.json (400 application/json)
+# Recorded for F4 (2026-10-19, buildId build-3afcd04f), shared with t/30-episode.t:
+#   ondemand/nextdata-generic-107267360.json   GET /_next/data/build-3afcd04f/listen/programs/x/x/107267360.json
+#                                              (__N_REDIRECT to the canonical path, spelled with upper-case %C3%B1)
+#   ondemand/nextdata-episode-nonascii-107267360.trimmed.json  GET .../if-youre-listening/the-apocalyptic-el-ni%c3%b1o-we-didn-t-see-coming/107267360.json
+#                                              (documentProps keys Episode.pm reads; the upper-case %C3%B1 spelling of the same
+#                                              URL answers 307 with only an x-nextjs-redirect header to this one, no Location)
 # Synthetic: html-page-200.html (HTML from a JSON endpoint), nextdata-redirect-absolute.json,
 #   nextdata-redirect-loop-a/b.json, bad.json (truncated), algolia-401/403/429.json,
 #   bff-collection-empty.json, listen-search-no-algolia.html, listen-search-no-buildid.html.
@@ -799,6 +807,275 @@ subtest 'nextData: __N_REDIRECT (relative, absolute, 2 hops, 3rd hop, loop, off-
 	( $ok, $err ) = api( nextData => ['/listen/off'] );
 	$e = one_err( $ok, $err, 'off-site redirect', $LOAD_FAILED, 200 );
 	like( $e->{message}, qr/off the ABC site/, 'off-site: message' );
+};
+
+# ---------------------------------------------------------------------------
+# F4: page paths that ABC only serves after a redirect LMS can't follow
+# ---------------------------------------------------------------------------
+
+my $NONASCII_ID    = '107267360';
+my $NONASCII_UPPER = "/listen/programs/if-youre-listening/the-apocalyptic-el-ni%C3%B1o-we-didn-t-see-coming/$NONASCII_ID";
+my $NONASCII       = "/listen/programs/if-youre-listening/the-apocalyptic-el-ni%c3%b1o-we-didn-t-see-coming/$NONASCII_ID";
+my $NONASCII_DOC   = 'ondemand/nextdata-episode-nonascii-107267360.trimmed.json';
+
+# The _next/data routes as ABC answers them (measured 2026-10-19): a path that isn't all lower-case
+# (an upper-case letter or %XX escape) gets a 307 whose only pointer is an x-nextjs-redirect header
+# to the lower-case path, with no Location. LMS's Async::HTTP fails that with "Redirection without
+# location". A lower-case path serves %pages (path => response; file => fixture), else a small page.
+sub serve_like_abc {
+	my %pages = @_;
+
+	Slim::Networking::SimpleAsyncHTTP->addRoute( qr{^\Q$SITE/_next/data/$BUILD/\E}, sub {
+		my ($path) = $_[0] =~ m{^\Q$SITE/_next/data/$BUILD\E(/.*)\.json\z};
+		return { error => 'Redirection without location' } if $path ne lc $path;
+
+		my $page = $pages{$path} or return { content => qq({"pageProps":{"page":"$path"}}), headers => $JSON_TYPE };
+		my %response = ( headers => $JSON_TYPE, %$page );
+		$response{content} = fixture( delete $response{file} ) if $response{file};
+		return \%response;
+	} );
+}
+
+sub n_redirect { { content => qq({"pageProps":{"__N_REDIRECT":"$_[0]","__N_REDIRECT_STATUS":308},"__N_SSP":true}) } }
+
+subtest 'nextData (F4): the path is requested lower-case, escapes lower-case, non-ASCII %-encoded as UTF-8' => sub {
+	my @cases = (
+		[ 'upper-case escapes (as ABC links the page)', $NONASCII_UPPER,                                                  $NONASCII ],
+		[ 'mixed-case escape %c3%B1',                   '/listen/programs/if-youre-listening/the-apocalyptic-el-ni%c3%B1o-we-didn-t-see-coming/107267360', $NONASCII ],
+		[ 'mixed-case escape %C3%b1',                   '/listen/programs/if-youre-listening/the-apocalyptic-el-ni%C3%b1o-we-didn-t-see-coming/107267360', $NONASCII ],
+		[ 'a raw non-ASCII character',                  '/listen/programs/if-youre-listening/the-apocalyptic-el-niño-we-didn-t-see-coming/107267360',      $NONASCII ],
+		[ 'an absolute URL with a trailing /',          "$SITE$NONASCII_UPPER/",                                          $NONASCII ],
+		[ 'upper-case letters (ABC lower-cases them too)', '/listen/programs/If-Youre-Listening/The-Apocalyptic-El-Ni%C3%B1o-we-didn-t-see-coming/107267360', $NONASCII ],
+		[ 'already lower-case: unchanged',              $NONASCII,                                                        $NONASCII ],
+		[ 'ASCII only: unchanged',                      $SCIENCE,                                                         $SCIENCE ],
+		[ 'several non-ASCII characters',               '/listen/programs/x/café-über-niño/1',                            '/listen/programs/x/caf%c3%a9-%c3%bcber-ni%c3%b1o/1' ],
+		[ 'several escapes, mixed case',                '/listen/programs/x/CAF%C3%A9-%c3%BCber-ni%C3%b1o/1',             '/listen/programs/x/caf%c3%a9-%c3%bcber-ni%c3%b1o/1' ],
+		[ 'a character outside the BMP',                '/listen/programs/x/a-🎧-b/1',                                    '/listen/programs/x/a-%f0%9f%8e%a7-b/1' ],
+		[ '+ kept, a space encoded, %2B lower-cased',   '/listen/programs/x/a+b c%2Bd/1',                                 '/listen/programs/x/a+b%20c%2bd/1' ],
+		[ 'path characters kept, others encoded',       q{/listen/programs/x/a:b@c!$&'()*,;=-._~d"e<f>g`h/1},             q{/listen/programs/x/a:b@c!$&'()*,;=-._~d%22e%3cf%3eg%60h/1} ],
+	);
+
+	for my $case (@cases) {
+		my ( $name, $asked, $requested ) = @$case;
+		fresh();
+		serve_search();
+		serve_like_abc( $NONASCII => { file => $NONASCII_DOC } );
+		prime();
+
+		my ( $ok, $err ) = api( nextData => [$asked] );
+		my ($props) = one_ok( $ok, $err, $name );
+		is_deeply( [ urls() ], [ data_url( $BUILD, $requested ) ], "$name: requested $requested" );
+
+		if ( $requested eq $NONASCII ) {
+			is( $props->{data}->{documentProps}->{id}, $NONASCII_ID, "$name: the episode document" );
+		}
+		else {
+			is( $props->{page}, $requested, "$name: the page" );
+		}
+	}
+
+	# one cache entry for every spelling of a page
+	fresh();
+	serve_search();
+	serve_like_abc( $NONASCII => { file => $NONASCII_DOC } );
+	prime();
+	my ( $ok, $err ) = api( nextData => [$NONASCII_UPPER], { ttl => 600 } );
+	one_ok( $ok, $err, 'upper-case escapes, ttl 600' );
+	clear_requests();
+	for my $spelling ( $NONASCII, "$SITE/listen/programs/if-youre-listening/the-apocalyptic-el-niño-we-didn-t-see-coming/107267360" ) {
+		( $ok, $err ) = api( nextData => [$spelling], { ttl => 600 } );
+		one_ok( $ok, $err, "then $spelling" );
+	}
+	is( scalar requests(), 0, 'other spellings of the same page: cache hits, no request' );
+};
+
+subtest 'nextData (F4): __N_REDIRECT to an upper-case-escaped path (recorded generic path of 107267360) is followed lower-case' => sub {
+	my $generic = "/listen/programs/x/x/$NONASCII_ID";
+
+	fresh();
+	serve_search();
+	serve_like_abc( $generic => { file => 'ondemand/nextdata-generic-107267360.json' }, $NONASCII => { file => $NONASCII_DOC } );
+	prime();
+
+	my ( $ok, $err ) = api( nextData => [$generic], { ttl => 600 } );
+	my ($props) = one_ok( $ok, $err, 'generic path' );
+	is( $props->{data}->{documentProps}->{id}, $NONASCII_ID, 'the episode document' );
+	is_deeply( [ urls() ], [ data_url( $BUILD, $generic ), data_url( $BUILD, $NONASCII ) ], 'the generic path, then the redirect target lower-case' );
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => [$NONASCII_UPPER], { ttl => 600 } );
+	one_ok( $ok, $err, 'the target as ABC links it' );
+	is( scalar requests(), 0, 'cached under the lower-case target' );
+};
+
+subtest 'nextData (F4): a 307 that LMS cannot follow (x-nextjs-redirect only, no Location) -> one LOAD_FAILED, no refresh, no retry' => sub {
+	# HTTP.pm hands its error callback the message and the SimpleAsyncHTTP object only: LMS passes
+	# the 307 response as a third argument, which HTTP.pm drops, and SimpleAsyncHTTP fills in
+	# headers only on success. So x-nextjs-redirect can't be read; a 307 that remains (to another
+	# page, say) is an error. Episode.pm falls back to the id-based lookup for episodes.
+	fresh();
+	serve_search();
+	route( data_url( $BUILD, '/listen/programs/renamed/some-episode/1' ), error => 'Redirection without location' );
+	prime();
+
+	my ( $ok, $err ) = api( nextData => ['/listen/programs/renamed/some-episode/1'] );
+	my $e = one_err( $ok, $err, '307 without Location', $LOAD_FAILED, undef );
+	like( $e->{message}, qr/Redirection without location/, 'message: LMS\'s reason' );
+	is_deeply( [ urls() ], [ data_url( $BUILD, '/listen/programs/renamed/some-episode/1' ) ], 'one request: no buildId refresh, no retry' );
+};
+
+subtest 'nextData (F4): redirect loops and the 2-hop limit hold across spellings' => sub {
+	fresh();
+	serve_search();
+	serve_like_abc(
+		'/listen/programs/loop-%c3%a9'  => n_redirect('/listen/programs/b'),
+		'/listen/programs/b'            => n_redirect('/listen/programs/LOOP-%C3%A9'),    # the first page, spelled differently
+		'/listen/programs/self'         => n_redirect('/listen/programs/Self'),
+		'/listen/programs/h%c3%a91'     => n_redirect('/listen/programs/H%C3%A92'),
+		'/listen/programs/h%c3%a92'     => n_redirect('h%C3%A93'),                           # relative
+		'/listen/programs/h%c3%a93'     => n_redirect('h%C3%A94'),                           # relative; h%c3%a94 is a page
+		'/listen/programs/two-%c3%a9'   => n_redirect('/listen/programs/H%C3%A93'),
+		'/listen/programs/off-%c3%a9'   => n_redirect('https://www.example.com/listen/programs/%C3%A9'),
+	);
+	prime();
+
+	my ( $ok, $err ) = api( nextData => ['/listen/programs/loop-%C3%A9'] );
+	my $e = one_err( $ok, $err, 'A -> B -> A (another spelling)', $LOAD_FAILED, 200 );
+	like( $e->{message}, qr{Redirect loop: /listen/programs/loop-%c3%a9 -> /listen/programs/b -> /listen/programs/loop-%c3%a9}, 'loop: message, lower-case paths' );
+	is( scalar requests(), 2, 'loop: 2 requests' );
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/listen/programs/self'] );
+	$e = one_err( $ok, $err, 'a page redirecting to its own upper-case spelling', $LOAD_FAILED, 200 );
+	like( $e->{message}, qr/Redirect loop/, 'self: a loop' );
+	is( scalar requests(), 1, 'self: 1 request' );
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/listen/programs/two-%C3%A9'] );
+	my ($props) = one_ok( $ok, $err, '2 hops with escapes' );
+	is( $props->{page}, '/listen/programs/h%c3%a94', '2 hops (one relative): the target' );
+	is_deeply( [ urls() ], [ map { data_url( $BUILD, $_ ) } qw(/listen/programs/two-%c3%a9 /listen/programs/h%c3%a93 /listen/programs/h%c3%a94) ], '2 hops: every request lower-case' );
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/listen/programs/H%C3%A91'] );
+	$e = one_err( $ok, $err, '3rd hop with escapes', $LOAD_FAILED, 200 );
+	like( $e->{message}, qr/Too many redirects/, '3rd hop: message' );
+	is( scalar requests(), 3, '3rd hop: the 4th page is not fetched' );
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/listen/programs/off-%C3%A9'] );
+	$e = one_err( $ok, $err, 'off-site with escapes', $LOAD_FAILED, 200 );
+	like( $e->{message}, qr/off the ABC site/, 'off-site: message' );
+	is( scalar requests(), 1, 'off-site: not followed' );
+};
+
+# Legacy program paths (Algolia's canonicalURL, e.g. /radionational/programs/futuretense) answer
+# HTTP 308 with a Location to the /listen page, recorded 2026-10-19:
+#   GET /_next/data/build-3afcd04f/radionational/programs/futuretense.json
+#   -> 308, location: /listen/programs/futuretense, refresh: 0;url=/listen/programs/futuretense,
+#      body "/listen/programs/futuretense" (28 bytes, not JSON)
+#   GET /_next/data/build-3afcd04f/radionational/programs/futuretense/el-ni%C3%B1o/1.json
+#   -> 308, location: /listen/programs/futuretense/el-ni%C3%B1o/1 (escapes kept as asked)
+# LMS's Async::HTTP follows 301/302/303/307 with a Location but not 308: it reaches HTTP.pm as a
+# response whose body isn't JSON, with its code and headers.
+sub http_redirect {
+	my ( $code, %headers ) = @_;
+	my $target = $headers{Location} || $headers{'x-nextjs-redirect'} || '';
+	return { code => $code, headers => { %headers, ( $headers{Location} ? ( Refresh => "0;url=$target" ) : () ) }, content => $target };
+}
+
+subtest 'nextData (F4): HTTP 308 (legacy /radionational/programs/... paths; LMS does not follow 308) -> Location followed' => sub {
+	my $legacy = '/radionational/programs/futuretense';
+	my $page   = '/listen/programs/futuretense';
+
+	fresh();
+	serve_search();
+	serve_like_abc(
+		$legacy                                       => http_redirect( 308, Location => $page ),
+		'/radionational/programs/futuretense/el-ni%c3%b1o/1' => http_redirect( 308, Location => '/listen/programs/futuretense/el-ni%C3%B1o/1' ),
+		'/radionational/programs/nextjs-only'         => http_redirect( 308, 'x-nextjs-redirect' => '/listen/programs/nextjs-only' ),
+		'/radionational/programs/relative'            => http_redirect( 308, Location => 'futuretense' ),
+	);
+	prime();
+
+	my ( $ok, $err ) = api( nextData => [$legacy], { ttl => 600 } );
+	my ( $props, $info ) = one_ok( $ok, $err, 'legacy program path' );
+	is( $props->{page}, $page, 'the /listen page' );
+	is( $info->{stale}, 0, 'not stale' );
+	is_deeply( [ urls() ], [ data_url( $BUILD, $legacy ), data_url( $BUILD, $page ) ], 'the legacy path, then the Location: no buildId refresh' );
+	is( scalar( grep { $_->{level} eq 'WARN' } log_messages() ), 0, 'no WARN' );
+
+	clear_requests();
+	for my $path ( $legacy, $page ) {
+		( $ok, $err ) = api( nextData => [$path], { ttl => 600 } );
+		one_ok( $ok, $err, "again: $path" );
+	}
+	is( scalar requests(), 0, 'cached under the legacy path and the target' );
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/radionational/programs/futuretense/el-ni%C3%B1o/1'] );
+	($props) = one_ok( $ok, $err, '308 to a path with upper-case escapes' );
+	is_deeply(
+		[ urls() ],
+		[ data_url( $BUILD, '/radionational/programs/futuretense/el-ni%c3%b1o/1' ), data_url( $BUILD, '/listen/programs/futuretense/el-ni%c3%b1o/1' ) ],
+		'both requested lower-case'
+	);
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/radionational/programs/nextjs-only'] );
+	($props) = one_ok( $ok, $err, '308 with only x-nextjs-redirect' );
+	is( $props->{page}, '/listen/programs/nextjs-only', 'x-nextjs-redirect followed when the response reaches us' );
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/radionational/programs/relative'] );
+	($props) = one_ok( $ok, $err, '308 to a relative Location' );
+	is( $props->{page}, $page, 'relative to the page (/radionational/programs/futuretense), then its 308 to the /listen page' );
+	is( scalar requests(), 3, 'relative Location, then a second 308: 3 requests (2 hops)' );
+};
+
+subtest 'nextData (F4): HTTP 308 shares the loop, 2-hop, off-site rules with __N_REDIRECT; no target -> as before' => sub {
+	fresh();
+	serve_search();
+	serve_like_abc(
+		'/radionational/programs/a'    => http_redirect( 308, Location => '/listen/programs/b' ),
+		'/listen/programs/b'           => n_redirect('/radionational/programs/A'),    # back to the first page
+		'/radionational/programs/self' => http_redirect( 308, Location => '/radionational/programs/Self' ),
+		'/radionational/programs/h1'   => http_redirect( 308, Location => '/listen/programs/h2' ),
+		'/listen/programs/h2'          => n_redirect('/radionational/programs/h3'),
+		'/radionational/programs/h3'   => http_redirect( 308, Location => '/listen/programs/h4' ),
+		'/radionational/programs/off'  => http_redirect( 308, Location => 'https://www.example.com/listen/programs/off' ),
+		'/radionational/programs/none' => { code => 308, content => '' },
+	);
+	prime();
+
+	my ( $ok, $err ) = api( nextData => ['/radionational/programs/a'] );
+	my $e = one_err( $ok, $err, '308 A -> __N_REDIRECT B -> A', $LOAD_FAILED, 200 );
+	like( $e->{message}, qr{Redirect loop: /radionational/programs/a -> /listen/programs/b -> /radionational/programs/a}, 'mixed loop: message' );
+	is( scalar requests(), 2, 'mixed loop: 2 requests' );
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/radionational/programs/self'] );
+	$e = one_err( $ok, $err, '308 to its own upper-case spelling', $LOAD_FAILED, 308 );
+	like( $e->{message}, qr/Redirect loop/, '308 self: a loop' );
+	is( scalar requests(), 1, '308 self: 1 request' );
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/radionational/programs/h1'] );
+	$e = one_err( $ok, $err, '308, __N_REDIRECT, 308: a 3rd hop', $LOAD_FAILED, 308 );
+	like( $e->{message}, qr/Too many redirects/, '3rd hop: message' );
+	is( scalar requests(), 3, '3rd hop: the 4th page is not fetched' );
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/radionational/programs/off'] );
+	$e = one_err( $ok, $err, '308 off the site', $LOAD_FAILED, 308 );
+	like( $e->{message}, qr/off the ABC site/, '308 off-site: message' );
+	is( scalar requests(), 1, '308 off-site: not followed' );
+
+	# a 308 without Location or x-nextjs-redirect is a page that isn't JSON, as before (buildId check)
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/radionational/programs/none'] );
+	one_err( $ok, $err, '308 without a target', $LOAD_FAILED, 308 );
+	is_deeply( [ urls() ], [ data_url( $BUILD, '/radionational/programs/none' ), $SEARCH ], '308 without a target: the buildId check, no retry (same buildId)' );
 };
 
 # ---------------------------------------------------------------------------

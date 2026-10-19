@@ -15,15 +15,19 @@ package Plugins::ABCListen::Episode;
 #       2. Else the episode document (API::nextData, 1 h cache): from the cached path, or, without
 #          one, from the generic path /listen/programs/x/x/<id>, which ABC redirects to the
 #          canonical page for any episode, segment or news audio id (OQ1, spiked 2026-10-19).
+#          F4: a cached path that fails (any error: a renamed page, a 307 LMS can't follow, a
+#          timeout) falls back once to the generic path, then step 3 as for any generic path;
+#          the document found caches its canonical path over the failed one.
 #       3. A page without an episode document (an audiobook chapter redirects to its book), or a
 #          failed generic path: ONE Algolia lookup by objectID. A hit with renditions is chosen
 #          from directly (dates.mediaDownload*/mediaStreaming* are the windows, the 1x1 crop of
 #          defaultThumbnail the image); a hit without them gives the page to fetch. No hit:
 #          EPISODE_NOT_FOUND.
-#     A failed request answers from the cached renditions of any age if there are some, else
-#     with the API's token (LOAD_FAILED or RATE_LIMITED). Every request has a 6 s timeout, and an
-#     18 s deadline answers before the handler's 20 s resolve timeout (from the cached renditions
-#     if any, else LOAD_FAILED). Whatever arrives later is still cached, never answered twice.
+#     When that chain fails (the lookup, or the page a hit names), it answers from the cached
+#     renditions of any age if there are some, else with the API's token (LOAD_FAILED or
+#     RATE_LIMITED). Every request has a 6 s timeout, and an 18 s deadline answers before the
+#     handler's 20 s resolve timeout (from the cached renditions if any, else LOAD_FAILED).
+#     Whatever arrives later is still cached, never answered twice.
 #     What is fetched is merged into the metadata cache (contract-3 keys; windows as epochs;
 #     renditions as { url, mime, bitrate, fileSize }, fileSize only when ABC gives one). A
 #     restricted or not yet released episode closes the cached windows (availableTo and
@@ -153,23 +157,33 @@ sub resolve {
 
 	my $path = $entry ? Plugins::ABCListen::API::sitePath( $entry->{path} ) : undef;
 
-	return _fetch( $state, $path ) if defined $path;
-	return _fetch( $state, sprintf( GENERIC_PATH, $id ), 1 );
+	return _fetch( $state, $path, 'cached' ) if defined $path;
+	return _fetch( $state, sprintf( GENERIC_PATH, $id ), 'generic' );
 }
 
-# The episode document at $path. The generic path is a guess: if it fails, look the id up.
+# The episode document at $path. $kind 'cached': the path in the metadata cache; if it fails (any
+# error), fall back once to the id-based chain, the generic path (F4). 'generic': a guess; if it
+# fails, look the id up. undef: the page a search hit names; if it fails, that's the answer.
 sub _fetch {
-	my ( $state, $path, $generic ) = @_;
+	my ( $state, $path, $kind ) = @_;
+	$kind ||= '';
 
 	Plugins::ABCListen::API::nextData(
 		$path,
 		sub { _document( $state, $path, shift ) },
 		sub {
 			my $error = shift;
-			return _lookup( $state, "$path failed (" . _message($error) . ')' ) if $generic;
+			my $why   = "$path failed (" . _message($error) . ')';
+
+			if ( $kind eq 'cached' ) {
+				main::DEBUGLOG && $log->is_debug && $log->debug("Episode $state->{id}: the cached path $why; trying the generic path");
+				return _fetch( $state, sprintf( GENERIC_PATH, $state->{id} ), 'generic' );
+			}
+			return _lookup( $state, $why ) if $kind eq 'generic';
+
 			_failed( $state, "the episode page $path", $error );
 		},
-		{ ttl => DOCUMENT_TTL, timeout => REQUEST_TIMEOUT, ( $generic ? ( quiet => 1 ) : () ) },
+		{ ttl => DOCUMENT_TTL, timeout => REQUEST_TIMEOUT, ( $kind eq 'generic' ? ( quiet => 1 ) : () ) },
 	);
 
 	return;

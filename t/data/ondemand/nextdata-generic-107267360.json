@@ -1,0 +1,23 @@
+{
+  "pageProps": {
+    "gtm": true,
+    "headTagsGTMPrepared": {
+      "gtmContainerId": "GTM-NZ6NQM6F",
+      "application": {
+        "environment": "production",
+        "generatorName": "PL CORE NEXT",
+        "generatorVersion": "0.0.0",
+        "product": "PL CORE"
+      }
+    },
+    "snowplowPrepared": {
+      "snowplowCollectorURL": "https://collector.abc.net.au",
+      "appVersionId": "corenext-0.59790",
+      "appId": "listen",
+      "environment": "production"
+    },
+    "__N_REDIRECT": "/listen/programs/if-youre-listening/the-apocalyptic-el-ni%C3%B1o-we-didn-t-see-coming/107267360",
+    "__N_REDIRECT_STATUS": 308
+  },
+  "__N_SSP": true
+}

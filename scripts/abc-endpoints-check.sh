@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # abc-endpoints-check.sh - manual drift probe for the ABC endpoints the plugin relies on
 # (ai-state/research/abc-listen-api.md, ABCListen/API.pm). One live request per endpoint family
-# (the _next/data and music families need a few), asserting the JSON paths our parsers use.
+# (the _next/data, music and non-ASCII path families need a few), asserting the JSON paths our
+# parsers use.
 # Prints "PASS <family>: <detail>" or "FAIL <family>: <reason>" per family and exits 1 if any
 # family failed.
 #
@@ -14,6 +15,7 @@
 #   ABC_PROGRAM_PATH  program page for _next/data   (default /listen/programs/scienceshow)
 #   ABC_EPISODE_PATH  any-slug episode page that redirects (default /listen/programs/scienceshow/x/107266790)
 #   ABC_COLLECTION_ID collection for the collection family (default 103194120)
+#   ABC_NONASCII_ID   episode whose canonical path has a non-ASCII slug (default 107267360, "El Niño")
 #
 #   ABC_PROGRAM_PATH=/listen/programs/nope scripts/abc-endpoints-check.sh   # FAIL _next/data: ...
 set -uo pipefail
@@ -22,6 +24,7 @@ SITE=https://www.abc.net.au
 PROGRAM_PATH=${ABC_PROGRAM_PATH:-/listen/programs/scienceshow}
 EPISODE_PATH=${ABC_EPISODE_PATH:-/listen/programs/scienceshow/x/107266790}
 COLLECTION_ID=${ABC_COLLECTION_ID:-103194120}
+NONASCII_ID=${ABC_NONASCII_ID:-107267360}
 
 for tool in curl jq; do
   command -v "$tool" >/dev/null || { echo "abc-endpoints-check: $tool is required" >&2; exit 2; }
@@ -199,9 +202,36 @@ else
   fail 'pls' 'no File1=https://abc.streamguys1.com/live/... line in triplejnsw.pls'
 fi
 
+# 11. non-ASCII path (F4): the generic path redirects to the canonical path, which ABC spells with
+#     upper-case %XX escapes; requested lower-case, as API::nextData does, it must serve the episode
+#     document. The spelling as given is probed for the log only: ABC answered it with a 307 that has
+#     only an x-nextjs-redirect header (no Location), which LMS can't follow (2026-10-19).
+generic_path="/listen/programs/x/x/$NONASCII_ID"
+if [[ -z "$build_id" ]]; then
+  fail 'non-ASCII path' 'no buildId (search page failed)'
+elif get_json 'non-ASCII path' "$tmp/nonascii-redirect.json" "$SITE/_next/data/$build_id$generic_path.json"; then
+  target=$(jq -r '.pageProps.__N_REDIRECT // empty | strings' "$tmp/nonascii-redirect.json")
+  target=${target#https://www.abc.net.au}
+  if [[ "$target" != /* ]]; then
+    fail 'non-ASCII path' "no .pageProps.__N_REDIRECT for $generic_path"
+  elif [[ "$target" != *%[0-9A-Fa-f][0-9A-Fa-f]* ]]; then
+    fail 'non-ASCII path' "$target has no %XX escape (set ABC_NONASCII_ID to another episode)"
+  else
+    served=${target,,}
+    as_given=$(fetch "$tmp/nonascii-as-given.json" "$SITE/_next/data/$build_id$target.json")
+    if get_json 'non-ASCII path' "$tmp/nonascii.json" "$SITE/_next/data/$build_id$served.json"; then
+      if check "$tmp/nonascii.json" "(.pageProps.data.documentProps.id | tostring) == \"$NONASCII_ID\""; then
+        pass 'non-ASCII path' "$generic_path -> $target (HTTP $as_given as given); lower-case: document $NONASCII_ID"
+      else
+        fail 'non-ASCII path' "no .pageProps.data.documentProps.id $NONASCII_ID at $served"
+      fi
+    fi
+  fi
+fi
+
 echo
 if ((failures)); then
-  echo "abc-endpoints-check: $failures of 10 families FAILED ($((SECONDS - started)) s)"
+  echo "abc-endpoints-check: $failures of 11 families FAILED ($((SECONDS - started)) s)"
   exit 1
 fi
-echo "abc-endpoints-check: all 10 families passed ($((SECONDS - started)) s)"
+echo "abc-endpoints-check: all 11 families passed ($((SECONDS - started)) s)"
