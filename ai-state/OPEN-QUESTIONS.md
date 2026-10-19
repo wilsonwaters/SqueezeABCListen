@@ -49,6 +49,10 @@ Unresolved product/technical decisions and what they block. Resolved items move 
   removes the footer. Squash-merge with an explicit clean commit message (GitHub then adds no co-author lines).
   Feature-branch commits that can't be rewritten (permission-denied) are handled by re-committing the tree as one
   clean commit on a fresh branch — never by rewriting pushed history.
+  **Identity persistence:** a session-worker restart reset the global git identity to the tool default, and one
+  orchestrator commit (71e77b6, progress log) went to `main` with the wrong author before it was noticed. The identity
+  is now also set in each repo's own `.git/config` (survives global resets); verify with `git var GIT_AUTHOR_IDENT`
+  after any restart.
 
 - **Top-level Programs label** (2026-10-19, orchestrator decision): the entry is labelled **"Programs"** (its submenu
   offers By network / A–Z / By type). F1 seeded the text "Programs (A–Z)"; O2 (#16) changes that token's EN text to
