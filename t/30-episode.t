@@ -560,11 +560,16 @@ subtest 'audiobook chapter (#12 amendment): cached chapter path -> book page -> 
 	is( scalar( algolia_requests() ), 1, '... with one Algolia request' );
 };
 
-subtest 'Algolia rate limited (429, or the budget used up) -> RATE_LIMITED' => sub {
+subtest 'Algolia rate limited (429, or the budget used up) -> RATE_LIMITED; unavailable -> LOAD_FAILED' => sub {
 	fresh();
 	serve( "/listen/programs/x/x/$SCIENCE", fixture('ondemand/nextdata-generic-1-404.json'), code => 404 );
 	serve_algolia( fixture('foundation/algolia-429.json'), code => 429 );
 	is_deeply( answer( resolve_id($SCIENCE), '429' ), { error => $RATE_LIMITED }, 'HTTP 429: RATE_LIMITED' );
+
+	fresh();
+	serve( "/listen/programs/x/x/$SCIENCE", fixture('ondemand/nextdata-generic-1-404.json'), code => 404 );
+	route( $ALGOLIA, error => 'Connect timed out' );
+	is_deeply( answer( resolve_id($SCIENCE), 'Algolia down' ), { error => $LOAD_FAILED }, 'Algolia unreachable: LOAD_FAILED' );
 
 	fresh();
 	serve( "/listen/programs/x/x/$SCIENCE", fixture('ondemand/nextdata-generic-1-404.json'), code => 404 );
