@@ -33,7 +33,9 @@ There are two ways to cut a release; both release the version currently in
 1. **Version-bump commit on `main`.** Change `<version>` in `ABCListen/install.xml` (and nothing
    else, apart from `CHANGELOG.md`) and get the commit onto `main`. A push to `main` that
    changes `<version>` in `ABCListen/install.xml` starts the release. (A push that touches
-   `install.xml` without changing `<version>`, for example a new `optionsURL`, does nothing.)
+   `install.xml` without changing `<version>`, for example a new `optionsURL`, does nothing
+   if `repo.xml` on `main` already has that version; if it doesn't, the version was never
+   released, and that push releases it.)
 2. **Run the workflow.** In GitHub: **Actions → Release → Run workflow**, branch `main`,
    leave *Dry run* unticked. Or through the REST API:
 
@@ -47,13 +49,16 @@ There are two ways to cut a release; both release the version currently in
    release (`0.1.0`, whose version was already in `install.xml`) is cut, and how an
    interrupted release is repaired.
 
-Real releases only run from `main`; a real run dispatched on another branch fails at once.
+Real releases only run from `main`; a real run dispatched on another branch fails at once
+(without holding up or cancelling a release from `main`).
 
 ## What the workflow does
 
 0. **Version.** Reads `V` from `ABCListen/install.xml` and fails unless it is `X.Y.Z`. On a
-   push, it compares `V` with the version before the push; if it is unchanged, the run ends
-   here (a green no-op; the other jobs show as skipped).
+   push, it compares `V` with the version before the push; if it is unchanged **and**
+   `repo.xml` on the latest `main` already has `version="V"`, the run ends here (a green no-op;
+   the other jobs show as skipped). Otherwise it goes on, so a version whose own run never
+   released it is released now.
 1. **Checks.** Runs the same checks as CI (`ci.yml`, i.e. `scripts/check.sh`); a failure stops
    the run.
 2. **Guards.** Fails if `V` is lower than the highest `vX.Y.Z` tag or than the version in
@@ -73,7 +78,9 @@ Real releases only run from `main`; a real run dispatched on another branch fail
 6. **Verify.** Downloads the uploaded asset and compares its SHA1 with step 4's. On a mismatch
    the run fails before `repo.xml` is touched.
 7. **repo.xml.** On top of the latest `main`: runs
-   `scripts/update-repo-xml.pl --version V --sha <sha1> --url <asset URL>`, checks the result
+   `scripts/update-repo-xml.pl --version V --sha <sha1> --url <asset URL> --install-xml <file>`,
+   where `<file>` is the `install.xml` inside the zip being released (so `minTarget` /
+   `maxTarget` are the released commit's, not those of a later `main`), checks the result
    with `xmllint`, and commits **only** `repo.xml` with the message
    `Release vV: update repo.xml [skip ci]`, authored and committed as
    `Wilson Waters <wilsonwaters@users.noreply.github.com>` (the repository owner). That identity
@@ -114,15 +121,20 @@ and checks the zip on every pull request anyway.
 - Real runs share one concurrency group and a running release is never cancelled, so two
   runs for the same version (a dispatch plus a push, or a re-run) run one after the other, and
   the second one finds the release and ends with `nothing to do`.
-- GitHub keeps only the newest *waiting* run of the group and cancels an older waiting one. If
-  the version is bumped several times in quick succession (say 0.2.0, then 0.3.0 while the
-  0.2.0 run is still waiting), the older waiting run is cancelled: that middle version is
-  superseded and never gets a tag or a release. The newest version is still released and
-  `repo.xml` points at it, so this is harmless for LMS users, who only ever see the version in
-  `repo.xml`. To release every version, wait for each release run to finish before the next
-  bump.
-- A push that touches `install.xml` without changing the version releases nothing (step 0); a
-  dispatch for an already released version finds the existing release and does nothing.
+- GitHub keeps only the newest *waiting* run of the group and cancels an older waiting one, so
+  a version bump's run can be cancelled before it starts. The newest version is still
+  released: the run that replaced it is for a later commit on `main`, and it releases the
+  version in that commit's `install.xml` unless `repo.xml` on `main` already has it (step 0).
+  That holds even when the later push leaves `<version>` alone (say a bump to 0.3.0 waits
+  behind another release, then a new `optionsURL` is pushed: the 0.3.0 run is cancelled and
+  the `optionsURL` run releases 0.3.0). Only when the version is bumped several times in quick
+  succession (0.2.0, then 0.3.0 while the 0.2.0 run is still waiting) is the middle version
+  superseded: it never gets a tag or a release. This is harmless for LMS users, who only ever
+  see the version in `repo.xml`; to release every version, wait for each release run to
+  finish before the next bump.
+- A push that touches `install.xml` without changing the version releases nothing once
+  `repo.xml` on `main` has that version (step 0); a dispatch for an already released version
+  finds the existing release and does nothing.
 - **Release exists but `repo.xml` is stale** (a run failed after creating the release, for
   example on a rejected push): run the workflow again. It downloads the existing asset,
   hashes it and updates `repo.xml` from it, without rebuilding or re-uploading anything.
@@ -153,15 +165,18 @@ and checks the zip on every pull request anyway.
 
 ## Prerequisites and troubleshooting
 
-- **Workflow permissions.** The workflow declares `permissions: contents: write`, but a
-  repository setting can still make `GITHUB_TOKEN` read-only. A **403** on creating the release
-  or on pushing `repo.xml` means: **Settings → Actions → General → Workflow permissions →
-  Read and write permissions**, save, then run the workflow again (it repairs `repo.xml` if the
-  release was already created).
+- **Workflow permissions.** The workflow's release job declares `permissions: contents: write`
+  (the other jobs only read), but a repository setting can still make `GITHUB_TOKEN`
+  read-only. A **403** on creating the release or on pushing `repo.xml` means: **Settings →
+  Actions → General → Workflow permissions → Read and write permissions**, save, then run the
+  workflow again (it repairs `repo.xml` if the release was already created).
 - **Branch protection.** GitHub Actions (`github-actions[bot]`, the `GITHUB_TOKEN` identity)
   must be allowed to push the `repo.xml` commit straight to `main`; the commit's author doesn't
   matter for this. If `main` is protected,
   allow GitHub Actions to bypass the rule, or the release is created but `repo.xml` stays stale.
+  A refused push (`GH006: Protected branch update failed` for branch protection, `GH013:
+  Repository rule violations found` for rulesets, or a 403) fails the run at once instead of
+  being retried.
 - **Before the first release** the committed `repo.xml` has a placeholder `sha` of 40 zeros. A
   user who adds the repository in that window sees ABC listen 0.1.0, but LMS's SHA1 check
   rejects the download and nothing is installed. Run the first release soon after `repo.xml`

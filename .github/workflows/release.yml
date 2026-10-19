@@ -7,9 +7,10 @@ name: Release
 # existing asset. The release notes are CHANGELOG.md's section for the version
 # (scripts/changelog-section.sh), or GitHub-generated notes when there is none. The repo.xml
 # commit is made as COMMIT_NAME/COMMIT_EMAIL (below) and pushed with GITHUB_TOKEN. A push to
-# main that touches install.xml without changing <version> does nothing. Dry runs (pull
-# requests, or dispatch with dry_run) build and show everything, including the notes, but
-# create no release, tag or commit. See RELEASING.md.
+# main that touches install.xml without changing <version> does nothing, provided repo.xml on
+# main already has that version (otherwise it releases it). Dry runs (pull requests, or
+# dispatch with dry_run) build and show everything, including the notes, but create no
+# release, tag or commit. See RELEASING.md.
 
 on:
   workflow_dispatch:
@@ -32,15 +33,20 @@ on:
       - 'scripts/update-repo-xml.pl'
       - 'scripts/changelog-section.sh'
 
+# Read-only by default; only the release job, which creates the release and pushes repo.xml,
+# gets contents: write.
 permissions:
-  contents: write
+  contents: read
 
 # Real releases share one group and a running one is never cancelled, so two runs for one
-# version are serialised and the second finds the release and does nothing. (GitHub keeps only
-# the newest waiting run of a group, which was started for the newest commit.) Dry runs get a
-# group of their own and never wait for, or hold up, a real release.
+# version are serialised and the second finds the release and does nothing. GitHub keeps only
+# the newest waiting run of a group and cancels an older waiting one, so a version bump's run
+# can be cancelled before it starts; the newer run that replaced it still releases that
+# version, because a push is a no-op only once repo.xml on main has its <version> (job
+# "version"). Dry runs, and runs on any branch but main (a real one fails at once), get a group
+# of their own, so they never wait for, hold up or cancel a real release.
 concurrency:
-  group: ${{ (github.event_name == 'pull_request' || inputs.dry_run) && format('release-dry-run-{0}', github.run_id) || 'release' }}
+  group: ${{ (github.event_name == 'pull_request' || inputs.dry_run || github.ref != 'refs/heads/main') && format('release-run-{0}', github.run_id) || 'release' }}
   cancel-in-progress: false
 
 # Commit identity (author and committer) of the repo.xml commit the workflow pushes to main:
@@ -56,7 +62,7 @@ defaults:
     shell: bash
 
 jobs:
-  # ---- 0. read the version; a push that didn't change it is a no-op ----
+  # ---- 0. read the version; a push that didn't change it is a no-op once it is released ----
   version:
     name: Version
     runs-on: ubuntu-latest
@@ -86,19 +92,30 @@ jobs:
           fi
 
           # A push that touches install.xml but leaves <version> alone (e.g. a new optionsURL)
-          # releases nothing. Dispatches and pull requests always go on.
+          # releases nothing, but only if repo.xml on the latest main already has that version.
+          # If it doesn't, the run for the bump never released it (cancelled while waiting, see
+          # concurrency above, or failed), and this run does. Dispatches and pull requests always
+          # go on. When in doubt, go on: the release job finds an existing release and stops.
           release=true
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
             if [[ "$BEFORE" =~ ^0*$ ]] || ! before_xml="$(git show "$BEFORE:ABCListen/install.xml" 2>/dev/null)"; then
               echo "install.xml before this push ($BEFORE) is not available; treating <version> as changed"
             else
               before_v="$(sed -n 's|.*<version>\(.*\)</version>.*|\1|p' <<<"$before_xml" | head -n 1)"
-              if [[ "$before_v" == "$V" ]]; then
-                echo "::notice::this push changed ABCListen/install.xml but not its <version> ($V): nothing to release"
-                echo "### No-op: <version> is still $V, nothing to release" >> "$GITHUB_STEP_SUMMARY"
-                release=false
-              else
+              if [[ "$before_v" != "$V" ]]; then
                 echo "<version> changed in this push: $before_v -> $V"
+              else
+                git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main ||
+                  echo "::warning::could not fetch main; reading repo.xml from the checkout's origin/main"
+                main_v="$(git show origin/main:repo.xml 2>/dev/null |
+                  perl -0777 -ne '/(<plugin\s[^>]*?\bname\s*=\s*"ABCListen"[^>]*>)/ and $1 =~ /\sversion\s*=\s*"([^"]*)"/ and print $1' || true)"
+                if [[ "$main_v" == "$V" ]]; then
+                  echo "::notice::this push changed ABCListen/install.xml but not its <version> ($V), and repo.xml on main is already at $V: nothing to release"
+                  echo "### No-op: <version> is still $V and repo.xml on main is at $V, nothing to release" >> "$GITHUB_STEP_SUMMARY"
+                  release=false
+                else
+                  echo "::notice::<version> is still $V, but repo.xml on main is at ${main_v:-(none)}: $V was never released (its run was cancelled or failed), so this run releases it"
+                fi
               fi
             fi
           fi
@@ -121,6 +138,9 @@ jobs:
     needs: [version, checks]
     if: needs.version.outputs.release == 'true'
     runs-on: ubuntu-latest
+    # the only job that writes: it creates the tag and release and pushes repo.xml to main
+    permissions:
+      contents: write
     timeout-minutes: 15
     env:
       DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run == true }}
@@ -293,9 +313,16 @@ jobs:
           echo "uploaded asset sha1 $got matches the built zip"
 
       # ---- 7. point repo.xml at the release, on top of the latest main ----
+      # minTarget/maxTarget come from the install.xml inside the released zip (built from the
+      # released commit, or the existing asset on the repair path), never from main's, which
+      # may have moved on since.
       - name: Update repo.xml
         if: env.ACTION != 'none'
         run: |
+          INSTALL_XML="$RUNNER_TEMP/released-install.xml"
+          unzip -p "$ZIP" install.xml > "$INSTALL_XML"
+          if [[ ! -s "$INSTALL_XML" ]]; then echo "::error::$ZIP has no install.xml at its root"; exit 1; fi
+          echo "INSTALL_XML=$INSTALL_XML" >> "$GITHUB_ENV"
           if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
             echo "pull request dry run: applying to the checked-out merge commit"
           else
@@ -307,7 +334,7 @@ jobs:
               exit 1
             fi
           fi
-          scripts/update-repo-xml.pl --version "$V" --sha "$SHA" --url "$ASSET_URL"
+          scripts/update-repo-xml.pl --version "$V" --sha "$SHA" --url "$ASSET_URL" --install-xml "$INSTALL_XML"
           xmllint --noout repo.xml
           echo "---- git diff repo.xml ----"
           git --no-pager diff -- repo.xml
@@ -326,10 +353,13 @@ jobs:
       # Only repo.xml is committed, authored and committed as COMMIT_NAME/COMMIT_EMAIL (workflow
       # env above). It is pushed with GITHUB_TOKEN, so it doesn't start another workflow run;
       # [skip ci] is an extra guard. A rejected (non-fast-forward) push is re-applied on the
-      # latest main and retried up to 3 times.
+      # latest main and retried up to 3 times. A refusal is not retried: a read-only token (403,
+      # "Permission ... denied"), branch protection ("GH006: Protected branch update failed") or
+      # a ruleset ("GH013: Repository rule violations found"), matched case-insensitively.
       - name: Commit and push repo.xml
         if: env.ACTION != 'none' && env.DRY_RUN != 'true'
         run: |
+          refused() { local o="${1,,}"; [[ "$o" == *403* || "$o" == *denied* || "$o" == *"protected branch"* || "$o" == *gh006* || "$o" == *gh013* ]]; }
           git config user.name "$COMMIT_NAME"
           git config user.email "$COMMIT_EMAIL"
           for attempt in 1 2 3 4; do
@@ -350,8 +380,8 @@ jobs:
               exit 0
             fi
             echo "$out"
-            if [[ "$out" == *403* || "$out" == *"denied"* || "$out" == *"protected branch"* ]]; then
-              echo "::error::push to main refused. See RELEASING.md, Prerequisites: GITHUB_TOKEN needs Read and write, and branch protection must let GitHub Actions (github-actions[bot]) push repo.xml. Re-run the workflow afterwards; it repairs repo.xml from the existing release."
+            if refused "$out"; then
+              echo "::error::push to main refused. See RELEASING.md, Prerequisites: GITHUB_TOKEN needs Read and write, and branch protection and rulesets must let GitHub Actions (github-actions[bot]) push repo.xml. Re-run the workflow afterwards; it repairs repo.xml from the existing release."
               exit 1
             fi
             if [[ $attempt -eq 4 ]]; then break; fi
@@ -364,7 +394,7 @@ jobs:
               echo "::error::repo.xml on main moved to $main_version, newer than $V; not overwriting it"
               exit 1
             fi
-            scripts/update-repo-xml.pl --version "$V" --sha "$SHA" --url "$ASSET_URL"
+            scripts/update-repo-xml.pl --version "$V" --sha "$SHA" --url "$ASSET_URL" --install-xml "$INSTALL_XML"
             xmllint --noout repo.xml
           done
           echo "::error::could not push repo.xml after 3 retries; re-run the workflow to repair it"
