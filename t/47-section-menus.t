@@ -6,7 +6,8 @@
 # recording wrappers around L1's Live->stationItem, O2's programItem and O3's programsByType;
 # stationItem undef -> row left out; Kids listen variants only when defined; Sport's inline "Radio
 # Stations" and "Live & Upcoming Events" (line2, time range, event-only services); the Kids listen
-# extras (prefetched first pages: images, ABC's title, fallbacks; menus served from that cache);
+# extras (prefetched first pages: images, ABC's title, fallbacks; menus served from that cache; at
+# most 3 s for them);
 # Audiobooks without O3; page failures (stations + extras + the error item; never empty); exactly
 # one callback on every path; dying callbacks; menu shapes and readable names; $client undef.
 #
@@ -389,6 +390,77 @@ subtest 'Kids listen: state versions listed when stationItem defines them; extra
 	route_page_json( 'kids', { component => 'StandardCollection', componentProps => { id => '104141842', title => 'Kids & Families on the page', items => [ { contentUri => 'coremedia://program/1', cardTitle => 'P', articleLink => '/listen/programs/p/' } ] } } );
 	route_kids_extras();
 	is( scalar( grep { ( $_->{passthrough}->[0]->{id} // '' ) eq '104141842' } @{ section('kids') } ), 1, 'a collection the page lists itself is not repeated as an extra' );
+};
+
+subtest 'Kids listen: the extras\' first pages are waited for at most 3 s; late ones fall back (and warm the cache)' => sub {
+	my $images = sub { my %by = map { $_->{name} => $_ } @{ $_[0] }; return [ map { $by{$_}->{image} } 'All Kids listen programs', 'Kids & Families podcasts', $_[1] // 'Books for Kids' ] };
+	my $AGG_ART = qr/f145fc77c718224c5ec9a81b4122ba23/;
+
+	fresh();
+	route_section('kids');
+	route_kids_extras( defer => 1 );
+	my $c = open_feed( $MENU{kids}, $CLIENT );
+	is( $c->count, 0, 'the page is in: waits for the extras' );
+	advanceTime(2);
+	is( $c->count, 0, '... for up to 3 s' );
+	advanceTime(1);
+	is( $c->count, 1, 'answers at the 3 s deadline (not the API\'s 8 s timeout)' );
+	my $items = items_of($c);
+	is_deeply( names($items), [ @KIDS_NAMES[ 0 .. 3 ], 'Kids & Families podcasts', string('PLUGIN_ABCLISTEN_BOOKS_FOR_KIDS'), 'News Time' ], 'the same rows, the late extras named by their tokens' );
+	is_deeply( $images->( $items, string('PLUGIN_ABCLISTEN_BOOKS_FOR_KIDS') ), [ ($ICON) x 3 ], 'late extras: the plugin icon' );
+	check_shapes( $items, 'Kids listen (late extras)' );
+
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred while Slim::Networking::SimpleAsyncHTTP->deferred;
+	runTimers();
+	is( $c->count, 1, 'the late answers: still one callback' );
+	is( scalar Slim::Utils::Timers->pending, 0, 'no timer left behind' );
+
+	my $before = scalar requests();
+	$c = open_feed( $MENU{kids}, $CLIENT );
+	is( $c->count, 1, 'next open: answers at once (the late answers warmed the cache)' );
+	like( $images->( items_of($c) )->[0], $AGG_ART, '... with the extras\' artwork' );
+	is( scalar requests(), $before, '... without a request' );
+
+	fresh();
+	route_section('kids');
+	route( $AGG_URL,  file => 'discovery/bff-programAggregationCollection-9317914-kidslisten-programs-size50.json', headers => $JSON_TYPE );
+	route( $KIDS_POD, file => 'discovery/bff-collection-104141842-kids-families.trimmed.json',                    headers => $JSON_TYPE );
+	route( $KIDS_BOOK, file => 'discovery/bff-collection-106510880-books-for-kids.json', headers => $JSON_TYPE, defer => 1 );
+	$c = open_feed( $MENU{kids}, $CLIENT );
+	is( $c->count, 0, 'two extras in, one pending: waits' );
+	advanceTime(3);
+	is( $c->count, 1, 'answers at the deadline' );
+	my $got = $images->( items_of($c), string('PLUGIN_ABCLISTEN_BOOKS_FOR_KIDS') );
+	like( $got->[0], $AGG_ART, 'in time: All Kids listen programs has its artwork' );
+	like( $got->[1], qr/wcms\.abc-cdn\.net\.au/, 'in time: Kids & Families podcasts too' );
+	is( $got->[2], $ICON, 'late: Books for Kids has the plugin icon' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred while Slim::Networking::SimpleAsyncHTTP->deferred;
+	is( $c->count, 1, 'still one callback' );
+
+	fresh();
+	route_section( 'kids', defer => 1 );
+	route_kids_extras();
+	$c = open_feed( $MENU{kids}, $CLIENT );
+	advanceTime(5);
+	is( $c->count, 0, 'the page itself is always waited for (its own API timeout)' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred while Slim::Networking::SimpleAsyncHTTP->deferred;
+	runTimers();
+	is( $c->count, 1, 'answers when the page is in' );
+	is_deeply( names( items_of($c) ), \@KIDS_NAMES, 'with the extras that came in time' );
+	like( $images->( items_of($c) )->[0], $AGG_ART, '... and their artwork' );
+	is( scalar Slim::Utils::Timers->pending, 0, 'every extra in time: the deadline timer is gone' );
+
+	fresh();
+	{
+		no warnings 'redefine';
+		route_section('kids');
+		local *Plugins::ABCListen::Collections::menuPage = sub { die "menuPage broke\n" };
+		$c = open_feed( $MENU{kids}, $CLIENT );
+	}
+	is( $c->count, 1, 'menuPage dying: answers at once' );
+	is_deeply( $images->( items_of($c), string('PLUGIN_ABCLISTEN_BOOKS_FOR_KIDS') ), [ ($ICON) x 3 ], '... with the fallbacks' );
+	is( scalar Slim::Utils::Timers->pending, 0, '... and no timer left' );
+	ok( scalar( grep { $_->{message} =~ /menuPage broke/ } problems() ), 'logged' );
 };
 
 # ---------------------------------------------------------------------------

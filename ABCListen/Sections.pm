@@ -36,9 +36,12 @@ package Plugins::ABCListen::Sections;
 #                       106510880, named with ABC's title), News Time (OnDemand->programItem,
 #                       /kidslisten/programs/news-time). The three collections' first pages are
 #                       fetched together with the page (Collections->menuPage: the request and cache their menus use)
-#                       for their first card's image and ABC's title; when that fails: the plugin
-#                       icon and the PLUGIN_ABCLISTEN_KIDS_PROGRAMS / _KIDS_PODCASTS / _BOOKS_FOR_KIDS
-#                       names. A collection the page lists itself is not repeated.
+#                       for their first card's image and ABC's title. The menu waits for them at
+#                       most EXTRAS_DEADLINE (3 s, like D2's withImages; the page itself has the
+#                       API's 8 s): one that fails or is late gets the plugin icon and the
+#                       PLUGIN_ABCLISTEN_KIDS_PROGRAMS / _KIDS_PODCASTS / _BOOKS_FOR_KIDS name (a late
+#                       answer still warms the cache its menu uses). A collection the page lists
+#                       itself is not repeated.
 #          Audiobooks   All audiobooks A–Z (OnDemand->programsByType($client, $cb, 'audiobook'),
 #                       only when O3's programsByType exists), then the text item
 #                       PLUGIN_ABCLISTEN_AUDIOBOOKS_AU_ONLY (ABC serves audiobook audio to
@@ -56,8 +59,11 @@ package Plugins::ABCListen::Sections;
 use strict;
 use warnings;
 
+use Time::HiRes ();
+
 use Slim::Utils::Log;
 use Slim::Utils::Strings qw(cstring);
+use Slim::Utils::Timers;
 
 use Plugins::ABCListen::Collections;
 use Plugins::ABCListen::Live;
@@ -67,6 +73,8 @@ use Plugins::ABCListen::Util;
 use constant LOAD_FAILED => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
 use constant EMPTY       => 'PLUGIN_ABCLISTEN_EMPTY_COLLECTION';
 use constant ENDASH      => "\x{2013}";
+
+use constant EXTRAS_DEADLINE => 3;    # seconds a section waits for its extras' first pages
 
 my $log = logger('plugin.abclisten');
 
@@ -139,26 +147,54 @@ sub _audiobooksMenu { _sectionMenu( 'audiobooks', @_ ) }
 # Section menus
 # ---------------------------------------------------------------------------
 
-# The page and the extras' first pages, in parallel; then the stations; then the rows.
+# The page and the extras' first pages, in parallel; then the stations; then the rows. The page is
+# always waited for; the extras at most EXTRAS_DEADLINE (late or failed ones use their fallbacks).
 sub _sectionMenu {
 	my ( $key, $client, $cb, $args ) = @_;
 	my $section = $SECTIONS{$key};
 	my $once    = _once($cb);
 
 	_try( $client, $once, sub {
-		my ( $page, %extras );
-		my @extras  = @{ $section->{collections} || [] };
-		my $pending = 1 + @extras;
+		my ( $page, $pageIn, %extras, $extrasIn, $timer, $started );
+		my @extras = @{ $section->{collections} || [] };
+		my $left   = @extras;
+		$extrasIn = 1 unless $left;
 
-		my $fetched = sub {
-			return if --$pending;
-			_try( $client, $once, sub { _withStations( $client, $once, $section, $page, \%extras ) } );
+		my $go = sub {
+			return if $started || !$pageIn || !$extrasIn;
+			$started = 1;
+			_try( $client, $once, sub { _withStations( $client, $once, $section, $page, {%extras} ) } );
 		};
 
-		$COLLECTIONS->page( $section->{path}, sub { $page = shift; $fetched->() } );
+		my $extrasDone = sub {
+			return if $extrasIn;
+			$extrasIn = 1;
+			Slim::Utils::Timers::killSpecific($timer) if $timer;
+			undef $timer;
+			$go->();
+		};
+
+		$COLLECTIONS->page( $section->{path}, sub { $page = shift; $pageIn = 1; $go->() } );
+		return unless @extras;
+
+		$timer = Slim::Utils::Timers::setTimer( undef, Time::HiRes::time() + EXTRAS_DEADLINE, sub {
+			undef $timer;
+			main::DEBUGLOG && $log->is_debug && $log->debug( 'ABC listen: section extras not all fetched within ' . EXTRAS_DEADLINE . " s ($section->{path}); the rest use their fallbacks" );
+			$extrasDone->();
+		} );
 
 		for my $extra (@extras) {
-			$COLLECTIONS->menuPage( _extraHash($extra), 0, sub { $extras{ $extra->{id} } = shift; $fetched->() } );
+			my $settled = 0;
+			my $answer  = sub {
+				return if $settled++;
+				$extras{ $extra->{id} } = shift unless $extrasIn;    # after the deadline: only warmed the cache
+				$extrasDone->() unless --$left;
+			};
+
+			eval { $COLLECTIONS->menuPage( _extraHash($extra), 0, $answer ); 1 } or do {
+				$log->warn( "ABC listen: fetching the section extra $extra->{id} failed: " . ( $@ || 'unknown error' ) );
+				$answer->( { error => LOAD_FAILED } );
+			};
 		}
 	} );
 
