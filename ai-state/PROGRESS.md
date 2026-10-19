@@ -16,6 +16,11 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   #5 D1 collection engine + Home · #13 D3 search + global search · #20 M2 followed programs
 - IC-1 integration check: Programs → episode → play end to end (O1 + O2), plus Radio/Settings regression
 
+## Interruptions
+- 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
+  squeezelite stopped). 17:24: testbed restarted (`dev/start.sh`), stale O3 lock broken, link restored to main; all
+  in-flight agents (L1, O3, D1, D3, M2, O6 review, IC-1) resumed from their saved state. Lesson: ≤5 concurrent agents.
+
 ## Last completions
 - #16 O2 merged (PR #29, squash fd465d0): Programs → network → program → episodes, public builders, program-menu
   registry. Review APPROVE + fixes; runtime PASS (5 networks/5 programs, both skins). LMS menu rules recorded.
