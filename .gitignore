@@ -1,0 +1,15 @@
+# Dev environment
+dev/logs/
+dev/browser/node_modules/
+
+# Build outputs
+dist/
+
+# Editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
