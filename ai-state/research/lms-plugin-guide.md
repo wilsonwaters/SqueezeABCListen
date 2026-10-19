@@ -640,14 +640,9 @@ critical ones):
 13. **Local test deps.** `URI::Escape`, `HTML::Entities` and `shellcheck` are missing in this
     container. CI installs them; locally run `apt-get install liburi-perl libhtml-parser-perl shellcheck`
     before `scripts/check.sh`.
-14. **Commit identity.** Two instructions conflict:
-    - REF's stakeholder rule (REF OPEN-QUESTIONS #5) was "author as Wilson Waters, no tool
-      attribution trailers", and REF `release.yml:268-270` hard-codes that identity for the
-      `repo.xml` commit;
-    - this session's harness asks for `Co-Authored-By`/`Claude-Session` trailers.
-
-    The orchestrator should confirm with the stakeholder which applies here before porting
-    `release.yml` and setting commit conventions.
+14. **Commit identity.** Same rule as REF (REF OPEN-QUESTIONS #5): everything is authored as
+    Wilson Waters <wilsonwaters@users.noreply.github.com> with no tool/vendor attribution, and REF
+    `release.yml:268-270` uses that identity for the `repo.xml` commit (see OPEN-QUESTIONS, Resolved).
 15. **Squeezelite sample rates.** The testbed player needs `-Z 192000`, or LMS rejects 48 kHz AAC
     (already in `dev/common.sh`). Real Squeezebox Classic/Boom/Transporter players need `faad` for
     AAC (README troubleshooting, as REF item b).

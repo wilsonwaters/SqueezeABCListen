@@ -1,6 +1,6 @@
 # Ecosystem research: ABC listen on LMS and elsewhere
 
-Researched 2026-10-19 by a research sub-agent. Cloned code was read, never run. Clones are in the scratchpad (`/tmp/claude-0/-home-user/ae9985bf-990f-54ab-8efa-9c020108380c/scratchpad/ecosystem/`).
+Researched 2026-10-19 by a research sub-agent. Cloned code was read, never run. Clones are in the scratchpad (session scratchpad, `ecosystem/`).
 
 ## Summary
 

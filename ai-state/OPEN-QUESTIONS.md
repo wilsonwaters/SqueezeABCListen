@@ -11,12 +11,7 @@ Unresolved product/technical decisions and what they block. Resolved items move 
    undocumented Gigya login flow (fragile, credential handling) for little gain. The stakeholder never needs
    to share credentials with the agents.
    _Blocks: nothing in v1._
-2. **Commit authorship convention.** In the SqueezeRTRFM project the stakeholder asked for all commits to be
-   authored as Wilson Waters with no tool attribution trailers. No such instruction has been given for this
-   repo, so this session's default applies (agent-authored commits with Co-Authored-By trailers; the release
-   workflow commits `repo.xml` as `github-actions[bot]`). To confirm with the stakeholder at handoff — easy to
-   switch for future commits; rewriting existing history would need their explicit OK.
-   _Blocks: nothing._
+2. _(resolved — see Resolved: commit authorship)_
 3. **mediahubaustralia live streams unreachable from the dev container.** `live-radio0N.mediahubaustralia.com`
    returns a Cloudflare 403 to this container's (non-Australian datacenter) egress. ABC's `.pls` files also
    point at `abc.streamguys1.com` HE-AAC Icecast streams, which DO play in the container testbed (verified),
@@ -42,6 +37,13 @@ Unresolved product/technical decisions and what they block. Resolved items move 
    _Blocks: nothing (D5 is Should; dropping it only removes chapter lists)._
 
 ## Resolved
+
+- **Commit authorship / attribution** (2026-10-19, stakeholder instruction): **never attribute any AI tool or vendor**
+  anywhere — commits, PRs, issues, comments, docs or code. All commits are authored and committed as
+  `Wilson Waters <wilsonwaters@users.noreply.github.com>` (including the release workflow's `repo.xml` commit); no
+  attribution trailers or generated-by footers. PRs are squash-merged with an explicit clean commit message.
+  Commits made before this instruction carry the old author/trailers; rewriting `main` needs a force-push, which is
+  the stakeholder's call.
 
 - **Top-level Programs label** (2026-10-19, orchestrator decision): the entry is labelled **"Programs"** (its submenu
   offers By network / A–Z / By type). F1 seeded the text "Programs (A–Z)"; O2 (#16) changes that token's EN text to
