@@ -127,6 +127,9 @@ sub player {
 	my ( $mac, $url, $master ) = @_;
 	my $player = $master ? $master->makeSlave($mac) : ABCListenTest::FakeClient->new($mac);
 	play( $player->master, $url ) unless $master;
+
+	# a sync group shares the master's playlist
+	$Slim::Player::Playlist::PLAYLISTS{$mac} = $Slim::Player::Playlist::PLAYLISTS{ $master->id } if $master;
 	return $player;
 }
 
