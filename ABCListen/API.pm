@@ -101,12 +101,17 @@ package Plugins::ABCListen::API;
 #       - id: cardId when all digits; else (audio types, dynamiccollection) the numeric last segment
 #         of articleLink; else uriId. (Curated cards often carry a teaser id in contentUri.)
 #       - title: for programs, cardTitle when it spells the articleLink slug (the last path segment
-#         minus a trailing '-page'; letters and digits compared case-insensitively, the slug a prefix
-#         of cardTitle ending at a word boundary: 'The Dinner Mix: Brisbane Special' matches
-#         /the-dinner-mix/, 'God Forbid' /godforbid/); else cardImagePrepared.alt when it looks like
-#         a name (non-empty, <= 50 chars, no NxN token, none of logo/image/illustration/photo/graphic/
-#         stylised/stylized/square/featuring); else cardTitle. tagline = cardTitle when title came
-#         from alt and differs from it (trimmed, case-insensitive), else undef.
+#         minus a trailing '-page'; letters and digits compared case-insensitively and without
+#         accents, only non-alphanumerics between them, the slug a prefix of cardTitle ending at a
+#         word boundary: 'The Dinner Mix: Brisbane Special' matches /the-dinner-mix/, 'God Forbid'
+#         /godforbid/); else, when cardImagePrepared.alt looks like a name (non-empty, <= 50 chars,
+#         no NxN token, none of logo/image/illustration/photo/graphic/stylised/stylized/square/
+#         featuring) and spells the slug the same way (F5), the part of alt that spells it, plus a
+#         '?' or '!' right after it, underscores as spaces ('Global Roaming podcast' ->
+#         'Global Roaming', 'BackgroundBriefing_3000x3000.jpg' -> 'BackgroundBriefing'); else
+#         cardTitle. Alt text that does not spell the slug (another program's name, an episode, a
+#         file name) is never the title. tagline = cardTitle when title came from alt and differs
+#         from it (trimmed, case-insensitive), else undef.
 #       - path = sitePath(articleLink); image = imageUrl(cardImagePrepared, 300); date =
 #         parseISO8601(cardAttributionPrepared.publishedDate); duration =
 #         cardMediaIndicatorPrepared.duration when a positive integer; programId = programID or
@@ -158,6 +163,8 @@ use constant SITE_CONFIG_OP  => 'siteConfig';
 use constant SITE_CONFIG_KEY => 'api:siteConfig';
 
 my $log = logger('plugin.abclisten');
+
+my $HAS_NORMALIZE = eval { require Unicode::Normalize; 1 } ? 1 : 0;
 
 my $CANONICAL = JSON::PP->new->canonical(1)->utf8(1)->allow_nonref(1)->allow_blessed(1);
 
@@ -1110,12 +1117,14 @@ sub cardRef {
 	$id = $uriId unless defined $id;
 
 	# FQ4: program cards' cardTitle is often an editorial tagline; the image alt text is sometimes the
-	# name, sometimes an image description. A cardTitle that spells the page slug is the name.
+	# name, sometimes an image description, a file name or another program's name (F5). A cardTitle
+	# that spells the page slug is the name; else the part of a name-like alt text that spells it.
 	my $cardTitle = _cleanText( $card->{cardTitle} );
 	my ( $title, $tagline ) = ( $cardTitle, undef );
 	if ( $type eq 'program' && !_spellsSlug( $cardTitle, $card->{articleLink} ) ) {
-		my $alt = _cleanText( ref $card->{cardImagePrepared} eq 'HASH' ? $card->{cardImagePrepared}->{alt} : undef );
-		( $title, $tagline ) = ( $alt, defined $cardTitle && lc $cardTitle ne lc $alt ? $cardTitle : undef ) if _looksLikeName($alt);
+		my $alt  = _cleanText( ref $card->{cardImagePrepared} eq 'HASH' ? $card->{cardImagePrepared}->{alt} : undef );
+		my $name = _looksLikeName($alt) ? _slugName( $alt, $card->{articleLink} ) : undef;
+		( $title, $tagline ) = ( $name, defined $cardTitle && lc $cardTitle ne lc $name ? $cardTitle : undef ) if defined $name;
 	}
 
 	my $media    = ref $card->{cardMediaIndicatorPrepared} eq 'HASH' ? $card->{cardMediaIndicatorPrepared} : {};
@@ -1148,23 +1157,40 @@ sub _looksLikeName {
 	return defined $text && length $text && length $text <= 50 && $text !~ /\b[0-9]+x[0-9]+\b/i && $text !~ $NOT_A_NAME;
 }
 
-# True when the last segment of $link (minus a trailing '-page') is, in letters and digits and
-# ignoring case, a prefix of $title ending at a word boundary.
-sub _spellsSlug {
-	my ( $title, $link ) = @_;
-	return 0 unless defined $title && defined $link && !ref $link;
+# True when $title starts with the slug of $link (see _slugPrefix).
+sub _spellsSlug { defined _slugPrefix(@_) ? 1 : 0 }
+
+# The alt-text name that spells the slug of $link: _slugPrefix, file-name underscores as spaces.
+sub _slugName {
+	my $name = _slugPrefix(@_);
+	return undef unless defined $name;
+
+	$name =~ s/[\s_]+/ /g;
+	return $name;
+}
+
+# The start of $text that spells the last segment of $link (minus a trailing '-page'), or undef:
+# the slug's letters and digits in order (any case, accents ignored, nothing but punctuation and
+# spaces between them), ending at a word boundary, plus any '?' or '!' right after it. Leading
+# punctuation is not part of it. ('Global Roaming podcast', /global-roaming/ -> 'Global Roaming')
+sub _slugPrefix {
+	my ( $text, $link ) = @_;
+	return undef unless defined $text && !ref $text && defined $link && !ref $link;
 
 	$link =~ s/[?#].*\z//s;
 	$link =~ s{/+\z}{};
-	my ($slug) = $link =~ m{/([^/]+)\z} or return 0;
+	my ($slug) = $link =~ m{/([^/]+)\z} or return undef;
 
 	$slug = lc $slug;
 	$slug =~ s/-page\z//;
 	$slug =~ s/[^a-z0-9]+//g;
-	return 0 unless length $slug;
+	return undef unless length $slug;
 
-	my $spelled = join '[^a-z0-9]*', split //, $slug;
-	return lc($title) =~ /\A[^a-z0-9]*$spelled(?![a-z0-9])/ ? 1 : 0;
+	$text = Unicode::Normalize::NFD($text) if $HAS_NORMALIZE;
+	my $spelled = join '\P{Alnum}*', split //, $slug;
+	my ($prefix) = $text =~ /\A\P{Alnum}*($spelled\p{M}*+(?!\p{Alnum})[?!]*)/i or return undef;
+
+	return $HAS_NORMALIZE ? Unicode::Normalize::NFC($prefix) : $prefix;
 }
 
 sub _digits { defined $_[0] && !ref $_[0] && $_[0] =~ /\A[0-9]+\z/ ? "$_[0]" : undef }

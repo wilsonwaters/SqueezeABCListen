@@ -455,9 +455,9 @@ subtest 'itemFor: program -> programItem (tagline as description; name rules fro
 	ok( !exists $item->{description}, 'no description on the browse item (LMS menu rule 1)' );
 	like( $item->{image}, qr/\A\Q$WCMS\E\/0b00910f69470533fe28ab472d099166\?.*cropW=3000.*&width=300&height=169\z/, 'artwork 300 px wide, crop params kept' );
 
-	my $roaming = ref_from_card( $cards[1] );    # alt "Global Roaming podcast" is taken as the name
+	my $roaming = ref_from_card( $cards[1] );    # alt "Global Roaming podcast": the part that spells the slug is the name
 	$COL->itemFor( $CLIENT, $roaming, 1 );
-	is( $PROGRAM_ITEM[-1]->{title}, 'Global Roaming podcast', 'name from cardRef (alt text)' );
+	is( $PROGRAM_ITEM[-1]->{title}, 'Global Roaming', 'name from cardRef (alt text)' );
 	is( $PROGRAM_ITEM[-1]->{description}, 'Global news and how to make sense of it', 'the tagline (cardTitle) is the description' );
 	is( $item->{passthrough}->[0]->{path}, '/listen/programs/if-youre-listening', 'canonical path in the passthrough' );
 };
@@ -715,8 +715,8 @@ subtest 'itemsFor: program names (FQ4): found -> renamed, cardTitle as descripti
 	# No One Saw It Coming (alt "Global Roaming podcast": another program's name), Background
 	# Briefing (alt "BackgroundBriefing_3000x3000.jpg")
 	my @refs = map { ref_from_card($_) } @MPP[ 0, 1, 3, 4 ];
-	is( $refs[3]->{title}, 'BackgroundBriefing_3000x3000.jpg', 'precondition: cardRef names Background Briefing after its image file' );
-	is( $refs[2]->{title}, 'Global Roaming podcast', 'precondition: cardRef names No One Saw It Coming after another program' );
+	is( $refs[3]->{title}, 'BackgroundBriefing', 'precondition: cardRef names Background Briefing after the part of its image file name that spells the slug' );
+	is( $refs[2]->{title}, 'Big moments that changed the course of history', 'precondition: cardRef names No One Saw It Coming after its cardTitle (the alt names another program)' );
 
 	my $c = run( 'itemsFor', $CLIENT, \@refs, 1 );
 	is_deeply(
@@ -729,13 +729,13 @@ subtest 'itemsFor: program names (FQ4): found -> renamed, cardTitle as descripti
 	my ($items) = $c->args(0);
 	is_deeply(
 		[ map { $_->{name} } @$items ],
-		[ "If You're Listening", 'Global Roaming podcast', 'Global Roaming podcast', 'Background Briefing' ],
+		[ "If You're Listening", 'Global Roaming', 'Big moments that changed the course of history', 'Background Briefing' ],
 		'found: the program\'s own name (heroImageWithCTAPrepared.heading); not found (404): cardRef\'s name is kept'
 	);
 	is_deeply(
 		[ map { $_->{description} } @PROGRAM_ITEM ],
-		[ "What's really going on behind the biggest news stories", 'Global news and how to make sense of it', 'Big moments that changed the course of history', 'Must-listen investigative journalism' ],
-		'the cardTitle (tagline) is the description: after a rename, and kept when the lookup failed'
+		[ "What's really going on behind the biggest news stories", 'Global news and how to make sense of it', $refs[2]->{description}, 'Must-listen investigative journalism' ],
+		'the cardTitle (tagline) is the description: after a rename, and kept when the lookup failed (no tagline: the card\'s description)'
 	);
 	is( $items->[0]->{passthrough}->[0]->{description}, "What's really going on behind the biggest news stories", 'carried in the passthrough (LMS menu rule 1)' );
 	ok( !exists $items->[0]->{description}, 'no description key on the row' );
