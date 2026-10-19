@@ -227,6 +227,9 @@ PLUGIN_ABCLISTEN_TYPE_OTHER
 PLUGIN_ABCLISTEN_INDEX_FALLBACK
 	EN	The full program list is unavailable right now, so only programs from the network lists are shown.
 
+PLUGIN_ABCLISTEN_NO_PROGRAMS
+	EN	No programs available
+
 # === D1 === Collections and Discover
 
 PLUGIN_ABCLISTEN_DISCOVER
