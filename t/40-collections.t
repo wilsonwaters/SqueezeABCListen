@@ -71,8 +71,9 @@ Slim::Utils::Log->addLogCategory( { category => 'plugin.abclisten', defaultLevel
 # ---- recording builder stubs (call the real builders unless told otherwise) ----
 
 my ( @PROGRAM_ITEM, @EPISODE_ITEM, @STATION_ITEM, @BY_PAGE_SLUG );
-my %SLUGS;    # byPageSlug table for the test: slug => service id
+my %SLUGS;    # byPageSlug table for the test: site path (D4: lookups are by path) => service id
 my ( $realProgramItem, $realEpisodeItem ) = ( \&Plugins::ABCListen::OnDemand::programItem, \&Plugins::ABCListen::OnDemand::episodeItem );
+my $realByPageSlug = Plugins::ABCListen::Stations->can('byPageSlug');    # L1's rules (undef before L1)
 {
 	no warnings qw(redefine once);
 	*Plugins::ABCListen::OnDemand::programItem = sub { push @PROGRAM_ITEM, { %{ $_[2] } }; goto &$realProgramItem };
@@ -93,7 +94,7 @@ sub fresh {
 	Plugins::ABCListen::API::_reset();
 	$COL->_reset;
 	@PROGRAM_ITEM = @EPISODE_ITEM = @STATION_ITEM = @BY_PAGE_SLUG = ();
-	%SLUGS = ( sport => 'SPORT', radionational => 'RN', triplej => 'TRIPLEJ', pacific => 'RA1', country => 'COUNTRY' );
+	%SLUGS = ( '/listen/live/sport' => 'SPORT', '/listen/radionational' => 'RN', '/triplej' => 'TRIPLEJ', '/pacific/live' => 'RA1', '/listen/live/country' => 'COUNTRY' );
 	setTime($T0);
 	route( "$SITE/listen/search", file => 'foundation/listen-search.trimmed.html', headers => { 'Content-Type' => 'text/html' } );
 }
@@ -513,7 +514,7 @@ subtest 'itemFor: collection -> nested link; dynamiccollection -> articleLink le
 	is_deeply( [ @$item{qw(name type image)}, $item->{passthrough} ], [ 'Nested', 'link', $ICON, [ { id => '555', title => 'Nested', image => undef }, 0, 3 ] ], 'collection card: link (id, title), plugin icon without an image, level 3' );
 };
 
-subtest 'itemFor: channel / externallink /live/ -> Stations->byPageSlug -> Live->stationItem' => sub {
+subtest 'itemFor: channel / externallink -> Stations->byPageSlug($path) -> Live->stationItem (D4: lookups by path)' => sub {
 	fresh();
 	my @cards = @{ json_file('discovery/bff-collection-102833294-radio-stations.json')->{collection}->{items} };
 
@@ -527,33 +528,37 @@ subtest 'itemFor: channel / externallink /live/ -> Stations->byPageSlug -> Live-
 	is_deeply(
 		\@results,
 		[
-			[ 'ABC local radio stations', [], undef ],                                  # externallink /listen/radio#find-your-local-station
-			[ 'ABC SPORT',                [qw(sport)], 'abclisten://live/SPORT' ],       # externallink /listen/live/sport
-			[ 'ABC Radio National',       [qw(radionational)], 'abclisten://live/RN' ],
-			[ 'ABC NewsRadio',            [], undef ],                                   # externallink /listen/news (no live segment)
-			[ 'ABC Classic',              [qw(classic)], undef ],                        # not in the test table
-			[ 'triple j',                 [qw(triplej)], 'abclisten://live/TRIPLEJ' ],
-			[ 'Double J',                 [qw(doublej)], undef ],
-			[ 'ABC Country',              [qw(country)], 'abclisten://live/COUNTRY' ],   # /listen/live/country/
-			[ 'ABC Jazz',                 [qw(jazz)], undef ],
-			[ 'ABC Kids listen',          [qw(kidslisten)], undef ],
-			[ 'ABC Radio Australia',      [qw(pacific)], 'abclisten://live/RA1' ],       # /pacific/live/
-			[ 'ABC Classic 2',            [qw(classic2)], undef ],
-			[ 'triple j Hottest',         [qw(triplejhottest)], undef ],
-			[ 'triple j Unearthed',       [], undef ],                                   # off-site link
+			[ 'ABC local radio stations', ['/listen/radio'], undef ],                                     # maps to nothing
+			[ 'ABC SPORT',                ['/listen/live/sport'], 'abclisten://live/SPORT' ],
+			[ 'ABC Radio National',       ['/listen/radionational'], 'abclisten://live/RN' ],
+			[ 'ABC NewsRadio',            ['/listen/news'], undef ],                                      # not in the test table
+			[ 'ABC Classic',              ['/listen/classic'], undef ],
+			[ 'triple j',                 ['/triplej'], 'abclisten://live/TRIPLEJ' ],
+			[ 'Double J',                 ['/listen/doublej'], undef ],
+			[ 'ABC Country',              ['/listen/live/country'], 'abclisten://live/COUNTRY' ],
+			[ 'ABC Jazz',                 ['/listen/jazz'], undef ],
+			[ 'ABC Kids listen',          ['/kidslisten'], undef ],
+			[ 'ABC Radio Australia',      ['/pacific/live'], 'abclisten://live/RA1' ],
+			[ 'ABC Classic 2',            ['/listen/live/classic2'], undef ],
+			[ 'triple j Hottest',         ['/triplejhottest'], undef ],
+			[ 'triple j Unearthed',       [], undef ],                                                    # off-site link: no site path
 		],
-		'slug candidates per card (from the real Radio Stations collection), first mapped slug wins'
+		'one Stations->byPageSlug call per card, with the card\'s site path (no slug guessing); the id it returns is the station'
 	);
 	is_deeply( $STATION_ITEM[0], [ $CLIENT, 'SPORT' ], 'stationItem($client, $serviceId)' );
-
-	@BY_PAGE_SLUG = ();
-	$COL->itemFor( $CLIENT, ref_from_card( card( 'coremedia://channel/1', articleLink => 'https://abc.net.au/triplej/live/doublej-nope/' ) ), 1 );
-	is_deeply( \@BY_PAGE_SLUG, [qw(doublej-nope triplej)], 'segment after "live" first, then the first segment that isn\'t listen/live (host without www)' );
-
-	@BY_PAGE_SLUG = ();
-	$COL->itemFor( $CLIENT, ref_from_card( card( 'coremedia://externallink/1', articleLink => 'https://www.abc.net.au/listen/live/sport' ) ), 1 );
-	is_deeply( \@BY_PAGE_SLUG, [qw(sport)], '/listen/live/sport: "sport" tried once' );
 	is( scalar warnings_logged(), 0, 'unmapped station cards: no WARN' );
+
+	SKIP: {
+		skip 'L1 not merged', 4 unless $realByPageSlug;
+		no warnings 'redefine';
+		local *Plugins::ABCListen::Stations::byPageSlug = sub { push @BY_PAGE_SLUG, $_[1]; goto &$realByPageSlug };
+		my $url = sub { my $item = $COL->itemFor( $CLIENT, ref_from_card( card( @_, cardTitle => 'x' ) ), 1 ); $item ? $item->{url} : undef };
+
+		is( $url->( 'coremedia://externallink/1', articleLink => 'https://www.abc.net.au/listen/news' ), 'abclisten://live/NEWS', 'L1 rules: /listen/news is NewsRadio' );
+		is( $url->( 'coremedia://channel/2', articleLink => 'https://www.abc.net.au/news' ), undef, 'L1 rules: /news (the ABC News website) is no station' );
+		is( $url->( 'coremedia://externallink/3', articleLink => 'https://abc.net.au/listen/live/sportextra' ), 'abclisten://live/ITINERANT_THREE', 'L1 rules: abc.net.au without www maps (ABC SPORT EXTRA)' );
+		is( $url->( 'coremedia://externallink/4', articleLink => '/kidslisten/' ), 'abclisten://live/KIDSLISTEN', 'L1 rules: a network home (/kidslisten) maps' );
+	}
 };
 
 subtest 'itemFor: station cards without L1\'s live API are skipped silently' => sub {

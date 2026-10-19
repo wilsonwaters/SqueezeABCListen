@@ -343,3 +343,21 @@ PLUGIN_ABCLISTEN_PODCASTS
 # === R2 === Docs and acceptance smoke test (no runtime strings; R2 may reword PLUGIN_ABCLISTEN_DESC in F1's section)
 
 # === R3 === v1.0.0 release and final verification (no runtime strings)
+
+# === D4 === Section menus: News, Sport, Kids listen, Audiobooks
+
+PLUGIN_ABCLISTEN_KIDS_PROGRAMS
+	EN	All Kids listen programs
+
+PLUGIN_ABCLISTEN_KIDS_PODCASTS
+	EN	Kids & Families podcasts
+
+# Books for Kids is named with ABC's title; this is its name when ABC's collection could not be loaded
+PLUGIN_ABCLISTEN_BOOKS_FOR_KIDS
+	EN	Books for Kids
+
+PLUGIN_ABCLISTEN_AUDIOBOOKS_AZ
+	EN	All audiobooks A–Z
+
+PLUGIN_ABCLISTEN_AUDIOBOOKS_AU_ONLY
+	EN	Audiobooks play only in Australia.

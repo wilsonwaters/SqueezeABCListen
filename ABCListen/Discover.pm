@@ -26,6 +26,7 @@ use Slim::Utils::Log;
 use Slim::Utils::Strings qw(cstring);
 
 use Plugins::ABCListen::Collections;
+use Plugins::ABCListen::Sections;
 use Plugins::ABCListen::Util;
 
 use constant LOAD_FAILED => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
@@ -34,11 +35,16 @@ my $log = logger('plugin.abclisten');
 
 sub init { return }
 
-# The top-level "Home" item sorts at the "home" weight (see Plugin.pm, Util::topWeight).
-sub menuWeights { Plugins::ABCListen::Util::topWeight('home') }
+# The top-level "Home" item sorts at the "home" weight (see Plugin.pm, Util::topWeight); D4's
+# section items at theirs.
+sub menuWeights { ( Plugins::ABCListen::Util::topWeight('home'), Plugins::ABCListen::Sections->menuWeights ) }
 
 sub menuItems {
 	my ( $class, $client, $cb, $args ) = @_;
+
+	# D4: News, Sport, Kids listen, Audiobooks (no network I/O); Home stays if they fail
+	my @sections = eval { Plugins::ABCListen::Sections->topItems($client) };
+	$log->error( 'Building the ABC listen section items failed: ' . $@ ) if $@;
 
 	$cb->( [ {
 		name   => cstring( $client, 'PLUGIN_ABCLISTEN_HOME' ),
@@ -46,7 +52,7 @@ sub menuItems {
 		url    => \&_homeRoot,
 		image  => Plugins::ABCListen::Util::ICON,
 		weight => Plugins::ABCListen::Util::topWeight('home'),
-	} ] );
+	}, @sections ] );
 }
 
 # Home: Featured, then the home collections.

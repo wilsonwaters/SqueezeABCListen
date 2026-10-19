@@ -8,11 +8,13 @@ package Plugins::ABCListen::Collections;
 # behave the same everywhere. All I/O goes through Plugins::ABCListen::API (async).
 #
 # ---- Callbacks ------------------------------------------------------------------------------------
-#   page, home, items and itemsFor call $cb EXACTLY ONCE, on every path. Failures are
-#   { error => TOKEN }, the API token passed through ('PLUGIN_ABCLISTEN_LOAD_FAILED' or
-#   'PLUGIN_ABCLISTEN_RATE_LIMITED'). Cache hits call back synchronously, other calls later: code
-#   must work either way. A callback that dies is logged and never leads to a second call.
-#   Functions work as class methods (Plugins::ABCListen::Collections->page(...)) or plain functions.
+#   page, home, items, aggregationItems, itemsFor and checkOnAir call $cb EXACTLY ONCE, on every
+#   path. Failures are { error => TOKEN }, the API token passed through
+#   ('PLUGIN_ABCLISTEN_LOAD_FAILED' or 'PLUGIN_ABCLISTEN_RATE_LIMITED'). Cache hits call back
+#   synchronously, other calls later: code must work either way. A callback that dies is logged and
+#   never leads to a second call.
+#   Every public function works as a class method (Plugins::ABCListen::Collections->page(...)) or as
+#   a plain function (Plugins::ABCListen::Collections::itemFor($client, $ref, $depth)).
 #
 # ---- Card refs ------------------------------------------------------------------------------------
 #   API::cardRef's shape: { type, id, uriId, title, tagline, path, image, date, duration, programId,
@@ -35,20 +37,51 @@ package Plugins::ABCListen::Collections;
 #                             (undef when empty), image => the first supported embedded card's
 #                             image } - omitted without a numeric id, or when no embedded card
 #                             (componentProps.items[]) is supported (e.g. video-only collections)
-#         LiveRadioCarousel, RecommendationsExperiment, ExperimentEnroller, AppStoreCTA,
-#         AppOnwardJourney: ignored; any other component: ignored, logged once per name at DEBUG.
+#         RecommendationsExperiment, ExperimentEnroller, AppStoreCTA, AppOnwardJourney: ignored;
+#         any other component (Promo, TeaserNavigator, Tracklist, ...): ignored, logged once per
+#         name at DEBUG.
 #       A handler that dies is logged (WARN, once per component name) and skipped.
-#       Extending (D4): add an entry to %COMPONENTS, sub { my ($component, $page) = @_; ... }, that
-#       pushes onto $page (new keys, e.g. stations, are fine: callers ignore keys they don't know).
+#       Extending: add an entry to %COMPONENTS, sub { my ($component, $page) = @_; ... }, that
+#       pushes onto $page (new keys are fine: callers ignore keys they don't know).
+#     D4 (section pages: News, Sport, Kids listen, Audiobooks) adds these components and keys; Home
+#     ignores the new keys:
+#         MetaCollection      componentProps.items[] (sub-collections) -> collections { id, title,
+#                             image => undef } in order; a sub-collection whose itemsCount is 0 is
+#                             omitted (a missing itemsCount is kept). They page with items(), no
+#                             rootMetaCollectionId needed.
+#         ProgramAggregationCollection
+#                             { id (componentProps.id, else the contentUri id, else key), title
+#                             (title, else heading), image (first supported embedded card),
+#                             kind => 'aggregation' } -> collections, paged by aggregationItems
+#                             (see %FETCHERS); omitted like a StandardCollection without a
+#                             supported embedded card.
+#         MiniEPG             { serviceId => uc(papiServiceId), title, start, end (epochs or undef),
+#                             component => 'MiniEPG' } -> stations
+#         LiveRadioCarousel   componentProps.cards[] -> stations, each as MiniEPG's plus
+#                             component => 'LiveRadioCarousel' and heading => componentProps.heading
+#                             (undef when empty). Entries without a papiServiceId are dropped.
+#         stationCards        { <collection id> => [card refs] } for each kept StandardCollection whose
+#                             supported embedded cards all map to live stations (Sport's "Radio
+#                             Stations"), so a section can list them inline.
+#       An untitled StandardCollection keeps title undef; collectionItem names it Featured.
 #   home($cb)  = page('/listen', $cb).
 #
 #   items($collectionId, $offset, $size, $cb)
 #       -> $cb->({ title, total, count, cards => [refs] }) | $cb->({ error => TOKEN })
 #       API::bff('collection/x', { collectionId, offset, size }) (ttl 30 min, stale_ok, timeout 8 s).
-#       total = collection.pagination.total (undef when missing); count = how many cards ABC sent
-#       (for paging; cards without a parseable contentUri are dropped from cards). A null or empty
-#       collection is { total => undef or 0, count => 0, cards => [] }. offset defaults to 0, size
-#       to PAGE_SIZE (20).
+#       title = collection.title, else collection.heading; total = collection.pagination.total
+#       (undef when missing); count = how many cards ABC sent (for paging; cards without a parseable
+#       contentUri are dropped from cards). A null or empty collection is { total => undef or 0,
+#       count => 0, cards => [] }. offset defaults to 0, size to PAGE_SIZE (20).
+#
+#   aggregationItems($collectionId, $offset, $size, $cb)                                        (D4)
+#       As items(), from API::bff('programAggregationCollection/x', { collectionId, offset, size })
+#       (same response shape; ttl 6 h, stale_ok, timeout 8 s). E.g. All Kids listen programs, 9317914.
+#
+#   checkOnAir(\@serviceIds, $cb) -> $cb->()                                                    (D4)
+#       Makes sure Live->stationItem knows whether the event-only services among the ids are on air:
+#       Stations->checkOnAir for those, then $cb->() once - when all are known, at the NAME_DEADLINE
+#       (3 s), or at once when there are none (or L1's Stations->checkOnAir / get are absent).
 #
 #   itemFor($client, $ref, $depth) -> \%item | undef  (synchronous, no I/O)
 #       $depth is the level of the menu the item is listed in (a page root such as Home = 0, a
@@ -61,12 +94,12 @@ package Plugins::ABCListen::Collections;
 #         collection                       -> collectionItem (id = the card's id)
 #         dynamiccollection                -> collectionItem with the numeric last segment of the
 #                                             card's path (articleLink), else undef
-#         channel; externallink with a 'live' path segment
-#                                          -> Live->stationItem($client, Stations->byPageSlug($slug))
-#                                             for the first slug that maps: the segment after 'live',
-#                                             then the first segment that is not 'listen' or 'live'.
-#                                             undef while Stations->byPageSlug or Live->stationItem
-#                                             don't exist (L1), or when no slug maps.
+#         channel / externallink whose path Stations->byPageSlug maps to a service (contract 7: live
+#         pages, network homes, /listen/news; not /news, the ABC News website)
+#                                          -> Live->stationItem($client, Stations->byPageSlug($path));
+#                                             L1 owns the path rules. undef while Stations->byPageSlug
+#                                             or Live->stationItem don't exist, or when the path maps
+#                                             to nothing (other links).
 #         teaser, unknown (hero)           -> by path: a /programs/ path whose last segment is all
 #                                             digits -> episode (that id, docType audioepisode);
 #                                             '.../programs/<slug>' -> program (no id); else undef
@@ -74,8 +107,10 @@ package Plugins::ABCListen::Collections;
 #       A builder that dies: undef, logged at WARN once per card type.
 #
 #   itemsFor($client, \@refs, $depth, $cb) -> $cb->(\@items)  (never an error)
-#       A page of cards -> items: drops duplicates (same type + id), resolves program names (below),
-#       then itemFor on each; refs that map to nothing are left out (\@items may be empty).
+#       A page of cards -> items: drops duplicates (same type + id), resolves program names (below)
+#       and, at the same time, the on-air status of the event-only services that station cards name
+#       (checkOnAir, same 3 s deadline: an event station is listed only while it is on air), then
+#       itemFor on each; refs that map to nothing are left out (\@items may be empty).
 #       Program names (FQ4): every program ref with a path that is not from the hero is looked up
 #       with Programs->program($path) (cached 6 h), at most NAME_CONCURRENCY (4) at a time, within
 #       NAME_DEADLINE (3 s) for the whole page: cardRef's title is either cardTitle (often an
@@ -84,17 +119,19 @@ package Plugins::ABCListen::Collections;
 #       Found: title = the program's own name (heroImageWithCTAPrepared.heading), and the card's
 #       cardTitle becomes the description (tagline) if it differs. Error or deadline: cardRef's
 #       title and tagline are kept. Lookups still queued or in flight at the deadline carry on
-#       and warm the cache for the next open. Without lookups it calls back synchronously.
+#       and warm the cache for the next open. Without lookups or event checks it calls back
+#       synchronously.
 #
-#   collectionItem($client, { id, title, image }, $depth) -> link | undef
+#   collectionItem($client, { id, title, image, kind? }, $depth) -> link | undef
 #       A link listed at level $depth (0 at a page root) to the collection's menu at $depth + 1;
 #       undef when that passes MAX_DEPTH or without a numeric id. name = title, else
 #       PLUGIN_ABCLISTEN_FEATURED (never blank); image = imageUrl(image, 300), else the plugin icon.
 #       The menu: PAGE_SIZE items per page (items + itemsFor), then "More…" (PLUGIN_ABCLISTEN_MORE)
 #       while the page had cards and offset + count < total. Nothing to list: one
 #       PLUGIN_ABCLISTEN_EMPTY_COLLECTION text item; fetch error: the error token's text item.
-#       Every feed answers exactly once. The collection hash travels in the passthrough (D4 may add
-#       keys such as kind => 'aggregation' and page those with its own fetcher).
+#       Every feed answers exactly once. The collection hash travels in the passthrough; its kind
+#       picks the paging fetcher from %FETCHERS (aggregation => aggregationItems; no or an unknown
+#       kind => items), so a new kind of collection needs a %FETCHERS entry, not a _collectionMenu edit.
 #
 # Owned by the discovery stream (D1 creates; D2 and D4 extend additively).
 
@@ -110,10 +147,11 @@ use Slim::Utils::Timers;
 use Plugins::ABCListen::API;
 use Plugins::ABCListen::OnDemand;
 use Plugins::ABCListen::Programs;
-use Plugins::ABCListen::Util qw(decodeEntities);
+use Plugins::ABCListen::Util qw(decodeEntities parseISO8601);
 
 use constant PAGE_TTL         => 3600;    # page() Next data
 use constant ITEMS_TTL        => 1800;    # items() BFF collections
+use constant AGGREGATION_TTL  => 6 * 3600;    # aggregationItems() (D4)
 use constant API_TIMEOUT      => 8;       # seconds per request (menu paths; HTTP.pm's default is 15)
 use constant PAGE_SIZE        => 20;
 use constant MAX_DEPTH        => 3;
@@ -134,11 +172,21 @@ my %AUDIO_TYPE = map { $_ => 1 } qw(audioepisode audio audiosegment);
 my %COMPONENTS = (
 	HeroCarousel              => \&_heroCarousel,
 	StandardCollection        => \&_standardCollection,
-	LiveRadioCarousel         => undef,    # Radio covers live stations (L1)
 	RecommendationsExperiment => undef,    # D2 (Popular now, Popular in sport)
 	ExperimentEnroller        => undef,
 	AppStoreCTA               => undef,
 	AppOnwardJourney          => undef,
+
+	# ---- D4: section pages (Home ignores the keys these add) ----
+	MetaCollection               => \&_metaCollection,
+	ProgramAggregationCollection => \&_programAggregation,
+	MiniEPG                      => \&_liveStations,
+	LiveRadioCarousel            => \&_liveStations,
+);
+
+# ---- D4: paging fetchers by collection kind (collectionItem's passthrough hash); default items() ----
+my %FETCHERS = (
+	aggregation => \&aggregationItems,
 );
 
 my %loggedComponent;    # component name => 1 once logged (unknown at DEBUG, failing at WARN)
@@ -251,6 +299,87 @@ sub _standardCollection {
 	return unless $first;
 
 	push @{ $page->{collections} }, { id => $id, title => _text( $props->{title} ), image => $first->{image} };
+
+	_stationCards( $id, $props, $page );    # D4
+	return;
+}
+
+# ---- D4: section page components ------------------------------------------------------------------
+
+# A kept StandardCollection whose supported embedded cards are all live stations -> stationCards.
+sub _stationCards {
+	my ( $id, $props, $page ) = @_;
+
+	my @refs = grep { _target($_) } grep {defined} map { Plugins::ABCListen::API::cardRef($_) } _list( $props->{items} );
+	return if !@refs || grep { _target($_)->{kind} ne 'station' } @refs;
+
+	$page->{stationCards}->{$id} = \@refs;
+	return;
+}
+
+sub _metaCollection {
+	my ( $component, $page ) = @_;
+
+	for my $sub ( _list( _hash( $component->{componentProps} )->{items} ) ) {
+		next unless ref $sub eq 'HASH';
+
+		my $id = _digits( $sub->{id} );
+		next unless defined $id;
+
+		my $count = _int( $sub->{itemsCount} );
+		next if defined $count && $count == 0;    # ABC lists empty sub-collections (Audiobooks "Live Events")
+
+		push @{ $page->{collections} }, { id => $id, title => _text( $sub->{title} ), image => undef };
+	}
+
+	return;
+}
+
+sub _programAggregation {
+	my ( $component, $page ) = @_;
+	my $props = _hash( $component->{componentProps} );
+
+	my $id = _digits( $props->{id} );
+	if ( !defined $id ) {
+		my ( undef, $uriId ) = Plugins::ABCListen::API::coreMediaRef( $props->{contentUri} );
+		$id = _digits($uriId);
+	}
+	$id = _digits( $component->{key} ) unless defined $id;
+	return unless defined $id;
+
+	my ($first) = grep { _target($_) } grep {defined} map { Plugins::ABCListen::API::cardRef($_) } _list( $props->{items} );
+	return unless $first;
+
+	my $title = _text( $props->{title} );
+	$title = _text( $props->{heading} ) unless defined $title;
+
+	push @{ $page->{collections} }, { id => $id, title => $title, image => $first->{image}, kind => 'aggregation' };
+	return;
+}
+
+# MiniEPG (its own props) and LiveRadioCarousel (componentProps.cards[]) -> stations.
+sub _liveStations {
+	my ( $component, $page ) = @_;
+	my $props = _hash( $component->{componentProps} );
+	my $name  = $component->{component};
+
+	my $carousel = $name eq 'LiveRadioCarousel';
+	my $heading  = $carousel ? _text( $props->{heading} ) : undef;
+
+	for my $entry ( grep { ref $_ eq 'HASH' } $carousel ? _list( $props->{cards} ) : ($props) ) {
+		my $serviceId = _text( $entry->{papiServiceId} );
+		next unless defined $serviceId && $serviceId =~ /\A[A-Za-z0-9_]+\z/;    # 'itinerant_four' happens
+
+		push @{ $page->{stations} }, {
+			serviceId => uc $serviceId,
+			title     => _text( $entry->{title} ),
+			start     => _isText( $entry->{start} ) ? parseISO8601( $entry->{start} ) : undef,
+			end       => _isText( $entry->{end} )   ? parseISO8601( $entry->{end} )   : undef,
+			component => $name,
+			( $carousel ? ( heading => $heading ) : () ),
+		};
+	}
+
 	return;
 }
 
@@ -260,7 +389,17 @@ sub _standardCollection {
 
 sub items {
 	shift if _isClass( $_[0] );
-	my ( $id, $offset, $size, $cb ) = @_;
+	return _bffCollection( 'collection/x', ITEMS_TTL, @_ );
+}
+
+# D4: a program aggregation (e.g. All Kids listen programs), same shape as items().
+sub aggregationItems {
+	shift if _isClass( $_[0] );
+	return _bffCollection( 'programAggregationCollection/x', AGGREGATION_TTL, @_ );
+}
+
+sub _bffCollection {
+	my ( $endpoint, $ttl, $id, $offset, $size, $cb ) = @_;
 	my $once = _once($cb);
 
 	$id = _digits($id);
@@ -270,14 +409,14 @@ sub items {
 	$size   = _int($size)   || PAGE_SIZE;
 
 	Plugins::ABCListen::API::bff(
-		'collection/x',
+		$endpoint,
 		{ collectionId => $id, offset => $offset, size => $size },
 		sub {
 			my $data = shift;
 			_guard( $once, sub { $once->( _collectionPage($data) ) } );
 		},
 		sub { $once->( { error => _token(shift) } ) },
-		{ ttl => ITEMS_TTL, stale_ok => 1, timeout => API_TIMEOUT },
+		{ ttl => $ttl, stale_ok => 1, timeout => API_TIMEOUT },
 	);
 
 	return;
@@ -287,8 +426,11 @@ sub _collectionPage {
 	my $collection = _hash( _hash(shift)->{collection} );
 	my @cards      = _list( $collection->{items} );
 
+	my $title = _text( $collection->{title} );
+	$title = _text( $collection->{heading} ) unless defined $title;    # program aggregations have only a heading
+
 	return {
-		title => _text( $collection->{title} ),
+		title => $title,
 		total => _int( _hash( $collection->{pagination} )->{total} ),
 		count => scalar @cards,
 		cards => [ grep {defined} map { Plugins::ABCListen::API::cardRef($_) } @cards ],
@@ -296,7 +438,8 @@ sub _collectionPage {
 }
 
 sub collectionItem {
-	my ( $class, $client, $collection, $depth ) = @_;
+	shift if _isClass( $_[0] );
+	my ( $client, $collection, $depth ) = @_;
 	return undef unless ref $collection eq 'HASH' && defined _digits( $collection->{id} );
 
 	my $level = _level( $depth, 0 ) + 1;
@@ -323,7 +466,7 @@ sub _collectionMenu {
 	$depth      = _level( $depth, 1 );
 
 	_try( $client, $once, sub {
-		items( $collection->{id}, $offset, PAGE_SIZE, sub {
+		_fetcher($collection)->( $collection->{id}, $offset, PAGE_SIZE, sub {
 			my $result = shift;
 
 			return _textFeed( $client, $once, $result->{error} ) if $result->{error};
@@ -357,6 +500,12 @@ sub _collectionMenu {
 	return;
 }
 
+# D4: the paging fetcher for a collection hash (%FETCHERS by kind; items() by default).
+sub _fetcher {
+	my $kind = shift->{kind};
+	return ( _isText($kind) && $FETCHERS{$kind} ) || \&items;
+}
+
 # ---------------------------------------------------------------------------
 # Card dispatcher
 # ---------------------------------------------------------------------------
@@ -369,7 +518,8 @@ my %BUILDERS = (
 );
 
 sub itemFor {
-	my ( $class, $client, $ref, $depth ) = @_;
+	shift if _isClass( $_[0] );
+	my ( $client, $ref, $depth ) = @_;
 	return undef unless ref $ref eq 'HASH';
 
 	$depth = _level( $depth, 1 );
@@ -394,6 +544,7 @@ sub itemFor {
 }
 
 # What a card ref maps to: { kind => program | episode | collection | station, id? }, or undef.
+# Stations carry their service id.
 sub _target {
 	my $ref  = shift;
 	my $type = $ref->{type};
@@ -421,8 +572,9 @@ sub _target {
 		return defined $id ? { kind => 'collection', id => $id } : undef;
 	}
 
-	if ( $type eq 'channel' || ( $type eq 'externallink' && grep { $_ eq 'live' } _segments($path) ) ) {
-		return defined $path && _stationsAvailable() ? { kind => 'station' } : undef;
+	if ( $type eq 'channel' || $type eq 'externallink' ) {
+		my $id = _serviceId($path);
+		return defined $id ? { kind => 'station', id => $id } : undef;
 	}
 
 	if ( $type eq 'teaser' || $type eq 'unknown' ) {
@@ -471,35 +623,22 @@ sub _nestedCollectionItem {
 }
 
 sub _stationItem {
-	my ( $client, $ref ) = @_;
+	my ( $client, $ref, $target ) = @_;
 
-	for my $slug ( _slugCandidates( $ref->{path} ) ) {
-		my $id = Plugins::ABCListen::Stations->byPageSlug($slug);
-		return Plugins::ABCListen::Live->stationItem( $client, $id ) if defined $id && length $id;
-	}
+	my $item = Plugins::ABCListen::Live->stationItem( $client, $target->{id} );
+	main::DEBUGLOG && $log->is_debug && !$item && $log->debug("ABC listen: station $target->{id} ($ref->{path}) is not listed (hidden, HLS-only or off air)");
 
-	main::DEBUGLOG && $log->is_debug && $log->debug( "ABC listen: no station for $ref->{type} card " . $ref->{path} );
-	return undef;
+	return $item;
 }
 
-# Live-page slugs to try for a station card's path, in order: the segment after 'live', then the
-# first segment that is not 'listen' or 'live' ('/listen/live/sport' -> sport; '/pacific/live' ->
-# pacific; '/listen/radionational' -> radionational).
-sub _slugCandidates {
-	my @segments = _segments(shift);
-	my @slugs;
+# The live service a station card's path names (contract 7: L1's Stations->byPageSlug owns the
+# rules), or undef - also while L1's live API is absent.
+sub _serviceId {
+	my $path = shift;
+	return undef unless _hasText($path) && _stationsAvailable();
 
-	for my $i ( 0 .. $#segments - 1 ) {
-		if ( $segments[$i] eq 'live' ) {
-			push @slugs, $segments[ $i + 1 ];
-			last;
-		}
-	}
-
-	my ($first) = grep { $_ ne 'listen' && $_ ne 'live' } @segments;
-	push @slugs, $first if defined $first && !grep { $_ eq $first } @slugs;
-
-	return @slugs;
+	my $id = Plugins::ABCListen::Stations->byPageSlug($path);
+	return _hasText($id) ? $id : undef;
 }
 
 # Whether L1's live API is there: Stations->byPageSlug and Live->stationItem.
@@ -517,7 +656,8 @@ sub _stationsAvailable {
 # ---------------------------------------------------------------------------
 
 sub itemsFor {
-	my ( $class, $client, $refs, $depth, $cb ) = @_;
+	shift if _isClass( $_[0] );
+	my ( $client, $refs, $depth, $cb ) = @_;
 	my $once = _once($cb);
 
 	my $fail = sub {
@@ -532,16 +672,64 @@ sub itemsFor {
 			push @refs, $ref unless $seen{$key}++;
 		}
 
-		_resolveNames( \@refs, sub {
-			my $named = shift;
-			my $items = eval { [ grep {defined} map { $class->itemFor( $client, $_, $depth ) } @$named ] };
+		# program names and (D4) event stations' on-air status, in parallel; then build
+		my ( $named, $pending ) = ( undef, 2 );
+		my $build = sub {
+			return if --$pending;
+			my $items = eval { [ grep {defined} map { __PACKAGE__->itemFor( $client, $_, $depth ) } @$named ] };
 			$items ? $once->($items) : $fail->($@);
-		} );
+		};
+
+		my @stations = map { $_->{id} } grep { $_ && $_->{kind} eq 'station' } map { _target($_) } @refs;
+
+		_resolveNames( \@refs, sub { $named = shift; $build->() } );
+		checkOnAir( \@stations, $build );
 
 		1;
 	} or $fail->($@);
 
 	return;
+}
+
+# ---- D4: event-only live services --------------------------------------------------------------------
+
+sub checkOnAir {
+	shift if _isClass( $_[0] );
+	my ( $ids, $cb ) = @_;
+	my $once = _once($cb);
+
+	my %seen;
+	my @events = grep { !$seen{$_}++ && _isEventOnly($_) } grep { _hasText($_) } @{ ref $ids eq 'ARRAY' ? $ids : [] };
+
+	return $once->() unless @events && Plugins::ABCListen::Stations->can('checkOnAir');
+
+	my $timer;
+	my $finish = sub {
+		Slim::Utils::Timers::killSpecific($timer) if $timer;
+		undef $timer;
+		$once->();
+	};
+
+	$timer = Slim::Utils::Timers::setTimer( undef, Time::HiRes::time() + NAME_DEADLINE, sub {
+		undef $timer;
+		main::DEBUGLOG && $log->is_debug && $log->debug( 'ABC listen: event services not all known within ' . NAME_DEADLINE . " s (@events); listing the ones known on air" );
+		$once->();
+	} );
+
+	eval { Plugins::ABCListen::Stations->checkOnAir( \@events, $finish ); 1 } or do {
+		$log->error( 'ABC listen: checking the event services failed: ' . ( $@ || 'unknown error' ) );
+		$finish->();
+	};
+
+	return;
+}
+
+sub _isEventOnly {
+	my $id = shift;
+	return 0 unless _stationsAvailable() && Plugins::ABCListen::Stations->can('get');
+
+	my $rec = eval { Plugins::ABCListen::Stations->get($id) };
+	return ref $rec eq 'HASH' && $rec->{eventOnly} ? 1 : 0;
 }
 
 # Look up the names of the program refs that may carry a tagline (see itemsFor);
