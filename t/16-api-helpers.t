@@ -19,6 +19,10 @@
 #   nextdata-section-kidslisten-programs.trimmed.json GET /_next/data/build-3afcd04f/kidslisten/programs.json
 #   nextdata-section-sport.programs.trimmed.json     GET /_next/data/build-3afcd04f/listen/sport.json (the 'Programs' collection only)
 #   epgNowPlaying-RN-now.json (F1, research wrapper kept) for a resize.abcradio.net.au prepared image
+# F5 (alt text as a name only when it spells the slug) also reads t/data/discovery/ (see
+# t/40-collections.t): bff-collection-103194120-most-popular-podcasts-o{0,20,40}.json, the 20 program
+# cards that took their name from the alt text before F5, and every card of every committed fixture
+# (t/data/*/*.json) for the title junk and slug checks.
 
 use strict;
 use warnings;
@@ -27,10 +31,13 @@ use utf8;
 use ABCListenTest qw(:all);
 use Test::More;
 
+use File::Glob qw(bsd_glob);
 use JSON::PP ();
 use Time::Local qw(timegm);
+use Unicode::Normalize ();
 
 use Plugins::ABCListen::API qw(:all);
+use Plugins::ABCListen::Util qw(decodeEntities);
 
 binmode( Test::More->builder->$_, ':encoding(UTF-8)' ) for qw(output failure_output todo_output);
 
@@ -47,7 +54,36 @@ my @CARD_KEYS = sort qw(type id uriId title tagline path image date duration pro
 
 my $WCMS = 'https://live-production.wcms.abc-cdn.net.au';
 
-sub json { JSON::PP::decode_json( fixture("foundation/$_[0]") ) }
+# A decoded fixture: a bare file name is in t/data/foundation/, 'dir/file' anywhere in t/data/.
+sub json { JSON::PP::decode_json( fixture( $_[0] =~ m{/} ? $_[0] : "foundation/$_[0]" ) ) }
+
+# Letters and digits only, lower case, accents removed: what a slug spells.
+sub spelling {
+	my $text = Unicode::Normalize::NFD(shift);
+	$text =~ s/\p{Mn}+//g;
+	$text = lc $text;
+	$text =~ s/[^a-z0-9]+//g;
+	return $text;
+}
+
+# The articleLink's slug (last path segment, minus a trailing '-page'), or undef.
+sub slug_of {
+	my $link = shift;
+	return undef unless defined $link && !ref $link;
+	$link =~ s/[?#].*\z//s;
+	$link =~ s{/+\z}{};
+	my ($slug) = $link =~ m{/([^/]+)\z} or return undef;
+	$slug =~ s/-page\z//i;
+	return $slug;
+}
+
+sub clean_text {
+	my $text = shift;
+	return undef unless defined $text && !ref $text;
+	$text = decodeEntities($text);
+	$text =~ s/\A\s+|\s+\z//g;
+	return length $text ? $text : undef;
+}
 
 # Every card in a decoded fixture (a hash with a string contentUri and a cardTitle), in document order.
 sub cards_in {
@@ -246,7 +282,8 @@ subtest 'sitePath' => sub {
 
 subtest 'cardRef: FQ4 program names (exact titles and taglines)' => sub {
 	my @table = (
-		[ 'bff-collection-home-most-popular-podcasts.json', 'coremedia://program/104525826', 'Global Roaming podcast', 'Global news and how to make sense of it' ],
+		# F5: alt 'Global Roaming podcast' spells /global-roaming/ and is trimmed to that part
+		[ 'bff-collection-home-most-popular-podcasts.json', 'coremedia://program/104525826', 'Global Roaming', 'Global news and how to make sense of it' ],
 		[ 'bff-programAggregationCollection-rn.json', 'coremedia://program/8132136', 'God Forbid', undef ],
 		[ 'bff-collection-home-most-popular-podcasts.json', 'coremedia://program/104252122', "What's really going on behind the biggest news stories", undef ],
 		[ 'nextdata-listen-home.components.trimmed.json', 'coremedia://program/107274050', 'The Dinner Mix: Brisbane Special', undef ],
@@ -269,6 +306,55 @@ subtest 'cardRef: FQ4 program names (exact titles and taglines)' => sub {
 	is( card( 'nextdata-listen-home.components.trimmed.json', 'coremedia://program/107274050' )->{cardImagePrepared}->{alt}, '1x1 Program Image', 'Dinner Mix alt is "1x1 Program Image"' );
 	is( card( 'nextdata-section-kidslisten-programs.trimmed.json', 'coremedia://program/13078228' )->{cardImagePrepared}->{alt}, 'child sleeping on crescent moon with book', 'Bedtime Stories alt is an image description' );
 	is( card( 'nextdata-section-sport.programs.trimmed.json', 'coremedia://program/10584496' )->{cardImagePrepared}->{alt}, 'Hosts with cricket paraphernalia', 'ABC Cricket Podcast alt is an image description' );
+
+	# F5: the 20 Most Popular Podcasts program cards (of 54) whose cardTitle does not spell the slug
+	# and whose alt text passed the looks-like-a-name rules, so their name came from the alt text before F5.
+	my ( $o0, $o20, $o40 ) = map {"discovery/bff-collection-103194120-most-popular-podcasts-o$_.json"} 0, 20, 40;
+	my @mpp = (
+		# the alt text does not spell the slug (another program, an episode, a file, an image, the network): cardTitle
+		[ $o0,  'coremedia://program/105102080', 'Global Roaming podcast',           'Big moments that changed the course of history',              undef ],
+		[ $o0,  'coremedia://program/107254950', 'BONDY: FROM HERO TO ZERO ',        'Mark Humphries tells the remarkable true story of Alan Bond', undef ],
+		[ $o0,  'coremedia://program/105985824', 'Unravel-Generic_3000x3000',        'Award-winning Investigative True Crime',                      undef ],
+		[ $o0,  'coremedia://program/104331816', 'Roy and HG Podcast Tile',          'Last episode of the year for the masters of midfield mayhem', undef ],
+		[ $o0,  'coremedia://program/106369508', 'ABC Podcasts Dino Dome',           'Who will win the first Dino Dome Teams Challenge?',           undef ],
+		[ $o20, 'coremedia://program/106301456', 'News Top Stories',                 'The latest breaking news across the day',                     undef ],
+		[ $o20, 'coremedia://program/106162560', 'Hosts with cricket paraphernalia', 'The biggest issues and stories in cricket',                   undef ],
+		[ $o40, 'coremedia://program/106232754', 'The Science Show - ABC RN',        'Unique insights into science',                                undef ],
+
+		# the alt text spells the slug, then junk or extra words: trimmed to the part that spells it
+		[ $o0, 'coremedia://program/104525826', 'Global Roaming podcast',           'Global Roaming',     'Global news and how to make sense of it' ],
+		[ $o0, 'coremedia://program/104960366', 'Late Night Live podcast',          'Late Night Live',    'Incisive analysis, fearless debates & nightly surprises' ],
+		[ $o0, 'coremedia://program/104416144', 'BackgroundBriefing_3000x3000.jpg', 'BackgroundBriefing', 'Must-listen investigative journalism' ],
+		[ $o0, 'coremedia://program/104252126', 'Dr Karl Podcast Tile',             'Dr Karl Podcast',    'Solving the mysteries of the world, with science!' ],
+		[ $o0, 'coremedia://program/104252134', 'All In The Mind podcast tile',     'All In The Mind',    'Explore a world of mind, brain and behaviour' ],
+
+		# the alt text is the name
+		[ $o0,  'coremedia://program/104252132', 'Conversations',          'Conversations',          "Meet someone who's seen and done amazing things" ],
+		[ $o0,  'coremedia://program/105116426', 'Politics Now',           'Politics Now',           'Political coverage you can trust' ],
+		[ $o20, 'coremedia://program/104991340', 'ABC News Daily',         'ABC News Daily',         'One big story - Coverage you can trust' ],
+		[ $o20, 'coremedia://program/106219650', 'Lady Killers ',          'Lady Killers',           'The sensational crimes of Victorian era women' ],
+		[ $o40, 'coremedia://program/106199340', 'The Economy Stupid',     'The Economy Stupid',     'Your guide to the world of business, economics and finance' ],
+		[ $o40, 'coremedia://program/106189570', 'Do You Know Mordechai?', 'Do You Know Mordechai?', 'A smooth-talking conman is stealing hearts' ],
+		[ $o40, 'coremedia://program/105810568', 'Evil Genius',            'Evil Genius',            'Comedians decide if historical figures are heroes or villains' ],
+	);
+
+	for my $row (@mpp) {
+		my ( $file, $uri, $alt, $title, $tagline ) = @$row;
+		my $card = card( $file, $uri );
+		my $ref  = cardRef($card);
+		is( $card->{cardImagePrepared}->{alt}, $alt, "$uri: fixture alt '$alt'" );
+		is( $ref->{title},   $title,   "$uri: title '$title'" );
+		is( $ref->{tagline}, $tagline, "$uri: tagline" );
+	}
+
+	my @programs = grep { $_->{contentUri} =~ m{\Acoremedia://program/} } map { cards_in( json($_) ) } $o0, $o20, $o40;
+	is( scalar @programs, 54, 'Most Popular Podcasts fixtures: 54 program cards' );
+	my %alt = map { $_->[1] => 1 } grep { defined $_->[4] } @mpp;
+	is_deeply(
+		[ sort map { $_->{contentUri} } grep { my $r = cardRef($_); defined $r->{tagline} } @programs ],
+		[ sort keys %alt ],
+		'only the 12 cards whose alt text spells the slug take their name from it'
+	);
 };
 
 subtest 'cardRef: id comes from cardId; uriId from contentUri (spec amendment)' => sub {
@@ -334,6 +420,43 @@ subtest 'cardRef: every card in the copied fixtures' => sub {
 	ok( $count >= 50, "at least 50 fixture cards ($count)" );
 	ok( $types{$_}, "fixtures cover $_ cards" ) for qw(program audioepisode audio audiosegment dynamiccollection channel teaser externallink video);
 	is( scalar cards_in( json('bff-collection-empty.json') ), 0, 'the empty collection has no cards' );
+
+	# F5: every card of every committed fixture (t/data/*/*.json that decodes). No title carries file
+	# or image junk; a program title taken from the alt text spells its slug (nothing unrelated, nothing
+	# more) and is a part of that alt text.
+	my ( $files, $titles, $fromAlt, @junk, @unrelated, @notAlt ) = ( 0, 0, 0 );
+	for my $path ( sort { $a cmp $b } bsd_glob( fixturePath('*') . '/*.json' ) ) {
+		my ($rel) = $path =~ m{([^/\\]+/[^/\\]+)\z};
+		my $data = eval { json($rel) } or next;
+		$files++;
+
+		for my $card ( cards_in($data) ) {
+			my $ref = cardRef($card) or next;
+			defined( my $title = $ref->{title} ) or next;
+			$titles++;
+			my $name = "$rel $card->{contentUri} '$title'";
+
+			push @junk, $name if $title =~ /\.(?:jpe?g|png|gif|webp|svg|tiff?|bmp)\b/i || $title =~ /[0-9]{3,}x[0-9]{3,}/i || $title =~ /\btile\b/i;
+
+			my $cardTitle = clean_text( $card->{cardTitle} );
+			next if $ref->{type} ne 'program' || ( defined $cardTitle && $title eq $cardTitle );
+			$fromAlt++;
+
+			my $slug = slug_of( $card->{articleLink} );
+			push @unrelated, $name unless defined $slug && spelling($title) eq spelling($slug);
+
+			my $alt = clean_text( ref $card->{cardImagePrepared} eq 'HASH' ? $card->{cardImagePrepared}->{alt} : undef );
+			push @notAlt, $name unless defined $alt && index( join( ' ', split /[\s_]+/, $alt ), $title ) >= 0;
+		}
+	}
+
+	note "$files fixture files, $titles titles, $fromAlt from alt text";
+	ok( $files >= 60,   "every committed fixture that decodes ($files)" );
+	ok( $titles >= 300, "at least 300 titles ($titles)" );
+	ok( $fromAlt >= 12, "at least 12 program titles from alt text ($fromAlt)" );
+	is_deeply( \@junk,      [], 'no title has a file extension, an NNNNxNNNN size or the word "Tile"' );
+	is_deeply( \@unrelated, [], 'every title from alt text spells exactly its articleLink slug' );
+	is_deeply( \@notAlt,    [], 'every title from alt text is a part of that alt text' );
 };
 
 subtest 'cardRef: types pass through, with their fields' => sub {
@@ -413,25 +536,29 @@ subtest 'cardRef: episode fields (date, duration, docType, programId)' => sub {
 subtest 'cardRef: title rule edge cases, links, text clean-up' => sub {
 	my $program = sub { my %extra = @_; cardRef( { contentUri => 'coremedia://program/1', cardTitle => 'An editorial tagline', %extra } ) };
 
-	my $fifty = 'A' x 50;
-	is( $program->( cardImagePrepared => { alt => $fifty } )->{title},       $fifty,                 'alt of exactly 50 chars: a name' );
-	is( $program->( cardImagePrepared => { alt => "A$fifty" } )->{title},    'An editorial tagline', 'alt of 51 chars: cardTitle' );
-	is( $program->( cardImagePrepared => { alt => '  ' } )->{title},         'An editorial tagline', 'blank alt: cardTitle' );
-	is( $program->( cardImagePrepared => { alt => '  ' } )->{tagline},       undef,                  '... and no tagline' );
-	is( $program->( cardImagePrepared => undef )->{title},                   'An editorial tagline', 'no image: cardTitle' );
-	is( $program->( cardImagePrepared => { alt => 'Late Night Live 1400X1400' } )->{title}, 'An editorial tagline', 'NxN token (any case): cardTitle' );
-	for my $word (qw(logo image illustration photo graphic stylised stylized square featuring Logo SQUARE)) {
-		is( $program->( cardImagePrepared => { alt => "Show $word" } )->{title}, 'An editorial tagline', "alt with '$word': cardTitle" );
-	}
-	is( $program->( cardImagePrepared => { alt => 'Logophile Hour' } )->{title}, 'Logophile Hour', "'Logophile' is not the word 'logo'" );
+	# alt text on a card whose articleLink ends in /$slug/
+	my $alt = sub { my ( $text, $slug, %extra ) = @_; $program->( articleLink => "/listen/programs/$slug/", cardImagePrepared => { alt => $text }, %extra ) };
 
-	my $named = $program->( cardImagePrepared => { alt => ' Background Briefing &amp; Friends ' }, cardTitle => ' Investigations &#8217;n more&nbsp; ' );
+	# the looks-like-a-name rules still apply to the whole alt text
+	my $fifty = 'A' x 50;
+	is( $alt->( $fifty, 'a' x 50 )->{title},     $fifty,                 'alt of exactly 50 chars: a name' );
+	is( $alt->( "A$fifty", 'a' x 51 )->{title},  'An editorial tagline', 'alt of 51 chars: cardTitle' );
+	is( $alt->( '  ', 'show' )->{title},         'An editorial tagline', 'blank alt: cardTitle' );
+	is( $alt->( '  ', 'show' )->{tagline},       undef,                  '... and no tagline' );
+	is( $program->( articleLink => '/listen/programs/show/', cardImagePrepared => undef )->{title}, 'An editorial tagline', 'no image: cardTitle' );
+	is( $alt->( 'Late Night Live 1400X1400', 'latenightlive' )->{title}, 'An editorial tagline', 'NxN token (any case), even after the slug: cardTitle' );
+	for my $word (qw(logo image illustration photo graphic stylised stylized square featuring Logo SQUARE)) {
+		is( $alt->( "Show $word", 'show' )->{title}, 'An editorial tagline', "alt with '$word', even after the slug: cardTitle" );
+	}
+	is( $alt->( 'Logophile Hour', 'logophile-hour' )->{title}, 'Logophile Hour', "'Logophile' is not the word 'logo'" );
+
+	my $named = $alt->( ' Background Briefing &amp; Friends ', 'background-briefing-friends', cardTitle => ' Investigations &#8217;n more&nbsp; ' );
 	is( $named->{title},   'Background Briefing & Friends', 'alt title decoded and trimmed' );
 	is( $named->{tagline}, "Investigations \x{2019}n more", 'tagline is the decoded, trimmed cardTitle' );
-	is( $program->( cardImagePrepared => { alt => 'Name' }, cardTitle => undef )->{tagline}, undef, 'alt name without cardTitle: no tagline' );
+	is( $alt->( 'Name', 'name', cardTitle => undef )->{tagline}, undef, 'alt name without cardTitle: no tagline' );
 
-	my $same = $program->( cardImagePrepared => { alt => ' ABC News Daily ' }, cardTitle => 'abc news DAILY' );
-	is( $same->{title},   'ABC News Daily', 'alt equal to cardTitle (trimmed, any case): title from alt' );
+	my $same = $alt->( ' ABC News Daily ', 'abc-news-daily', cardTitle => 'abc news DAILY' );
+	is( $same->{title},   'abc news DAILY', 'alt equal to cardTitle (trimmed, any case): both spell the slug, cardTitle wins' );
 	is( $same->{tagline}, undef,            '... and no tagline repeating it' );
 
 	# a cardTitle that spells the articleLink slug is the name, whatever the alt says
@@ -459,9 +586,71 @@ subtest 'cardRef: title rule edge cases, links, text clean-up' => sub {
 	for my $case (@misses) {
 		my ( $cardTitle, $link, $name ) = @$case;
 		my $ref = $slugged->( $cardTitle, $link );
-		is( $ref->{title},   'Hosts at a desk', "does not spell the slug ($name): title from alt" );
-		is( $ref->{tagline}, $cardTitle,        "does not spell the slug ($name): tagline is cardTitle" );
+		is( $ref->{title},   $cardTitle, "does not spell the slug ($name), nor does the alt: title is cardTitle" );
+		is( $ref->{tagline}, undef,      "does not spell the slug ($name), nor does the alt: no tagline" );
 	}
+
+	# F5: alt text is a name only when it spells the slug, and only the part that spells it
+	my @altNames = (
+		# punctuation, case and spacing differences
+		[ "If You\x{2019}re Listening!",         'if-youre-listening',    "If You\x{2019}re Listening!", 'curly apostrophe; a trailing "!" is kept' ],
+		[ 'Do You Know Mordechai? (podcast)',    'do-you-know-mordechai', 'Do You Know Mordechai?',      'a trailing "?" is kept, the rest dropped' ],
+		[ 'The Economy, Stupid',                 'the-economy-stupid',    'The Economy, Stupid',         'a comma inside' ],
+		[ 'BACKGROUND BRIEFING',                 'backgroundbriefing',    'BACKGROUND BRIEFING',         'upper case, a space the slug lacks' ],
+		[ '"Lady Killers"',                      'lady-killers',          'Lady Killers',                'quotes around it dropped' ],
+		[ 'The 13-Storey Treehouse',             'the-13-storey-treehouse-page', 'The 13-Storey Treehouse', "digits; trailing '-page' ignored" ],
+
+		# file and image junk after the name
+		[ 'Late_Night_Live_3000x3000.jpg',       'latenightlive',         'Late Night Live',             'file name: underscores become spaces, size and extension dropped' ],
+		[ 'Politics Now.png',                    'politics-now',          'Politics Now',                'extension dropped' ],
+		[ 'Dr Karl Podcast Tile',                'dr-karl-podcast',       'Dr Karl Podcast',             '"Tile" dropped' ],
+		[ 'Lady Killers - ABC RN',               'lady-killers',          'Lady Killers',                'network suffix dropped' ],
+
+		# prefix matches at a word boundary only
+		[ 'AM with Sabra Lane',                  'am',                    'AM',                          'a whole word' ],
+		[ 'The Case Of Jesse and Luke',          'the-case-of',           'The Case Of',                 'whole words of a longer title' ],
+
+		# non-ASCII
+		[ "\x{c9}migr\x{e9} Stories podcast tile", 'emigre-stories',      "\x{c9}migr\x{e9} Stories",    'accented letters spell their base letters' ],
+		[ "Nga\x{304} Ko\x{304}rero",            'nga-korero',            "Ng\x{101} K\x{14d}rero",      'decomposed accents: composed in the name' ],
+		[ "\x{2018}Allo \x{2018}Allo!",          'allo-allo',             "Allo \x{2018}Allo!",          'non-ASCII punctuation is not a letter' ],
+	);
+	for my $case (@altNames) {
+		my ( $text, $slug, $title, $name ) = @$case;
+		my $ref = $alt->( $text, $slug );
+		is( $ref->{title},   $title,                 "alt spells the slug ($name): '$title'" );
+		is( $ref->{tagline}, 'An editorial tagline', "alt spells the slug ($name): tagline is cardTitle" );
+	}
+
+	my @altMisses = (
+		[ 'Amazing Stories',             'am',                     'the slug inside a word' ],
+		[ 'Politics Nowcast',            'politics-now',           'the slug a prefix of a longer word' ],
+		[ 'ABC Podcasts Dino Dome',      'dino-dome',              'the slug not at the start' ],
+		[ 'Global Roaming podcast',      'no-one-saw-it-coming',   "another program's name" ],
+		[ 'News Top Stories',            'abc-news-top-stories',   'shorter than the slug' ],
+		[ "Caf\x{e9}",                   'caf',                    'a non-ASCII letter is not a word boundary' ],
+		[ "Cafe\x{301}s",                'cafe',                   '... nor is a combining accent before a letter' ],
+		[ "Ng\x{101} K\x{14d}rero",      'ng-krero',               'an accented letter is a letter, not punctuation' ],
+	);
+	for my $case (@altMisses) {
+		my ( $text, $slug, $name ) = @$case;
+		my $ref = $alt->( $text, $slug );
+		is( $ref->{title},   'An editorial tagline', "alt does not spell the slug ($name): cardTitle" );
+		is( $ref->{tagline}, undef,                  "alt does not spell the slug ($name): no tagline" );
+	}
+
+	# cards with no usable articleLink: the alt text is never a name
+	for my $link ( undef, '', '/', 'https://www.abc.net.au/', { href => '/listen/programs/global-roaming/' } ) {
+		my $ref = $program->( articleLink => $link, cardImagePrepared => { alt => 'Global Roaming' } );
+		my $what = defined $link ? ref $link ? 'a hash' : "'$link'" : 'undef';
+		is( $ref->{title},   'An editorial tagline', "articleLink $what: cardTitle" );
+		is( $ref->{tagline}, undef,                  "articleLink $what: no tagline" );
+	}
+
+	# a non-ASCII cardTitle spells its slug too (the rn-featured synthetic card), whatever the alt says
+	my $emigre = cardRef( { %{ card( 'ondemand/bff-programAggregationCollection-rn-featured.synthetic.json', 'coremedia://program/90000001' ) }, cardImagePrepared => { alt => 'Hosts at a desk' } } );
+	is( $emigre->{title},   "\x{c9}migr\x{e9} Stories", "'\x{c9}migr\x{e9} Stories' spells /emigre-stories/: title is cardTitle" );
+	is( $emigre->{tagline}, undef,                      '... no tagline' );
 
 	my $episode = cardRef( { contentUri => 'coremedia://audioepisode/5', cardTitle => ' Ep &amp; 1 ', cardImagePrepared => { alt => 'Global Roaming podcast' }, description => '  ' } );
 	is( $episode->{title},       'Ep & 1', 'non-program: cardTitle even when alt looks like a name' );
