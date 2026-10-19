@@ -4,7 +4,8 @@
 # empty/off-air bodies, missing presenters/image/link, entities and whitespace, odd start/end; the
 # cache TTL (until the program's end, clamped 60 s - 15 min; 60 s for missing/past/inconsistent ends;
 # "next" until its start); the 60 s negative cache for HTTP errors, 404, 429, timeouts and bad JSON,
-# logged at WARN once per run of failures; `null` and {} as "nothing on air"; coalescing; at most
+# logged at WARN once per run of failures; `null` and {} as "nothing on air"; coalescing (L3: a
+# second caller takes no request slot); at most
 # 6 requests at a time; cached/lastGood semantics; programNext only on demand; timeSlot in local
 # time (also across midnight); and exactly one callback on every path.
 
@@ -274,6 +275,15 @@ subtest 'coalescing and at most 6 requests at a time' => sub {
 	is( $a->count, 1, 'first caller answered once' );
 	is( $b->count, 1, 'second caller answered once' );
 	is( ( $b->args(0) )[0]->{title}, 'The Radio National Hour', '... with the program' );
+
+	# (L3) API.pm also merges identical GETs, so the request count alone can't tell: a second caller
+	# for RN must not take a request slot of its own
+	reset_all();
+	route( qr{/epgNowPlaying/}, file => 'live/bff-epgNowPlaying-RN-now.json', defer => 1 );
+	my @dup = ( now_cb('RN'), now_cb('RN'), map { now_cb("LOCAL_$_") } qw(A B C D E) );
+	is( scalar( Slim::Networking::SimpleAsyncHTTP->deferred ), 6, 'RN twice + 5 others: 6 requests in flight (the second RN caller takes no slot)' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is( scalar( grep { $_->count == 1 } @dup ), 7, '... every caller answered once' );
 
 	reset_all();
 	route( qr{/epgNowPlaying/}, file => 'live/bff-epgNowPlaying-RN-now.json', defer => 1 );

@@ -39,7 +39,10 @@ package Plugins::ABCListen::NowPlaying;
 # wait in a queue. A "nothing on air" answer forgets the last-good program.
 #
 # Logging: a failed request is logged at WARN once per run of consecutive failures (per service and
-# now/next), then at DEBUG. API::bff is called with quiet => 1, so it logs failures at DEBUG only.
+# now/next), then at DEBUG. API::bff is called with quiet => 1, so it logs failures at DEBUG only,
+# and with ttl => API_TTL (30 s): a response API.pm got that recently for the same URL is used
+# without a new request (Stations' event check fetches the same epgNowPlaying/<ID>/now just before
+# the Sport menu asks for the program on air; L3).
 #
 # Owned by the live stream: L2 creates (ai-state/streams.md, rule 5).
 
@@ -56,6 +59,7 @@ use constant MAX_TTL      => 900;
 use constant NEGATIVE_TTL => 60;
 use constant CONCURRENCY  => 6;
 use constant TIMEOUT      => 8;      # seconds per request
+use constant API_TTL      => 30;     # reuse an API.pm response this fresh (L3: Sport's event check)
 use constant IMAGE_PX     => 580;
 
 use constant EN_DASH => "\x{2013}";
@@ -213,7 +217,7 @@ sub _pump {
 				{ imageRatio => '1x1' },
 				sub { $done->( { data => $_[0] } ) },
 				sub { $done->( { error => $_[0] } ) },
-				{ quiet => 1, timeout => TIMEOUT },
+				{ quiet => 1, timeout => TIMEOUT, ttl => API_TTL },
 			);
 			1;
 		} or $done->( { error => { message => 'request failed: ' . ( $@ || 'unknown problem' ) } } );

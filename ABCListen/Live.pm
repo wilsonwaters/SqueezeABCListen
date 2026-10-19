@@ -38,14 +38,15 @@ package Plugins::ABCListen::Live;
 #             PLUGIN_ABCLISTEN_LIVE_FAILED }, or { error => LIVE_HLS_ONLY | LIVE_OFF_AIR |
 #             UNAVAILABLE (unknown id) }; exactly one callback.
 #   metadata, onStream, onStop
-#             Plugins::ABCListen::LiveMetadata (L2): the program on air, polled per master player and
-#             pushed to Now Playing. Its station fallback is _metadata here: { title => station
-#             name, artist => "ABC listen", cover => logo (~600 px), bitrate => "56kbps CBR" } (no
-#             bitrate when the stream playing isn't StreamGuys Icecast); synchronous, no network,
-#             never dies. onStream (_onStream) also logs a fallback to another stream family once
-#             per play (L5: Stations->noteStream).
-# Song info: LiveMetadata->trackInfo ("Program info"), registered as a Slim::Menu::TrackInfo
-# provider.
+#             Plugins::ABCListen::LiveMetadata (L2): the program on air (L3: the song on music
+#             stations), polled per master player and pushed to Now Playing. Its station fallback is
+#             _metadata here: { title => station name, artist => "ABC listen", cover => logo
+#             (~600 px), bitrate => "56kbps CBR" } (no bitrate when the stream playing isn't
+#             StreamGuys Icecast); synchronous, no network, never dies. onStream (_onStream) also
+#             logs a fallback to another stream family once per play (L5: Stations->noteStream);
+#             a LiveMetadata onStream that dies is logged and doesn't stop it.
+# Song info: LiveMetadata->trackInfo ("Program info") and, after it, LiveMetadata->recentInfo
+# ("Recently played", L3), registered as Slim::Menu::TrackInfo providers.
 #
 # Pref liveQuality (L5): initialised and validated in init; Stations reads it at play time.
 #
@@ -113,6 +114,12 @@ sub init {
 	Slim::Menu::TrackInfo->registerInfoProvider( abclistenProgramInfo => (
 		after => 'top',
 		func  => \&Plugins::ABCListen::LiveMetadata::trackInfo,
+	) );
+
+	# L3: "Recently played" (main music stations), right after "Program info"
+	Slim::Menu::TrackInfo->registerInfoProvider( abclistenRecentlyPlayed => (
+		after => 'abclistenProgramInfo',
+		func  => \&Plugins::ABCListen::LiveMetadata::recentInfo,
 	) );
 
 	return;
@@ -436,9 +443,10 @@ sub _resolve {
 }
 
 # === L5 === the live kind's onStream: L2's metadata poll (unchanged), then L5's fallback log (once
-# per play). Each part contains its own errors, so one never stops the other.
+# per play). Each part contains its own errors, so one never stops the other (L3: the metadata
+# poll is wrapped here too, so a die in it can't skip the fallback check).
 sub _onStream {
-	Plugins::ABCListen::LiveMetadata::onStream(@_);
+	eval { Plugins::ABCListen::LiveMetadata::onStream(@_); 1 } or $log->warn( 'Live metadata onStream failed: ' . ( $@ || 'unknown error' ) );
 	eval { $STATIONS->noteStream(@_); 1 } or $log->warn( 'Live stream fallback check failed: ' . ( $@ || 'unknown error' ) );
 	return;
 }

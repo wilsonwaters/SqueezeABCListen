@@ -11,7 +11,8 @@
 # <presenters>" + the L1 text on a new line; one programNow per listed station (time-zone versions
 # use their own EPG); the 3 s deadline with 7 slow stations (<= 6 requests at a time, cached and
 # last-good data used, answered once); stationItem from cached data only, never fetching; Sport
-# fetches the listed stations after the event checks.
+# fetches the listed stations after the event checks. L3: Sport makes exactly the expected number
+# of requests (a cap), and an on-air event service's program reuses the event check's response.
 
 use strict;
 use warnings;
@@ -371,8 +372,12 @@ subtest 'Sport: listed services; no HLS-only, duplicate or off-air services' => 
 	reset_all();
 	route( qr{epgNowPlaying/}, file => 'live/bff-epgNowPlaying-SPORT_BBL-now.json' );    # every event service off air (null)
 
-	my $c = open_feed( undef, sport_feed(undef) );
+	my $feed = sport_feed(undef);
+	$NP->_reset();    # (L3) forget the Radio menu's programs, so that any other programNow shows as a request
+	my $before = scalar requests();
+	my $c      = open_feed( undef, $feed );
 	is( $c->count, 1, 'answers once' );
+	is( scalar( requests() ) - $before, 11, 'exactly 11 requests: 7 event checks + the programs of the 4 listed stations (L3: a cap)' );
 	my $items = items_of($c);
 	is_deeply( [ map { id_of($_) } @$items ], [qw(GRANDSTAND ITINERANT_THREE ITINERANT_ONE ITINERANT_TWO)], 'GRANDSTAND, ITINERANT_THREE, ITINERANT_ONE, ITINERANT_TWO' );
 	is_deeply( [ map { $_->{name} } @$items ], [ 'ABC SPORT', 'ABC SPORT EXTRA', 'ABC Rugby League World Cup', 'ABC AFLW' ], 'their names' );
@@ -390,8 +395,12 @@ subtest 'Sport: listed services; no HLS-only, duplicate or off-air services' => 
 	reset_all();
 	route( "${BFF}epgNowPlaying/SPORT_BBL/now?imageRatio=1x1", file => 'live/epg-event-onair-pls.json' );
 	route( qr{epgNowPlaying/}, file => 'live/bff-epgNowPlaying-SPORT_BBL-now.json' );
-	$items = items_of( open_feed( $PLAYER, sport_feed($PLAYER) ) );
+	$feed   = sport_feed($PLAYER);
+	$before = scalar requests();
+	$items  = items_of( open_feed( $PLAYER, $feed ) );
 	is_deeply( [ map { id_of($_) } @$items ], [qw(GRANDSTAND ITINERANT_THREE ITINERANT_ONE ITINERANT_TWO SPORT_BBL)], 'an on-air event service is listed' );
+	is( scalar( grep { $_->{url} =~ m{/epgNowPlaying/SPORT_BBL/now} } requests() ), 1, 'its epgNowPlaying is fetched once: the program on air comes from the event check\'s response (no duplicate; L3)' );
+	is( scalar( requests() ) - $before, 11, '... 11 requests in all: 7 event checks + the programs of the 4 other listed stations' );
 	is( $items->[-1]->{name}, 'ABC BBL', '... by name' );
 	like( $items->[-1]->{image}, qr/cropW=/, '... with its logo' );
 	check_names( $items, 'Sport' );
@@ -424,9 +433,9 @@ subtest 'Sport: 3 s deadline for the event checks; unknown = hidden; once only' 
 
 	my $checks = scalar requests();
 	my $again  = open_feed( undef, $feed );
-	is( scalar( requests() ) - $checks, 1, 'next open: event status from the cache; only the newly listed station\'s program is fetched (L2)' );
+	is( scalar( requests() ) - $checks, 0, 'next open: no request (event status from the cache; the newly listed station\'s program from the event check\'s fresh response: no duplicate, L3)' );
 	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
-	is( $again->count, 1, '... then answers' );
+	is( $again->count, 1, '... answers' );
 	is( scalar( grep { id_of($_) eq 'SPORT_BBL' } @{ items_of($again) } ), 1, '... with the event service the late check found on air' );
 
 	reset_all();

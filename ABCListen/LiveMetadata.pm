@@ -2,29 +2,36 @@ package Plugins::ABCListen::LiveMetadata;
 
 # Now Playing metadata for live stations (abclisten://live/<SERVICE_ID>), and its per-player
 # poll/push engine. A port of the reference plugin's RTRFM/LiveMetadata.pm, generalised to many
-# services. Program mode (L2): the program on air from Plugins::ABCListen::NowPlaying. L3 adds a
-# track mode (songs on music stations) on top: the mode decision (buildMeta), the delay computation
-# (nextDelay) and the push (_push) are kept apart for that.
+# services. Program mode (L2): the program on air from Plugins::ABCListen::NowPlaying. Track mode
+# (L3): the song playing now on music stations, from Plugins::ABCListen::Tracks, falling back to
+# program mode between songs, on talk stations and without song data.
 #
 #   init(stationMeta => \&code)    called from Live->init. stationMeta($client, $url, $id) is the
 #                                  live kind's station metadata (L1: { title => station name,
 #                                  artist => "ABC listen", cover => logo, bitrate }, {} when unknown).
 #   metadata($client, $url, $id)   the live kind's metadata hook (ProtocolHandler kind registry):
 #                                  synchronous, no network, never dies. buildMeta of the station
-#                                  metadata and NowPlaying's cached (else last-good) program. When
-#                                  the program isn't fresh it starts an asynchronous
-#                                  NowPlaying->programNow and returns what it has. For a player
-#                                  that plays (or pauses on) this URL without a running poll, it
-#                                  also starts the poll (stale-poll recovery: after an LMS
-#                                  restart, a reconnect, or forgotten timers).
+#                                  metadata, NowPlaying's cached (else last-good) program and, for a
+#                                  service with song data, Tracks->current (the song while it is
+#                                  current, with last-good). When the program isn't fresh it starts
+#                                  an asynchronous NowPlaying->programNow and returns what it has;
+#                                  songs are only fetched by the poll (only while someone plays the
+#                                  station). For a player that plays (or pauses on) this URL
+#                                  without a running poll, it also starts the poll (stale-poll
+#                                  recovery: after an LMS restart, a reconnect, or forgotten timers).
 #   onStream($client, $song, $id)  starts the poll for $client's master (sync groups: one poll per
 #                                  master, whichever player LMS calls this for), or moves it to $id.
 #                                  A poll already running for the master and $id is kept.
 #   onStop($song, $id)             stops the master's poll, if it polls $id.
-#   buildMeta($station, $program)  pure. No program: the station metadata. Program mode: the
-#                                  station metadata with title => program, artist => presenters ||
-#                                  station name, album => station name, cover => program image ||
-#                                  station cover.
+#   buildMeta($station, $program[, $song])
+#                                  pure. Track mode (a $song with a title): the station metadata
+#                                  with title => song, artist => song artist || station name,
+#                                  album => "<program> · <station name>" (without a program: the
+#                                  song's album (release), else the station name), cover => song
+#                                  cover || program image || station cover. Else, no program: the
+#                                  station metadata. Program mode: the station metadata with
+#                                  title => program, artist => presenters || station name, album =>
+#                                  station name, cover => program image || station cover.
 #   nextDelay($program, $now)      pure: seconds to the next poll, end + BOUNDARY_GRACE (30) - now
 #                                  clamped to MIN_DELAY..MAX_DELAY (60-900); MIN_DELAY without a
 #                                  program or its end.
@@ -36,20 +43,33 @@ package Plugins::ABCListen::LiveMetadata;
 #                                  "Presented by <presenters>", "Next: <program> · <time slot>"
 #                                  (NowPlaying->programNext, fetched only here); rows without data
 #                                  are left out (the station name when nothing is known).
+#   recentInfo($client, $url, ...) Slim::Menu::TrackInfo provider (L3, registered by Live->init
+#                                  after "Program info"): for the main music stations
+#                                  (Tracks->station; not talk stations, not time-zone versions), a
+#                                  "Recently played" link; undef for other URLs. Its feed answers
+#                                  exactly once, within INFO_DEADLINE (3 s): up to RECENT_ROWS (10)
+#                                  text rows "9:41pm · Artist – Title" (server local time,
+#                                  Util::friendlyTime; no time or no artist: that part left out);
+#                                  empty, failed or late: one text row "No recently played songs".
 #
 # Polling: one Slim::Utils::Timers timer per master player (keyed on the player object) refreshes
-# NowPlaying for the service it plays: at nextDelay (program end + 30 s, clamped 60-900 s),
-# ERROR_DELAY (30 s) after a failed fetch or an update that dies. A poll stops (kills its timer,
-# makes no fetch) once the master is neither playing nor paused, or its current playlist URL isn't
-# the polled live URL any more, and on onStop. A poll with neither a pending timer nor a fetch in
-# flight, or kept for another client object with the same id (a reconnected player), is stale and
-# is replaced at the next metadata call. Services nobody plays are never polled; all players share
-# NowPlaying's cache, so one upstream request per refresh per service.
+# what is due for the service it plays: NowPlaying (cached until the program ends) and, for a
+# service with song data, Tracks (cached until next_updated, 20-120 s). The next poll comes at the
+# minimum of the program delay (nextDelay: program end + 30 s, clamped 60-900 s; ERROR_DELAY (30 s)
+# after a failed program fetch) and the track delay (Tracks->pollIn: next_updated - now, clamped
+# 20-120 s; 30 s after a failed song fetch; none without song data), and ERROR_DELAY after an
+# update that dies. A poll stops (kills its timer, makes no fetch) once the master is neither
+# playing nor paused, or its current playlist URL isn't the polled live URL any more, and on
+# onStop; switching to a station without songs stops the song fetches with it. A poll with neither
+# a pending timer nor a fetch in flight, or kept for another client object with the same id (a
+# reconnected player), is stale and is replaced at the next metadata call. Services nobody plays
+# are never polled; all players share NowPlaying's and Tracks' caches, so one upstream request per
+# refresh per service.
 #
 # Push, when { title, artist, album, cover } differs from what was last pushed to the master (kept
 # on the player, so a restarted poll doesn't re-push): ProtocolHandler::getMetadataFor dispatches
 # to the metadata hook above and ignores the song's pluginData(wmaMeta), so nothing is written
-# there: the hook already reads NowPlaying's updated cache. The sequence is
+# there: the hook already reads NowPlaying's and Tracks' updated caches. The sequence is
 #   Slim::Music::Info::setCurrentTitle($url, $title)          (no client: not a new song)
 #   $master->currentPlaylistUpdateTime(Time::HiRes::time())    (the Default skin refreshes on it)
 #   Slim::Control::Request::notifyFromArray($master, ['newmetadata'])   (Material, players)
@@ -75,20 +95,24 @@ use Slim::Utils::Timers;
 
 use Plugins::ABCListen::NowPlaying;
 use Plugins::ABCListen::Stations;
+use Plugins::ABCListen::Tracks;
 use Plugins::ABCListen::Util;
 
 use constant BOUNDARY_GRACE => 30;    # poll this long after the program's end
 use constant MIN_DELAY      => 60;
 use constant MAX_DELAY      => 900;
 use constant ERROR_DELAY    => 30;
-use constant INFO_DEADLINE  => 3;     # seconds for the Program info feed
+use constant INFO_DEADLINE  => 3;     # seconds for the Program info and Recently played feeds
+use constant RECENT_ROWS    => 10;
 
 use constant PUSHED_KEY => 'liveMetaPushed';
 use constant MIDDOT     => " \x{B7} ";
+use constant EN_DASH    => " \x{2013} ";
 
 my $log = logger('plugin.abclisten');
 
 my $NOW_PLAYING = 'Plugins::ABCListen::NowPlaying';
+my $TRACKS      = 'Plugins::ABCListen::Tracks';
 
 my $stationMeta;    # code ref: the live kind's station metadata (L1)
 my %polls;          # master id => { master, id, url, timer (weak; undef once fired or killed), fetching }
@@ -136,7 +160,10 @@ sub _metadata {
 			if !_polling( $master, $id ) && _playsUrl( $master, $url );
 	}
 
-	return buildMeta( $station, $program );
+	# the song (L3): from Tracks' cache only (the poll fetches it, while someone plays the station)
+	my $song = $TRACKS->hasSongs($id) ? $TRACKS->current($id) : undef;
+
+	return buildMeta( $station, $program, $song );
 }
 
 sub onStream {
@@ -170,10 +197,28 @@ sub onStop {
 
 sub buildMeta {
 	shift if _isClass( $_[0] );
-	my ( $station, $program ) = @_;
+	my ( $station, $program, $song ) = @_;
 
 	my %meta = ref $station eq 'HASH' ? %$station : ();
-	return \%meta unless ref $program eq 'HASH' && _isText( $program->{title} );
+	my $hasProgram = ref $program eq 'HASH' && _isText( $program->{title} );
+
+	if ( ref $song eq 'HASH' && _isText( $song->{title} ) ) {
+		my $name = $meta{title};
+
+		$meta{title}  = $song->{title};
+		$meta{artist} = _isText( $song->{artist} ) ? $song->{artist} : $name;
+		$meta{album}  = $hasProgram ? join( MIDDOT, grep { _isText($_) } $program->{title}, $name )
+			: _isText( $song->{album} ) ? $song->{album}
+			: $name;
+		$meta{cover} = $song->{cover} if _isText( $song->{cover} );
+		$meta{cover} = $program->{image} if !_isText( $song->{cover} ) && $hasProgram && _isText( $program->{image} );
+
+		delete $meta{$_} for grep { !defined $meta{$_} } keys %meta;
+
+		return \%meta;
+	}
+
+	return \%meta unless $hasProgram;
 
 	my $name = $meta{title};
 
@@ -237,8 +282,7 @@ sub _poll {
 	eval {
 		if ( _playsUrl( $master, $state->{url} ) ) {
 			main::DEBUGLOG && $log->is_debug && $log->debug( "Live metadata: polling $state->{id} for " . _who($master) );
-			$state->{fetching} = 1;
-			$NOW_PLAYING->programNow( $state->{id}, sub { _fetched( $master, $state, @_ ) } );
+			_fetch( $master, $state );
 		}
 		else {
 			_stop( $master, "not playing $state->{url} any more" );
@@ -253,14 +297,46 @@ sub _poll {
 	return;
 }
 
-# NowPlaying's answer, synchronous or not. Never dies: an update that fails is retried after
-# ERROR_DELAY rather than leaving the poll without a timer.
+# Refresh what is due: the program (NowPlaying) and, for a service with song data, the song
+# (Tracks); both answer from their caches when fresh. _fetched runs once both have answered.
+sub _fetch {
+	my ( $master, $state ) = @_;
+
+	my $id = $state->{id};
+	my @sources = ( [ program => sub { $NOW_PLAYING->programNow( $id, @_ ) } ] );
+	push @sources, [ track => sub { $TRACKS->now( $id, @_ ) } ] if $TRACKS->hasSongs($id);
+
+	my %results;
+	my $left = @sources;
+	$state->{fetching} = 1;
+
+	for my $source (@sources) {
+		my ( $name, $start ) = @$source;
+
+		my $once = 0;
+		my $done = sub {
+			return if $once++;
+			$results{$name} = [@_];
+			_fetched( $master, $state, \%results ) unless --$left;
+		};
+
+		eval { $start->($done); 1 } or do {
+			_unexpected( "Live metadata $name fetch failed", $@ );
+			$done->( undef, 'request failed' );
+		};
+	}
+
+	return;
+}
+
+# The answers of NowPlaying (and Tracks), synchronous or not. Never dies: an update that fails is
+# retried after ERROR_DELAY rather than leaving the poll without a timer.
 sub _fetched {
-	my ( $master, $state, @result ) = @_;
+	my ( $master, $state, $results ) = @_;
 
 	delete $state->{fetching};
 
-	eval { _update( $master, $state, @result ); 1 } or do {
+	eval { _update( $master, $state, $results ); 1 } or do {
 		_unexpected( 'Live metadata update failed', $@ );
 		_schedule( $master, ERROR_DELAY ) if _isCurrent( $master, $state );
 	};
@@ -269,7 +345,7 @@ sub _fetched {
 }
 
 sub _update {
-	my ( $master, $state, $program, $error ) = @_;
+	my ( $master, $state, $results ) = @_;
 
 	# stopped, or stopped and started again, while the request was in flight
 	return unless _isCurrent( $master, $state );
@@ -277,12 +353,23 @@ sub _update {
 	my $url = $state->{url};
 	return _stop( $master, "not playing $url any more" ) unless _playsUrl( $master, $url );
 
-	if ( defined $error ) {
-		main::DEBUGLOG && $log->is_debug && $log->debug( "Live metadata: no program data for $state->{id} (fetch failed), no push" );
-		return _schedule( $master, ERROR_DELAY );
+	my $id = $state->{id};
+	my ( $program, $error ) = @{ $results->{program} || [] };
+
+	# track mode (L3): the song while it is current (with last-good), and its refresh delay
+	my $hasSongs   = $results->{track} ? 1 : 0;
+	my $song       = $hasSongs ? $TRACKS->current($id) : undef;
+	my $trackDelay = $hasSongs ? $TRACKS->pollIn($id)  : undef;
+
+	my $delay = defined $error ? ERROR_DELAY : nextDelay( $program, Time::HiRes::time() );
+	$delay = $trackDelay if defined $trackDelay && $trackDelay < $delay;
+
+	if ( defined $error && !$song ) {
+		main::DEBUGLOG && $log->is_debug && $log->debug( "Live metadata: no program data for $id (fetch failed), no push" );
+		return _schedule( $master, $delay );
 	}
 
-	my $meta = buildMeta( _station( $master, $url, $state->{id} ), $program || $NOW_PLAYING->lastGood( $state->{id} ) );
+	my $meta = buildMeta( _station( $master, $url, $id ), $program || $NOW_PLAYING->lastGood($id), $song );
 
 	if ( _changed( $master->pluginData(PUSHED_KEY), $meta ) ) {
 		_push( $master, $url, $meta );
@@ -292,7 +379,7 @@ sub _update {
 		main::DEBUGLOG && $log->is_debug && $log->debug( 'Live metadata: unchanged for ' . _who($master) . ', no push' );
 	}
 
-	_schedule( $master, nextDelay( $program, Time::HiRes::time() ) );
+	_schedule( $master, $delay );
 	return;
 }
 
@@ -458,6 +545,86 @@ sub _label {
 	my $program = shift;
 	my $slot    = $NOW_PLAYING->timeSlot($program);
 	return defined $slot ? $program->{title} . MIDDOT . $slot : $program->{title};
+}
+
+# ---------------------------------------------------------------------------
+# Song info: "Recently played" (L3)
+# ---------------------------------------------------------------------------
+
+sub recentInfo {
+	my ( $client, $url ) = @_;
+
+	my $item = eval {
+		my $parsed = Plugins::ABCListen::Util::parseUrl($url);
+		return undef unless $parsed && $parsed->{kind} eq 'live' && $TRACKS->station( $parsed->{id} );
+
+		{
+			name        => cstring( $client, 'PLUGIN_ABCLISTEN_RECENTLY_PLAYED' ),
+			type        => 'link',
+			url         => \&_recentlyPlayed,
+			passthrough => [ $parsed->{id} ],
+		};
+	};
+	_unexpected( 'Recently played entry failed', $@ ) if $@;
+
+	return $item;
+}
+
+sub _recentlyPlayed {
+	my ( $client, $cb, $args, $id ) = @_;
+
+	my ( $answered, $timer ) = (0);
+
+	my $answer = sub {
+		my $plays = shift;
+		return if $answered++;
+
+		if ($timer) {
+			Slim::Utils::Timers::killSpecific($timer);
+			undef $timer;
+		}
+
+		my $items = eval { _recentItems( $client, $plays ) };
+		if ( ref $items ne 'ARRAY' ) {
+			_unexpected( 'Recently played failed', $@ );
+			$items = [ { name => cstring( $client, 'PLUGIN_ABCLISTEN_NO_RECENT_TRACKS' ), type => 'text' } ];
+		}
+
+		$cb->( { items => $items } );
+	};
+
+	eval { $TRACKS->recent( $id, RECENT_ROWS, sub { $answer->( $_[0] ) } ); 1 } or do {
+		_unexpected( 'Recently played fetch failed', $@ );
+		$answer->(undef);
+	};
+
+	return if $answered;
+
+	$timer = Slim::Utils::Timers::setTimer( undef, Time::HiRes::time() + INFO_DEADLINE, sub {
+		undef $timer;
+		main::DEBUGLOG && $log->is_debug && $log->debug( "Recently played for $id: no answer within " . INFO_DEADLINE . ' s' );
+		$answer->(undef);
+	} );
+
+	return;
+}
+
+# Text rows "9:41pm · Artist – Title" (newest first), or one row saying there are none.
+sub _recentItems {
+	my ( $client, $plays ) = @_;
+
+	my @items;
+	for my $play ( ref $plays eq 'ARRAY' ? @$plays : () ) {
+		next unless ref $play eq 'HASH' && _isText( $play->{title} );
+
+		my $song = _isText( $play->{artist} ) ? $play->{artist} . EN_DASH . $play->{title} : $play->{title};
+		my $time = Plugins::ABCListen::Util::friendlyTime( $play->{playedTime} );
+
+		push @items, { type => 'text', name => defined $time ? $time . MIDDOT . $song : $song };
+		last if @items >= RECENT_ROWS;
+	}
+
+	return @items ? \@items : [ { name => cstring( $client, 'PLUGIN_ABCLISTEN_NO_RECENT_TRACKS' ), type => 'text' } ];
 }
 
 # ---------------------------------------------------------------------------

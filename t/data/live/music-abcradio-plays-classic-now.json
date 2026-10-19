@@ -1,0 +1,691 @@
+{
+ "next_updated": "2026-10-19T23:28:21+00:00",
+ "last_updated": "2026-10-19T23:27:33+00:00",
+ "next": {},
+ "now": {
+  "summary": {
+   "artist": "Boccherini, Luigi",
+   "title": "Sextet in E-flat major, Op. 38 No. 1, G467",
+   "properties": {
+    "performers": "Mark Gaydon (bassoon), Robert Nairn (double bass), Sally Walker (flute), Sarah Barrett (horn), Stephen King (viola), Elizabeth Layton (violin)",
+    "label": "Avie AV2698",
+    "year": "2024"
+   },
+   "links": {
+    "Youtube": "https://www.youtube.com/results?search_query=Boccherini%2C%20Luigi%20Sextet%20in%20E-flat%20major%2C%20Op.%2038%20No.%201%2C%20G467",
+    "Spotify": "https://open.spotify.com/search/Boccherini%2C%20Luigi%20Sextet%20in%20E-flat%20major%2C%20Op.%2038%20No.%201%2C%20G467",
+    "Apple": "https://music.apple.com/au/search?term=Boccherini%2C%20Luigi%20Sextet%20in%20E-flat%20major%2C%20Op.%2038%20No.%201%2C%20G467"
+   }
+  },
+  "entity": "Play",
+  "arid": "mpLgAqRRer",
+  "played_time": "2026-10-19T23:15:22+00:00",
+  "service_id": "classic",
+  "recording": {
+   "entity": "Recording",
+   "arid": "mtXYEy6opY",
+   "title": "Sextet in E-flat major, Op. 38 No. 1, G467",
+   "metadata": null,
+   "description": null,
+   "duration": 789,
+   "artists": [
+    {
+     "entity": "Artist",
+     "arid": "ma0eQOZNq5",
+     "name": "Sally Walker (flute) +  Elizabeth Layton (violin) +  Mark Gaydon (bassoon) +  Robert Nairn (double bass) +  Stephen King (viola) +  Sarah Barrett (horn)",
+     "artwork": [],
+     "links": [],
+     "is_australian": null,
+     "type": "primary",
+     "role": null
+    },
+    {
+     "entity": "Artist",
+     "arid": "makzow93z3",
+     "name": "Sally Walker",
+     "artwork": [],
+     "links": [],
+     "is_australian": null,
+     "type": "performer",
+     "role": "flute"
+    },
+    {
+     "entity": "Artist",
+     "arid": "maDeAo7D5K",
+     "name": "Elizabeth Layton",
+     "artwork": [],
+     "links": [],
+     "is_australian": null,
+     "type": "performer",
+     "role": "violin"
+    },
+    {
+     "entity": "Artist",
+     "arid": "maGYJr6LY7",
+     "name": "Mark Gaydon",
+     "artwork": [],
+     "links": [],
+     "is_australian": null,
+     "type": "performer",
+     "role": "bassoon"
+    },
+    {
+     "entity": "Artist",
+     "arid": "ma2YZmOD5k",
+     "name": "Robert Nairn",
+     "artwork": [],
+     "links": [],
+     "is_australian": null,
+     "type": "performer",
+     "role": "double bass"
+    },
+    {
+     "entity": "Artist",
+     "arid": "mab5W3Z9Z5",
+     "name": "Stephen King",
+     "artwork": [],
+     "links": [],
+     "is_australian": null,
+     "type": "performer",
+     "role": "viola"
+    },
+    {
+     "entity": "Artist",
+     "arid": "maX5BE94Bz",
+     "name": "Sarah Barrett",
+     "artwork": [],
+     "links": [],
+     "is_australian": null,
+     "type": "performer",
+     "role": "horn"
+    },
+    {
+     "entity": "Artist",
+     "arid": "maV521X9zQ",
+     "name": "Boccherini, Luigi",
+     "artwork": [],
+     "links": [],
+     "is_australian": true,
+     "type": "primaryComposer",
+     "role": null
+    }
+   ],
+   "releases": [
+    {
+     "entity": "Release",
+     "arid": "mr25apK13A",
+     "title": "Boccherini: Chamber Works for Flute - Quintet, Op. 19 - Sextet, Op. 38 - Quintet in C Major",
+     "format": null,
+     "artwork": [
+      {
+       "entity": "Artwork",
+       "arid": "mirPnlMqN9",
+       "url": "https://www.abc.net.au/classic/albumart/avie-av2698.jpg",
+       "type": "cover",
+       "title": null,
+       "mini_synopsis": null,
+       "short_synopsis": null,
+       "medium_synopsis": null,
+       "width": 600,
+       "height": 600,
+       "sizes": [
+        {
+         "url": "https://resize.abcradio.net.au/Nin4ZlwhcbVe9NqTWwlpze6A1uo=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Favie-av2698.jpg",
+         "width": 100,
+         "height": 100,
+         "aspect_ratio": "1x1"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/Dgfs-vMLhfQ23wkQ4nXCaQc_GAY=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Favie-av2698.jpg",
+         "width": 160,
+         "height": 160,
+         "aspect_ratio": "1x1"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/qQRL7cL-DFN12NqEyoLH6Dsf4mw=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Favie-av2698.jpg",
+         "width": 340,
+         "height": 340,
+         "aspect_ratio": "1x1"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/yYlAKGOr9-21MUnkaFWRbjah6wg=/580x580/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Favie-av2698.jpg",
+         "width": 580,
+         "height": 580,
+         "aspect_ratio": "1x1"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/pYNuwgxNzF9D8NgIGeZJKzyAHZc=/100x75/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Favie-av2698.jpg",
+         "width": 100,
+         "height": 75,
+         "aspect_ratio": "4x3"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/vRRzldXOeQ-yKVqM1ndGvEFPG64=/160x120/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Favie-av2698.jpg",
+         "width": 160,
+         "height": 120,
+         "aspect_ratio": "4x3"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/oiJSc7YFRHaaI23DMYBT4yG3A5k=/220x124/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Favie-av2698.jpg",
+         "width": 220,
+         "height": 124,
+         "aspect_ratio": "16x9"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/8moVaqN8yj4OF2Zp94v428N9J00=/580x326/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Favie-av2698.jpg",
+         "width": 580,
+         "height": 326,
+         "aspect_ratio": "16x9"
+        }
+       ],
+       "is_primary": null
+      }
+     ],
+     "links": [],
+     "artists": [
+      {
+       "entity": "Artist",
+       "arid": "ma0eQOZNq5",
+       "name": "Sally Walker (flute) +  Elizabeth Layton (violin) +  Mark Gaydon (bassoon) +  Robert Nairn (double bass) +  Stephen King (viola) +  Sarah Barrett (horn)",
+       "artwork": [],
+       "links": [],
+       "is_australian": null,
+       "type": "primary",
+       "role": null
+      },
+      {
+       "entity": "Artist",
+       "arid": "makzow93z3",
+       "name": "Sally Walker",
+       "artwork": [],
+       "links": [],
+       "is_australian": null,
+       "type": "performer",
+       "role": null
+      },
+      {
+       "entity": "Artist",
+       "arid": "maDeAo7D5K",
+       "name": "Elizabeth Layton",
+       "artwork": [],
+       "links": [],
+       "is_australian": null,
+       "type": "performer",
+       "role": null
+      },
+      {
+       "entity": "Artist",
+       "arid": "maGYJr6LY7",
+       "name": "Mark Gaydon",
+       "artwork": [],
+       "links": [],
+       "is_australian": null,
+       "type": "performer",
+       "role": null
+      },
+      {
+       "entity": "Artist",
+       "arid": "ma2YZmOD5k",
+       "name": "Robert Nairn",
+       "artwork": [],
+       "links": [],
+       "is_australian": null,
+       "type": "performer",
+       "role": null
+      },
+      {
+       "entity": "Artist",
+       "arid": "mab5W3Z9Z5",
+       "name": "Stephen King",
+       "artwork": [],
+       "links": [],
+       "is_australian": null,
+       "type": "performer",
+       "role": null
+      },
+      {
+       "entity": "Artist",
+       "arid": "maX5BE94Bz",
+       "name": "Sarah Barrett",
+       "artwork": [],
+       "links": [],
+       "is_australian": null,
+       "type": "performer",
+       "role": null
+      }
+     ],
+     "record_label": "Avie",
+     "release_year": "2024",
+     "release_album_id": "AV2698",
+     "is_primary": null
+    }
+   ],
+   "artwork": [],
+   "links": []
+  },
+  "release": {
+   "entity": "Release",
+   "arid": "mr25apK13A",
+   "title": "Boccherini: Chamber Works for Flute - Quintet, Op. 19 - Sextet, Op. 38 - Quintet in C Major",
+   "format": null,
+   "artwork": [
+    {
+     "entity": "Artwork",
+     "arid": "mirPnlMqN9",
+     "url": "https://www.abc.net.au/classic/albumart/avie-av2698.jpg",
+     "type": "cover",
+     "title": null,
+     "mini_synopsis": null,
+     "short_synopsis": null,
+     "medium_synopsis": null,
+     "width": 600,
+     "height": 600,
+     "sizes": [
+      {
+       "url": "https://resize.abcradio.net.au/Nin4ZlwhcbVe9NqTWwlpze6A1uo=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Favie-av2698.jpg",
+       "width": 100,
+       "height": 100,
+       "aspect_ratio": "1x1"
+      },
+      {
+       "url": "https://resize.abcradio.net.au/Dgfs-vMLhfQ23wkQ4nXCaQc_GAY=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Favie-av2698.jpg",
+       "width": 160,
+       "height": 160,
+       "aspect_ratio": "1x1"
+      },
+      {
+       "url": "https://resize.abcradio.net.au/qQRL7cL-DFN12NqEyoLH6Dsf4mw=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Favie-av2698.jpg",
+       "width": 340,
+       "height": 340,
+       "aspect_ratio": "1x1"
+      },
+      {
+       "url": "https://resize.abcradio.net.au/yYlAKGOr9-21MUnkaFWRbjah6wg=/580x580/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Favie-av2698.jpg",
+       "width": 580,
+       "height": 580,
+       "aspect_ratio": "1x1"
+      },
+      {
+       "url": "https://resize.abcradio.net.au/pYNuwgxNzF9D8NgIGeZJKzyAHZc=/100x75/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Favie-av2698.jpg",
+       "width": 100,
+       "height": 75,
+       "aspect_ratio": "4x3"
+      },
+      {
+       "url": "https://resize.abcradio.net.au/vRRzldXOeQ-yKVqM1ndGvEFPG64=/160x120/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Favie-av2698.jpg",
+       "width": 160,
+       "height": 120,
+       "aspect_ratio": "4x3"
+      },
+      {
+       "url": "https://resize.abcradio.net.au/oiJSc7YFRHaaI23DMYBT4yG3A5k=/220x124/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Favie-av2698.jpg",
+       "width": 220,
+       "height": 124,
+       "aspect_ratio": "16x9"
+      },
+      {
+       "url": "https://resize.abcradio.net.au/8moVaqN8yj4OF2Zp94v428N9J00=/580x326/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Favie-av2698.jpg",
+       "width": 580,
+       "height": 326,
+       "aspect_ratio": "16x9"
+      }
+     ],
+     "is_primary": null
+    }
+   ],
+   "links": [],
+   "artists": [
+    {
+     "entity": "Artist",
+     "arid": "ma0eQOZNq5",
+     "name": "Sally Walker (flute) +  Elizabeth Layton (violin) +  Mark Gaydon (bassoon) +  Robert Nairn (double bass) +  Stephen King (viola) +  Sarah Barrett (horn)",
+     "artwork": [],
+     "links": [],
+     "is_australian": null,
+     "type": "primary",
+     "role": null
+    },
+    {
+     "entity": "Artist",
+     "arid": "makzow93z3",
+     "name": "Sally Walker",
+     "artwork": [],
+     "links": [],
+     "is_australian": null,
+     "type": "performer",
+     "role": null
+    },
+    {
+     "entity": "Artist",
+     "arid": "maDeAo7D5K",
+     "name": "Elizabeth Layton",
+     "artwork": [],
+     "links": [],
+     "is_australian": null,
+     "type": "performer",
+     "role": null
+    },
+    {
+     "entity": "Artist",
+     "arid": "maGYJr6LY7",
+     "name": "Mark Gaydon",
+     "artwork": [],
+     "links": [],
+     "is_australian": null,
+     "type": "performer",
+     "role": null
+    },
+    {
+     "entity": "Artist",
+     "arid": "ma2YZmOD5k",
+     "name": "Robert Nairn",
+     "artwork": [],
+     "links": [],
+     "is_australian": null,
+     "type": "performer",
+     "role": null
+    },
+    {
+     "entity": "Artist",
+     "arid": "mab5W3Z9Z5",
+     "name": "Stephen King",
+     "artwork": [],
+     "links": [],
+     "is_australian": null,
+     "type": "performer",
+     "role": null
+    },
+    {
+     "entity": "Artist",
+     "arid": "maX5BE94Bz",
+     "name": "Sarah Barrett",
+     "artwork": [],
+     "links": [],
+     "is_australian": null,
+     "type": "performer",
+     "role": null
+    }
+   ],
+   "record_label": "Avie",
+   "release_year": "2024",
+   "release_album_id": "AV2698"
+  }
+ },
+ "prev": {
+  "summary": {
+   "artist": "Greenaway, Sally",
+   "title": "En Las Sombras",
+   "properties": {
+    "performers": "Matt Withers (guitar)",
+    "label": "Sally Greenaway",
+    "year": "2023"
+   },
+   "links": {
+    "Youtube": "https://www.youtube.com/results?search_query=Greenaway%2C%20Sally%20En%20Las%20Sombras",
+    "Spotify": "https://open.spotify.com/search/Greenaway%2C%20Sally%20En%20Las%20Sombras",
+    "Apple": "https://music.apple.com/au/search?term=Greenaway%2C%20Sally%20En%20Las%20Sombras"
+   }
+  },
+  "entity": "Play",
+  "arid": "mprJp288zL",
+  "played_time": "2026-10-19T23:09:08+00:00",
+  "service_id": "classic",
+  "recording": {
+   "entity": "Recording",
+   "arid": "mt9kWvPP7Y",
+   "title": "En Las Sombras",
+   "metadata": null,
+   "description": null,
+   "duration": 284,
+   "artists": [
+    {
+     "entity": "Artist",
+     "arid": "maQYx7pJ5o",
+     "name": "Matt Withers (guitar)",
+     "artwork": [],
+     "links": [],
+     "is_australian": null,
+     "type": "primary",
+     "role": null
+    },
+    {
+     "entity": "Artist",
+     "arid": "mave0vKd5G",
+     "name": "Greenaway, Sally",
+     "artwork": [],
+     "links": [],
+     "is_australian": true,
+     "type": "primaryComposer",
+     "role": null
+    }
+   ],
+   "releases": [
+    {
+     "entity": "Release",
+     "arid": "mrvABYxZPX",
+     "title": "En Las Sombras - Single",
+     "format": null,
+     "artwork": [
+      {
+       "entity": "Artwork",
+       "arid": "mi6gmNXqp9",
+       "url": "https://www.abc.net.au/classic/albumart/sallygreenaway-20230414.jpg",
+       "type": "cover",
+       "title": null,
+       "mini_synopsis": null,
+       "short_synopsis": null,
+       "medium_synopsis": null,
+       "width": 3000,
+       "height": 3000,
+       "sizes": [
+        {
+         "url": "https://resize.abcradio.net.au/_imv9OrVDfSZLcaMoAF3jlQZc4o=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+         "width": 100,
+         "height": 100,
+         "aspect_ratio": "1x1"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/aUacF29wKqV4IMOL3u1BqrI-zrQ=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+         "width": 160,
+         "height": 160,
+         "aspect_ratio": "1x1"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/G-HXCDE0pkcs61dcoshINXAGezY=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+         "width": 340,
+         "height": 340,
+         "aspect_ratio": "1x1"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/3IQMc8_jCC4Voy5yvWpWN7l2FAs=/580x580/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+         "width": 580,
+         "height": 580,
+         "aspect_ratio": "1x1"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/-HTCkQhvNi3JtfVnWQI_mpPCko4=/940x940/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+         "width": 940,
+         "height": 940,
+         "aspect_ratio": "1x1"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/sot9A82xWn3rkLmcjHnDNuP71X0=/1300x1300/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+         "width": 1300,
+         "height": 1300,
+         "aspect_ratio": "1x1"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/eL4duuJRJVsmWTzS4Bky6WOldgs=/100x75/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+         "width": 100,
+         "height": 75,
+         "aspect_ratio": "4x3"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/Q-a9v0648TbY82fCLBbZvUbbQxE=/160x120/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+         "width": 160,
+         "height": 120,
+         "aspect_ratio": "4x3"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/fe6Sxy81NNhesLA34JQtwet54qI=/220x124/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+         "width": 220,
+         "height": 124,
+         "aspect_ratio": "16x9"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/AkkEinb5C8AepXb5l9yqbJacwPs=/580x326/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+         "width": 580,
+         "height": 326,
+         "aspect_ratio": "16x9"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/7Mb77WpPlZycQ5Z4wVIySw0KjTc=/940x529/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+         "width": 940,
+         "height": 529,
+         "aspect_ratio": "16x9"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/_YT0gg56ihx1uqeq0MbWI3qaPww=/1300x731/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+         "width": 1300,
+         "height": 731,
+         "aspect_ratio": "16x9"
+        }
+       ],
+       "is_primary": null
+      }
+     ],
+     "links": [],
+     "artists": [
+      {
+       "entity": "Artist",
+       "arid": "maQYx7pJ5o",
+       "name": "Matt Withers (guitar)",
+       "artwork": [],
+       "links": [],
+       "is_australian": null,
+       "type": "primary",
+       "role": null
+      }
+     ],
+     "record_label": "Sally Greenaway",
+     "release_year": "2023",
+     "release_album_id": null,
+     "is_primary": null
+    }
+   ],
+   "artwork": [],
+   "links": []
+  },
+  "release": {
+   "entity": "Release",
+   "arid": "mrvABYxZPX",
+   "title": "En Las Sombras - Single",
+   "format": null,
+   "artwork": [
+    {
+     "entity": "Artwork",
+     "arid": "mi6gmNXqp9",
+     "url": "https://www.abc.net.au/classic/albumart/sallygreenaway-20230414.jpg",
+     "type": "cover",
+     "title": null,
+     "mini_synopsis": null,
+     "short_synopsis": null,
+     "medium_synopsis": null,
+     "width": 3000,
+     "height": 3000,
+     "sizes": [
+      {
+       "url": "https://resize.abcradio.net.au/_imv9OrVDfSZLcaMoAF3jlQZc4o=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+       "width": 100,
+       "height": 100,
+       "aspect_ratio": "1x1"
+      },
+      {
+       "url": "https://resize.abcradio.net.au/aUacF29wKqV4IMOL3u1BqrI-zrQ=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+       "width": 160,
+       "height": 160,
+       "aspect_ratio": "1x1"
+      },
+      {
+       "url": "https://resize.abcradio.net.au/G-HXCDE0pkcs61dcoshINXAGezY=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+       "width": 340,
+       "height": 340,
+       "aspect_ratio": "1x1"
+      },
+      {
+       "url": "https://resize.abcradio.net.au/3IQMc8_jCC4Voy5yvWpWN7l2FAs=/580x580/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+       "width": 580,
+       "height": 580,
+       "aspect_ratio": "1x1"
+      },
+      {
+       "url": "https://resize.abcradio.net.au/-HTCkQhvNi3JtfVnWQI_mpPCko4=/940x940/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+       "width": 940,
+       "height": 940,
+       "aspect_ratio": "1x1"
+      },
+      {
+       "url": "https://resize.abcradio.net.au/sot9A82xWn3rkLmcjHnDNuP71X0=/1300x1300/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+       "width": 1300,
+       "height": 1300,
+       "aspect_ratio": "1x1"
+      },
+      {
+       "url": "https://resize.abcradio.net.au/eL4duuJRJVsmWTzS4Bky6WOldgs=/100x75/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+       "width": 100,
+       "height": 75,
+       "aspect_ratio": "4x3"
+      },
+      {
+       "url": "https://resize.abcradio.net.au/Q-a9v0648TbY82fCLBbZvUbbQxE=/160x120/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+       "width": 160,
+       "height": 120,
+       "aspect_ratio": "4x3"
+      },
+      {
+       "url": "https://resize.abcradio.net.au/fe6Sxy81NNhesLA34JQtwet54qI=/220x124/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+       "width": 220,
+       "height": 124,
+       "aspect_ratio": "16x9"
+      },
+      {
+       "url": "https://resize.abcradio.net.au/AkkEinb5C8AepXb5l9yqbJacwPs=/580x326/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+       "width": 580,
+       "height": 326,
+       "aspect_ratio": "16x9"
+      },
+      {
+       "url": "https://resize.abcradio.net.au/7Mb77WpPlZycQ5Z4wVIySw0KjTc=/940x529/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+       "width": 940,
+       "height": 529,
+       "aspect_ratio": "16x9"
+      },
+      {
+       "url": "https://resize.abcradio.net.au/_YT0gg56ihx1uqeq0MbWI3qaPww=/1300x731/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fsallygreenaway-20230414.jpg",
+       "width": 1300,
+       "height": 731,
+       "aspect_ratio": "16x9"
+      }
+     ],
+     "is_primary": null
+    }
+   ],
+   "links": [],
+   "artists": [
+    {
+     "entity": "Artist",
+     "arid": "maQYx7pJ5o",
+     "name": "Matt Withers (guitar)",
+     "artwork": [],
+     "links": [],
+     "is_australian": null,
+     "type": "primary",
+     "role": null
+    }
+   ],
+   "record_label": "Sally Greenaway",
+   "release_year": "2023",
+   "release_album_id": null
+  }
+ }
+}

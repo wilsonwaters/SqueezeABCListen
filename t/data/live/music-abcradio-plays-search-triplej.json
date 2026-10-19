@@ -1,0 +1,2106 @@
+{
+ "total": 10000,
+ "offset": 0,
+ "limit": 10,
+ "items": [
+  {
+   "summary": {
+    "artist": "Genesis Owusu & KYE",
+    "title": "HUMAN AGAIN",
+    "links": {
+     "Youtube": "https://www.youtube.com/results?search_query=Genesis%20Owusu%20%26%20KYE%20HUMAN%20AGAIN",
+     "Spotify": "https://open.spotify.com/search/Genesis%20Owusu%20%26%20KYE%20HUMAN%20AGAIN",
+     "Apple": "https://music.apple.com/au/search?term=Genesis%20Owusu%20%26%20KYE%20HUMAN%20AGAIN"
+    }
+   },
+   "entity": "Play",
+   "arid": "mprbYkZ23d",
+   "played_time": "2026-10-19T23:32:16+00:00",
+   "service_id": "triplej",
+   "recording": {
+    "entity": "Recording",
+    "arid": "mtVgn2GaJg",
+    "title": "HUMAN AGAIN",
+    "metadata": null,
+    "description": null,
+    "duration": 195,
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "maoe3db2vz",
+      "name": "Genesis Owusu & KYE",
+      "artwork": [],
+      "links": [],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "releases": [
+     {
+      "entity": "Release",
+      "arid": "mrPAD8eG0A",
+      "title": "Human Again",
+      "format": null,
+      "artwork": [
+       {
+        "entity": "Artwork",
+        "arid": "mive6n0Xne",
+        "url": "https://www.abc.net.au/triplej/albums/genesisowusu-humanagain.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 1000,
+        "height": 1000,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/J9puZOEW6RvJYTQGWgjCK0gjwsA=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fgenesisowusu-humanagain.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       }
+      ],
+      "links": [],
+      "artists": [
+       {
+        "entity": "Artist",
+        "arid": "maoe3db2vz",
+        "name": "Genesis Owusu & KYE",
+        "artwork": [],
+        "links": [],
+        "is_australian": true,
+        "type": "primary",
+        "role": null
+       }
+      ],
+      "record_label": null,
+      "release_year": "2026",
+      "release_album_id": null,
+      "is_primary": null
+     },
+     {
+      "entity": "Release",
+      "arid": "mraXqWBEW5",
+      "title": "HUMAN AGAIN",
+      "format": null,
+      "artwork": [
+       {
+        "entity": "Artwork",
+        "arid": "miLg438aZP",
+        "url": "https://www.abc.net.au/triplej/albums/genesisowusu-humanagain.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 1000,
+        "height": 1000,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/J9puZOEW6RvJYTQGWgjCK0gjwsA=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fgenesisowusu-humanagain.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       },
+       {
+        "entity": "Artwork",
+        "arid": "mi5gGo4Opg",
+        "url": "https://www.abc.net.au/triplej/albums/genesisowusukye-humanagain.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 1000,
+        "height": 1000,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/tMworeLv8Z4H5eH1GQ2GUJmi3FE=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fgenesisowusukye-humanagain.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       },
+       {
+        "entity": "Artwork",
+        "arid": "miwPQBEwag",
+        "url": "https://abc.net.au/triplej/albums/playlist/207f9201d127531267be39c8c49fb7af3244.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 600,
+        "height": 600,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/O-ccPM1H2h1PSU-2WqU3AiRWCqw=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F207f9201d127531267be39c8c49fb7af3244.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       },
+       {
+        "entity": "Artwork",
+        "arid": "miNgz3YAR9",
+        "url": "https://abc.net.au/triplej/albums/playlist/207f9201d127531267be39c8c49fb7af1018.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 600,
+        "height": 600,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/2pJq061UbkIKXVco6ubPDs_Zozc=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F207f9201d127531267be39c8c49fb7af1018.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       }
+      ],
+      "links": [],
+      "artists": [
+       {
+        "entity": "Artist",
+        "arid": "maoe3db2vz",
+        "name": "Genesis Owusu & KYE",
+        "artwork": [],
+        "links": [],
+        "is_australian": true,
+        "type": "primary",
+        "role": null
+       }
+      ],
+      "record_label": null,
+      "release_year": "2026",
+      "release_album_id": null,
+      "is_primary": null
+     }
+    ],
+    "artwork": [],
+    "links": []
+   },
+   "release": {
+    "entity": "Release",
+    "arid": "mraXqWBEW5",
+    "title": "HUMAN AGAIN",
+    "format": null,
+    "artwork": [
+     {
+      "entity": "Artwork",
+      "arid": "miLg438aZP",
+      "url": "https://www.abc.net.au/triplej/albums/genesisowusu-humanagain.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 1000,
+      "height": 1000,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/J9puZOEW6RvJYTQGWgjCK0gjwsA=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fgenesisowusu-humanagain.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     },
+     {
+      "entity": "Artwork",
+      "arid": "mi5gGo4Opg",
+      "url": "https://www.abc.net.au/triplej/albums/genesisowusukye-humanagain.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 1000,
+      "height": 1000,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/tMworeLv8Z4H5eH1GQ2GUJmi3FE=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fgenesisowusukye-humanagain.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     },
+     {
+      "entity": "Artwork",
+      "arid": "miwPQBEwag",
+      "url": "https://abc.net.au/triplej/albums/playlist/207f9201d127531267be39c8c49fb7af3244.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 600,
+      "height": 600,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/O-ccPM1H2h1PSU-2WqU3AiRWCqw=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F207f9201d127531267be39c8c49fb7af3244.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     },
+     {
+      "entity": "Artwork",
+      "arid": "miNgz3YAR9",
+      "url": "https://abc.net.au/triplej/albums/playlist/207f9201d127531267be39c8c49fb7af1018.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 600,
+      "height": 600,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/2pJq061UbkIKXVco6ubPDs_Zozc=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F207f9201d127531267be39c8c49fb7af1018.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     }
+    ],
+    "links": [],
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "maoe3db2vz",
+      "name": "Genesis Owusu & KYE",
+      "artwork": [],
+      "links": [],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "record_label": null,
+    "release_year": "2026",
+    "release_album_id": null
+   }
+  },
+  {
+   "summary": {
+    "artist": "Spacey Jane",
+    "title": "East Village",
+    "links": {
+     "Youtube": "https://www.youtube.com/results?search_query=Spacey%20Jane%20East%20Village",
+     "Spotify": "https://open.spotify.com/search/Spacey%20Jane%20East%20Village",
+     "Apple": "https://music.apple.com/au/search?term=Spacey%20Jane%20East%20Village"
+    }
+   },
+   "entity": "Play",
+   "arid": "mpLGo85g6L",
+   "played_time": "2026-10-19T23:28:54+00:00",
+   "service_id": "triplej",
+   "recording": {
+    "entity": "Recording",
+    "arid": "mtygxOe6vk",
+    "title": "East Village",
+    "metadata": null,
+    "description": null,
+    "duration": 210,
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "maaYaQ6RYP",
+      "name": "Spacey Jane",
+      "artwork": [],
+      "links": [],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "releases": [
+     {
+      "entity": "Release",
+      "arid": "mrnynY1oa5",
+      "title": "Exit Wounds",
+      "format": null,
+      "artwork": [
+       {
+        "entity": "Artwork",
+        "arid": "mi7eLLZxoe",
+        "url": "https://www.abc.net.au/triplej/albums/spaceyjane-exitwounds.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 1000,
+        "height": 1000,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/0JLlwESpUU_RQACW31ERGXjeugc=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fspaceyjane-exitwounds.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       }
+      ],
+      "links": [],
+      "artists": [
+       {
+        "entity": "Artist",
+        "arid": "maaYaQ6RYP",
+        "name": "Spacey Jane",
+        "artwork": [],
+        "links": [],
+        "is_australian": true,
+        "type": "primary",
+        "role": null
+       }
+      ],
+      "record_label": null,
+      "release_year": "2026",
+      "release_album_id": null,
+      "is_primary": null
+     }
+    ],
+    "artwork": [],
+    "links": []
+   },
+   "release": {
+    "entity": "Release",
+    "arid": "mrnynY1oa5",
+    "title": "Exit Wounds",
+    "format": null,
+    "artwork": [
+     {
+      "entity": "Artwork",
+      "arid": "mi7eLLZxoe",
+      "url": "https://www.abc.net.au/triplej/albums/spaceyjane-exitwounds.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 1000,
+      "height": 1000,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/0JLlwESpUU_RQACW31ERGXjeugc=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fspaceyjane-exitwounds.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     }
+    ],
+    "links": [],
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "maaYaQ6RYP",
+      "name": "Spacey Jane",
+      "artwork": [],
+      "links": [],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "record_label": null,
+    "release_year": "2026",
+    "release_album_id": null
+   }
+  },
+  {
+   "summary": {
+    "artist": "Swapmeet",
+    "title": "Halfway",
+    "links": {
+     "Unearthed": "https://www.abc.net.au/triplejunearthed/artist/swapmeet",
+     "Youtube": "https://www.youtube.com/results?search_query=Swapmeet%20Halfway",
+     "Spotify": "https://open.spotify.com/search/Swapmeet%20Halfway",
+     "Apple": "https://music.apple.com/au/search?term=Swapmeet%20Halfway"
+    }
+   },
+   "entity": "Play",
+   "arid": "mpnYvKg5AL",
+   "played_time": "2026-10-19T23:25:22+00:00",
+   "service_id": "triplej",
+   "recording": {
+    "entity": "Recording",
+    "arid": "mt5g1PRZBk",
+    "title": "Halfway",
+    "metadata": null,
+    "description": null,
+    "duration": 212,
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "mave06nRZ5",
+      "name": "Swapmeet",
+      "artwork": [],
+      "links": [
+       {
+        "entity": "Link",
+        "arid": "mlA0POJrMk",
+        "url": "https://www.abc.net.au/triplejunearthed/artist/swapmeet",
+        "id_component": "8fd57cd7e14e8b8474c5c3e5df7310c2",
+        "service_id": "unearthed",
+        "title": "Unearthed Artist",
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "type": "profile",
+        "provider": "unearthed",
+        "external": false
+       }
+      ],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "releases": [
+     {
+      "entity": "Release",
+      "arid": "mroAeYv0VA",
+      "title": "Halfway",
+      "format": null,
+      "artwork": [
+       {
+        "entity": "Artwork",
+        "arid": "miZP11bLKP",
+        "url": "https://abc.net.au/triplej/albums/playlist/a81f5a487ced68b0ac4670181626d33c9900.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 300,
+        "height": 300,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/LPtEoceVuoSJJ7NO173EOISIT0A=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2Fa81f5a487ced68b0ac4670181626d33c9900.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       }
+      ],
+      "links": [],
+      "artists": [
+       {
+        "entity": "Artist",
+        "arid": "mave06nRZ5",
+        "name": "Swapmeet",
+        "artwork": [],
+        "links": [
+         {
+          "entity": "Link",
+          "arid": "mlA0POJrMk",
+          "url": "https://www.abc.net.au/triplejunearthed/artist/swapmeet",
+          "id_component": "8fd57cd7e14e8b8474c5c3e5df7310c2",
+          "service_id": "unearthed",
+          "title": "Unearthed Artist",
+          "mini_synopsis": null,
+          "short_synopsis": null,
+          "medium_synopsis": null,
+          "type": "profile",
+          "provider": "unearthed",
+          "external": false
+         }
+        ],
+        "is_australian": true,
+        "type": "primary",
+        "role": null
+       }
+      ],
+      "record_label": null,
+      "release_year": null,
+      "release_album_id": null,
+      "is_primary": null
+     },
+     {
+      "entity": "Release",
+      "arid": "mrKyQ3oklA",
+      "title": "Mount Zero",
+      "format": null,
+      "artwork": [
+       {
+        "entity": "Artwork",
+        "arid": "miQeRzp7ze",
+        "url": "https://www.abc.net.au/triplej/albums/swapmeet-mountzero.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 600,
+        "height": 600,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/clhLEwWlBId2tHA_NB1oos97TNg=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fswapmeet-mountzero.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       }
+      ],
+      "links": [],
+      "artists": [
+       {
+        "entity": "Artist",
+        "arid": "mave06nRZ5",
+        "name": "Swapmeet",
+        "artwork": [],
+        "links": [
+         {
+          "entity": "Link",
+          "arid": "mlA0POJrMk",
+          "url": "https://www.abc.net.au/triplejunearthed/artist/swapmeet",
+          "id_component": "8fd57cd7e14e8b8474c5c3e5df7310c2",
+          "service_id": "unearthed",
+          "title": "Unearthed Artist",
+          "mini_synopsis": null,
+          "short_synopsis": null,
+          "medium_synopsis": null,
+          "type": "profile",
+          "provider": "unearthed",
+          "external": false
+         }
+        ],
+        "is_australian": true,
+        "type": "primary",
+        "role": null
+       }
+      ],
+      "record_label": null,
+      "release_year": "2026",
+      "release_album_id": null,
+      "is_primary": null
+     }
+    ],
+    "artwork": [],
+    "links": []
+   },
+   "release": {
+    "entity": "Release",
+    "arid": "mrKyQ3oklA",
+    "title": "Mount Zero",
+    "format": null,
+    "artwork": [
+     {
+      "entity": "Artwork",
+      "arid": "miQeRzp7ze",
+      "url": "https://www.abc.net.au/triplej/albums/swapmeet-mountzero.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 600,
+      "height": 600,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/clhLEwWlBId2tHA_NB1oos97TNg=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fswapmeet-mountzero.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     }
+    ],
+    "links": [],
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "mave06nRZ5",
+      "name": "Swapmeet",
+      "artwork": [],
+      "links": [
+       {
+        "entity": "Link",
+        "arid": "mlA0POJrMk",
+        "url": "https://www.abc.net.au/triplejunearthed/artist/swapmeet",
+        "id_component": "8fd57cd7e14e8b8474c5c3e5df7310c2",
+        "service_id": "unearthed",
+        "title": "Unearthed Artist",
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "type": "profile",
+        "provider": "unearthed",
+        "external": false
+       }
+      ],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "record_label": null,
+    "release_year": "2026",
+    "release_album_id": null
+   }
+  },
+  {
+   "summary": {
+    "artist": "DJ_Dave",
+    "title": "Fail-safe",
+    "links": {
+     "Youtube": "https://www.youtube.com/results?search_query=DJ_Dave%20Fail-safe",
+     "Spotify": "https://open.spotify.com/search/DJ_Dave%20Fail-safe",
+     "Apple": "https://music.apple.com/au/search?term=DJ_Dave%20Fail-safe"
+    }
+   },
+   "entity": "Play",
+   "arid": "mpnvRPMM9n",
+   "played_time": "2026-10-19T23:21:19+00:00",
+   "service_id": "triplej",
+   "recording": {
+    "entity": "Recording",
+    "arid": "mtVKQpe2Vg",
+    "title": "Fail-safe",
+    "metadata": null,
+    "description": null,
+    "duration": 206,
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "maJzlBKxLY",
+      "name": "DJ_Dave",
+      "artwork": [],
+      "links": [],
+      "is_australian": null,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "releases": [
+     {
+      "entity": "Release",
+      "arid": "mrOXKD2voA",
+      "title": "Hardcore Software",
+      "format": null,
+      "artwork": [
+       {
+        "entity": "Artwork",
+        "arid": "mix9dDqWy9",
+        "url": "https://www.abc.net.au/triplej/albums/djdave-hardcoresoftware.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 600,
+        "height": 600,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/DAKQXEzFGQ0J30QgvZMde-byiy8=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fdjdave-hardcoresoftware.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       }
+      ],
+      "links": [],
+      "artists": [
+       {
+        "entity": "Artist",
+        "arid": "maJzlBKxLY",
+        "name": "DJ_Dave",
+        "artwork": [],
+        "links": [],
+        "is_australian": null,
+        "type": "primary",
+        "role": null
+       }
+      ],
+      "record_label": null,
+      "release_year": "2026",
+      "release_album_id": null,
+      "is_primary": null
+     }
+    ],
+    "artwork": [],
+    "links": []
+   },
+   "release": {
+    "entity": "Release",
+    "arid": "mrOXKD2voA",
+    "title": "Hardcore Software",
+    "format": null,
+    "artwork": [
+     {
+      "entity": "Artwork",
+      "arid": "mix9dDqWy9",
+      "url": "https://www.abc.net.au/triplej/albums/djdave-hardcoresoftware.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 600,
+      "height": 600,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/DAKQXEzFGQ0J30QgvZMde-byiy8=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fdjdave-hardcoresoftware.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     }
+    ],
+    "links": [],
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "maJzlBKxLY",
+      "name": "DJ_Dave",
+      "artwork": [],
+      "links": [],
+      "is_australian": null,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "record_label": null,
+    "release_year": "2026",
+    "release_album_id": null
+   }
+  },
+  {
+   "summary": {
+    "artist": "Troye Sivan",
+    "title": "FF",
+    "links": {
+     "Unearthed": "https://www.abc.net.au/triplejunearthed/artist/troye-sivan",
+     "Youtube": "https://www.youtube.com/results?search_query=Troye%20Sivan%20FF",
+     "Spotify": "https://open.spotify.com/search/Troye%20Sivan%20FF",
+     "Apple": "https://music.apple.com/au/search?term=Troye%20Sivan%20FF"
+    }
+   },
+   "entity": "Play",
+   "arid": "mpnOy066zd",
+   "played_time": "2026-10-19T23:17:04+00:00",
+   "service_id": "triplej",
+   "recording": {
+    "entity": "Recording",
+    "arid": "mtMg9jExlK",
+    "title": "FF",
+    "metadata": null,
+    "description": null,
+    "duration": 261,
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "ma0eQGJd51",
+      "name": "Troye Sivan",
+      "artwork": [],
+      "links": [
+       {
+        "entity": "Link",
+        "arid": "mlA0VJP2r0",
+        "url": "https://www.abc.net.au/triplejunearthed/artist/troye-sivan",
+        "id_component": "b9bd7ad306111521d73c61a896e74225",
+        "service_id": "unearthed",
+        "title": "Unearthed Artist",
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "type": "profile",
+        "provider": "unearthed",
+        "external": false
+       }
+      ],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "releases": [
+     {
+      "entity": "Release",
+      "arid": "mr6AzaZWaX",
+      "title": "She's the Best",
+      "format": null,
+      "artwork": [
+       {
+        "entity": "Artwork",
+        "arid": "mi1g5pXrvP",
+        "url": "https://www.abc.net.au/triplej/albums/troyesivan-shesthebest.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 800,
+        "height": 800,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/ejbC25IU41y4PrFmxs_cBjl384w=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Ftroyesivan-shesthebest.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       },
+       {
+        "entity": "Artwork",
+        "arid": "mi0eXvLArg",
+        "url": "https://abc.net.au/triplej/albums/playlist/cdb9941223846552e54fd9d1d226e2a72921.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 600,
+        "height": 600,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/A2ixDdSODVRK9WE-Y7E4FHiEJj4=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2Fcdb9941223846552e54fd9d1d226e2a72921.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       },
+       {
+        "entity": "Artwork",
+        "arid": "miNgz3nGn9",
+        "url": "https://abc.net.au/triplej/albums/playlist/cdb9941223846552e54fd9d1d226e2a74587.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 600,
+        "height": 600,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/Uq3PeZFbV1MRyKsnuXoWh87g51g=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2Fcdb9941223846552e54fd9d1d226e2a74587.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       }
+      ],
+      "links": [],
+      "artists": [
+       {
+        "entity": "Artist",
+        "arid": "ma0eQGJd51",
+        "name": "Troye Sivan",
+        "artwork": [],
+        "links": [
+         {
+          "entity": "Link",
+          "arid": "mlA0VJP2r0",
+          "url": "https://www.abc.net.au/triplejunearthed/artist/troye-sivan",
+          "id_component": "b9bd7ad306111521d73c61a896e74225",
+          "service_id": "unearthed",
+          "title": "Unearthed Artist",
+          "mini_synopsis": null,
+          "short_synopsis": null,
+          "medium_synopsis": null,
+          "type": "profile",
+          "provider": "unearthed",
+          "external": false
+         }
+        ],
+        "is_australian": true,
+        "type": "primary",
+        "role": null
+       }
+      ],
+      "record_label": null,
+      "release_year": "2026",
+      "release_album_id": null,
+      "is_primary": null
+     }
+    ],
+    "artwork": [],
+    "links": []
+   },
+   "release": {
+    "entity": "Release",
+    "arid": "mr6AzaZWaX",
+    "title": "She's the Best",
+    "format": null,
+    "artwork": [
+     {
+      "entity": "Artwork",
+      "arid": "mi1g5pXrvP",
+      "url": "https://www.abc.net.au/triplej/albums/troyesivan-shesthebest.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 800,
+      "height": 800,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/ejbC25IU41y4PrFmxs_cBjl384w=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Ftroyesivan-shesthebest.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     },
+     {
+      "entity": "Artwork",
+      "arid": "mi0eXvLArg",
+      "url": "https://abc.net.au/triplej/albums/playlist/cdb9941223846552e54fd9d1d226e2a72921.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 600,
+      "height": 600,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/A2ixDdSODVRK9WE-Y7E4FHiEJj4=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2Fcdb9941223846552e54fd9d1d226e2a72921.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     },
+     {
+      "entity": "Artwork",
+      "arid": "miNgz3nGn9",
+      "url": "https://abc.net.au/triplej/albums/playlist/cdb9941223846552e54fd9d1d226e2a74587.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 600,
+      "height": 600,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/Uq3PeZFbV1MRyKsnuXoWh87g51g=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2Fcdb9941223846552e54fd9d1d226e2a74587.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     }
+    ],
+    "links": [],
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "ma0eQGJd51",
+      "name": "Troye Sivan",
+      "artwork": [],
+      "links": [
+       {
+        "entity": "Link",
+        "arid": "mlA0VJP2r0",
+        "url": "https://www.abc.net.au/triplejunearthed/artist/troye-sivan",
+        "id_component": "b9bd7ad306111521d73c61a896e74225",
+        "service_id": "unearthed",
+        "title": "Unearthed Artist",
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "type": "profile",
+        "provider": "unearthed",
+        "external": false
+       }
+      ],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "record_label": null,
+    "release_year": "2026",
+    "release_album_id": null
+   }
+  },
+  {
+   "summary": {
+    "artist": "Gang Of Youths",
+    "title": "Magnolia",
+    "links": {
+     "Unearthed": "https://www.abc.net.au/triplejunearthed/artist/gang-youths/",
+     "Youtube": "https://www.youtube.com/results?search_query=Gang%20Of%20Youths%20Magnolia",
+     "Spotify": "https://open.spotify.com/search/Gang%20Of%20Youths%20Magnolia",
+     "Apple": "https://music.apple.com/au/search?term=Gang%20Of%20Youths%20Magnolia"
+    }
+   },
+   "entity": "Play",
+   "count": 42,
+   "arid": "mpd6EMgg0L",
+   "played_time": "2026-10-19T23:11:11+00:00",
+   "service_id": "triplej",
+   "recording": {
+    "countdown": {
+     "count": 21,
+     "title": "2015"
+    },
+    "entity": "Recording",
+    "arid": "mtZK2adWgp",
+    "title": "Magnolia",
+    "metadata": null,
+    "description": null,
+    "duration": 309,
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "maPeRVjged",
+      "name": "Gang Of Youths",
+      "artwork": [],
+      "links": [
+       {
+        "entity": "Link",
+        "arid": "mlGk7xqp07",
+        "url": "https://www.abc.net.au/triplejunearthed/artist/gang-youths/",
+        "id_component": "113311",
+        "title": "Unearthed artist",
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "type": "service",
+        "provider": "unearthed",
+        "external": false
+       }
+      ],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "releases": [
+     {
+      "entity": "Release",
+      "arid": "mrmX4jlz5G",
+      "title": "The Positions",
+      "format": null,
+      "artwork": [
+       {
+        "entity": "Artwork",
+        "arid": "mi6gm2KO9n",
+        "url": "https://images.abcradio.net.au/abc-music-api-triplej-production/release/mi6gm2KO9n/ebc6c1c99e44f985c2ea4a45bc79b62f.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 960,
+        "height": 960,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/-RQza9N6gfkQ72Z5qGFbpPI8wxc=/100x100/center/middle/https%3A%2F%2Fimages.abcradio.net.au%2Fabc-music-api-triplej-production%2Frelease%2Fmi6gm2KO9n%2Febc6c1c99e44f985c2ea4a45bc79b62f.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": false
+       },
+       {
+        "entity": "Artwork",
+        "arid": "mi6gmKjGGe",
+        "url": "https://www.abc.net.au/triplej/albums/53464/covers/original.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 960,
+        "height": 960,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/9Ath10iEvCCDGsZDUJs_sHxsXYw=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2F53464%2Fcovers%2Foriginal.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": false
+       },
+       {
+        "entity": "Artwork",
+        "arid": "mi6gmK0aOe",
+        "url": "https://www.abc.net.au/triplej/albums/53523/covers/original.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 960,
+        "height": 960,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/G-KnqzfUP00wlttzqIRBCX1fF7I=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2F53523%2Fcovers%2Foriginal.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": false
+       }
+      ],
+      "links": [],
+      "artists": [
+       {
+        "entity": "Artist",
+        "arid": "maPeRVjged",
+        "name": "Gang Of Youths",
+        "artwork": [],
+        "links": [
+         {
+          "entity": "Link",
+          "arid": "mlGk7xqp07",
+          "url": "https://www.abc.net.au/triplejunearthed/artist/gang-youths/",
+          "id_component": "113311",
+          "title": "Unearthed artist",
+          "mini_synopsis": null,
+          "short_synopsis": null,
+          "medium_synopsis": null,
+          "type": "service",
+          "provider": "unearthed",
+          "external": false
+         }
+        ],
+        "is_australian": true,
+        "type": "primary",
+        "role": null
+       }
+      ],
+      "record_label": null,
+      "release_year": "2015",
+      "release_album_id": "53523",
+      "is_primary": true
+     },
+     {
+      "entity": "Release",
+      "arid": "mrLX2DVP5n",
+      "title": "Magnolia",
+      "format": null,
+      "artwork": [],
+      "links": [],
+      "artists": [
+       {
+        "entity": "Artist",
+        "arid": "maPeRVjged",
+        "name": "Gang Of Youths",
+        "artwork": [],
+        "links": [
+         {
+          "entity": "Link",
+          "arid": "mlGk7xqp07",
+          "url": "https://www.abc.net.au/triplejunearthed/artist/gang-youths/",
+          "id_component": "113311",
+          "title": "Unearthed artist",
+          "mini_synopsis": null,
+          "short_synopsis": null,
+          "medium_synopsis": null,
+          "type": "service",
+          "provider": "unearthed",
+          "external": false
+         }
+        ],
+        "is_australian": true,
+        "type": "primary",
+        "role": null
+       }
+      ],
+      "record_label": null,
+      "release_year": null,
+      "release_album_id": null,
+      "is_primary": false
+     }
+    ],
+    "artwork": [],
+    "links": []
+   },
+   "release": {
+    "entity": "Release",
+    "arid": "mrmX4jlz5G",
+    "title": "The Positions",
+    "format": null,
+    "artwork": [
+     {
+      "entity": "Artwork",
+      "arid": "mi6gm2KO9n",
+      "url": "https://images.abcradio.net.au/abc-music-api-triplej-production/release/mi6gm2KO9n/ebc6c1c99e44f985c2ea4a45bc79b62f.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 960,
+      "height": 960,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/-RQza9N6gfkQ72Z5qGFbpPI8wxc=/100x100/center/middle/https%3A%2F%2Fimages.abcradio.net.au%2Fabc-music-api-triplej-production%2Frelease%2Fmi6gm2KO9n%2Febc6c1c99e44f985c2ea4a45bc79b62f.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": false
+     },
+     {
+      "entity": "Artwork",
+      "arid": "mi6gmKjGGe",
+      "url": "https://www.abc.net.au/triplej/albums/53464/covers/original.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 960,
+      "height": 960,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/9Ath10iEvCCDGsZDUJs_sHxsXYw=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2F53464%2Fcovers%2Foriginal.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": false
+     },
+     {
+      "entity": "Artwork",
+      "arid": "mi6gmK0aOe",
+      "url": "https://www.abc.net.au/triplej/albums/53523/covers/original.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 960,
+      "height": 960,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/G-KnqzfUP00wlttzqIRBCX1fF7I=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2F53523%2Fcovers%2Foriginal.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": false
+     }
+    ],
+    "links": [],
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "maPeRVjged",
+      "name": "Gang Of Youths",
+      "artwork": [],
+      "links": [
+       {
+        "entity": "Link",
+        "arid": "mlGk7xqp07",
+        "url": "https://www.abc.net.au/triplejunearthed/artist/gang-youths/",
+        "id_component": "113311",
+        "title": "Unearthed artist",
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "type": "service",
+        "provider": "unearthed",
+        "external": false
+       }
+      ],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "record_label": null,
+    "release_year": "2015",
+    "release_album_id": "53523"
+   }
+  },
+  {
+   "summary": {
+    "artist": "girl in red",
+    "title": "blue",
+    "links": {
+     "Youtube": "https://www.youtube.com/results?search_query=girl%20in%20red%20blue",
+     "Spotify": "https://open.spotify.com/search/girl%20in%20red%20blue",
+     "Apple": "https://music.apple.com/au/search?term=girl%20in%20red%20blue"
+    }
+   },
+   "entity": "Play",
+   "arid": "mpL5qyzzAL",
+   "played_time": "2026-10-19T23:06:58+00:00",
+   "service_id": "triplej",
+   "recording": {
+    "entity": "Recording",
+    "arid": "mtjgdm6q5K",
+    "title": "blue",
+    "metadata": null,
+    "description": null,
+    "duration": 247,
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "mawejjnreR",
+      "name": "girl in red",
+      "artwork": [],
+      "links": [],
+      "is_australian": null,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "releases": [
+     {
+      "entity": "Release",
+      "arid": "mrq5YdGRLA",
+      "title": "blue",
+      "format": null,
+      "artwork": [
+       {
+        "entity": "Artwork",
+        "arid": "milPOA2km9",
+        "url": "https://www.abc.net.au/triplej/albums/girlinred-blue.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 1000,
+        "height": 1000,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/wz8elcHse8-suIWeDZAfhOQRs5g=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fgirlinred-blue.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       }
+      ],
+      "links": [],
+      "artists": [
+       {
+        "entity": "Artist",
+        "arid": "mawejjnreR",
+        "name": "girl in red",
+        "artwork": [],
+        "links": [],
+        "is_australian": null,
+        "type": "primary",
+        "role": null
+       }
+      ],
+      "record_label": null,
+      "release_year": "2026",
+      "release_album_id": null,
+      "is_primary": null
+     }
+    ],
+    "artwork": [],
+    "links": []
+   },
+   "release": {
+    "entity": "Release",
+    "arid": "mrq5YdGRLA",
+    "title": "blue",
+    "format": null,
+    "artwork": [
+     {
+      "entity": "Artwork",
+      "arid": "milPOA2km9",
+      "url": "https://www.abc.net.au/triplej/albums/girlinred-blue.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 1000,
+      "height": 1000,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/wz8elcHse8-suIWeDZAfhOQRs5g=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fgirlinred-blue.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     }
+    ],
+    "links": [],
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "mawejjnreR",
+      "name": "girl in red",
+      "artwork": [],
+      "links": [],
+      "is_australian": null,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "record_label": null,
+    "release_year": "2026",
+    "release_album_id": null
+   }
+  },
+  {
+   "summary": {
+    "artist": "Tobiahs & VV-Ace",
+    "title": "Where You Really Come From",
+    "links": {
+     "Youtube": "https://www.youtube.com/results?search_query=Tobiahs%20%26%20VV-Ace%20Where%20You%20Really%20Come%20From",
+     "Spotify": "https://open.spotify.com/search/Tobiahs%20%26%20VV-Ace%20Where%20You%20Really%20Come%20From",
+     "Apple": "https://music.apple.com/au/search?term=Tobiahs%20%26%20VV-Ace%20Where%20You%20Really%20Come%20From"
+    }
+   },
+   "entity": "Play",
+   "arid": "mpr1eWbbqr",
+   "played_time": "2026-10-19T23:02:56+00:00",
+   "service_id": "triplej",
+   "recording": {
+    "entity": "Recording",
+    "arid": "mteK5j8W7Y",
+    "title": "Where You Really Come From",
+    "metadata": null,
+    "description": null,
+    "duration": 176,
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "mab5W3rL95",
+      "name": "Tobiahs & VV-Ace",
+      "artwork": [],
+      "links": [],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "releases": [
+     {
+      "entity": "Release",
+      "arid": "mrmXl0lVxX",
+      "title": "Where You Really Come From",
+      "format": null,
+      "artwork": [
+       {
+        "entity": "Artwork",
+        "arid": "mi7eMBN7EP",
+        "url": "https://www.abc.net.au/triplej/albums/tobiahsvv-ace-whereyoureallycomefrom.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 1000,
+        "height": 1000,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/YCOZ8HVId25FVNnbp6XeVif6qxg=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Ftobiahsvv-ace-whereyoureallycomefrom.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       },
+       {
+        "entity": "Artwork",
+        "arid": "mi7eLLqbqe",
+        "url": "https://abc.net.au/triplej/albums/playlist/2c569114e884f8d8a944d64f84f3cc833341.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 600,
+        "height": 600,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/cfZXGuNrH1CuE6h29iUgymJAYFc=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F2c569114e884f8d8a944d64f84f3cc833341.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       },
+       {
+        "entity": "Artwork",
+        "arid": "mi7gV7qYA9",
+        "url": "https://abc.net.au/triplej/albums/playlist/2c569114e884f8d8a944d64f84f3cc836054.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 600,
+        "height": 600,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/2LqXLSMPy-OKS_8EWyNFqS6QCgw=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F2c569114e884f8d8a944d64f84f3cc836054.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       }
+      ],
+      "links": [],
+      "artists": [
+       {
+        "entity": "Artist",
+        "arid": "mab5W3rL95",
+        "name": "Tobiahs & VV-Ace",
+        "artwork": [],
+        "links": [],
+        "is_australian": true,
+        "type": "primary",
+        "role": null
+       }
+      ],
+      "record_label": null,
+      "release_year": "2026",
+      "release_album_id": null,
+      "is_primary": null
+     }
+    ],
+    "artwork": [],
+    "links": []
+   },
+   "release": {
+    "entity": "Release",
+    "arid": "mrmXl0lVxX",
+    "title": "Where You Really Come From",
+    "format": null,
+    "artwork": [
+     {
+      "entity": "Artwork",
+      "arid": "mi7eMBN7EP",
+      "url": "https://www.abc.net.au/triplej/albums/tobiahsvv-ace-whereyoureallycomefrom.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 1000,
+      "height": 1000,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/YCOZ8HVId25FVNnbp6XeVif6qxg=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Ftobiahsvv-ace-whereyoureallycomefrom.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     },
+     {
+      "entity": "Artwork",
+      "arid": "mi7eLLqbqe",
+      "url": "https://abc.net.au/triplej/albums/playlist/2c569114e884f8d8a944d64f84f3cc833341.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 600,
+      "height": 600,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/cfZXGuNrH1CuE6h29iUgymJAYFc=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F2c569114e884f8d8a944d64f84f3cc833341.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     },
+     {
+      "entity": "Artwork",
+      "arid": "mi7gV7qYA9",
+      "url": "https://abc.net.au/triplej/albums/playlist/2c569114e884f8d8a944d64f84f3cc836054.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 600,
+      "height": 600,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/2LqXLSMPy-OKS_8EWyNFqS6QCgw=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F2c569114e884f8d8a944d64f84f3cc836054.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     }
+    ],
+    "links": [],
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "mab5W3rL95",
+      "name": "Tobiahs & VV-Ace",
+      "artwork": [],
+      "links": [],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "record_label": null,
+    "release_year": "2026",
+    "release_album_id": null
+   }
+  },
+  {
+   "summary": {
+    "artist": "Trophy Wyfe",
+    "title": "Spiders",
+    "links": {
+     "Unearthed": "https://www.abc.net.au/triplejunearthed/artist/trophywyfe",
+     "Youtube": "https://www.youtube.com/results?search_query=Trophy%20Wyfe%20Spiders",
+     "Spotify": "https://open.spotify.com/search/Trophy%20Wyfe%20Spiders",
+     "Apple": "https://music.apple.com/au/search?term=Trophy%20Wyfe%20Spiders"
+    }
+   },
+   "entity": "Play",
+   "arid": "mpnvRPMEvn",
+   "played_time": "2026-10-19T22:55:52+00:00",
+   "service_id": "triplej",
+   "recording": {
+    "entity": "Recording",
+    "arid": "mtqgaoWrnY",
+    "title": "Spiders",
+    "metadata": null,
+    "description": null,
+    "duration": 256,
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "maQYX20wqz",
+      "name": "Trophy Wyfe",
+      "artwork": [],
+      "links": [
+       {
+        "entity": "Link",
+        "arid": "mlm5YDLAjy",
+        "url": "https://www.abc.net.au/triplejunearthed/artist/trophywyfe",
+        "id_component": "a49df74596f67c2a39711fdea3967ffa",
+        "service_id": "unearthed",
+        "title": "Unearthed Artist",
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "type": "profile",
+        "provider": "unearthed",
+        "external": false
+       }
+      ],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "releases": [
+     {
+      "entity": "Release",
+      "arid": "mrO5MxP6MA",
+      "title": "Spiders",
+      "format": null,
+      "artwork": [
+       {
+        "entity": "Artwork",
+        "arid": "mi6gm6jR79",
+        "url": "https://www.abc.net.au/triplej/albums/trophywyfe-spiders.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 1200,
+        "height": 1200,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/CoA-yThWWZGOCObwd-hGbvCFUF0=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Ftrophywyfe-spiders.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       }
+      ],
+      "links": [],
+      "artists": [
+       {
+        "entity": "Artist",
+        "arid": "maQYX20wqz",
+        "name": "Trophy Wyfe",
+        "artwork": [],
+        "links": [
+         {
+          "entity": "Link",
+          "arid": "mlm5YDLAjy",
+          "url": "https://www.abc.net.au/triplejunearthed/artist/trophywyfe",
+          "id_component": "a49df74596f67c2a39711fdea3967ffa",
+          "service_id": "unearthed",
+          "title": "Unearthed Artist",
+          "mini_synopsis": null,
+          "short_synopsis": null,
+          "medium_synopsis": null,
+          "type": "profile",
+          "provider": "unearthed",
+          "external": false
+         }
+        ],
+        "is_australian": true,
+        "type": "primary",
+        "role": null
+       }
+      ],
+      "record_label": null,
+      "release_year": "2026",
+      "release_album_id": null,
+      "is_primary": null
+     }
+    ],
+    "artwork": [
+     {
+      "entity": "Artwork",
+      "arid": "miQPNM8XAe",
+      "url": "https://www.abc.net.au/triplej/albums/trophywyfe-spiders.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 1200,
+      "height": 1200,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/CoA-yThWWZGOCObwd-hGbvCFUF0=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Ftrophywyfe-spiders.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     }
+    ],
+    "links": []
+   },
+   "release": {
+    "entity": "Release",
+    "arid": "mrO5MxP6MA",
+    "title": "Spiders",
+    "format": null,
+    "artwork": [
+     {
+      "entity": "Artwork",
+      "arid": "mi6gm6jR79",
+      "url": "https://www.abc.net.au/triplej/albums/trophywyfe-spiders.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 1200,
+      "height": 1200,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/CoA-yThWWZGOCObwd-hGbvCFUF0=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Ftrophywyfe-spiders.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     }
+    ],
+    "links": [],
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "maQYX20wqz",
+      "name": "Trophy Wyfe",
+      "artwork": [],
+      "links": [
+       {
+        "entity": "Link",
+        "arid": "mlm5YDLAjy",
+        "url": "https://www.abc.net.au/triplejunearthed/artist/trophywyfe",
+        "id_component": "a49df74596f67c2a39711fdea3967ffa",
+        "service_id": "unearthed",
+        "title": "Unearthed Artist",
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "type": "profile",
+        "provider": "unearthed",
+        "external": false
+       }
+      ],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "record_label": null,
+    "release_year": "2026",
+    "release_album_id": null
+   }
+  },
+  {
+   "summary": {
+    "artist": "The Good Kids",
+    "title": "No Parks (at the Beach)",
+    "links": {
+     "Unearthed": "https://www.abc.net.au/triplejunearthed/artist/good-kids",
+     "Youtube": "https://www.youtube.com/results?search_query=The%20Good%20Kids%20No%20Parks%20%28at%20the%20Beach%29",
+     "Spotify": "https://open.spotify.com/search/The%20Good%20Kids%20No%20Parks%20%28at%20the%20Beach%29",
+     "Apple": "https://music.apple.com/au/search?term=The%20Good%20Kids%20No%20Parks%20%28at%20the%20Beach%29"
+    }
+   },
+   "entity": "Play",
+   "arid": "mpnN4zBeNd",
+   "played_time": "2026-10-19T22:53:00+00:00",
+   "service_id": "triplej",
+   "recording": {
+    "entity": "Recording",
+    "arid": "mtMkRywEPY",
+    "title": "No Parks (at the Beach)",
+    "metadata": null,
+    "description": null,
+    "duration": 135,
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "maAzkmN0rY",
+      "name": "The Good Kids",
+      "artwork": [],
+      "links": [
+       {
+        "entity": "Link",
+        "arid": "mlD5l73vey",
+        "url": "https://www.abc.net.au/triplejunearthed/artist/good-kids",
+        "id_component": "ca4b71abf8736600054a18f4b040563c",
+        "service_id": "unearthed",
+        "title": "Unearthed Artist",
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "type": "profile",
+        "provider": "unearthed",
+        "external": false
+       }
+      ],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "releases": [
+     {
+      "entity": "Release",
+      "arid": "mrZXrZmVeX",
+      "title": "No Parks (at the Beach)",
+      "format": null,
+      "artwork": [
+       {
+        "entity": "Artwork",
+        "arid": "miW98NnBGP",
+        "url": "https://www.abc.net.au/triplej/albums/thegoodkids-noparksatthebeach.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 1200,
+        "height": 1200,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/mzU9we0ULckCLclqcD5IUEoRjJ0=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fthegoodkids-noparksatthebeach.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       }
+      ],
+      "links": [],
+      "artists": [
+       {
+        "entity": "Artist",
+        "arid": "maAzkmN0rY",
+        "name": "The Good Kids",
+        "artwork": [],
+        "links": [
+         {
+          "entity": "Link",
+          "arid": "mlD5l73vey",
+          "url": "https://www.abc.net.au/triplejunearthed/artist/good-kids",
+          "id_component": "ca4b71abf8736600054a18f4b040563c",
+          "service_id": "unearthed",
+          "title": "Unearthed Artist",
+          "mini_synopsis": null,
+          "short_synopsis": null,
+          "medium_synopsis": null,
+          "type": "profile",
+          "provider": "unearthed",
+          "external": false
+         }
+        ],
+        "is_australian": true,
+        "type": "primary",
+        "role": null
+       }
+      ],
+      "record_label": null,
+      "release_year": "2026",
+      "release_album_id": null,
+      "is_primary": null
+     }
+    ],
+    "artwork": [
+     {
+      "entity": "Artwork",
+      "arid": "mineB8mA0g",
+      "url": "https://www.abc.net.au/triplej/albums/thegoodkids-noparksatthebeach.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 1200,
+      "height": 1200,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/mzU9we0ULckCLclqcD5IUEoRjJ0=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fthegoodkids-noparksatthebeach.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     }
+    ],
+    "links": []
+   },
+   "release": {
+    "entity": "Release",
+    "arid": "mrZXrZmVeX",
+    "title": "No Parks (at the Beach)",
+    "format": null,
+    "artwork": [
+     {
+      "entity": "Artwork",
+      "arid": "miW98NnBGP",
+      "url": "https://www.abc.net.au/triplej/albums/thegoodkids-noparksatthebeach.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 1200,
+      "height": 1200,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/mzU9we0ULckCLclqcD5IUEoRjJ0=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fthegoodkids-noparksatthebeach.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     }
+    ],
+    "links": [],
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "maAzkmN0rY",
+      "name": "The Good Kids",
+      "artwork": [],
+      "links": [
+       {
+        "entity": "Link",
+        "arid": "mlD5l73vey",
+        "url": "https://www.abc.net.au/triplejunearthed/artist/good-kids",
+        "id_component": "ca4b71abf8736600054a18f4b040563c",
+        "service_id": "unearthed",
+        "title": "Unearthed Artist",
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "type": "profile",
+        "provider": "unearthed",
+        "external": false
+       }
+      ],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "record_label": null,
+    "release_year": "2026",
+    "release_album_id": null
+   }
+  }
+ ]
+}
