@@ -6,12 +6,31 @@
 # letters, counts and buckets; By type; program rows via programItem with the duplicate-title
 # name override; the public programsByType for D2/D4; fallback and LOAD_FAILED states; exactly one
 # callback on every path, also when the consumer's callback dies).
+# O7: network-relative program paths ('/triplej/hottest-100'): the page check through
+# API::nextData (which follows ABC's 308), listed or left out, the 24 h decision cache, at most 4
+# checks in flight, and Hottest 100 through A–Z -> H -> its program menu.
 #
 # Fixtures in t/data/ondemand/:
 #   algolia-programs-list.json   raw response body of ai-state/research/abc-samples/algolia-programs-list.json
 #                                (POST .../indexes/listen_prod_all/query, the O3 filter, hitsPerPage 1000:
 #                                724 programs on 2026-10-19, trimmed to 3; {_fixture_note, data} wrapper
 #                                stripped; shape unedited; no credentials)
+#   algolia-programs-network-paths.trimmed.json
+#                                the same query, recorded 2026-10-19 (724 programs): the 12 hits whose
+#                                canonicalURL is not a /programs/ or /audiobooks/ page, with the O3
+#                                attributesToRetrieve only (defaultThumbnail: 1x1 and 16x9); nbHits set to 12
+#   nextdata-program-hottest-100.trimmed.json, nextdata-program-like-a-version.trimmed.json
+#                                GET /_next/data/build-3afcd04f/triplej/programs/{hottest-100,like-a-version}.json,
+#                                recorded 2026-10-19, the targets of the 308s from /triplej/hottest-100 and
+#                                /triplej/like-a-version: pageProps trimmed to hero, description, presenters,
+#                                programCollectionPrepared (2 items, pagination set to 2), programTemplate,
+#                                webDistributionRestricted. Like A Version: programTemplate video, an empty
+#                                hero, video items only. The other 4 network-relative hits
+#                                (bars-of-steel-page, summer-mornings, special-features, music-in-time)
+#                                answered 404 that day.
+#   bff-episodesWithSegments-hottest-100.trimmed.json
+#                                GET /core-next/api/episodesWithSegments/x?collectionId=12158996&offset=0&size=50,
+#                                recorded 2026-10-19 (9 episodes), trimmed to 2 (pagination set to 2).
 #   bff-programAggregationCollection-rn.json, -rn-featured.synthetic.json, -pacific.trimmed.json
 #                                O2's network fixtures (see t/32-programs.t), for the fallback path.
 # Synthetic hit lists are built below (hit()). The search page (Algolia app id TESTAPPID, key
@@ -45,6 +64,8 @@ my $PI        = 'Plugins::ABCListen::ProgramIndex';
 my $OD        = 'Plugins::ABCListen::OnDemand';
 my $SITE      = 'https://www.abc.net.au';
 my $AGG       = "$SITE/core-next/api/programAggregationCollection/x";
+my $NEXT      = "$SITE/_next/data/build-3afcd04f";    # the buildId of listen-search.trimmed.html
+my $EPS       = "$SITE/core-next/api/episodesWithSegments/x";
 my $ALGOLIA   = 'https://TESTAPPID-dsn.algolia.net/1/indexes/listen_prod_all/query';
 my $T0        = 1_792_400_000;    # Mon 19 Oct 2026
 my $ICON      = Plugins::ABCListen::Util::ICON;
@@ -174,6 +195,51 @@ sub check_names {
 }
 
 sub logged { my $level = shift; grep { $_->{level} eq $level } Slim::Utils::Log->messages( category => 'plugin.abclisten' ) }
+
+# ---- O7: the pages behind network-relative program paths ----
+
+sub page_url { "$NEXT$_[0].json" }
+
+# Site paths of the page data requested, in order.
+sub page_requests { map { $_->{url} =~ m{\A\Q$NEXT\E(/.*)\.json\z} ? $1 : () } requests() }
+
+# HTTP 308 as ABC answers a network-relative program path (recorded 2026-10-19:
+# GET /_next/data/build-3afcd04f/triplej/hottest-100.json -> 308, location: /triplej/programs/hottest-100,
+# body "/triplej/programs/hottest-100", not JSON). LMS doesn't follow a 308; API::nextData does (F4).
+sub redirect_308 { my $to = shift; return ( code => 308, headers => { Location => $to, Refresh => "0;url=$to" }, content => $to ) }
+
+# The pages behind the real network-relative hits, as ABC answered them on 2026-10-19.
+sub route_real_pages {
+	route( page_url('/triplej/hottest-100'),             redirect_308('/triplej/programs/hottest-100') );
+	route( page_url('/triplej/programs/hottest-100'),    file => 'ondemand/nextdata-program-hottest-100.trimmed.json', headers => $JSON_TYPE );
+	route( page_url('/triplej/like-a-version'),          redirect_308('/triplej/programs/like-a-version') );
+	route( page_url('/triplej/programs/like-a-version'), file => 'ondemand/nextdata-program-like-a-version.trimmed.json', headers => $JSON_TYPE );
+	route( qr{\A\Q$NEXT\E/}, code => 404 );
+}
+
+# A synthetic program page (route arguments). hero => <id>: heroImageWithCTAPrepared.uri
+# coremedia://program/<id> (else an empty hero); items => [ card specs ] ('audioepisode', 'video', ...:
+# docType and contentUri; 'uri:<type>': contentUri only); without items, no programCollectionPrepared.
+my $CARD = 7000;
+
+sub page_json {
+	my %f     = @_;
+	my %props = ( heroImageWithCTAPrepared => defined $f{hero} ? { uri => "coremedia://program/$f{hero}", heading => 'A page' } : {} );
+	if ( $f{items} ) {
+		my @cards = map {
+			my $n = ++$CARD;
+			/\Auri:(.+)\z/ ? { contentUri => "coremedia://$1/$n", cardTitle => "Card $n" } : { docType => $_, contentUri => "coremedia://$_/$n", cardTitle => "Card $n" }
+		} @{ $f{items} };
+		$props{programCollectionPrepared} = { id => 4242, pagination => { total => scalar @cards }, items => \@cards };
+	}
+	return ( content => to_json( { pageProps => \%props } ), headers => $JSON_TYPE );
+}
+
+sub network_hit { my ( $path, %f ) = @_; return hit( canonicalURL => "https://www.abc.net.au$path/", title => "Program at $path", %f ) }
+
+sub listed_paths { [ map { $_->{path} } @{ result_of( $_[0] )->{items} } ] }
+
+sub debug_logged { my $re = shift; grep { $_->{message} =~ $re } logged('DEBUG') }
 
 # The synthetic program list for the menu tests (18 programs; no News briefings).
 my %MENU_REF;    # title/slug => the expected program ref
@@ -579,6 +645,182 @@ subtest 'programs: exactly one callback, also when the consumer\'s callback dies
 };
 
 # ---------------------------------------------------------------------------
+# ProgramIndex: network-relative program paths (O7)
+# ---------------------------------------------------------------------------
+
+subtest 'O7, the real hits: /triplej/hottest-100 listed (its 308 to /triplej/programs/hottest-100 checked); Like A Version (video only) and the 404s left out' => sub {
+	fresh();
+	route( $ALGOLIA, file => 'ondemand/algolia-programs-network-paths.trimmed.json', headers => $JSON_TYPE );
+	route_real_pages();
+
+	my ($h100) = grep { $_->{title} eq 'Hottest 100' } @{ JSON::PP::decode_json( fixture('ondemand/algolia-programs-network-paths.trimmed.json') )->{hits} };
+
+	my $c = index_call();
+	is( $c->count, 1, 'one callback' );
+	is_deeply(
+		result_of($c),
+		{
+			fallback => 0,
+			items    => [ {
+				id          => '8199386',
+				title       => 'Hottest 100',
+				path        => '/triplej/hottest-100',
+				description => "We\x{2019}re counting down the 100 best songs of 2025, as voted by you!",
+				image       => $h100->{defaultThumbnail}->{'1x1'},
+				network     => 'triple j',
+				programType => 'music',
+			} ],
+		},
+		'only Hottest 100, an ordinary ref under its Algolia path (ABC\'s canonical path; the 308 is followed when it opens)'
+	);
+	is_deeply(
+		[ page_requests() ],
+		[
+			'/triplej/bars-of-steel-page',      '/listen/doublej/summer-mornings', '/triplej/like-a-version', '/triplej/programs/like-a-version',
+			'/listen/classic/special-features', '/listen/classic/music-in-time',   '/triplej/hottest-100',    '/triplej/programs/hottest-100',
+		],
+		'the 6 network-relative pages checked in Algolia order, 308s followed; the news pages, /listen/radionational and radio.abc.net.au not requested'
+	);
+	is( scalar algolia_requests(), 1, 'one Algolia request' );
+
+	is( scalar( debug_logged(qr/left out/) ), 5, 'the 5 left out are logged at DEBUG' );
+	ok( scalar( debug_logged(qr{/triplej/like-a-version left out: not a program page with audio episodes}) ), 'Like A Version: not a program page with audio episodes' );
+	ok( scalar( debug_logged(qr{/triplej/bars-of-steel-page left out: .*404}) ), 'a 404: left out' );
+	is( scalar( logged('WARN') ) + scalar( logged('ERROR') ), 0, 'nothing at WARN or ERROR' );
+
+	# the decisions are cached with the index (24 h)
+	my @before = requests();
+	setTime( $T0 + 23 * 3600 );
+	$c = index_call();
+	is( $c->count, 1, 'within 24 h: answered synchronously' );
+	is_deeply( listed_paths($c), ['/triplej/hottest-100'], 'within 24 h: the same list' );
+	is( scalar requests(), scalar @before, 'within 24 h: no request (the index and the decisions are cached)' );
+
+	setTime( $T0 + 25 * 3600 );
+	$c = index_call();
+	is_deeply( listed_paths($c), ['/triplej/hottest-100'], 'after 24 h: the same list' );
+	is( scalar( grep { $_ eq '/triplej/like-a-version' } page_requests() ), 2, 'after 24 h: the pages are checked again' );
+};
+
+subtest 'O7, page checks: a program page with audio episodes is listed; anything else left out (cached); no answer -> listed, checked again' => sub {
+	fresh();
+	my @cases = (
+		# [ path, route, listed, what ]
+		[ '/listen/doublej/direct',      [ page_json( hero => 1, items => [qw(video audioepisode)] ) ], 1, 'a program page with an audio episode (no redirect)' ],
+		[ '/kidslisten/segments',        [ page_json( hero => 2, items => ['uri:audiosegment'] ) ],     1, 'audio by contentUri (no docType)' ],
+		[ '/triplejunearthed/audio',     [ page_json( hero => 3, items => ['audio'] ) ],                1, 'docType audio' ],
+		[ '/pacific/no-hero',            [ page_json( items => ['audioepisode'] ) ],                    0, 'audio, but no coremedia://program hero (not a program page)' ],
+		[ '/listen/jazz/video',          [ page_json( hero => 4, items => [qw(video video)] ) ],        0, 'a program page with video only' ],
+		[ '/listen/country/no-episodes', [ page_json( hero => 5 ) ],                                    0, 'a program page without an episode collection' ],
+		[ '/listen/classic/empty',       [ page_json( hero => 6, items => [] ) ],                       0, 'an empty episode collection' ],
+		[ '/listen/radionational/gone',  [ code => 404 ],                                               0, '404' ],
+		[ '/triplej/loop',               [ redirect_308('/triplej/loop') ],                             0, 'a redirect loop' ],
+		[ '/triplej/off-site',           [ redirect_308('https://example.com/x') ],                     0, 'a redirect off the ABC site' ],
+		[ '/listen/doublej/no-props',    [ content => '{"props":{}}', headers => $JSON_TYPE ],          0, 'no page data' ],
+		[ '/listen/jazz/down',           [ code => 500 ],                                               1, 'a 500' ],
+		[ '/listen/country/slow',        [ error => 'Timed out waiting for data' ],                     1, 'a timeout' ],
+		[ '/kidslisten/busy',            [ code => 429 ],                                               1, 'a 429' ],
+	);
+	my @transient = ( '/listen/jazz/down', '/listen/country/slow', '/kidslisten/busy' );
+
+	route_hits( [
+		hit( slug => 'plain' ),
+		( map { network_hit( $_->[0] ) } @cases ),
+		network_hit('/listen/notanetwork/x'),
+		network_hit('/triplej/hottest-100/an-episode/106246016'),
+		network_hit('/triplej'),
+	] );
+	route( page_url( $_->[0] ), @{ $_->[1] } ) for @cases;
+
+	my $c = index_call();
+	is( $c->count, 1, 'one callback' );
+	my %listed = map { $_ => 1 } @{ listed_paths($c) };
+	for my $case (@cases) {
+		my ( $path, undef, $expected, $what ) = @$case;
+		is( $listed{$path} ? 1 : 0, $expected, "$what: " . ( $expected ? 'listed' : 'left out' ) );
+	}
+	is_deeply( listed_paths($c), [ '/listen/programs/plain', map { $_->[2] ? $_->[0] : () } @cases ], 'Algolia order kept' );
+	is( result_of($c)->{fallback}, 0, 'fallback 0' );
+
+	is_deeply( [ page_requests() ], [ map { $_->[0] } @cases ],'each network-relative page requested once; no request for /listen/programs/plain or the hits without a program page' );
+	ok( scalar( debug_logged(qr/3 hits without a program page skipped/) ), 'a path under no network (/listen/notanetwork/x), an episode path and a network page skipped' );
+	is( scalar( debug_logged(qr/left out/) ), 8, 'the 8 left out logged at DEBUG' );
+	is( scalar( debug_logged(qr/couldn't check .*; listed/) ), 3, 'the 3 unchecked logged at DEBUG' );
+	is( scalar( logged('WARN') ) + scalar( logged('ERROR') ), 0, 'nothing at WARN or ERROR' );
+
+	# later calls: only the pages that didn't answer are checked again
+	my @before = page_requests();
+	setTime( $T0 + 3600 );
+	$c = index_call();
+	my @after = page_requests();
+	is_deeply( [ @after[ @before .. $#after ] ], \@transient, 'an hour later: only the 500, the timeout and the 429 are requested again' );
+	is_deeply( listed_paths($c), [ '/listen/programs/plain', map { $_->[2] ? $_->[0] : () } @cases ], 'the same list' );
+
+	# now they answer: decided like the others
+	Slim::Networking::SimpleAsyncHTTP->reset;
+	route( "$SITE/listen/search", file => 'foundation/listen-search.trimmed.html', headers => { 'Content-Type' => 'text/html' } );
+	route( page_url('/listen/jazz/down'), page_json( hero => 7, items => ['video'] ) );
+	route( page_url('/listen/country/slow'), page_json( hero => 8, items => ['audioepisode'] ) );
+	route( page_url('/kidslisten/busy'), page_json( hero => 9, items => ['audioepisode'] ) );
+	$c = index_call();
+	ok( !( grep { $_ eq '/listen/jazz/down' } @{ listed_paths($c) } ), 'the 500 page answers video only: left out' );
+	ok( ( grep { $_ eq '/listen/country/slow' } @{ listed_paths($c) } ), 'the timed-out page answers with audio: listed' );
+	is( scalar page_requests(), 3, 'only those 3 requested (the Algolia answer and the other decisions are cached)' );
+	is( scalar requests(), 3, 'and nothing else' );
+
+	# every hit left out: as for no usable hit, the network-list fallback
+	fresh();
+	route_hits( [ network_hit('/triplej/like-a-version') ] );
+	route_real_pages();
+	route_networks();
+	$c = index_call();
+	is( result_of($c)->{fallback}, 1, 'only Like A Version: the network-list fallback (never an empty A–Z)' );
+	is( ( grep { $_->{message} =~ /has no programs/ } logged('WARN') ), 1, 'WARN, as for no usable hit' );
+};
+
+subtest 'O7, page checks: at most 4 in flight; callers share requests; one callback each; a check that dies -> LOAD_FAILED once' => sub {
+	fresh();
+	my @paths = map {"/triplej/slow-$_"} 1 .. 6;
+	route_hits( [ map { network_hit($_) } @paths ] );
+	route( page_url($_), page_json( hero => 9, items => ['audioepisode'] ), defer => 1 ) for @paths;
+
+	my $waiting = sub { [ map { m{\A\Q$NEXT\E(/.*)\.json\z} ? $1 : () } Slim::Networking::SimpleAsyncHTTP->deferred ] };
+
+	my ( $a, $b ) = ( index_call(), index_call() );
+	is( $a->count + $b->count, 0, 'not answered while the pages load' );
+	is_deeply( $waiting->(), [ @paths[ 0 .. 3 ] ], 'the first 4 pages in flight (one request each for both callers)' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is_deeply( $waiting->(), [ @paths[ 4, 5 ] ], 'then the last 2' );
+	is( $a->count + $b->count, 0, 'still not answered' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is_deeply( [ $a->count, $b->count ], [ 1, 1 ], 'each caller answered once, when every page is in' );
+	is_deeply( listed_paths($b), \@paths, 'all 6 listed' );
+	is( scalar page_requests(), 6, 'one request per page' );
+
+	my $c = index_call();
+	is( $c->count, 1, 'every decision cached: answered synchronously' );
+
+	fresh();
+	route_hits( [ network_hit('/triplej/hottest-100') ] );
+	route_real_pages();
+	{
+		no warnings 'redefine';
+		local *Plugins::ABCListen::ProgramIndex::_isAudioProgram = sub { die "page check broke\n" };
+		$c = index_call();
+		is( $c->count, 1, 'a check dies: one callback' );
+		is_deeply( result_of($c), { error => 'PLUGIN_ABCLISTEN_LOAD_FAILED' }, 'a check dies: LOAD_FAILED' );
+	}
+	ok( ( grep { $_->{message} =~ /page check broke/ } logged('ERROR') ), 'a check dies: logged at ERROR' );
+
+	fresh();
+	route_hits( [ network_hit('/triplej/hottest-100') ] );
+	route_real_pages();
+	my $calls = 0;
+	ok( eval { $PI->programs( sub { $calls++; die "consumer broke\n" } ); 1 }, 'after the checks, a dying consumer: the die does not reach the caller' ) or diag $@;
+	is( $calls, 1, 'after the checks, a dying consumer: called once' );
+};
+
+# ---------------------------------------------------------------------------
 # Menus
 # ---------------------------------------------------------------------------
 
@@ -843,6 +1085,41 @@ subtest 'the real fixture through the menus: S and By type' => sub {
 	is( $s->[0]->{image}, "$WCMS/0af840be01308fcdc934b82c3cf0336e?impolicy=wcms_crop_resize&cropH=2000&cropW=2000&xPos=0&yPos=0&width=300&height=300", 'artwork at 300 px' );
 	is_deeply( names( items_of( feed($TYPES) ) ), [ 'Podcasts (2)', 'Music (1)' ], 'By type: Podcasts (2), Music (1)' );
 	is( scalar algolia_requests(), 1, 'one Algolia request for all of it' );
+};
+
+subtest 'O7 in the menus: All programs A–Z -> H -> Hottest 100 opens /triplej/programs/hottest-100 (its episodes); Like A Version not listed' => sub {
+	fresh();
+	route( $ALGOLIA, file => 'ondemand/algolia-programs-network-paths.trimmed.json', headers => $JSON_TYPE );
+	route( qr{\A\Q$EPS\E\?collectionId=12158996&}, file => 'ondemand/bff-episodesWithSegments-hottest-100.trimmed.json', headers => $JSON_TYPE );
+	route_real_pages();
+
+	my $letters = items_of( feed($AZ) );
+	is_deeply( names($letters), ['H (1)'], 'A–Z: H (1); no L (Like A Version) and none of the 404s' );
+	my $h = items_of( open_item( $letters->[0] ) );
+	is_deeply( names($h), ['Hottest 100'], 'H: Hottest 100' );
+	is( $h->[0]->{line2}, 'triple j', 'line2: the network' );
+	is( $h->[0]->{passthrough}->[0]->{path}, '/triplej/hottest-100', 'the row opens /triplej/hottest-100 (ABC\'s canonical path, as the triple j network list has it)' );
+	is_deeply( names( items_of( feed($TYPES) ) ), ['Music (1)'], 'By type: Music (1)' );
+
+	my $episodes = sub { [ map { $_->{play} } grep { defined $_->{play} } @{ $_[0] } ] };
+	my @expected = ( 'abclisten://episode/106246016', 'abclisten://episode/106246024' );
+
+	# the page data the check loaded is cached: opening the row requests only the episodes
+	my @before = page_requests();
+	my $menu   = items_of( open_item( $h->[0] ) );
+	is( scalar page_requests(), scalar @before, 'opened: the program page comes from the cache (the check loaded it)' );
+	is_deeply( $menu->[0], { name => "We\x{2019}re counting down the 100 best songs of 2025, as voted by you!", type => 'textarea' }, 'the program menu: the description first' );
+	is_deeply( $episodes->($menu), \@expected, 'the program menu: the episodes of the /triplej/programs/hottest-100 page (collection 12158996)' );
+	ok( ( grep { $_->{url} =~ /episodesWithSegments.*collectionId=12158996&/ } requests() ), 'episodes requested for collection 12158996' );
+
+	# nothing cached: the row opens /triplej/hottest-100, and nextData follows its 308
+	Slim::Utils::Cache->resetAll;
+	Plugins::ABCListen::API::_reset();
+	@before = page_requests();
+	$menu   = items_of( open_item( $h->[0] ) );
+	my @after = page_requests();
+	is_deeply( [ @after[ @before .. $#after ] ], [ '/triplej/hottest-100', '/triplej/programs/hottest-100' ], 'nothing cached: /triplej/hottest-100, then its 308 target /triplej/programs/hottest-100' );
+	is_deeply( $episodes->($menu), \@expected, 'nothing cached: the same episodes' );
 };
 
 done_testing();
