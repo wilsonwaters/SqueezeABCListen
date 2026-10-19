@@ -16,6 +16,8 @@
 #   nextdata-listen-home.components.trimmed.json     GET /_next/data/build-3afcd04f/listen.json (research summary of pageProps.data, re-wrapped)
 #   nextdata-program-scienceshow.trimmed.json        GET /_next/data/<buildId>/listen/programs/scienceshow.json (pageProps, re-wrapped)
 #   nextdata-section-news.trimmed.json               GET /_next/data/build-3afcd04f/listen/news.json
+#   nextdata-section-kidslisten-programs.trimmed.json GET /_next/data/build-3afcd04f/kidslisten/programs.json
+#   nextdata-section-sport.programs.trimmed.json     GET /_next/data/build-3afcd04f/listen/sport.json (the 'Programs' collection only)
 #   epgNowPlaying-RN-now.json (F1, research wrapper kept) for a resize.abcradio.net.au prepared image
 
 use strict;
@@ -38,6 +40,7 @@ my @CARD_FIXTURES = qw(
 	bff-programAggregationCollection-rn.json bff-episodesWithSegments-scienceshow.json
 	bff-recommendations-homepagePopularNow.json nextdata-listen-home.components.trimmed.json
 	nextdata-program-scienceshow.trimmed.json nextdata-section-news.trimmed.json
+	nextdata-section-kidslisten-programs.trimmed.json nextdata-section-sport.programs.trimmed.json
 );
 
 my @CARD_KEYS = sort qw(type id uriId title tagline path image date duration programId docType description);
@@ -183,6 +186,7 @@ subtest 'richText: blocks, inline nodes, whitespace and entities' => sub {
 	is( richText( $tag->( 'p', $t->('Fish &amp; chips &#8217;n&nbsp;peas') ) ), "Fish & chips \x{2019}n peas", 'entities decoded' );
 	is( richText( { descriptor => $tag->( 'p', $t->('x'), { type => 'image', props => {} } ) } ), 'x', 'unknown node types without text are skipped' );
 	is( richText( $tag->( 'div', $t->('loose'), $tag->( 'p', $t->('para') ), $t->('tail') ) ), "loose\n\npara\n\ntail", 'text around blocks forms its own paragraphs' );
+	is( richText( $tag->( 'p', $t->('line one'), $tag->( 'br' ), $t->('line two') ) ), "line one\n\nline two", 'br inside a paragraph breaks it' );
 };
 
 subtest 'richText: empty, strings and unrecognised input' => sub {
@@ -246,6 +250,8 @@ subtest 'cardRef: FQ4 program names (exact titles and taglines)' => sub {
 		[ 'bff-programAggregationCollection-rn.json', 'coremedia://program/8132136', 'God Forbid', undef ],
 		[ 'bff-collection-home-most-popular-podcasts.json', 'coremedia://program/104252122', "What's really going on behind the biggest news stories", undef ],
 		[ 'nextdata-listen-home.components.trimmed.json', 'coremedia://program/107274050', 'The Dinner Mix: Brisbane Special', undef ],
+		[ 'nextdata-section-kidslisten-programs.trimmed.json', 'coremedia://program/13078228', 'Bedtime Stories', undef ],
+		[ 'nextdata-section-sport.programs.trimmed.json', 'coremedia://program/10584496', 'ABC Cricket Podcast', undef ],
 	);
 
 	for my $row (@table) {
@@ -261,6 +267,8 @@ subtest 'cardRef: FQ4 program names (exact titles and taglines)' => sub {
 	like( card( 'bff-programAggregationCollection-rn.json', 'coremedia://program/8132136' )->{cardImagePrepared}->{alt}, qr/\blogo\b.*\bfeaturing\b/, 'God Forbid alt has "logo" and "featuring"' );
 	like( card( 'bff-collection-home-most-popular-podcasts.json', 'coremedia://program/104252122' )->{cardImagePrepared}->{alt}, qr/3000x3000.*square/, "If You're Listening alt has 3000x3000 and square" );
 	is( card( 'nextdata-listen-home.components.trimmed.json', 'coremedia://program/107274050' )->{cardImagePrepared}->{alt}, '1x1 Program Image', 'Dinner Mix alt is "1x1 Program Image"' );
+	is( card( 'nextdata-section-kidslisten-programs.trimmed.json', 'coremedia://program/13078228' )->{cardImagePrepared}->{alt}, 'child sleeping on crescent moon with book', 'Bedtime Stories alt is an image description' );
+	is( card( 'nextdata-section-sport.programs.trimmed.json', 'coremedia://program/10584496' )->{cardImagePrepared}->{alt}, 'Hosts with cricket paraphernalia', 'ABC Cricket Podcast alt is an image description' );
 };
 
 subtest 'cardRef: id comes from cardId; uriId from contentUri (spec amendment)' => sub {
@@ -308,6 +316,7 @@ subtest 'cardRef: every card in the copied fixtures' => sub {
 			like( $ref->{id}, qr/\A[0-9]+\z/, "$name: numeric id" );
 			is( $ref->{id}, $card->{cardId}, "$name: id = cardId" ) if defined $card->{cardId} && $card->{cardId} =~ /\A[0-9]+\z/;
 			ok( defined $ref->{title} && length $ref->{title} && $ref->{title} !~ /\A\s|\s\z/, "$name: trimmed title" );
+			ok( !defined $ref->{tagline} || lc $ref->{tagline} ne lc $ref->{title}, "$name: tagline does not repeat the title" );
 			ok( !defined $ref->{path} || $ref->{path} =~ m{\A/}, "$name: path is a site path" );
 			ok( !defined $ref->{image} || $ref->{image} =~ m{\Ahttps://}, "$name: image URL" );
 			ok( !defined $ref->{duration} || $ref->{duration} =~ /\A[1-9][0-9]*\z/, "$name: duration a positive integer or undef" );
@@ -420,6 +429,39 @@ subtest 'cardRef: title rule edge cases, links, text clean-up' => sub {
 	is( $named->{title},   'Background Briefing & Friends', 'alt title decoded and trimmed' );
 	is( $named->{tagline}, "Investigations \x{2019}n more", 'tagline is the decoded, trimmed cardTitle' );
 	is( $program->( cardImagePrepared => { alt => 'Name' }, cardTitle => undef )->{tagline}, undef, 'alt name without cardTitle: no tagline' );
+
+	my $same = $program->( cardImagePrepared => { alt => ' ABC News Daily ' }, cardTitle => 'abc news DAILY' );
+	is( $same->{title},   'ABC News Daily', 'alt equal to cardTitle (trimmed, any case): title from alt' );
+	is( $same->{tagline}, undef,            '... and no tagline repeating it' );
+
+	# a cardTitle that spells the articleLink slug is the name, whatever the alt says
+	my $slugged = sub { my ( $cardTitle, $link ) = @_; $program->( cardTitle => $cardTitle, articleLink => $link, cardImagePrepared => { alt => 'Hosts at a desk' } ) };
+	my @spells = (
+		[ 'ABC Cricket Podcast',              '/listen/programs/abc-cricket-podcast/',                                 'exact' ],
+		[ 'God Forbid',                       '/listen/programs/godforbid/',                                           'slug without hyphens' ],
+		[ 'The Dinner Mix: Brisbane Special', '/listen/programs/the-dinner-mix/',                                      'slug a prefix ending at a word boundary' ],
+		[ 'The 13-Storey Treehouse',          'https://www.abc.net.au/listen/audiobooks/the-13-storey-treehouse-page/', "trailing '-page' ignored" ],
+		[ "If You're Listening!",             'https://abc.net.au/listen/programs/if-youre-listening?x=1#top',          'case, punctuation, query and fragment ignored' ],
+		[ 'Bedtime Stories with R.A. Spratt', '/listen/programs/bedtime-stories-with-ra-spratt',                        'dotted initials' ],
+	);
+	for my $case (@spells) {
+		my ( $cardTitle, $link, $name ) = @$case;
+		my $ref = $slugged->( $cardTitle, $link );
+		is( $ref->{title},   $cardTitle, "spells the slug ($name): title is cardTitle" );
+		is( $ref->{tagline}, undef,      "spells the slug ($name): no tagline" );
+	}
+	my @misses = (
+		[ 'Amazing stories, every morning',  '/listen/programs/am/',                             'slug a prefix inside a word' ],
+		[ 'Bedtime Stories',                 '/listen/programs/bedtime-stories-with-ra-spratt/', 'cardTitle shorter than the slug' ],
+		[ 'The Science Show',                '/listen/programs/scienceshow/',                    'slug not at the start' ],
+		[ 'Global news',                     '/',                                                'no slug' ],
+	);
+	for my $case (@misses) {
+		my ( $cardTitle, $link, $name ) = @$case;
+		my $ref = $slugged->( $cardTitle, $link );
+		is( $ref->{title},   'Hosts at a desk', "does not spell the slug ($name): title from alt" );
+		is( $ref->{tagline}, $cardTitle,        "does not spell the slug ($name): tagline is cardTitle" );
+	}
 
 	my $episode = cardRef( { contentUri => 'coremedia://audioepisode/5', cardTitle => ' Ep &amp; 1 ', cardImagePrepared => { alt => 'Global Roaming podcast' }, description => '  ' } );
 	is( $episode->{title},       'Ep & 1', 'non-program: cardTitle even when alt looks like a name' );

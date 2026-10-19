@@ -22,6 +22,9 @@
 #   nextdata-listen-home.components.trimmed.json     GET /_next/data/build-3afcd04f/listen.json (research summary of pageProps.data -> {"pageProps": {"data": ...}};
 #                                                    profilesProviderPrepared.APIKey (Gigya site key) replaced by a dummy)
 #   nextdata-section-news.trimmed.json               GET /_next/data/build-3afcd04f/listen/news.json
+#   nextdata-section-kidslisten-programs.trimmed.json GET /_next/data/build-3afcd04f/kidslisten/programs.json
+#   nextdata-section-sport.programs.trimmed.json     GET /_next/data/build-3afcd04f/listen/sport.json (only the 'Programs'
+#                                                    collection kept from the research copy's componentsContent)
 #   algolia-listen_prod_all-query.json               POST https://<appId>-dsn.algolia.net/1/indexes/listen_prod_all/query {"query":"science show","hitsPerPage":3,"facets":["*"]}
 #   papi-services.trimmed.json                       GET https://program.abcradio.net.au/api/v1/services.json
 #   music-abcradio-plays-search-triplej.json         GET https://music.abcradio.net.au/api/v1/plays/search.json?station=triplej&order=desc&limit=3
@@ -477,6 +480,7 @@ subtest 'siteConfig: buildId and the Search component Algolia config' => sub {
 	my $client = '"client":{"appId":"APP1","apiKey":"key1"}';
 	my @ranking = (
 		[ qq({"buildId":"b1","props":{"a":{$client,"indexName":"listen_prod_all_query_suggestions"},"b":{"component":"Search","componentProps":{$client,"indexName":"zz_index"}}}}), 'zz_index', 'Search component first' ],
+		[ qq({"buildId":"b1","props":{"a":{$client,"indexName":"aa_main_index"},"b":{"component":"Search","componentProps":{$client,"indexName":"zz_index"}}}}), 'zz_index', 'Search component beats an earlier non-suggestions index' ],
 		[ qq({"buildId":"b1","props":{"a":{$client,"indexName":"aa_query_suggestions"},"b":{$client,"indexName":"main_index"}}}), 'main_index', 'then a non-suggestions index' ],
 		[ qq({"buildId":"b1","props":{"a":{$client,"indexName":"only_query_suggestions"}}}), 'only_query_suggestions', 'then anything' ],
 		[ qq({"buildId":"b1","props":{"a":{"client":{"appId":"bad id!","apiKey":"k"},"indexName":"x"}}}), undef, 'an unusable app id is ignored' ],

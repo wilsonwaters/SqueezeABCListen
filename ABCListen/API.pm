@@ -90,9 +90,13 @@ package Plugins::ABCListen::API;
 #       - type, uriId: from coreMediaRef(contentUri); every type passes through.
 #       - id: cardId when all digits; else (audio types, dynamiccollection) the numeric last segment
 #         of articleLink; else uriId. (Curated cards often carry a teaser id in contentUri.)
-#       - title: for programs, cardImagePrepared.alt when it looks like a name (non-empty, <= 50
-#         chars, no NxN token, none of logo/image/illustration/photo/graphic/stylised/stylized/square/
-#         featuring), else cardTitle; tagline = cardTitle when title came from alt, else undef.
+#       - title: for programs, cardTitle when it spells the articleLink slug (the last path segment
+#         minus a trailing '-page'; letters and digits compared case-insensitively, the slug a prefix
+#         of cardTitle ending at a word boundary: 'The Dinner Mix: Brisbane Special' matches
+#         /the-dinner-mix/, 'God Forbid' /godforbid/); else cardImagePrepared.alt when it looks like
+#         a name (non-empty, <= 50 chars, no NxN token, none of logo/image/illustration/photo/graphic/
+#         stylised/stylized/square/featuring); else cardTitle. tagline = cardTitle when title came
+#         from alt and differs from it (trimmed, case-insensitive), else undef.
 #       - path = sitePath(articleLink); image = imageUrl(cardImagePrepared, 300); date =
 #         parseISO8601(cardAttributionPrepared.publishedDate); duration =
 #         cardMediaIndicatorPrepared.duration when a positive integer; programId = programID or
@@ -1039,12 +1043,13 @@ sub cardRef {
 	$id = _lastNumericSegment( $card->{articleLink} ) if !defined $id && ( $AUDIO_TYPE{$type} || $type eq 'dynamiccollection' );
 	$id = $uriId unless defined $id;
 
-	# FQ4: program cards' cardTitle is often an editorial tagline; the image alt text is sometimes the name
+	# FQ4: program cards' cardTitle is often an editorial tagline; the image alt text is sometimes the
+	# name, sometimes an image description. A cardTitle that spells the page slug is the name.
 	my $cardTitle = _cleanText( $card->{cardTitle} );
 	my ( $title, $tagline ) = ( $cardTitle, undef );
-	if ( $type eq 'program' ) {
+	if ( $type eq 'program' && !_spellsSlug( $cardTitle, $card->{articleLink} ) ) {
 		my $alt = _cleanText( ref $card->{cardImagePrepared} eq 'HASH' ? $card->{cardImagePrepared}->{alt} : undef );
-		( $title, $tagline ) = ( $alt, $cardTitle ) if _looksLikeName($alt);
+		( $title, $tagline ) = ( $alt, defined $cardTitle && lc $cardTitle ne lc $alt ? $cardTitle : undef ) if _looksLikeName($alt);
 	}
 
 	my $media    = ref $card->{cardMediaIndicatorPrepared} eq 'HASH' ? $card->{cardMediaIndicatorPrepared} : {};
@@ -1075,6 +1080,25 @@ sub cardRef {
 sub _looksLikeName {
 	my $text = shift;
 	return defined $text && length $text && length $text <= 50 && $text !~ /\b[0-9]+x[0-9]+\b/i && $text !~ $NOT_A_NAME;
+}
+
+# True when the last segment of $link (minus a trailing '-page') is, in letters and digits and
+# ignoring case, a prefix of $title ending at a word boundary.
+sub _spellsSlug {
+	my ( $title, $link ) = @_;
+	return 0 unless defined $title && defined $link && !ref $link;
+
+	$link =~ s/[?#].*\z//s;
+	$link =~ s{/+\z}{};
+	my ($slug) = $link =~ m{/([^/]+)\z} or return 0;
+
+	$slug = lc $slug;
+	$slug =~ s/-page\z//;
+	$slug =~ s/[^a-z0-9]+//g;
+	return 0 unless length $slug;
+
+	my $spelled = join '[^a-z0-9]*', split //, $slug;
+	return lc($title) =~ /\A[^a-z0-9]*$spelled(?![a-z0-9])/ ? 1 : 0;
 }
 
 sub _digits { defined $_[0] && !ref $_[0] && $_[0] =~ /\A[0-9]+\z/ ? "$_[0]" : undef }

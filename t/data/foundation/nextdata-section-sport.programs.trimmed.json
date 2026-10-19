@@ -1,0 +1,96 @@
+{
+  "pageProps": {
+    "data": {
+      "title": "ABC Sport",
+      "description": "ABC Sport on ABC Listen",
+      "componentsContent": [
+        {
+          "key": "107106452",
+          "component": "StandardCollection",
+          "componentProps": {
+            "bentoCardType": "ContentCard",
+            "id": "107106452",
+            "title": "Programs",
+            "productName": "listen",
+            "heading": "Programs",
+            "items": [
+              {
+                "articleLink": "/listen/programs/abc-cricket-podcast/",
+                "cardAttributionPrepared": null,
+                "cardImagePrepared": {
+                  "alt": "Hosts with cricket paraphernalia",
+                  "imgSrc": "https://live-production.wcms.abc-cdn.net.au/03dca051c1ea63dd8b12f9252b8a12c2?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862",
+                  "ratio": "1x1",
+                  "srcSet": [
+                    "https://live-production.wcms.abc-cdn.net.au/03dca051c1ea63dd8b12f9252b8a12c2?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=160&height=160 160w"
+                  ],
+                  "hideImageBorders": true,
+                  "width": "862",
+                  "height": "862"
+                },
+                "cardMediaIndicatorPrepared": null,
+                "contentLabelPrepared": null,
+                "contentUri": "coremedia://program/10584496",
+                "cardId": "10584496",
+                "cardTitle": "ABC Cricket Podcast",
+                "noBorders": true,
+                "presentersPrepared": null,
+                "imagePositionPrepared": {
+                  "mobile": "top"
+                },
+                "cardContentPositionPrepared": {},
+                "hasMobileFeatured": "all",
+                "hideImageBorders": true,
+                "featuredSettings": {
+                  "mobile": true,
+                  "tablet": false,
+                  "desktop": false
+                },
+                "cardHeadingWeight": "regular"
+              }
+            ],
+            "contentUri": "coremedia://collection/107106452",
+            "borders": false,
+            "linkUrl": "",
+            "linkTitle": "",
+            "showTitleVisually": true,
+            "canonicalURI": "/listen/promo-10/107106452",
+            "robots": null,
+            "ratio": "1x1",
+            "carousel": true,
+            "carouselProps": {
+              "sliderWrapperOffset": true,
+              "freeScroll": true,
+              "freeScrollScreenTypes": [
+                "mobile"
+              ],
+              "itemGap": "0",
+              "cardHeadingSize": "xs",
+              "itemsPerScreen": {
+                "desktop": 4,
+                "tablet": 2,
+                "mobile": 2
+              }
+            },
+            "headingMoreIcon": true
+          },
+          "collectionPreparerParams": {
+            "cardHeadingWeight": "regular",
+            "ratio": "1x1",
+            "showSubAggregationMoreLink": true,
+            "hideImageBorders": true,
+            "showDescription": false,
+            "preferProgramThumbnail": false,
+            "mobileCardSettings": {
+              "hasFeatured": "all"
+            }
+          },
+          "container": {
+            "spacingTop": "small",
+            "spacingBottom": "small"
+          }
+        }
+      ]
+    }
+  }
+}
