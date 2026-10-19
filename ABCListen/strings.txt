@@ -34,8 +34,9 @@ PLUGIN_ABCLISTEN_KIDS
 PLUGIN_ABCLISTEN_AUDIOBOOKS
 	EN	Audiobooks
 
+# The top-level Programs entry (OnDemand); text "Programs" by orchestrator decision (O2 #16)
 PLUGIN_ABCLISTEN_PROGRAMS_AZ
-	EN	Programs (A–Z)
+	EN	Programs
 
 # === F2 === abclisten:// protocol handler
 
