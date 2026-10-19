@@ -4,10 +4,11 @@ package Plugins::ABCListen::Discover;
 # home and podcasts pages. Data and cards come from Plugins::ABCListen::Collections (the
 # collection engine); this module only lays out the menus.
 #
-#   menuItems -> two links, no network I/O:
+#   menuItems -> two links, then D4's News, Sport, Kids listen and Audiobooks links
+#                (Sections->topItems, whose menus Sections.pm owns), no network I/O:
 #                "Home"     (PLUGIN_ABCLISTEN_HOME,     weight Util::topWeight('home'))
 #                "Podcasts" (PLUGIN_ABCLISTEN_PODCASTS, weight Util::topWeight('podcasts'))
-#   menuWeights -> (topWeight('home'), topWeight('podcasts')).
+#   menuWeights -> (topWeight('home'), topWeight('podcasts'), Sections->menuWeights).
 #
 #   Home (_homeRoot): Collections->home ->
 #     1. "Featured" (PLUGIN_ABCLISTEN_FEATURED): the hero carousel's items in carousel order
@@ -52,6 +53,7 @@ use Slim::Utils::Strings qw(cstring);
 
 use Plugins::ABCListen::Collections;
 use Plugins::ABCListen::OnDemand;
+use Plugins::ABCListen::Sections;
 use Plugins::ABCListen::Util;
 
 use constant LOAD_FAILED => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
@@ -64,11 +66,16 @@ my $log = logger('plugin.abclisten');
 
 sub init { return }
 
-# The top-level items sort at the "home" and "podcasts" weights (see Plugin.pm, Util::topWeight).
-sub menuWeights { ( Plugins::ABCListen::Util::topWeight('home'), Plugins::ABCListen::Util::topWeight('podcasts') ) }
+# The top-level items sort at the "home" and "podcasts" weights (see Plugin.pm, Util::topWeight);
+# D4's section items at theirs.
+sub menuWeights { ( Plugins::ABCListen::Util::topWeight('home'), Plugins::ABCListen::Util::topWeight('podcasts'), Plugins::ABCListen::Sections->menuWeights ) }
 
 sub menuItems {
 	my ( $class, $client, $cb, $args ) = @_;
+
+	# D4: News, Sport, Kids listen, Audiobooks (no network I/O); Home and Podcasts stay if they fail
+	my @sections = eval { Plugins::ABCListen::Sections->topItems($client) };
+	$log->error( 'Building the ABC listen section items failed: ' . $@ ) if $@;
 
 	$cb->( [
 		{
@@ -85,6 +92,7 @@ sub menuItems {
 			image  => Plugins::ABCListen::Util::ICON,
 			weight => Plugins::ABCListen::Util::topWeight('podcasts'),
 		},
+		@sections,
 	] );
 }
 

@@ -1,0 +1,735 @@
+{
+  "pageProps": {
+    "data": {
+      "title": "Your Home of Free Audiobooks | Download the ABC listen app",
+      "description": "Listen to Audiobooks for Free. Explore Fiction, Non-Fiction, Biographies & Kids Audiobooks. Bestsellers & New Releases. Start your Free Audiobook journey today.",
+      "componentsContent": [
+        {
+          "key": "104031568",
+          "component": "Promo",
+          "componentProps": {
+            "brand": "master",
+            "imgSrc": "https://live-production.wcms.abc-cdn.net.au/301334227ad03d0e96994fcf2ebb07b8?impolicy=wcms_crop_resize&cropH=810&cropW=1440&xPos=0&yPos=0&width=1440&height=810",
+            "logoType": "banner",
+            "synopsis": "Get the ABC Listen app to listen from anywhere",
+            "title": "Listen to free audiobooks",
+            "CTAs": [
+              {
+                "id": "104031564",
+                "href": "https://www.abc.net.au/listen/listenapp",
+                "contextSettings": {
+                  "buttonText": "Download the app"
+                }
+              }
+            ],
+            "isBanner": true,
+            "isFullWidth": true,
+            "overlay": "dark",
+            "alignContentTo": "bottom",
+            "buttonVariantRound": true
+          },
+          "container": {
+            "width": "full-width",
+            "spacingSides": {
+              "mobile": "none"
+            },
+            "spacingTop": "none",
+            "spacingBottom": "standard"
+          }
+        },
+        {
+          "key": "105894152",
+          "component": "MetaCollection",
+          "componentProps": {
+            "heading": "WEB Audiobooks Page",
+            "items": [
+              {
+                "id": "105788650",
+                "title": "Live Events",
+                "collectionType": "StandardCollection",
+                "metaCollectionConfig": {
+                  "useFilter": false,
+                  "filterLabelUnit": ""
+                },
+                "standardCollectionConfig": {
+                  "carousel": true,
+                  "carouselProps": {
+                    "sliderWrapperOffset": true,
+                    "freeScroll": true,
+                    "freeScrollScreenTypes": [
+                      "mobile"
+                    ],
+                    "itemGap": "0",
+                    "peek": false,
+                    "itemsPerScreen": {
+                      "desktop": 4,
+                      "tablet": 2,
+                      "mobile": 2
+                    },
+                    "pagination": false
+                  },
+                  "headingMoreIcon": false,
+                  "hideHeadingAccent": false,
+                  "headingSize": "lg",
+                  "headingLevel": "h2",
+                  "limit": 25,
+                  "collectionId": "105788650",
+                  "moduleUri": "app://module/audiobookmegacollection-live events",
+                  "collectionPreparerParams": {
+                    "ratio": "1x1",
+                    "showSubAggregationMoreLink": false,
+                    "hideImageBorders": true,
+                    "showDescription": true,
+                    "showPresenters": true,
+                    "mobileCardSettings": {
+                      "hasFeatured": "all"
+                    },
+                    "preferProgramThumbnail": true
+                  }
+                },
+                "itemsCount": 0
+              },
+              {
+                "id": "105672994",
+                "title": "Most Popular",
+                "collectionType": "StandardCollection",
+                "metaCollectionConfig": {
+                  "useFilter": false,
+                  "filterLabelUnit": ""
+                },
+                "standardCollectionConfig": {
+                  "carousel": true,
+                  "carouselProps": {
+                    "sliderWrapperOffset": true,
+                    "freeScroll": true,
+                    "freeScrollScreenTypes": [
+                      "mobile"
+                    ],
+                    "itemGap": "0",
+                    "peek": false,
+                    "itemsPerScreen": {
+                      "desktop": 4,
+                      "tablet": 2,
+                      "mobile": 2
+                    },
+                    "pagination": false
+                  },
+                  "headingMoreIcon": false,
+                  "hideHeadingAccent": false,
+                  "headingSize": "lg",
+                  "headingLevel": "h2",
+                  "limit": 25,
+                  "collectionId": "105672994",
+                  "moduleUri": "app://module/audiobookmegacollection-most popular",
+                  "collectionPreparerParams": {
+                    "ratio": "1x1",
+                    "showSubAggregationMoreLink": false,
+                    "hideImageBorders": true,
+                    "showDescription": true,
+                    "showPresenters": true,
+                    "mobileCardSettings": {
+                      "hasFeatured": "all"
+                    },
+                    "preferProgramThumbnail": true
+                  }
+                },
+                "itemsCount": 9
+              },
+              {
+                "id": "107282012",
+                "title": "Top 100 Australian Books",
+                "collectionType": "StandardCollection",
+                "metaCollectionConfig": {
+                  "useFilter": false,
+                  "filterLabelUnit": ""
+                },
+                "standardCollectionConfig": {
+                  "carousel": true,
+                  "carouselProps": {
+                    "sliderWrapperOffset": true,
+                    "freeScroll": true,
+                    "freeScrollScreenTypes": [
+                      "mobile"
+                    ],
+                    "itemGap": "0",
+                    "peek": false,
+                    "itemsPerScreen": {
+                      "desktop": 4,
+                      "tablet": 2,
+                      "mobile": 2
+                    },
+                    "pagination": false
+                  },
+                  "headingMoreIcon": false,
+                  "hideHeadingAccent": false,
+                  "headingSize": "lg",
+                  "headingLevel": "h2",
+                  "limit": 25,
+                  "collectionId": "107282012",
+                  "moduleUri": "app://module/audiobookmegacollection-top 100 australian books",
+                  "collectionPreparerParams": {
+                    "ratio": "1x1",
+                    "showSubAggregationMoreLink": false,
+                    "hideImageBorders": true,
+                    "showDescription": true,
+                    "showPresenters": true,
+                    "mobileCardSettings": {
+                      "hasFeatured": "all"
+                    },
+                    "preferProgramThumbnail": true
+                  }
+                },
+                "itemsCount": 11
+              },
+              {
+                "id": "105611690",
+                "title": "Crime & Thriller",
+                "collectionType": "StandardCollection",
+                "metaCollectionConfig": {
+                  "useFilter": false,
+                  "filterLabelUnit": ""
+                },
+                "standardCollectionConfig": {
+                  "carousel": true,
+                  "carouselProps": {
+                    "sliderWrapperOffset": true,
+                    "freeScroll": true,
+                    "freeScrollScreenTypes": [
+                      "mobile"
+                    ],
+                    "itemGap": "0",
+                    "peek": false,
+                    "itemsPerScreen": {
+                      "desktop": 4,
+                      "tablet": 2,
+                      "mobile": 2
+                    },
+                    "pagination": false
+                  },
+                  "headingMoreIcon": false,
+                  "hideHeadingAccent": false,
+                  "headingSize": "lg",
+                  "headingLevel": "h2",
+                  "limit": 25,
+                  "collectionId": "105611690",
+                  "moduleUri": "app://module/audiobookmegacollection-crime & thriller",
+                  "collectionPreparerParams": {
+                    "ratio": "1x1",
+                    "showSubAggregationMoreLink": false,
+                    "hideImageBorders": true,
+                    "showDescription": true,
+                    "showPresenters": true,
+                    "mobileCardSettings": {
+                      "hasFeatured": "all"
+                    },
+                    "preferProgramThumbnail": true
+                  }
+                },
+                "itemsCount": 6
+              },
+              {
+                "id": "106929080",
+                "title": "Audio Dramas",
+                "collectionType": "StandardCollection",
+                "metaCollectionConfig": {
+                  "useFilter": false,
+                  "filterLabelUnit": ""
+                },
+                "standardCollectionConfig": {
+                  "carousel": true,
+                  "carouselProps": {
+                    "sliderWrapperOffset": true,
+                    "freeScroll": true,
+                    "freeScrollScreenTypes": [
+                      "mobile"
+                    ],
+                    "itemGap": "0",
+                    "peek": false,
+                    "itemsPerScreen": {
+                      "desktop": 4,
+                      "tablet": 2,
+                      "mobile": 2
+                    },
+                    "pagination": false
+                  },
+                  "headingMoreIcon": false,
+                  "hideHeadingAccent": false,
+                  "headingSize": "lg",
+                  "headingLevel": "h2",
+                  "limit": 25,
+                  "collectionId": "106929080",
+                  "moduleUri": "app://module/audiobookmegacollection-audio dramas",
+                  "collectionPreparerParams": {
+                    "ratio": "1x1",
+                    "showSubAggregationMoreLink": false,
+                    "hideImageBorders": true,
+                    "showDescription": true,
+                    "showPresenters": true,
+                    "mobileCardSettings": {
+                      "hasFeatured": "all"
+                    },
+                    "preferProgramThumbnail": true
+                  }
+                },
+                "itemsCount": 8
+              },
+              {
+                "id": "105812374",
+                "title": "",
+                "collectionType": "StandardCollection",
+                "metaCollectionConfig": {
+                  "useFilter": false,
+                  "filterLabelUnit": ""
+                },
+                "standardCollectionConfig": {
+                  "carousel": true,
+                  "carouselProps": {
+                    "sliderWrapperOffset": true,
+                    "freeScroll": true,
+                    "freeScrollScreenTypes": [
+                      "mobile"
+                    ],
+                    "itemGap": "0",
+                    "peek": false,
+                    "itemsPerScreen": {
+                      "desktop": 4,
+                      "tablet": 2,
+                      "mobile": 2
+                    },
+                    "pagination": false
+                  },
+                  "headingMoreIcon": false,
+                  "hideHeadingAccent": false,
+                  "headingSize": "lg",
+                  "headingLevel": "h2",
+                  "limit": 25,
+                  "collectionId": "105812374",
+                  "moduleUri": "app://module/audiobookmegacollection-105812374",
+                  "collectionPreparerParams": {
+                    "ratio": "1x1",
+                    "showSubAggregationMoreLink": false,
+                    "hideImageBorders": true,
+                    "showDescription": true,
+                    "showPresenters": true,
+                    "mobileCardSettings": {
+                      "hasFeatured": "all"
+                    },
+                    "preferProgramThumbnail": true
+                  }
+                },
+                "itemsCount": 0
+              },
+              {
+                "id": "105888784",
+                "title": "Popular Fiction",
+                "collectionType": "StandardCollection",
+                "metaCollectionConfig": {
+                  "useFilter": false,
+                  "filterLabelUnit": ""
+                },
+                "standardCollectionConfig": {
+                  "carousel": true,
+                  "carouselProps": {
+                    "sliderWrapperOffset": true,
+                    "freeScroll": true,
+                    "freeScrollScreenTypes": [
+                      "mobile"
+                    ],
+                    "itemGap": "0",
+                    "peek": false,
+                    "itemsPerScreen": {
+                      "desktop": 4,
+                      "tablet": 2,
+                      "mobile": 2
+                    },
+                    "pagination": false
+                  },
+                  "headingMoreIcon": false,
+                  "hideHeadingAccent": false,
+                  "headingSize": "lg",
+                  "headingLevel": "h2",
+                  "limit": 25,
+                  "collectionId": "105888784",
+                  "moduleUri": "app://module/audiobookmegacollection-popular fiction",
+                  "collectionPreparerParams": {
+                    "ratio": "1x1",
+                    "showSubAggregationMoreLink": false,
+                    "hideImageBorders": true,
+                    "showDescription": true,
+                    "showPresenters": true,
+                    "mobileCardSettings": {
+                      "hasFeatured": "all"
+                    },
+                    "preferProgramThumbnail": true
+                  }
+                },
+                "itemsCount": 5
+              },
+              {
+                "id": "106028888",
+                "title": "Timeless Audiobooks",
+                "collectionType": "StandardCollection",
+                "metaCollectionConfig": {
+                  "useFilter": false,
+                  "filterLabelUnit": ""
+                },
+                "standardCollectionConfig": {
+                  "carousel": true,
+                  "carouselProps": {
+                    "sliderWrapperOffset": true,
+                    "freeScroll": true,
+                    "freeScrollScreenTypes": [
+                      "mobile"
+                    ],
+                    "itemGap": "0",
+                    "peek": false,
+                    "itemsPerScreen": {
+                      "desktop": 4,
+                      "tablet": 2,
+                      "mobile": 2
+                    },
+                    "pagination": false
+                  },
+                  "headingMoreIcon": false,
+                  "hideHeadingAccent": false,
+                  "headingSize": "lg",
+                  "headingLevel": "h2",
+                  "limit": 25,
+                  "collectionId": "106028888",
+                  "moduleUri": "app://module/audiobookmegacollection-timeless audiobooks",
+                  "collectionPreparerParams": {
+                    "ratio": "1x1",
+                    "showSubAggregationMoreLink": false,
+                    "hideImageBorders": true,
+                    "showDescription": true,
+                    "showPresenters": true,
+                    "mobileCardSettings": {
+                      "hasFeatured": "all"
+                    },
+                    "preferProgramThumbnail": true
+                  }
+                },
+                "itemsCount": 6
+              },
+              {
+                "id": "106510880",
+                "title": "Books for Kids",
+                "collectionType": "StandardCollection",
+                "metaCollectionConfig": {
+                  "useFilter": false,
+                  "filterLabelUnit": ""
+                },
+                "standardCollectionConfig": {
+                  "carousel": true,
+                  "carouselProps": {
+                    "sliderWrapperOffset": true,
+                    "freeScroll": true,
+                    "freeScrollScreenTypes": [
+                      "mobile"
+                    ],
+                    "itemGap": "0",
+                    "peek": false,
+                    "itemsPerScreen": {
+                      "desktop": 4,
+                      "tablet": 2,
+                      "mobile": 2
+                    },
+                    "pagination": false
+                  },
+                  "headingMoreIcon": false,
+                  "hideHeadingAccent": false,
+                  "headingSize": "lg",
+                  "headingLevel": "h2",
+                  "limit": 25,
+                  "collectionId": "106510880",
+                  "moduleUri": "app://module/audiobookmegacollection-books for kids",
+                  "collectionPreparerParams": {
+                    "ratio": "1x1",
+                    "showSubAggregationMoreLink": false,
+                    "hideImageBorders": true,
+                    "showDescription": true,
+                    "showPresenters": true,
+                    "mobileCardSettings": {
+                      "hasFeatured": "all"
+                    },
+                    "preferProgramThumbnail": true
+                  }
+                },
+                "itemsCount": 7
+              },
+              {
+                "id": "105637010",
+                "title": "Beyond The Book",
+                "collectionType": "StandardCollection",
+                "metaCollectionConfig": {
+                  "useFilter": false,
+                  "filterLabelUnit": ""
+                },
+                "standardCollectionConfig": {
+                  "carousel": true,
+                  "carouselProps": {
+                    "sliderWrapperOffset": true,
+                    "freeScroll": true,
+                    "freeScrollScreenTypes": [
+                      "mobile"
+                    ],
+                    "itemGap": "0",
+                    "peek": false,
+                    "itemsPerScreen": {
+                      "desktop": 4,
+                      "tablet": 2,
+                      "mobile": 2
+                    },
+                    "pagination": false
+                  },
+                  "headingMoreIcon": false,
+                  "hideHeadingAccent": false,
+                  "headingSize": "lg",
+                  "headingLevel": "h2",
+                  "limit": 25,
+                  "collectionId": "105637010",
+                  "moduleUri": "app://module/audiobookmegacollection-beyond the book",
+                  "collectionPreparerParams": {
+                    "ratio": "1x1",
+                    "showSubAggregationMoreLink": false,
+                    "hideImageBorders": true,
+                    "showDescription": true,
+                    "showPresenters": true,
+                    "mobileCardSettings": {
+                      "hasFeatured": "all"
+                    },
+                    "preferProgramThumbnail": true
+                  }
+                },
+                "itemsCount": 8
+              },
+              {
+                "id": "105707526",
+                "title": "Programs For Book Lovers",
+                "collectionType": "StandardCollection",
+                "metaCollectionConfig": {
+                  "useFilter": false,
+                  "filterLabelUnit": ""
+                },
+                "standardCollectionConfig": {
+                  "carousel": true,
+                  "carouselProps": {
+                    "sliderWrapperOffset": true,
+                    "freeScroll": true,
+                    "freeScrollScreenTypes": [
+                      "mobile"
+                    ],
+                    "itemGap": "0",
+                    "peek": false,
+                    "itemsPerScreen": {
+                      "desktop": 4,
+                      "tablet": 2,
+                      "mobile": 2
+                    },
+                    "pagination": false
+                  },
+                  "headingMoreIcon": false,
+                  "hideHeadingAccent": false,
+                  "headingSize": "lg",
+                  "headingLevel": "h2",
+                  "limit": 25,
+                  "collectionId": "105707526",
+                  "moduleUri": "app://module/audiobookmegacollection-programs for book lovers",
+                  "collectionPreparerParams": {
+                    "ratio": "1x1",
+                    "showSubAggregationMoreLink": false,
+                    "hideImageBorders": true,
+                    "showDescription": true,
+                    "showPresenters": true,
+                    "mobileCardSettings": {
+                      "hasFeatured": "all"
+                    },
+                    "preferProgramThumbnail": true
+                  }
+                },
+                "itemsCount": 3
+              }
+            ],
+            "pagination": {
+              "offset": 0,
+              "size": 11,
+              "total": 11
+            },
+            "contentUri": "coremedia://collection/105894152",
+            "loadMoreUrl": "/listen/audiobooks",
+            "rootMetaCollectionId": "105894152",
+            "type": "aggregationgroup",
+            "showTitle": false
+          },
+          "subcollection": {
+            "standard": {
+              "componentProps": {
+                "carousel": true,
+                "carouselProps": {
+                  "sliderWrapperOffset": true,
+                  "freeScroll": true,
+                  "freeScrollScreenTypes": [
+                    "mobile"
+                  ],
+                  "itemGap": "0",
+                  "peek": false,
+                  "itemsPerScreen": {
+                    "desktop": 4,
+                    "tablet": 2,
+                    "mobile": 2
+                  },
+                  "pagination": false
+                },
+                "headingMoreIcon": false,
+                "hideHeadingAccent": false,
+                "headingSize": "lg",
+                "headingLevel": "h2"
+              },
+              "collectionPreparerParams": {
+                "ratio": "1x1",
+                "showSubAggregationMoreLink": false,
+                "hideImageBorders": true,
+                "showDescription": true,
+                "showPresenters": true,
+                "mobileCardSettings": {
+                  "hasFeatured": "all"
+                },
+                "preferProgramThumbnail": true
+              },
+              "loaderParams": {
+                "limit": 25
+              }
+            }
+          },
+          "container": {
+            "spacingTop": "none"
+          }
+        },
+        {
+          "key": "104031724",
+          "component": "TeaserNavigator",
+          "container": {
+            "spacingTop": "none",
+            "spacingBottom": "standard",
+            "width": "standard"
+          },
+          "componentProps": {
+            "id": "104031724",
+            "type": "accordion",
+            "items": [
+              {
+                "preparedTeaserText": {
+                  "descriptor": {
+                    "type": "tagname",
+                    "key": "div",
+                    "props": {},
+                    "children": [
+                      {
+                        "type": "tagname",
+                        "key": "@@standfirst",
+                        "props": {},
+                        "children": [
+                          {
+                            "type": "text",
+                            "content": "All titles in our Audiobook Library are available to stream for free on the ABC listen app. To browse the full collection, simply tap the ‘Audiobooks’ button located in the Search menu on the ABC listen app."
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "title": "Where do I listen to audiobooks?",
+                "uri": "coremedia://teaser/104031718"
+              },
+              {
+                "preparedTeaserText": {
+                  "descriptor": {
+                    "type": "tagname",
+                    "key": "div",
+                    "props": {},
+                    "children": [
+                      {
+                        "type": "tagname",
+                        "key": "@@standfirst",
+                        "props": {},
+                        "children": [
+                          {
+                            "type": "text",
+                            "content": "All of the audiobooks on the ABC listen app are completely free to stream. No fees, ads or membership required – download the ABC listen app today to access our full Audiobook Library."
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "title": "Are audiobooks free?",
+                "uri": "coremedia://teaser/104031716"
+              },
+              {
+                "preparedTeaserText": {
+                  "descriptor": {
+                    "type": "tagname",
+                    "key": "div",
+                    "props": {},
+                    "children": [
+                      {
+                        "type": "tagname",
+                        "key": "@@standfirst",
+                        "props": {},
+                        "children": [
+                          {
+                            "type": "text",
+                            "content": "Once published, audiobooks will be available to stream for one year on the ABC listen app. To check the publish date of a title, just open up the book you want to hear with a tap. "
+                          }
+                        ]
+                      },
+                      {
+                        "type": "tagname",
+                        "key": "p",
+                        "props": {},
+                        "children": [
+                          {
+                            "type": "text",
+                            "content": "We’ll also give you plenty of notice when a book is getting close to its expiry date, so you won’t have any audiobooks disappearing mid-chapter."
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "title": "How long can I keep an audiobook?",
+                "uri": "coremedia://teaser/104031722"
+              }
+            ],
+            "contentUri": "coremedia://collection/104031724",
+            "canonicalURI": "/listen/audiobooks-faqs-collection/104031724",
+            "sectionHeaderPrepared": {
+              "heading": "Audiobooks FAQs Collection",
+              "dataUri": "coremedia://collection/104031724",
+              "richTextDescription": null
+            }
+          }
+        },
+        {
+          "key": "14123180",
+          "component": "AppStoreCTA",
+          "componentProps": {
+            "androidAppURL": "https://play.google.com/store/apps/details?id=com.thisisaim.abcradio",
+            "contentSquareImagePrepared": {
+              "altText": "",
+              "imgRatio": "1x1",
+              "imgSrc": "https://live-production.wcms.abc-cdn.net.au/f39eea140d2c2dbf6f4946a4f3922135?impolicy=wcms_crop_resize&cropH=1335&cropW=1335&xPos=0&yPos=0&width=862&height=862"
+            },
+            "contentUri": "coremedia://teaser/14123296",
+            "description": "Download the ABC listen app to hear free audiobooks",
+            "heading": "Listen to Audiobooks on the go",
+            "iOSAppURL": "https://apps.apple.com/au/app/abc-listen/id544149504",
+            "backgroundColour": "#eae8f3",
+            "backgroundImageUrl": "/core-assets/listen/app-cta-listen-bg.png"
+          },
+          "container": false
+        }
+      ]
+    }
+  }
+}

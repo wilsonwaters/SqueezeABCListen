@@ -243,18 +243,19 @@ subtest 'a hook module that fails to load (compile error): logged, and its slot 
 	is_deeply( items_of($c), [ $A, $B, $ERROR_ITEM, $D, $E ], 'the broken hook is one error item in its slot; the others keep their order' );
 };
 
-subtest 'default feed: "Home", "Radio", "Podcasts", "Programs", "Search" and "My ABC listen" links' => sub {
+subtest 'default feed: "Home", "Radio", "Podcasts", the D4 sections, "Programs", "Search" and "My ABC listen" links' => sub {
 	resetStubs();
 	my $c = feed();
 
 	is( $c->count, 1, 'callback called once' );
 	my $items = items_of($c);
-	is( scalar @$items, 6, 'exactly six top-level items' );
-	is( $items->[0]->{name}, 'Home', 'first "Home" (D1; exact keys in t/41)' );
-	is( $items->[2]->{name}, 'Podcasts',      'then "Podcasts" (D2; exact keys in t/41)' );
-	is( $items->[3]->{name}, 'Programs',      'then "Programs" (O2; exact keys in t/33)' );
-	is( $items->[4]->{name}, 'Search',        'then "Search" (D3; exact keys in t/44)' );
-	is( $items->[5]->{name}, 'My ABC listen', 'then "My ABC listen" (M2; exact keys in t/52)' );
+	is( scalar @$items, 10, 'exactly ten top-level items' );
+	is( $items->[0]->{name}, 'Home',     'first "Home" (D1; exact keys in t/41)' );
+	is( $items->[2]->{name}, 'Podcasts', 'then "Podcasts" (D2; exact keys in t/41)' );
+	is_deeply( [ map { $_->{name} } @$items[ 3 .. 6 ] ], [ 'News', 'Sport', 'Kids listen', 'Audiobooks' ], 'then the sections (D4; exact keys in t/47)' );
+	is( $items->[7]->{name}, 'Programs',      'then "Programs" (O2; exact keys in t/33)' );
+	is( $items->[8]->{name}, 'Search',        'then "Search" (D3; exact keys in t/44)' );
+	is( $items->[9]->{name}, 'My ABC listen', 'then "My ABC listen" (M2; exact keys in t/52)' );
 
 	my $live = $items->[1];
 	is( $live->{name}, 'Radio', 'named "Radio"' );
@@ -282,7 +283,8 @@ subtest 'the hooks: init is harmless; the declared weights' => sub {
 	is_deeply( [ Plugins::ABCListen::OnDemand->menuWeights ], [75], 'OnDemand declares the "programs" weight (O2; its menus are tested in t/33)' );
 	ok( eval { Plugins::ABCListen::MyABC->init(); 1 }, 'MyABC->init does not die' ) or diag $@;
 	is_deeply( [ Plugins::ABCListen::MyABC->menuWeights ], [90], 'MyABC declares the "myabc" weight (M2; its menus are tested in t/52)' );
-	is_deeply( [ Plugins::ABCListen::Discover->menuWeights ], [ 10, 30 ], 'Discover declares the "home" and "podcasts" weights (D1, D2; its menus are tested in t/41)' );
+	is_deeply( [ Plugins::ABCListen::Discover->menuWeights ], [ 10, 30, 40, 50, 60, 70 ],
+		'Discover declares the "home" and "podcasts" weights (D1, D2; t/41) and the news, sport, kids and audiobooks weights (D4; t/47)' );
 	ok( eval { Plugins::ABCListen::Search->init(); 1 }, 'Search->init does not die' ) or diag $@;
 	is_deeply( [ Plugins::ABCListen::Search->menuWeights ], [80], 'Search declares the "search" weight (D3; its menus are tested in t/44)' );
 	is( scalar errors_logged(), 0, 'no errors logged' );

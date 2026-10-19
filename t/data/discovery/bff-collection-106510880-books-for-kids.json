@@ -1,0 +1,263 @@
+{
+  "collection": {
+    "bentoCardType": "ContentCard",
+    "id": "106510880",
+    "title": "Books for Kids",
+    "productName": "core-next",
+    "heading": "Books for Kids",
+    "loadMoreUrl": "/core-next/api/collection/x",
+    "pagination": {
+      "offset": 0,
+      "size": 7,
+      "total": 7
+    },
+    "items": [
+      {
+        "articleLink": "https://www.abc.net.au/listen/programs/bedtime-stories-with-ra-spratt/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "Drawing of a pig in a green frock and aviator's goggles, holding a sword. Text says Bedtime Stories with RA Spratt",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/bee444386b047d9ca0c5b6236ddbfbdb?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+          "ratio": "16x9",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/bee444386b047d9ca0c5b6236ddbfbdb?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=160&height=90 160w"
+          ],
+          "hideImageBorders": false,
+          "width": "862",
+          "height": "485"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://program/106961186",
+        "description": "The world's most glamorous flying pig, Nanny Piggins tells side-splitting stories and fractured fairytales for curious kids.",
+        "cardId": "106961186",
+        "cardTitle": "Bedtime Stories with R.A. Spratt",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "right"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": true,
+        "hideImageBorders": false,
+        "featuredSettings": {
+          "mobile": true,
+          "tablet": false,
+          "desktop": false
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/listen/audiobooks/the-13-storey-treehouse-page/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "The 13-Storey Treehouse - Andy Griffiths. Illustrated by Terry Denton",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/9779b4fdea8a0d41a60fbfc44b242e1a?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+          "ratio": "16x9",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/9779b4fdea8a0d41a60fbfc44b242e1a?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=160&height=90 160w"
+          ],
+          "hideImageBorders": false,
+          "width": "862",
+          "height": "485"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://program/106329802",
+        "description": "Andy and Terry live in a 13-storey treehouse. They've also got a new book to write, but there's a problem. A BIG problem. Well, quite a few big problems actually …",
+        "cardId": "106329802",
+        "cardTitle": "The 13-Storey Treehouse",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "right"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": true,
+        "hideImageBorders": false,
+        "featuredSettings": {
+          "mobile": true,
+          "tablet": false,
+          "desktop": false
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/listen/audiobooks/the-26-storey-treehouse-page/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/e71cfa80074bcfe0a6edb1b1bee1ddb6?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+          "ratio": "16x9",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/e71cfa80074bcfe0a6edb1b1bee1ddb6?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=160&height=90 160w"
+          ],
+          "hideImageBorders": false,
+          "width": "862",
+          "height": "485"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://program/106329818",
+        "description": "Come on back to the most amazing treehouse in the world!",
+        "cardId": "106329818",
+        "cardTitle": "The 26-Storey Treehouse",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "right"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": true,
+        "hideImageBorders": false,
+        "featuredSettings": {
+          "mobile": true,
+          "tablet": false,
+          "desktop": false
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/listen/programs/octonauts-dolphin-reef-rescue-and-other-stories/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "Octonauts Dolphin Reef Rescue and Other Stories",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/1c263e42862e45e727eca5ee5a196abf?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+          "ratio": "16x9",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/1c263e42862e45e727eca5ee5a196abf?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=160&height=90 160w"
+          ],
+          "hideImageBorders": false,
+          "width": "862",
+          "height": "485"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://program/106340478",
+        "description": "Join the team of adventure heroes who dive right into action — the fourth collection of episodes adapted from the immensely popular TV series!",
+        "cardId": "106340478",
+        "cardTitle": "Octonauts: The Dolphin Reef Rescue and Other Stories",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "right"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": true,
+        "hideImageBorders": false,
+        "featuredSettings": {
+          "mobile": true,
+          "tablet": false,
+          "desktop": false
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/kidslisten/programs/book-week/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "1x1 Program Image",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/e8935389775318e20f44e12ad7d421cb?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+          "ratio": "16x9",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/e8935389775318e20f44e12ad7d421cb?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=160&height=90 160w"
+          ],
+          "hideImageBorders": false,
+          "width": "862",
+          "height": "485"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://program/105630384",
+        "description": "Listen to audio versions of shortlisted books from the 2026 Book of the Year Awards!",
+        "cardId": "105630384",
+        "cardTitle": "Book Week",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "right"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": true,
+        "hideImageBorders": false,
+        "featuredSettings": {
+          "mobile": true,
+          "tablet": false,
+          "desktop": false
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/listen/audiobooks/the-wonderful-wizard-of-oz-page/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/96d3a8eb2ebaf07a595857fbe264e085?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+          "ratio": "16x9",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/96d3a8eb2ebaf07a595857fbe264e085?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=160&height=90 160w"
+          ],
+          "hideImageBorders": false,
+          "width": "862",
+          "height": "485"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://program/105915334",
+        "description": "A story that continues to cast its spell, it introduced generations of readers and audiences to a magical world that still feels alive today.",
+        "cardId": "105915334",
+        "cardTitle": "The Wonderful Wizard of Oz",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "right"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": true,
+        "hideImageBorders": false,
+        "featuredSettings": {
+          "mobile": true,
+          "tablet": false,
+          "desktop": false
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/listen/audiobooks/the-wind-in-the-willows-page/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "The Wind In The Willows - Kenneth Grahame. Narrated by Mark Coles Smith",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/6e99e8fcd84d218fa6fca577f6131bc9?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+          "ratio": "16x9",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/6e99e8fcd84d218fa6fca577f6131bc9?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=160&height=90 160w"
+          ],
+          "hideImageBorders": false,
+          "width": "862",
+          "height": "485"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://program/105915246",
+        "description": "Kenneth Grahame's The Wind in the Willows is a children's classic full of friendship, imagination, and charm, capturing the magic of nature and the joy of simple pleasures.",
+        "cardId": "105915246",
+        "cardTitle": "The Wind in the Willows",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "right"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": true,
+        "hideImageBorders": false,
+        "featuredSettings": {
+          "mobile": true,
+          "tablet": false,
+          "desktop": false
+        }
+      }
+    ],
+    "contentUri": "coremedia://collection/106510880",
+    "borders": false,
+    "linkUrl": "",
+    "linkTitle": "",
+    "showTitleVisually": true,
+    "canonicalURI": "/listen/listenapp/books-for-big-kids/106510880",
+    "robots": null,
+    "ratio": "16x9"
+  }
+}

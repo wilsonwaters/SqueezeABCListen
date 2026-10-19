@@ -36,6 +36,7 @@ use Plugins::ABCListen::OnDemand;
 use Plugins::ABCListen::MyABC;
 use Plugins::ABCListen::Plugin;
 use Plugins::ABCListen::Search;
+use Plugins::ABCListen::Sections;
 use Plugins::ABCListen::Util;
 
 binmode( Test::More->builder->$_, ':encoding(UTF-8)' ) for qw(output failure_output todo_output);
@@ -71,7 +72,7 @@ my @HOME_TITLES = (
 
 Slim::Utils::Log->addLogCategory( { category => 'plugin.abclisten', defaultLevel => 'WARN', description => 'PLUGIN_ABCLISTEN' } );
 
-# L1 stubs (contract 7): the test's own station table
+# L1 stubs (contract 7): the test's own station table, by site path (D4: lookups are by path)
 my %SLUGS;
 {
 	no warnings qw(redefine once);
@@ -89,7 +90,7 @@ sub fresh {
 	resetStubs();
 	Plugins::ABCListen::API::_reset();
 	$COL->_reset;
-	%SLUGS = ( sport => 'SPORT', radionational => 'RN', triplej => 'TRIPLEJ', classic => 'CLASSIC' );
+	%SLUGS = ( '/listen/live/sport' => 'SPORT', '/listen/radionational' => 'RN', '/triplej' => 'TRIPLEJ', '/listen/classic' => 'CLASSIC' );
 	setTime($T0);
 	route( "$SITE/listen/search", file => 'foundation/listen-search.trimmed.html', headers => { 'Content-Type' => 'text/html' } );
 }
@@ -155,31 +156,37 @@ sub warnings_from_collections { grep { $_->{level} =~ /WARN|ERROR/ && $_->{messa
 
 # ---------------------------------------------------------------------------
 
-subtest 'menuItems: "Home" (weight 10) and "Podcasts" (weight 30) links, no network; menuWeights' => sub {
+subtest 'menuItems: "Home" (weight 10) and "Podcasts" (weight 30) links, then the D4 sections; no network; menuWeights' => sub {
 	fresh();
 	my $c = collector();
 	$DISCOVER->menuItems( undef, $c->cb, {} );
 	is( $c->count, 1, 'one callback' );
+	my ($items) = $c->args(0);
 	is_deeply(
-		[ $c->args(0) ],
-		[ [
+		[ @$items[ 0, 1 ] ],
+		[
 			{ name => 'Home',     type => 'link', url => $HOME_ROOT, image => $ICON, weight => 10 },
 			{ name => 'Podcasts', type => 'link', url => $PODCASTS,  image => $ICON, weight => 30 },
-		] ],
+		],
 		'exact keys: name, type link, url (_homeRoot / _podcastsRoot), plugin icon, weight'
 	);
-	my ( $home, $podcasts ) = @{ ( $c->args(0) )[0] };
+	is_deeply( [ @$items[ 2 .. $#$items ] ], [ Plugins::ABCListen::Sections->topItems(undef) ], 'then Sections->topItems (D4; exact keys in t/47), nothing else' );
+	my ( $home, $podcasts ) = @$items;
 	is( $home->{name}, string('PLUGIN_ABCLISTEN_HOME'), 'Home: name from PLUGIN_ABCLISTEN_HOME' );
 	is( $home->{weight}, Plugins::ABCListen::Util::topWeight('home'), 'Home: weight = Util::topWeight("home")' );
 	is( $podcasts->{name}, string('PLUGIN_ABCLISTEN_PODCASTS'), 'Podcasts: name from PLUGIN_ABCLISTEN_PODCASTS' );
 	is( $podcasts->{weight}, Plugins::ABCListen::Util::topWeight('podcasts'), 'Podcasts: weight = Util::topWeight("podcasts")' );
-	is_deeply( [ $DISCOVER->menuWeights ], [ map { Plugins::ABCListen::Util::topWeight($_) } qw(home podcasts) ], 'menuWeights = (topWeight("home"), topWeight("podcasts"))' );
+	is_deeply(
+		[ $DISCOVER->menuWeights ],
+		[ ( map { Plugins::ABCListen::Util::topWeight($_) } qw(home podcasts) ), Plugins::ABCListen::Sections->menuWeights ],
+		'menuWeights = (topWeight("home"), topWeight("podcasts"), Sections->menuWeights)'
+	);
 	is( scalar requests(), 0, 'no HTTP request' );
 	ok( eval { $DISCOVER->init; 1 }, 'init is harmless' );
 
 	$c = collector();
 	$DISCOVER->menuItems( $CLIENT, $c->cb, {} );
-	is_deeply( names( ( $c->args(0) )[0] ), [ 'Home', 'Podcasts' ], 'with a client too' );
+	is_deeply( names( ( $c->args(0) )[0] ), [ 'Home', 'Podcasts', 'News', 'Sport', 'Kids listen', 'Audiobooks' ], 'with a client too' );
 };
 
 subtest 'top level: Home first (10), Podcasts after Radio (30)' => sub {
@@ -189,7 +196,11 @@ subtest 'top level: Home first (10), Podcasts after Radio (30)' => sub {
 	is( $c->count, 1, 'one callback' );
 	my $items = items_of($c);
 	is( $items->[0]->{name}, 'Home', 'Home first' );
-	is_deeply( names($items), [ 'Home', 'Radio', 'Podcasts', 'Programs', 'Search', 'My ABC listen' ], 'Home, Radio, Podcasts (D2), Programs, Search (D3), My ABC listen (M2)' );
+	is_deeply(
+		names($items),
+		[ 'Home', 'Radio', 'Podcasts', 'News', 'Sport', 'Kids listen', 'Audiobooks', 'Programs', 'Search', 'My ABC listen' ],
+		'Home, Radio, Podcasts (D2), News, Sport, Kids listen, Audiobooks (D4), Programs, Search (D3), My ABC listen (M2)'
+	);
 	ok( !( grep { exists $_->{weight} } @$items ), 'weights removed by Plugin.pm' );
 	is( scalar requests(), 0, 'no HTTP request for the top level' );
 };
@@ -493,6 +504,38 @@ subtest 'Radio Stations: station items with L1\'s live API; omitted from Home wi
 	local *Plugins::ABCListen::Stations::byPageSlug;
 	ok( !( grep { $_->{name} eq 'Radio Stations' } @{ home_root() } ), 'no Stations->byPageSlug (L1 not merged): Radio Stations is not offered' );
 	is( scalar warnings_from_collections(), 0, 'no WARN/ERROR' );
+};
+
+subtest 'a feed callback that dies (D1 review): logged, never called a second time, never escapes' => sub {
+	my $dying = sub {
+		my $calls = shift;
+		return sub { $$calls++; die "LMS callback broke\n" };
+	};
+	my $logged = sub { scalar grep { $_->{level} eq 'ERROR' && $_->{message} =~ /LMS callback broke/ } Slim::Utils::Log->messages( category => 'plugin.abclisten' ) };
+
+	fresh();
+	route_home();
+	my $calls = 0;
+	ok( eval { $HOME_ROOT->( $CLIENT, $dying->( \$calls ), {} ); 1 }, 'Home (page fetched): the death does not escape' ) or diag $@;
+	is( $calls, 1, 'Home: called once, not again with an error item (Collections\' once-guard catches it; Discover\'s _once would stop a second call)' );
+	is( $logged->(), 1, 'Home: logged at ERROR' );
+
+	$calls = 0;
+	ok( eval { $HOME_ROOT->( $CLIENT, $dying->( \$calls ), {} ); 1 }, 'Home (cached page, synchronous): the death does not escape' ) or diag $@;
+	is( $calls, 1, 'Home (cached): called once' );
+
+	fresh();
+	route_collection( 103194120, 0, 'bff-collection-103194120-most-popular-podcasts-o0.json' );
+	$calls = 0;
+	ok( eval { $COLL_MENU->( $CLIENT, $dying->( \$calls ), {}, { id => 103194120, title => 'Most Popular Podcasts' }, 0, 1 ); 1 }, 'collection menu: the death does not escape' ) or diag $@;
+	is( $calls, 1, 'collection menu: called once' );
+	is( $logged->(), 1, 'collection menu: logged at ERROR' );
+
+	fresh();
+	route( "$NEXT/listen.json", code => 500, content => 'oops' );
+	$calls = 0;
+	ok( eval { $HOME_ROOT->( $CLIENT, $dying->( \$calls ), {} ); 1 }, 'Home error path: the death does not escape' ) or diag $@;
+	is( $calls, 1, 'Home error path: called once (the error item)' );
 };
 
 done_testing();
