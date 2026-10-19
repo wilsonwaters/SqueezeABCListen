@@ -12,11 +12,13 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - release: R1 #9 · R2 #15 · R3 #17
 
 ## Currently in flight
-- #2 L1 all live stations — implementation in progress
-- #16 O2 → PR #29 — review + runtime verification running
-- #30 O6 AAC seek + O1 follow-ups — implementation dispatched
+- Implementation (worktrees, parallel): #2 L1 all live stations · #30 O6 AAC seek · #18 O3 A–Z/by type ·
+  #5 D1 collection engine + Home · #13 D3 search + global search · #20 M2 followed programs
+- IC-1 integration check: Programs → episode → play end to end (O1 + O2), plus Radio/Settings regression
 
 ## Last completions
+- #16 O2 merged (PR #29, squash fd465d0): Programs → network → program → episodes, public builders, program-menu
+  registry. Review APPROVE + fixes; runtime PASS (5 networks/5 programs, both skins). LMS menu rules recorded.
 - #12 O1 merged (PR #28, squash 95690b7): episode playback (MP3/AAC renditions, expired/not-found/geo messages,
   favourites). Review APPROVE; runtime PASS with independent ids. AAC seek gap → new O6 (#30).
 - #7 F3 merged (PR #27, squash a8d2488): API.pm data client + drift probe (10/10 live). Review fix: cardRef
