@@ -233,10 +233,12 @@ my %COMPONENTS = (
 );
 
 # ---- D4: paging by collection kind (collectionItem's passthrough hash): fetcher and page size ----
+# The fetchers look items / aggregationItems up when called (not \&items at load time), so a
+# replaced Collections::items (tests, a later redefinition) is the one menus use.
 my %FETCHERS = (
-	aggregation => { fetch => \&aggregationItems, size => AGGREGATION_PAGE_SIZE },    # one A–Z list
+	aggregation => { fetch => sub { aggregationItems(@_) }, size => AGGREGATION_PAGE_SIZE },    # one A–Z list
 );
-my $DEFAULT_FETCHER = { fetch => \&items, size => PAGE_SIZE };
+my $DEFAULT_FETCHER = { fetch => sub { items(@_) }, size => PAGE_SIZE };
 
 my %loggedComponent;    # component name => 1 once logged (unknown at DEBUG, failing at WARN)
 my %warnedType;         # card type => 1 once a dying builder was logged

@@ -358,6 +358,19 @@ subtest '%FETCHERS / menuPage: kind => aggregation pages 50 at a time with progr
 		my $plain = $COL->collectionItem( $CLIENT, { id => 5, title => 'Five', ( defined $kind ? ( kind => $kind ) : () ) }, 0 );
 		is( scalar @{ items_of( feed( $plain->{url}, @{ $plain->{passthrough} } ) ) }, 1, 'kind ' . ( $kind // 'none' ) . ': items() (collection/x, 20 per page)' );
 	}
+
+	# the fetchers look items / aggregationItems up when called: a replaced function is the one used
+	fresh();
+	my @calls;
+	{
+		no warnings 'redefine';
+		local *Plugins::ABCListen::Collections::items            = sub { push @calls, [ items => @_[ 0, 1, 2, 4 ] ]; $_[3]->( { count => 0, cards => [] } ) };
+		local *Plugins::ABCListen::Collections::aggregationItems = sub { push @calls, [ aggregationItems => @_[ 0, 1, 2, 4 ] ]; $_[3]->( { count => 0, cards => [] } ) };
+		$COL->menuPage( { id => '5', query => { rootMetaCollectionId => '7' } }, 20, sub { } );
+		$COL->menuPage( { id => '8', kind => 'aggregation' }, 0, sub { } );
+	}
+	is_deeply( \@calls, [ [ 'items', '5', 20, 20, { rootMetaCollectionId => '7' } ], [ 'aggregationItems', '8', 0, 50, undef ] ], 'menuPage calls a replaced items / aggregationItems (late binding), with the collection\'s query' );
+	is( scalar requests(), 0, 'no request' );
 };
 
 # ---------------------------------------------------------------------------
