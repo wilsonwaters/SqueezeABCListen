@@ -16,6 +16,14 @@
         "validFrom": null,
         "validTo": "2027-04-01T13:00:00+00:00"
       },
+      "defaultThumbnail": {
+        "16x9": "https://live-production.wcms.abc-cdn.net.au/d69f290a96e32fb4674bad70b4211043?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+        "1x1": "https://live-production.wcms.abc-cdn.net.au/d69f290a96e32fb4674bad70b4211043?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+        "3x2": "https://live-production.wcms.abc-cdn.net.au/d69f290a96e32fb4674bad70b4211043?impolicy=wcms_crop_resize&cropH=2000&cropW=3000&xPos=0&yPos=500&width=862&height=575",
+        "3x4": "https://live-production.wcms.abc-cdn.net.au/d69f290a96e32fb4674bad70b4211043?impolicy=wcms_crop_resize&cropH=3000&cropW=2250&xPos=375&yPos=0&width=862&height=1149",
+        "4x3": "https://live-production.wcms.abc-cdn.net.au/d69f290a96e32fb4674bad70b4211043?impolicy=wcms_crop_resize&cropH=2250&cropW=3000&xPos=0&yPos=375&width=862&height=647",
+        "9x16": "https://live-production.wcms.abc-cdn.net.au/d69f290a96e32fb4674bad70b4211043?impolicy=wcms_crop_resize&cropH=3000&cropW=1688&xPos=656&yPos=0&width=862&height=1533"
+      },
       "duration": 257,
       "mediaRenditions": [
         {
@@ -70,7 +78,7 @@
     "typo": true
   },
   "query": "",
-  "params": "hitsPerPage=1&filters=objectID%3A%22coremedia%3A%2F%2Faudioepisode%2F106353760%22+OR+objectID%3A%22coremedia%3A%2F%2Faudio%2F106353760%22+OR+objectID%3A%22coremedia%3A%2F%2Faudiosegment%2F106353760%22&attributesToRetrieve=%5B%22objectID%22%2C%22canonicalURL%22%2C%22title%22%2C%22programTitle%22%2C%22programID%22%2C%22duration%22%2C%22dates%22%2C%22mediaRenditions%22%5D&optionalFilters=%5B%5B%22contentType%3A+article%22%2C%22contentType%3A+channel%22%2C%22contentType%3A+program%22%2C%22contentType%3A+recipe%22%2C%22contentSource%3A+iview%22%2C%22mediaStreamingStatus%3A+AVAILABLE%22%2C%22mediaDownloadStatus%3A++AVAILABLE%22%5D%5D&optionalFilters=%5B%5B%22contentType%3A+article%22%2C%22contentType%3A+channel%22%2C%22contentType%3A+program%22%2C%22contentType%3A+recipe%22%2C%22contentSource%3A+iview%22%2C%22mediaStreamingStatus%3A+AVAILABLE%22%2C%22mediaDownloadStatus%3A+AVAILABLE%22%5D%5D&optionalFilters=%5B%22contentType%3Aprogram%3Cscore%3D1%3E%22%5D",
+  "params": "filters=objectID%3A%22coremedia%3A%2F%2Faudioepisode%2F106353760%22+OR+objectID%3A%22coremedia%3A%2F%2Faudio%2F106353760%22+OR+objectID%3A%22coremedia%3A%2F%2Faudiosegment%2F106353760%22&hitsPerPage=1&attributesToRetrieve=%5B%22objectID%22%2C%22canonicalURL%22%2C%22title%22%2C%22programTitle%22%2C%22programID%22%2C%22duration%22%2C%22dates%22%2C%22mediaRenditions%22%2C%22defaultThumbnail%22%5D&optionalFilters=%5B%5B%22contentType%3A+article%22%2C%22contentType%3A+channel%22%2C%22contentType%3A+program%22%2C%22contentType%3A+recipe%22%2C%22contentSource%3A+iview%22%2C%22mediaStreamingStatus%3A+AVAILABLE%22%2C%22mediaDownloadStatus%3A++AVAILABLE%22%5D%5D&optionalFilters=%5B%5B%22contentType%3A+article%22%2C%22contentType%3A+channel%22%2C%22contentType%3A+program%22%2C%22contentType%3A+recipe%22%2C%22contentSource%3A+iview%22%2C%22mediaStreamingStatus%3A+AVAILABLE%22%2C%22mediaDownloadStatus%3A+AVAILABLE%22%5D%5D&optionalFilters=%5B%22contentType%3Aprogram%3Cscore%3D1%3E%22%5D",
   "renderingContent": {
     "facetOrdering": {
       "facets": {
@@ -78,13 +86,10 @@
       }
     }
   },
-  "processingTimeMS": 4,
+  "processingTimeMS": 2,
   "processingTimingsMS": {
     "_request": {
-      "roundTrip": 202
-    },
-    "fetch": {
-      "total": 1
+      "roundTrip": 200
     },
     "getIdx": {
       "load": {
@@ -92,7 +97,7 @@
       },
       "total": 1
     },
-    "total": 4
+    "total": 2
   },
-  "serverTimeMS": 4
+  "serverTimeMS": 3
 }

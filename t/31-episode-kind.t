@@ -1,11 +1,15 @@
 #!/usr/bin/perl
 # The `episode` kind (Plugins::ABCListen::Episode->init) through the protocol handler's registry:
-# registration (resolve + metadata), the contract-4 resolve shape (url, alternates array, meta,
-# failToken only for geo), playback through scanUrl (the MP3, the AAC alternate after a failed
+# registration (resolve, metadata, onStream), the contract-4 resolve shape (url, alternates array,
+# meta, failToken only for geo), playback through scanUrl (the MP3, the AAC alternate after a failed
 # scan, the geo message when every candidate fails, error tokens without a scan), readable text
-# for every failure token, and metadata (full and partial cache entries, network, 600 px cover,
-# the no-entry fallback, no HTTP, corrupt entries, never an empty title). Offline: SimpleAsyncHTTP,
-# remote scanner and clock are stubs. Fixtures: t/data/ondemand (see t/30-episode.t).
+# for every failure token, metadata (full and partial cache entries, network, 600 px cover, the
+# no-entry fallback, no HTTP, corrupt entries, never an empty title), and onStream (O6: an AAC
+# track's empty duration and bitrate filled from the cache, fill-only: an MP3's never overwritten;
+# idempotent per player; a redirected stream; nothing derivable or no entry: skipped without
+# error). Offline: SimpleAsyncHTTP, remote scanner and clock are stubs; Slim::Music::Info's
+# setBitrate/setDuration are faked here as LMS implements them for a track object. Fixtures:
+# t/data/ondemand (see t/30-episode.t).
 
 use strict;
 use warnings;
@@ -69,6 +73,26 @@ my %REGISTERED;
 	Plugins::ABCListen::Episode->init;
 }
 
+# Slim::Music::Info::setBitrate/setDuration (not in the t/lib stub), as LMS implements them for a
+# track object: set the track's bitrate and vbr_scale, or its secs. Every call is recorded.
+my @INFO_CALLS;
+{
+	no warnings qw(redefine once);
+	*Slim::Music::Info::setBitrate = sub {
+		my ( $track, $bitrate, $vbr ) = @_;
+		push @INFO_CALLS, [ setBitrate => $bitrate ];
+		$track->bitrate($bitrate);
+		$track->vbr_scale($vbr);
+		return $track;
+	};
+	*Slim::Music::Info::setDuration = sub {
+		my ( $track, $secs ) = @_;
+		push @INFO_CALLS, [ setDuration => $secs ];
+		$track->secs($secs);
+		return $track;
+	};
+}
+
 sub fresh {
 	resetStubs();
 	Plugins::ABCListen::API::_reset();
@@ -118,12 +142,28 @@ sub play {
 	return ( $c, $song );
 }
 
+sub logged_like {
+	my ( $level, $re ) = @_;
+	return scalar grep { $_->{message} =~ $re } Slim::Utils::Log->messages( category => 'plugin.abclisten', level => $level );
+}
+
+# The handler's onStream for $song (as LMS calls it, for $client: default the song's master).
+# Returns [ the track's secs, its bitrate, the setDuration/setBitrate calls made ]; fails the
+# test if an onStream failure was logged.
+sub on_stream {
+	my ( $song, $name, $client ) = @_;
+	@INFO_CALLS = ();
+	$PH->onStream( $client || $song->master, $song );
+	is( logged_like( WARN => qr/onStream failed/ ), 0, "$name: no onStream failure logged" );
+	return [ $song->currentTrack->secs, $song->currentTrack->bitrate, sort { $a->[0] cmp $b->[0] } @INFO_CALLS ];
+}
+
 # ---- registration ----
 
-subtest 'Episode->init registers the episode kind with resolve and metadata' => sub {
+subtest 'Episode->init registers the episode kind with resolve, metadata and onStream' => sub {
 	ok( $REGISTERED{episode}, 'kind episode registered' );
-	is_deeply( [ sort keys %{ $REGISTERED{episode} || {} } ], [qw(metadata resolve)], 'resolve and metadata (no onStream/onStop)' );
-	ok( !( grep { ref $_ ne 'CODE' } values %{ $REGISTERED{episode} || {} } ), 'both are code refs' );
+	is_deeply( [ sort keys %{ $REGISTERED{episode} || {} } ], [qw(metadata onStream resolve)], 'resolve, metadata and onStream (O6; no onStop)' );
+	ok( !( grep { ref $_ ne 'CODE' } values %{ $REGISTERED{episode} || {} } ), 'all are code refs' );
 };
 
 # ---- resolve: contract-4 shape ----
@@ -262,12 +302,111 @@ subtest 'metadata: no HTTP, survives corrupt entries, never an empty title' => s
 	is( scalar( requests() ), 0, 'metadata never makes a request' );
 };
 
-subtest 'static: Episode.pm never touches the song duration/startOffset nor setCurrentTitle with a client' => sub {
+# ---- onStream (O6): fill the track's empty duration and bitrate, so LMS can seek ----
+
+my $DRIVE_ID   = '107174638';
+my $DRIVE_URL  = "abclisten://episode/$DRIVE_ID";
+my $DRIVE_PATH = '/listen/programs/classic-drive/classic-drive/107174638';
+my $DRIVE_AAC  = "$MEDIA/audio/02/pj/Z/2j.aac";
+my $DRIVE_BPS  = 261_525;    # 353,025,904 B x 8 / 10,799 s
+
+# A song streaming the Classic Drive AAC, with only the cache entry %entry (duration 10799 s
+# unless %entry says otherwise; an undef one is not stored).
+sub drive_song {
+	my %entry = @_;
+	fresh();
+	setEpisodeMeta( $DRIVE_ID, { duration => 10799, %entry } );
+	my $song = FakeSong->new($DRIVE_URL);
+	$song->streamUrl($DRIVE_AAC);
+	return $song;
+}
+
+subtest 'onStream: an AAC track without duration or bitrate gets both from the cache; idempotent' => sub {
+	fresh( parseISO8601('2026-10-20T12:00:00Z') );
+	setEpisodeMeta( $DRIVE_ID, { path => $DRIVE_PATH } );
+	route( "$SITE/_next/data/$BUILD$DRIVE_PATH.json", file => 'ondemand/nextdata-episode-classic-drive-aac.trimmed.json', headers => { 'Content-Type' => 'application/json' } );
+	scanner();
+	my ( $c, $song ) = play($DRIVE_URL);
+	my $track = $song->currentTrack;
+
+	is( $song->streamUrl, $DRIVE_AAC, 'streaming the AAC' );
+	ok( !$track->secs && !$track->bitrate, 'before: no duration, no bitrate (what LMS\'s scan leaves for ADTS AAC)' );
+
+	is_deeply( on_stream( $song, 'AAC' ), [ 10799, $DRIVE_BPS, [ setBitrate => $DRIVE_BPS ], [ setDuration => 10799 ] ],
+		'after: duration 10,799 s and bitrate 261,525 bps, set once each through Slim::Music::Info' );
+	ok( logged_like( INFO => qr/Episode $DRIVE_ID: LMS gave the stream no duration and no bitrate; .*10799 s.*261525 bps/ ), '... logged at INFO' );
+
+	my $other = ABCListenTest::FakeClient->new( '00:00:00:00:00:02', song => undef );
+	is_deeply( on_stream( $song, 'sync group', $other ), [ 10799, $DRIVE_BPS ], 'onStream for another player of a sync group: nothing set again' );
+	is_deeply( on_stream( $song, 'after a seek' ), [ 10799, $DRIVE_BPS ], 'onStream after a seek: nothing set again' );
+	is_deeply( [ $song->calls ], [], 'the song\'s own duration/startOffset are never touched' );
+};
+
+subtest 'onStream: fill-only, what LMS set (an MP3\'s) is never overwritten' => sub {
+	fresh();
+	serve_doc();
+	scanner();
+	my ( $c, $song ) = play($URL);
+	my $track = $song->currentTrack;
+
+	$track->secs(3276.04);
+	$track->bitrate(192000);    # as LMS's scan of the MP3 sets them
+	is_deeply( on_stream( $song, 'MP3' ), [ 3276.04, 192000 ], 'MP3 with LMS\'s duration and bitrate: nothing set, both kept' );
+
+	$track->bitrate(undef);
+	$track->secs(3000);
+	is_deeply( on_stream( $song, 'no bitrate' ), [ 3000, 192000, [ setBitrate => 192000 ] ], 'duration known, bitrate not: only the bitrate (the cached 192 kbps), LMS\'s duration kept' );
+
+	$track->secs(undef);
+	$track->bitrate(128000);
+	is_deeply( on_stream( $song, 'no duration' ), [ 3276, 128000, [ setDuration => 3276 ] ], 'bitrate known, duration not: only the duration, LMS\'s bitrate kept' );
+	is_deeply( [ $song->calls ], [], 'the song\'s own duration/startOffset are never touched' );
+};
+
+subtest 'onStream: redirected stream, pre-O6 entries, nothing derivable or no entry (skipped, no error)' => sub {
+	my $aac = { url => $DRIVE_AAC, mime => 'audio/aac' };
+
+	my $song = drive_song( renditions => [ { %$aac, bitrate => 261.525 } ] );
+	$song->streamUrl("$MEDIA/redirected/2j.aac");
+	$song->currentTrack->redir($DRIVE_AAC);
+	is( on_stream( $song, 'redirected' )->[1], $DRIVE_BPS, 'redirected: the bitrate of the rendition the track was redirected from' );
+
+	$song = drive_song( renditions => [ { %$aac, bitrate => 0, fileSize => 353_025_904 } ] );
+	is_deeply( on_stream( $song, 'pre-O6 with fileSize' ), [ 10799, $DRIVE_BPS, [ setBitrate => $DRIVE_BPS ], [ setDuration => 10799 ] ],
+		'a pre-O6 entry with fileSize and duration: the bitrate is derived now' );
+
+	$song = drive_song( renditions => [ { %$aac, bitrate => 0 } ] );
+	is_deeply( on_stream( $song, 'pre-O6 without fileSize' ), [ 10799, undef, [ setDuration => 10799 ] ], 'a pre-O6 entry without fileSize: no bitrate (stays unseekable); the duration is filled' );
+
+	for my $duration ( 0, undef ) {
+		my $name = 'duration ' . ( defined $duration ? $duration : 'missing' );
+		$song = drive_song( renditions => [ { %$aac, bitrate => 0, fileSize => 353_025_904 } ], duration => $duration );
+		is_deeply( on_stream( $song, $name ), [ undef, undef ], "$name: nothing derived, nothing set" );
+	}
+
+	$song = drive_song( renditions => [ { %$aac, url => "$MEDIA/another.aac", bitrate => 261.525 } ] );
+	is_deeply( on_stream( $song, 'another URL' ), [ 10799, undef, [ setDuration => 10799 ] ], 'streaming a URL that no cached rendition has: no bitrate' );
+
+	fresh();
+	$song = FakeSong->new($DRIVE_URL);
+	is_deeply( on_stream( $song, 'no entry' ), [ undef, undef ], 'no cache entry: nothing set' );
+};
+
+subtest 'static: the song\'s duration/startOffset never set, no setCurrentTitle; the track\'s only filled (O6 rule)' => sub {
 	my $file = File::Spec->catfile( $FindBin::Bin, '..', 'ABCListen', 'Episode.pm' );
 	open( my $fh, '<', $file ) or die "Can't open $file: $!";
-	my @hits = grep { /->(?:duration|startOffset)\(|setCurrentTitle\(/ } <$fh>;
+	my @lines = <$fh>;
 	close $fh;
-	is_deeply( \@hits, [], 'none in Episode.pm' );
+
+	is_deeply( [ grep { /->(?:duration|startOffset)\(|setCurrentTitle\(/ } @lines ], [], 'no $song->duration/startOffset call, no setCurrentTitle in Episode.pm' );
+	is_deeply( [ grep { /->(?:secs|bitrate|vbr_scale)\(\s*[^\s)]/ } @lines ], [], 'no direct secs/bitrate/vbr_scale setter' );
+
+	my @setDuration = grep {/Slim::Music::Info::setDuration\(/} @lines;
+	my @setBitrate  = grep {/Slim::Music::Info::setBitrate\(/} @lines;
+	is( scalar(@setDuration) . '/' . scalar(@setBitrate), '1/1', 'one Slim::Music::Info::setDuration and one setBitrate call' );
+	like( $setDuration[0] || '', qr/\bif !\$track->secs &&/,    '... setDuration only when the track has no duration (fill-only)' );
+	like( $setBitrate[0]  || '', qr/\bif !\$track->bitrate &&/, '... setBitrate only when the track has no bitrate (fill-only)' );
+
 	ok( Slim::Utils::Strings::stringExists('PLUGIN_ABCLISTEN_EPISODE'), 'the fallback title token exists' );
 };
 
@@ -282,6 +421,12 @@ sub new { my ( $class, %args ) = @_; return bless {%args}, $class }
 sub url   { my $self = shift; $self->{url}   = shift if @_; return $self->{url} }
 sub title { my $self = shift; $self->{title} = shift if @_; return $self->{title} }
 sub cover { my $self = shift; $self->{cover} = shift if @_; return $self->{cover} }
+
+# as Slim::Schema::RemoteTrack: secs (duration), bitrate (bps), vbr_scale, redir (the URL before a redirect)
+sub secs      { my $self = shift; $self->{secs}      = shift if @_; return $self->{secs} }
+sub bitrate   { my $self = shift; $self->{bitrate}   = shift if @_; return $self->{bitrate} }
+sub vbr_scale { my $self = shift; $self->{vbr_scale} = shift if @_; return $self->{vbr_scale} }
+sub redir     { my $self = shift; $self->{redir}     = shift if @_; return $self->{redir} }
 
 package FakeSong;
 

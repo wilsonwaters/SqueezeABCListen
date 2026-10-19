@@ -238,21 +238,22 @@ subtest 'a hook module that fails to load (compile error): logged, and its slot 
 	ok( ( grep { $_->{message} =~ /Plugins::ABCListen::Discover init failed: .*syntax error/s } errors_logged() ), 'load failure logged with the reason' );
 	is_deeply( \@inited, [qw(Live Search MyABC)], 'the other hooks are still initialised' );
 
-	my $c = feed( Live => sync_hook($A), OnDemand => sync_hook($B), Discover => undef, Search => sync_hook($D), MyABC => sync_hook($E) );
+	my $c = feed( Live => sync_hook($A), OnDemand => sync_hook($B), Discover => undef, Search => sync_hook($D), MyABC => sync_hook($E), declare => { Discover => undef } );
 	is( $c->count, 1, 'callback once' );
 	is_deeply( items_of($c), [ $A, $B, $ERROR_ITEM, $D, $E ], 'the broken hook is one error item in its slot; the others keep their order' );
 };
 
-subtest 'default feed: "Radio" and "Programs" links; the other hooks add nothing yet' => sub {
+subtest 'default feed: "Home", "Radio" and "Programs" links; the other hooks add nothing yet' => sub {
 	resetStubs();
 	my $c = feed();
 
 	is( $c->count, 1, 'callback called once' );
 	my $items = items_of($c);
-	is( scalar @$items, 2, 'exactly two top-level items' );
-	is( $items->[1]->{name}, 'Programs', 'then "Programs" (O2; exact keys in t/33)' );
+	is( scalar @$items, 3, 'exactly three top-level items' );
+	is( $items->[0]->{name}, 'Home', 'first "Home" (D1; exact keys in t/41)' );
+	is( $items->[2]->{name}, 'Programs', 'then "Programs" (O2; exact keys in t/33)' );
 
-	my $live = $items->[0];
+	my $live = $items->[1];
 	is( $live->{name}, 'Radio', 'named "Radio"' );
 	is( $live->{name}, string('PLUGIN_ABCLISTEN_RADIO'), 'from PLUGIN_ABCLISTEN_RADIO' );
 	is( $live->{type}, 'link', 'a link' );
@@ -264,7 +265,7 @@ subtest 'default feed: "Radio" and "Programs" links; the other hooks add nothing
 };
 
 subtest 'the empty hooks: init is harmless and menuItems answers [] once' => sub {
-	for my $name (qw(Discover Search MyABC)) {
+	for my $name (qw(Search MyABC)) {
 		resetStubs();
 		my $class = "Plugins::ABCListen::$name";
 		ok( eval { $class->init(); 1 }, "$class->init does not die" ) or diag $@;
@@ -285,7 +286,8 @@ subtest 'the empty hooks: init is harmless and menuItems answers [] once' => sub
 	is_deeply( [ Plugins::ABCListen::Live->menuWeights ], [20], 'Live declares the "radio" weight (for its error item)' );
 	ok( eval { Plugins::ABCListen::OnDemand->init(); 1 }, 'OnDemand->init does not die' ) or diag $@;
 	is_deeply( [ Plugins::ABCListen::OnDemand->menuWeights ], [75], 'OnDemand declares the "programs" weight (O2; its menus are tested in t/33)' );
-	ok( !$_->can('menuWeights'), "$_ declares no weights yet" ) for map {"Plugins::ABCListen::$_"} qw(Discover Search MyABC);
+	ok( !$_->can('menuWeights'), "$_ declares no weights yet" ) for map {"Plugins::ABCListen::$_"} qw(Search MyABC);
+	is_deeply( [ Plugins::ABCListen::Discover->menuWeights ], [10], 'Discover declares the "home" weight (D1; its menus are tested in t/41)' );
 	is( scalar errors_logged(), 0, 'no errors logged' );
 };
 
@@ -504,7 +506,7 @@ subtest 'an answer after the timeout is ignored' => sub {
 	$c = feed_with( Live => sync_hook($A), Discover => sub { my $cb = $_[2]; Slim::Utils::Timers::setTimer( undef, time() + $TIMEOUT + 1, sub { $cb->( [$B] ); $cb->( [$C] ) } ) } );
 	advanceTime( $TIMEOUT + 1 );
 	is( $c->count, 1, 'late answer given twice: still one callback' );
-	is_deeply( items_of($c), [ $A, $ERROR_ITEM ], 'late answer given twice: items unchanged' );
+	is_deeply( items_of($c), [ $ERROR_ITEM, $A ], 'late answer given twice: items unchanged (the error item at Discover\'s "home" weight)' );
 
 	clearTime();
 };
