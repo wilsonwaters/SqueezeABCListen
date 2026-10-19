@@ -15,6 +15,10 @@ also the text of its GitHub Release (see [RELEASING.md](RELEASING.md)).
 - **ABC listen** in the LMS Radio menu, with a **Radio** menu of five national ABC stations:
   triple j, Double J, Radio National, ABC Classic and ABC Jazz, played from ABC's live HE-AAC
   streams.
+- Stable `abclisten://` station links, so favourites keep working if ABC changes its stream
+  addresses. Now Playing shows the station name and artwork.
+- A settings page (Settings → Advanced → ABC listen, or Manage Plugins → ABC listen → Settings)
+  with a **Home state** setting, used by later releases to list your local ABC stations first.
 - Installation from a repository URL in Settings → Manage Plugins
   (`https://raw.githubusercontent.com/wilsonwaters/SqueezeABCListen/main/repo.xml`), with
   automated releases.
