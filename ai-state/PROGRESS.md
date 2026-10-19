@@ -20,6 +20,9 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
   squeezelite stopped). 17:24: testbed restarted (`dev/start.sh`), stale O3 lock broken, link restored to main; all
   in-flight agents (L1, O3, D1, D3, M2, O6 review, IC-1) resumed from their saved state. Lesson: ≤5 concurrent agents.
+- 2026-10-19 ~21:50–23:07 UTC: usage limit again (5 agents) + worker restart. Global git identity reset again (repo
+  .git/config kept Wilson Waters, so no wrong-author commits). Testbed restarted, stale L5 lock cleared. Resumed L2,
+  F5, O7; L5 and D6 held until those finish. New cap: ≤3 concurrent agents.
 
 ## Last completions
 - #22 D4 merged (PR #43, squash 990f709): News, Sport, Kids listen (full section), Audiobooks. Integrated with D2/M2
