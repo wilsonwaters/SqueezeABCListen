@@ -240,6 +240,17 @@ books without chapters; they play only in Australia anyway), then L4, then M2 (M
 
 ## Shared resources & conventions
 
+**LMS menu rules learned on the testbed (binding for every task that emits OPML items — D1–D5, L1–L5, M2, O2–O4):**
+1. **Never put `description` on a non-audio (link/browse) item.** LMS treats any non-audio item with a `description`
+   as a dead end: Material, Jive and the CLI can't open it, and the plain CLI query crashes (found in O2, PR #29). Put
+   the text in the passthrough or as the first row of the opened page instead.
+2. **On an episode/detail page, the synopsis (textarea) item comes first**, then actions (Play episode, …), then
+   other rows. In menu mode LMS blanks any item listed before a textarea, so "Play episode" disappeared in Material
+   when it came first (O2).
+3. Menu-mode counts can be one lower than plain counts because LMS moves a leading description into the window header —
+   write criteria/tests against the plain query, and check menu mode by item text.
+
+
 - **Runtime test bed**: one LMS 9.1.1 at http://localhost:9000 + DevPlayer (`00:00:00:00:00:01`) — see `RUNBOOK.md`.
   Hold the lock (`dev/testbed-lock.sh acquire <ID>`), link your worktree (`PLUGIN_SRC=<worktree>/ABCListen
   dev/link-plugin.sh --restart`), verify, re-link the main checkout, release. Live playback in the container uses the

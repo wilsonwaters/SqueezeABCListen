@@ -439,4 +439,6 @@ Stale locks (> 60 min) are broken automatically. Keep lock hold times short.
   GitHub `repo.xml`.
 - **Testbed lock etiquette.** Hold the lock only while touching LMS (link → checks → restore → release). Long holds
   (M1 held it ~80 min) stall every other agent; acquire waits up to 30 min and breaks locks older than 60 min.
+- **OPML items: no `description` on browse items; synopsis first on detail pages** — see `ai-state/streams.md`
+  "LMS menu rules learned on the testbed".
 
