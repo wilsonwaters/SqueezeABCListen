@@ -50,7 +50,7 @@ package Plugins::ABCListen::API;
 #       GET https://www.abc.net.au/_next/data/<buildId><path>.json -> its pageProps.
 #       $pagePath is a site path ('/listen', '/kidslisten', '/listen/programs/scienceshow') or an
 #       https://(www.)abc.net.au/... URL, normalised by sitePath (query, fragment, trailing '/' dropped).
-#       - F4: the path (and every __N_REDIRECT target) is requested as ABC serves it: characters
+#       - F4: the path (and every redirect target) is requested as ABC serves it: characters
 #         outside the URL path characters %-encoded as UTF-8, then all lower-case ('/listen/x/
 #         el-ni%C3%B1o' -> '/listen/x/el-ni%c3%b1o'). Any other spelling gets a 307 with only an
 #         x-nextjs-redirect header (to the lower-cased path) and no Location: LMS can't follow it
@@ -59,8 +59,11 @@ package Plugins::ABCListen::API;
 #       - 404 or a non-JSON body (stale buildId): refresh siteConfig once and retry once, only if the
 #         buildId changed. Refreshes are limited to one per 60 s across all callers: within that window
 #         a 404 is returned as LOAD_FAILED (status 404) without a new discovery.
-#       - Follows pageProps.__N_REDIRECT (site-relative or absolute) for up to 2 hops; a 3rd hop, a
-#         loop or an off-site target -> LOAD_FAILED.
+#       - Follows pageProps.__N_REDIRECT (site-relative, relative or absolute) and, F4, HTTP redirects
+#         LMS doesn't follow: a 308 (legacy '/radionational/programs/futuretense' -> Location
+#         '/listen/programs/futuretense'), by its Location, else its x-nextjs-redirect header. Up to 2
+#         hops in all; a 3rd hop, a loop or an off-site target -> LOAD_FAILED (status 200 for a
+#         __N_REDIRECT, the HTTP code for a 308). A 308 without either header: as a non-JSON body.
 #       - Cached under the final path, and the path asked for (both as requested, so every spelling
 #         of a page shares one entry), never under the buildId.
 #   algolia(\%params, $cb, $ecb, \%opts)
@@ -364,6 +367,11 @@ sub _nextDataGet {
 		_handler( $done, $what, sub {
 			my $error = _httpError(@_);
 
+			# F4: a redirect LMS doesn't follow (a 308: legacy /radionational/programs/... paths)
+			if ( defined( my $target = _redirectTarget( $_[1] ) ) ) {
+				return _nextDataRedirect( $state, $buildId, $path, $target, $error->{status} );
+			}
+
 			# a stale buildId shows as a 404 or an HTML page instead of JSON
 			if ( ( ( $error->{status} || 0 ) == 404 || _isNotJSON( $_[0] ) ) && !$state->{retried}++ ) {
 				return _refreshBuildId( $state, $buildId, $path, $error );
@@ -377,8 +385,7 @@ sub _nextDataGet {
 
 sub _nextDataResponse {
 	my ( $state, $buildId, $path, $json ) = @_;
-	my $done  = $state->{done};
-	my $chain = $state->{chain};
+	my $done = $state->{done};
 
 	my $pageProps = ref $json eq 'HASH' ? $json->{pageProps} : undef;
 	if ( ref $pageProps ne 'HASH' ) {
@@ -387,21 +394,32 @@ sub _nextDataResponse {
 
 	my $target = $pageProps->{__N_REDIRECT};
 	if ( !defined $target ) {
-		return $done->( { data => $pageProps, cacheKeys => [ map { _nextKey($_) } @$chain ] } );
+		return $done->( { data => $pageProps, cacheKeys => [ map { _nextKey($_) } @{ $state->{chain} } ] } );
 	}
+
+	_nextDataRedirect( $state, $buildId, $path, $target, 200 );
+}
+
+# Follow the page data at $path to $target: a __N_REDIRECT, or an HTTP redirect LMS didn't follow
+# (F4). One hop of the chain: loops, a 3rd hop and off-site targets are LOAD_FAILED with $status
+# (200 for __N_REDIRECT, the HTTP code otherwise).
+sub _nextDataRedirect {
+	my ( $state, $buildId, $path, $target, $status ) = @_;
+	my $done  = $state->{done};
+	my $chain = $state->{chain};
 
 	my $next = _redirectPath( $path, $target );
 
 	if ( !defined $next ) {
-		return $done->( { error => _error( LOAD_FAILED, "Page data for $path redirects off the ABC site: " . _show($target), 200 ) } );
+		return $done->( { error => _error( LOAD_FAILED, "Page data for $path redirects off the ABC site: " . _show($target), $status ) } );
 	}
 	if ( $state->{seen}->{$next}++ ) {
-		return $done->( { error => _error( LOAD_FAILED, 'Redirect loop: ' . join( ' -> ', @$chain, $next ), 200 ) } );
+		return $done->( { error => _error( LOAD_FAILED, 'Redirect loop: ' . join( ' -> ', @$chain, $next ), $status ) } );
 	}
 
 	push @$chain, $next;
 	if ( @$chain - 1 > MAX_REDIRECTS ) {
-		return $done->( { error => _error( LOAD_FAILED, 'Too many redirects: ' . join( ' -> ', @$chain ), 200 ) } );
+		return $done->( { error => _error( LOAD_FAILED, 'Too many redirects: ' . join( ' -> ', @$chain ), $status ) } );
 	}
 
 	main::DEBUGLOG && $log->is_debug && $log->debug("nextData $state->{path}: redirected to $next");
@@ -425,6 +443,28 @@ sub _redirectPath {
 	}
 
 	return _servedPath( sitePath($target) );
+}
+
+# F4: the target of an HTTP redirect that reached HTTP.pm's error callback unfollowed, from its
+# Location header, else its x-nextjs-redirect header; undef for anything else. LMS's Async::HTTP
+# follows 301, 302, 303 and 307 when they have a Location, but treats a 308 as a plain response:
+# its body (the target path, not JSON) fails to decode, and $http carries the code and headers.
+# A 307 without Location never gets here with headers: LMS fails it ("Redirection without
+# location") and passes HTTP.pm only the message.
+sub _redirectTarget {
+	my $http = shift;
+	return undef unless ref $http;
+
+	my $code = eval { $http->code };
+	return undef unless defined $code && $code =~ /\A30[12378]\z/;
+
+	my $headers = eval { $http->headers } or return undef;
+	for my $name (qw(Location X-Nextjs-Redirect)) {
+		my $value = eval { $headers->header($name) };
+		return $value if defined $value && !ref $value && length $value;
+	}
+
+	return undef;
 }
 
 # F4: a site path spelled the way ABC serves its page data without a redirect: every character
