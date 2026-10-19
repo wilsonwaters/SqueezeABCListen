@@ -25,6 +25,11 @@ Unresolved product/technical decisions and what they block. Resolved items move 
    streams may be higher quality but are untestable here. **Default decision:** v1 plays the Icecast streams;
    higher-quality live options (HLS via PlayHLS when installed, mediahub when reachable) are planned as an
    optional setting in the live stream and confirmed by the stakeholder on pi14.
+   **Update 2026-10-19 (L5, PR #49):** PlayHLS 1.01 cannot play `abclisten://` stations: it has no protocol handler
+   and hands ffmpeg `$FILE$`, which F2 rewrites back to `abclisten://…` (verified on the testbed). Orchestrator
+   decision: L5 ships **Standard (56 kbps Icecast, default)** and **ABC mediahub (may be Australia-only; automatic
+   Icecast fallback)**; the HLS option is not shown until L6 (stretch: own HLS handler, or a small F2 change so a
+   convert rule gets the real URL). Stakeholder: confirm mediahub plays on pi14 and note its bitrate.
    _Blocks: nothing in v1._
 
 5. **Audiobooks — list and play them?** ABC's website plays no audiobooks: book pages are `webDistributionRestricted`

@@ -13,9 +13,10 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 
 ## Currently in flight
 - #4 L2 program on air — PR #47 in review + runtime check
-- #14 L5 higher-quality live — implementation (resumed after F5 merged)
+- #14 L5 higher-quality live — PR #49: rework (drop hls option per OPEN-QUESTIONS §4; rebase onto L2's onStream)
 - #44 D6 podcasts A–Z letter groups — implementation (resumed after O7 merged)
-- Queued (cap 3): L3, L4, O4, D5, F6, O8, R2, R3
+- #8 L3 now-playing songs — implementation (L2 follow-ups folded in, see #8 amendment)
+- Queued (cap 3): L5 review, L4, O4, D5, F6, O8, R2, R3
 
 ## Interruptions
 - 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
@@ -26,6 +27,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   F5, O7; L5 and D6 held until those finish. New cap: ≤3 concurrent agents.
 
 ## Last completions
+- #4 L2 merged (PR #47, squash 3b5d5ee): program on air in Radio menus, Now Playing (poll/push per master player via
+  the live kind hook) and Program info. Review + runtime APPROVE (3 stations played). Low findings folded into L3 (#8).
 - #40 O7 merged (PR #46, squash 7004fc0): network-relative program paths (Hottest 100) kept in A–Z / By type after a
   page check. Review APPROVE; follow-ups filed as O8 (#48: Follow row for Hottest 100 episodes, outage resilience).
 - #37 F5 merged (PR #45, squash 1adab5b): cardRef uses image alt text as a name only when it spells the card's slug
