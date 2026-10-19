@@ -345,8 +345,10 @@ subtest 'Kids listen (full section): live station, Featured, Latest Programs, Al
 	is( $by{'Kids & Families podcasts'}->{passthrough}->[0]->{id}, '104141842', 'Kids & Families podcasts: collection 104141842' );
 	like( $by{'Kids & Families podcasts'}->{image}, qr/wcms\.abc-cdn\.net\.au/, '... with artwork' );
 	is( $by{'Books for Kids'}->{passthrough}->[0]->{id}, '106510880', 'Books for Kids: the Audiobooks sub-collection 106510880, named with ABC\'s title' );
-	is_deeply( $PROGRAM_ITEM[-1], { title => 'News Time', path => '/kidslisten/programs/news-time' }, 'News Time: OnDemand->programItem({ title, path })' );
+	my $newsTimeArt = 'https://live-production.wcms.abc-cdn.net.au/316aa1eb12b66a0ef24d30f6455c86ad?impolicy=wcms_crop_resize&cropH=2812&cropW=2812&xPos=1094&yPos=0&width=300&height=300';
+	is_deeply( $PROGRAM_ITEM[-1], { title => 'News Time', path => '/kidslisten/programs/news-time', image => $newsTimeArt }, 'News Time: OnDemand->programItem({ title, path, image })' );
 	is( $by{'News Time'}->{passthrough}->[0]->{path}, '/kidslisten/programs/news-time', '... opening O2\'s program menu' );
+	like( $by{'News Time'}->{image}, qr{\Ahttps://live-production\.wcms\.abc-cdn\.net\.au/316aa1eb12b66a0ef24d30f6455c86ad\?}, '... with ABC\'s News Time artwork (its card in All Kids listen programs), not the plugin icon' );
 	check_shapes( $items, 'Kids listen' );
 	is( scalar requests_like(qr{/_next/data/}), 1, 'one _next/data request (the /kidslisten page)' );
 
@@ -378,6 +380,7 @@ subtest 'Kids listen: state versions listed when stationItem defines them; extra
 	my %by = map { $_->{name} => $_ } @$items;
 	is( $by{'Books for Kids'}->{name}, string('PLUGIN_ABCLISTEN_BOOKS_FOR_KIDS'), 'Books for Kids named by its token' );
 	is_deeply( [ map { $by{$_}->{image} } 'All Kids listen programs', 'Kids & Families podcasts', 'Books for Kids' ], [ ($ICON) x 3 ], 'plugin icon' );
+	is( $by{'News Time'}->{image}, $ICON, 'News Time without the programs\' first page: the plugin icon' );
 
 	fresh();
 	route_section('kids');

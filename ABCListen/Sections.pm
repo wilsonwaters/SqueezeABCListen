@@ -34,9 +34,11 @@ package Plugins::ABCListen::Sections;
 #          Kids listen  All Kids listen programs (program aggregation 9317914, A–Z as ABC orders it),
 #                       Kids & Families podcasts (collection 104141842), Books for Kids (collection
 #                       106510880, named with ABC's title), News Time (OnDemand->programItem,
-#                       /kidslisten/programs/news-time). The three collections' first pages are
-#                       fetched together with the page (Collections->menuPage: the request and cache their menus use)
-#                       for their first card's image and ABC's title. The menu waits for them at
+#                       /kidslisten/programs/news-time, with the artwork of its card in the extras'
+#                       first pages - All Kids listen programs lists it - else the plugin icon).
+#                       The three collections' first pages are fetched together with the page
+#                       (Collections->menuPage: the request and cache their menus use) for their
+#                       first card's image and ABC's title. The menu waits for them at
 #                       most EXTRAS_DEADLINE (3 s, like D2's withImages; the page itself has the
 #                       API's 8 s): one that fails or is late gets the plugin icon and the
 #                       PLUGIN_ABCLISTEN_KIDS_PROGRAMS / _KIDS_PODCASTS / _BOOKS_FOR_KIDS name (a late
@@ -65,6 +67,7 @@ use Slim::Utils::Log;
 use Slim::Utils::Strings qw(cstring);
 use Slim::Utils::Timers;
 
+use Plugins::ABCListen::API;
 use Plugins::ABCListen::Collections;
 use Plugins::ABCListen::Live;
 use Plugins::ABCListen::OnDemand;
@@ -270,7 +273,7 @@ sub _sectionItems {
 		next if $listed{ $extra->{id} };
 		push @items, _extraCollection( $client, $extra, $s->{extras}->{ $extra->{id} } ) || ();
 	}
-	push @items, grep { ref $_ eq 'HASH' } map { $ONDEMAND->programItem( $client, {%$_} ) } @{ $section->{programs} || [] };
+	push @items, grep { ref $_ eq 'HASH' } map { $ONDEMAND->programItem( $client, _withArtwork( $_, $section, $s->{extras} ) ) } @{ $section->{programs} || [] };
 	push @items, $section->{extras}->($client) if $section->{extras};
 
 	# 5. failure / nothing at all
@@ -290,6 +293,19 @@ sub _extraCollection {
 	my $title = $extra->{abcTitle} && _hasText( $first->{title} ) ? $first->{title} : cstring( $client, $extra->{token} );
 
 	return $COLLECTIONS->collectionItem( $client, _extraHash( $extra, title => $title, image => $image ), 0 );
+}
+
+# A static program (News Time) with ABC's artwork: the image of its card in the extras' prefetched
+# first pages (News Time is in All Kids listen programs), else none (programItem: the plugin icon).
+sub _withArtwork {
+	my ( $program, $section, $extras ) = @_;
+	my $path = Plugins::ABCListen::API::sitePath( $program->{path} );
+	return {%$program} unless defined $path;
+
+	my ($card) = grep { ( $_->{type} // '' ) eq 'program' && _hasText( $_->{image} ) && ( Plugins::ABCListen::API::sitePath( $_->{path} ) // '' ) eq $path }
+		grep { ref $_ eq 'HASH' } map { _list( _hash( _hash($extras)->{ $_->{id} } )->{cards} ) } @{ $section->{collections} || [] };
+
+	return { %$program, ( $card ? ( image => $card->{image} ) : () ) };
 }
 
 # The collection hash of an extra (what collectionItem passes to its menu, and menuPage reads).
