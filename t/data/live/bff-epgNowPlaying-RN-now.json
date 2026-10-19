@@ -1,0 +1,46 @@
+{
+ "preparedImage": {
+  "alt": "The Radio National Hour",
+  "imgSrc": "https://resize.abcradio.net.au/sxF2gr_3zsy8XBwQPKVB5buoV78=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FTheRadioNationalHour_3000x3000.jpg",
+  "ratio": "1x1",
+  "srcSet": [
+   "https://resize.abcradio.net.au/sxF2gr_3zsy8XBwQPKVB5buoV78=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FTheRadioNationalHour_3000x3000.jpg 100w",
+   "https://resize.abcradio.net.au/G9NQRodMiMoooLMuuTIhTHwxjb4=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FTheRadioNationalHour_3000x3000.jpg 160w",
+   "https://resize.abcradio.net.au/EkoiPwYk_ZS0fBVJ4G8rTX8TnFU=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FTheRadioNationalHour_3000x3000.jpg 340w",
+   "https://resize.abcradio.net.au/KYPnLYzMajKvohTSDh2eooeqsU0=/580x580/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FTheRadioNationalHour_3000x3000.jpg 580w",
+   "https://resize.abcradio.net.au/L44g_s8k2kZ7iw-9mgozasQGQlg=/940x940/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FTheRadioNationalHour_3000x3000.jpg 940w",
+   "https://resize.abcradio.net.au/6b927OJfu0X8d6LalJT_j5paBM0=/1300x1300/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FTheRadioNationalHour_3000x3000.jpg 1300w"
+  ]
+ },
+ "preparedPresenters": [
+  {
+   "id": "prqP0eRwdJ",
+   "names": {
+    "full": "Fran Kelly"
+   }
+  }
+ ],
+ "start": "2026-10-19T07:00:00+00:00",
+ "end": "2026-10-19T08:00:00+00:00",
+ "title": "The Radio National Hour",
+ "programLink": "https://www.abc.net.au/listen/programs/the-radio-national-hour",
+ "variant": "now",
+ "papiServiceId": "RN",
+ "imageRatio": "1x1",
+ "sources": [
+  {
+   "id": "ptfb171377",
+   "contentType": "audiostream",
+   "contentSource": "papi",
+   "file": "https://streaming.abc-cdn.net.au/audio/hls/rnnsw.m3u8?source=web",
+   "type": "hls"
+  },
+  {
+   "id": "ptf7461355",
+   "contentType": "audiostream",
+   "contentSource": "papi",
+   "file": "https://live-radio01.mediahubaustralia.com/2RNW/aac/?source=web",
+   "type": "aac"
+  }
+ ]
+}

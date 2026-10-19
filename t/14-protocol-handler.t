@@ -8,8 +8,8 @@
 # scanner or LMS callback, sync or async resolve: LMS's callback runs exactly once and no resolve
 # failure is reported), new() with and without redir, getMetadataFor layering (fallback <
 # resolve meta < kind metadata), its bounded meta map and its rate-limited WARN for a dying kind
-# metadata, getCurrentTitle/getIcon/isRemote, and onStream/onStop dispatch. Also the F2 slice: Live->init registers the `live` kind for the 5
-# stations (Icecast URL at play time, name and image as metadata).
+# metadata, getCurrentTitle/getIcon/isRemote, and onStream/onStop dispatch. Also Live->init registers the `live` kind
+# (since L1 for the full catalogue, see t/20-stations.t): Icecast URL at play time, name, logo and bitrate as metadata.
 
 use strict;
 use warnings;
@@ -43,8 +43,6 @@ my $C    = 'https://example.test/c.mp3';
 my $BAD_URL       = 'PLUGIN_ABCLISTEN_BAD_URL';
 my $UNAVAILABLE   = 'PLUGIN_ABCLISTEN_UNAVAILABLE';
 my $STREAM_FAILED = 'PLUGIN_ABCLISTEN_STREAM_FAILED';
-
-my $RN_LOGO = 'https://live-production.wcms.abc-cdn.net.au/556166359443f9aaa26ce7b905c4a29f?impolicy=wcms_crop_resize&cropH=500&cropW=500&xPos=0&yPos=0&width=862&height=862';
 
 # record INFO and DEBUG calls too (they are guarded by is_info / is_debug)
 $Slim::Utils::Log::CATEGORIES{'plugin.abclisten'} = { defaultLevel => 'DEBUG', description => 'PLUGIN_ABCLISTEN' };
@@ -930,8 +928,8 @@ subtest 'slice: Live->init registers the live kind (Icecast URL at play time, st
 
 		is_deeply(
 			$PH->getMetadataFor( undef, $url ),
-			{ title => $names{$id}, artist => DISPLAY_NAME, cover => ( $id eq 'RN' ? $RN_LOGO : ICON ), icon => ICON },
-			"$id: metadata = station name, 'ABC listen', station image"
+			{ title => $names{$id}, artist => DISPLAY_NAME, cover => Plugins::ABCListen::API::imageUrl( Plugins::ABCListen::Stations->get($id)->{logo}, 600 ), bitrate => '56kbps CBR', icon => ICON },
+			"$id: metadata = station name, 'ABC listen', station logo, Icecast bitrate"
 		);
 		is( $PH->getCurrentTitle( undef, $url ), $names{$id}, "$id: current title" );
 	}
