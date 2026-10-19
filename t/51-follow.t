@@ -1,11 +1,15 @@
 #!/usr/bin/perl
 # M2: Plugins::ABCListen::Follow, the server-wide follow list in the prefs stub (pref `followed`,
 # namespace plugin.abclisten): MyABC->init's default and 'array' validator; follow / unfollow /
-# isFollowed / list; path normalisation and de-duplication; the title fallback; refresh keeping
-# followedAt; stored keys exactly { path, id, title, image, network, followedAt }; the cap of 200
-# (the oldest dropped, INFO log); A-Z by Programs::sortKey; a fresh array on every set; corrupt-pref
-# handling; persistence across a stub "restart" (the value round-tripped as LMS's prefs file would);
-# each write re-reading the list; programPathFor's table (the same table as O4's "More from").
+# isFollowed / list / listWithUnfollowed; path normalisation and de-duplication; the title
+# fallback; refresh keeping followedAt and its place; stored keys exactly { path, id, title, image,
+# network, followedAt } (+ unfollowedAt on a tombstone); follow order (never sorted); tombstones:
+# an unfollow keeps the entry at its place for 30 min, a re-follow within that restores it in place
+# (followedAt kept), later follows append, expired ones are ignored and dropped on the next write,
+# at most 200; the cap of 200 (the oldest becomes a tombstone, INFO log); a fresh array on every
+# set; corrupt-pref handling; persistence across a stub "restart" (the value round-tripped as LMS's
+# prefs file would), tombstones included; each write re-reading the list; programPathFor's table
+# (the same table as O4's "More from").
 
 use strict;
 use warnings;
@@ -56,6 +60,9 @@ sub fresh {
 
 sub paths { [ map { $_->{path} } @_ ] }
 
+# The Followed programs view: [ "<path>", or "<path> (unfollowed)" for a tombstone ], in order.
+sub view { [ map { $_->{path} . ( exists $_->{unfollowedAt} ? ' (unfollowed)' : '' ) } $F->listWithUnfollowed ] }
+
 sub infos { map { $_->{message} } grep { $_->{level} eq 'INFO' } Slim::Utils::Log->messages( category => 'plugin.abclisten' ) }
 
 # ---------------------------------------------------------------------------
@@ -95,7 +102,9 @@ subtest 'follow / isFollowed / list / unfollow' => sub {
 
 	is( $F->unfollow($SCIENCE), 1, 'unfollow: 1' );
 	ok( !$F->isFollowed($SCIENCE), 'no longer followed' );
-	is_deeply( stored(), [], 'the pref is empty again' );
+	is_deeply( [ $F->list ], [], 'list: empty' );
+	is_deeply( stored(), [ { %SCIENCE_SHOW, followedAt => $T0, unfollowedAt => $T0 } ], 'the pref keeps a tombstone (unfollowedAt = now)' );
+	is_deeply( [ $F->listWithUnfollowed ], stored(), 'listWithUnfollowed: the tombstone' );
 };
 
 subtest 'stored keys exactly { path, id, title, image, network, followedAt }; unknown ones absent' => sub {
@@ -111,6 +120,9 @@ subtest 'stored keys exactly { path, id, title, image, network, followedAt }; un
 	my ($odd) = grep { $_->{path} eq '/listen/programs/odd' } @{ stored() };
 	is_deeply( [ sort keys %$odd ], [qw(followedAt path title)], 'non-scalar or blank values are not stored' );
 	ok( !( grep { ref $_ } map { values %$_ } @{ stored() } ), 'every stored value is a plain scalar' );
+
+	$F->unfollow($SCIENCE);
+	is_deeply( [ sort keys %{ stored()->[0] } ], [ sort @KEYS, 'unfollowedAt' ], 'a tombstone: the same keys plus unfollowedAt' );
 };
 
 subtest 'path spellings normalise to one entry (API::sitePath)' => sub {
@@ -121,7 +133,7 @@ subtest 'path spellings normalise to one entry (API::sitePath)' => sub {
 	is_deeply( paths( @{ stored() } ), [$SCIENCE], 'five spellings: one entry, the canonical path' );
 	ok( $F->isFollowed("https://www.abc.net.au$SCIENCE/"), 'isFollowed normalises too' );
 	is( $F->unfollow("http://abc.net.au$SCIENCE/"), 1, 'unfollow normalises too' );
-	is_deeply( stored(), [], 'gone' );
+	is_deeply( [ $F->list ], [], 'gone' );
 };
 
 subtest 'title fallback; following again refreshes title, image and network but keeps followedAt' => sub {
@@ -129,7 +141,7 @@ subtest 'title fallback; following again refreshes title, image and network but 
 	$F->follow( { path => '/listen/programs/lab-notes' } );
 	is( stored()->[0]->{title}, 'lab-notes', 'no title: the last path segment' );
 	$F->follow( { path => '/listen/programs/blank', title => "  \t" } );
-	is( ( $F->list )[0]->{title}, 'blank', 'a blank title: the last path segment' );
+	is( ( $F->list )[-1]->{title}, 'blank', 'a blank title: the last path segment' );
 
 	fresh();
 	$F->follow( { title => 'Science (old)', path => $SCIENCE, image => 'old.jpg', network => 'RN' } );
@@ -167,25 +179,112 @@ subtest 'no site path: nothing followed' => sub {
 	is( $F->unfollow(undef), 0, 'unfollow(undef): 0' );
 };
 
-subtest 'list: A-Z by Programs::sortKey ("The" ignored, accents folded), then title, then path' => sub {
+subtest 'list: follow order (oldest first), never sorted; a refresh keeps its place' => sub {
 	fresh();
 	my @programs = (
 		[ 'The Science Show', $SCIENCE ],
 		[ 'Hack',             '/triplej/programs/hack' ],
 		[ 'Classic Drive',    '/listen/programs/classic-drive' ],
 		[ 'Ábc Pacific',      '/pacific/programs/abc-pacific' ],
-		[ 'the Inside Sport', '/listen/programs/inside-sport' ],
 		[ 'Sci',              '/listen/programs/sci-b' ],
 		[ 'Sci',              '/listen/programs/sci-a' ],
 	);
-	$F->follow( { title => $_->[0], path => $_->[1] } ) for @programs;
-	is_deeply(
-		[ map { $_->{title} } $F->list ],
-		[ 'Ábc Pacific', 'Classic Drive', 'Hack', 'the Inside Sport', 'Sci', 'Sci', 'The Science Show' ],
-		'A-Z: the leading "The" ignored, accents folded'
-	);
-	is_deeply( [ map { $_->{path} } grep { $_->{title} eq 'Sci' } $F->list ], [ '/listen/programs/sci-a', '/listen/programs/sci-b' ], 'equal titles: by path' );
-	is( scalar( $F->list ), 7, 'scalar list(): the count' );
+	my $n = 0;
+	for (@programs) {
+		setTime( $T0 + 10 * $n++ );
+		$F->follow( { title => $_->[0], path => $_->[1] } );
+	}
+	my @order = map { $_->[1] } @programs;
+	is_deeply( paths( $F->list ), \@order, 'in the order followed (not A-Z, not by path)' );
+	is_deeply( [ map { $_->{followedAt} } $F->list ], [ map { $T0 + 10 * $_ } 0 .. 5 ], '... oldest followedAt first' );
+	is( scalar( $F->list ), 6, 'scalar list(): the count' );
+
+	setTime( $T0 + 1000 );
+	$F->follow( { title => 'Aardvark (renamed)', path => '/listen/programs/classic-drive' } );
+	is_deeply( paths( $F->list ), \@order, 'a refresh (even one that would sort first) keeps its place' );
+	is( ( $F->list )[2]->{title}, 'Aardvark (renamed)', '... with the new title' );
+
+	$F->follow( { title => 'Aaa', path => '/listen/programs/aaa' } );
+	is_deeply( paths( $F->list ), [ @order, '/listen/programs/aaa' ], 'a new follow is appended, whatever its title' );
+
+	# the same second: still in the order followed
+	fresh();
+	$F->follow( { title => $_, path => "/listen/programs/$_" } ) for qw(zeta alpha mid);
+	is_deeply( paths( $F->list ), [ map {"/listen/programs/$_"} qw(zeta alpha mid) ], 'follows in the same second: in the order followed' );
+	is_deeply( paths( $F->listWithUnfollowed ), paths( $F->list ), 'listWithUnfollowed without tombstones: the same as list' );
+};
+
+subtest 'tombstones: an unfollow keeps its place for 30 min; a re-follow within that restores it in place' => sub {
+	fresh();
+	my ( $A, $B, $C, $D, $E ) = map {"/listen/programs/$_"} qw(a b c d e);
+	setTime($T0);
+	$F->follow( { title => 'A', path => $A } );
+	setTime( $T0 + 10 );
+	$F->follow( { title => 'B', path => $B } );
+	setTime( $T0 + 20 );
+	$F->follow( { title => 'C', path => $C } );
+
+	setTime( $T0 + 100 );
+	is( $F->unfollow($B), 1, 'unfollow B: 1' );
+	ok( !$F->isFollowed($B), 'B is not followed' );
+	is_deeply( paths( $F->list ), [ $A, $C ], 'list: A, C (no tombstone)' );
+	is_deeply( view(), [ $A, "$B (unfollowed)", $C ], 'listWithUnfollowed: B still at its place' );
+	is_deeply( ( $F->listWithUnfollowed )[1], { path => $B, title => 'B', followedAt => $T0 + 10, unfollowedAt => $T0 + 100 }, '... with followedAt and unfollowedAt' );
+
+	setTime( $T0 + 200 );
+	$F->follow( { title => 'D', path => $D } );
+	is_deeply( view(), [ $A, "$B (unfollowed)", $C, $D ], 'a new follow is appended after the tombstone' );
+
+	my $before = refaddr( stored() );
+	is( $F->unfollow($B), 0, 'unfollowing the tombstone again: 0' );
+	is( refaddr( stored() ), $before, '... and nothing is written' );
+
+	setTime( $T0 + 100 + 1799 );
+	my $entry = $F->follow( { title => 'B (renamed)', path => $B, network => 'RN' } );
+	is_deeply( $entry, { path => $B, title => 'B (renamed)', network => 'RN', followedAt => $T0 + 10 }, 're-follow within 30 min: restored with its followedAt, details refreshed' );
+	ok( $F->isFollowed($B), '... followed again' );
+	is_deeply( view(), [ $A, $B, $C, $D ], '... at its old place' );
+
+	# expiry: 30 min after the unfollow, reads ignore it; the next write drops it
+	setTime( $T0 + 3000 );
+	$F->unfollow($C);
+	setTime( $T0 + 3000 + 1799 );
+	is_deeply( view(), [ $A, $B, "$C (unfollowed)", $D ], 'after 29:59: the tombstone is still there' );
+	setTime( $T0 + 3000 + 1800 );
+	is_deeply( view(), [ $A, $B, $D ], 'after 30 min: gone from listWithUnfollowed' );
+	ok( !$F->isFollowed($C), '... and not followed' );
+	is( scalar @{ stored() }, 4, '... still in the pref until the next write' );
+	$F->follow( { title => 'E', path => $E } );
+	is_deeply( paths( @{ stored() } ), [ $A, $B, $D, $E ], 'the next write drops it' );
+
+	# a re-follow after expiry is a new follow: appended, with a new followedAt
+	setTime( $T0 + 6000 );
+	$F->unfollow($A);
+	setTime( $T0 + 6000 + 1800 );
+	$entry = $F->follow( { title => 'A', path => $A } );
+	is( $entry->{followedAt}, $T0 + 7800, 're-follow after 30 min: a new followedAt' );
+	is_deeply( view(), [ $B, $D, $E, $A ], '... appended at the end' );
+
+	# a clock moved back: a tombstone from the "future" lives 30 min either way
+	fresh();
+	$F->follow( { title => 'A', path => $A } );
+	$F->unfollow($A);
+	setTime( $T0 - 1799 );
+	is_deeply( view(), ["$A (unfollowed)"], 'the clock 29:59 back: still there' );
+	setTime( $T0 - 1800 );
+	is_deeply( view(), [], 'the clock 30 min back: expired' );
+};
+
+subtest 'tombstones: at most 200 (the oldest unfollows dropped)' => sub {
+	fresh();
+	for my $n ( 1 .. 205 ) {
+		setTime( $T0 + $n );
+		$F->follow( { title => "P$n", path => "/listen/programs/p$n" } );
+		$F->unfollow("/listen/programs/p$n");
+	}
+	is( scalar @{ stored() }, 200, '205 unfollows: 200 tombstones kept' );
+	is( paths( @{ stored() } )->[0], '/listen/programs/p6', 'the five oldest unfollows dropped' );
+	is_deeply( [ $F->list ], [], 'nothing followed' );
 };
 
 subtest 'cap: the 201st follow drops the oldest followedAt (INFO names it)' => sub {
@@ -204,9 +303,11 @@ subtest 'cap: the 201st follow drops the oldest followedAt (INFO names it)' => s
 
 	setTime( $T0 + 1000 );
 	$F->follow( { title => 'Program 201', path => '/listen/programs/p201' } );
-	is( scalar @{ stored() }, 200, 'still 200 after the 201st' );
+	is( scalar( my @l = $F->list ), 200, 'still 200 followed after the 201st' );
 	ok( !$F->isFollowed('/listen/programs/p1'), 'the oldest follow (p1, followedAt kept on refresh) was dropped' );
 	ok( $F->isFollowed('/listen/programs/p2') && $F->isFollowed('/listen/programs/p201'), 'p2 and the new p201 kept' );
+	is_deeply( ( $F->listWithUnfollowed )[0], { path => '/listen/programs/p1', title => 'Program 1 (renamed)', followedAt => $T0 + 1, unfollowedAt => $T0 + 1000 }, 'p1 became a tombstone at its place (no row moves)' );
+	is( ( $F->listWithUnfollowed )[-1]->{path}, '/listen/programs/p201', 'p201 appended' );
 	my @info = infos();
 	is( scalar @info, 1, 'one INFO message' );
 	like( $info[0], qr{Program 1 \(renamed\) \(/listen/programs/p1\)}, 'it names the dropped program' );
@@ -216,7 +317,8 @@ subtest 'cap: the 201st follow drops the oldest followedAt (INFO names it)' => s
 	$F->follow( { title => "Program $_", path => "/listen/programs/p$_" } ) for 1 .. 200;
 	$F->follow( { title => 'A new program', path => '/listen/programs/a-new' } );
 	ok( $F->isFollowed('/listen/programs/a-new'), 'equal followedAt: the new follow is kept' );
-	is( scalar @{ stored() }, 200, '... and one older follow dropped' );
+	is( scalar( @l = $F->list ), 200, '... and one older follow dropped' );
+	ok( !$F->isFollowed('/listen/programs/p1'), '... the first in the list (p1)' );
 };
 
 subtest 'every write sets a fresh array of fresh hashes; earlier values are never changed' => sub {
@@ -266,14 +368,18 @@ subtest 'a corrupt pref never dies; it reads clean and the next write stores the
 		{ path => "https://www.abc.net.au$SCIENCE/", title => 'The Science Show', followedAt => '17', id => '2885500', mac => '00:00:00:00:00:01', password => 'secret' },
 		{ path => $SCIENCE, title => 'Duplicate', followedAt => 99 },
 		{ path => '/triplej/programs/hack', title => [ 'Hack' ], followedAt => 'yesterday', image => { a => 1 } },
+		{ path => '/listen/programs/bad-tombstone', title => 'Bad', followedAt => 5, unfollowedAt => 'soon' },
+		{ path => '/listen/programs/ref-tombstone', title => 'Ref', followedAt => 5, unfollowedAt => [$T0] },
+		{ path => '/listen/programs/old-tombstone', title => 'Old', followedAt => 5, unfollowedAt => $T0 - 1800 },
 	];
 	my @list = eval { $F->list };
 	is( $@, '', 'mixed garbage: list() does not die' );
 	is_deeply(
 		\@list,
-		[ { path => '/triplej/programs/hack', title => 'hack', followedAt => 0 }, { path => $SCIENCE, title => 'The Science Show', id => '2885500', followedAt => 17 } ],
-		'non-hashes, entries without a site path and later duplicates dropped; unknown keys ignored; bad values fall back'
+		[ { path => $SCIENCE, title => 'The Science Show', id => '2885500', followedAt => 17 }, { path => '/triplej/programs/hack', title => 'hack', followedAt => 0 } ],
+		'non-hashes, entries without a site path and later duplicates dropped; unknown keys ignored; bad values fall back; stored order'
 	);
+	is_deeply( paths( $F->listWithUnfollowed ), paths(@list), 'tombstones with a bad or expired unfollowedAt: expired' );
 
 	$F->unfollow('/listen/programs/not-there');
 	is( ref stored()->[0], '', 'a no-op unfollow does not rewrite it' );
@@ -295,7 +401,10 @@ subtest 'persistence across a stub restart (the pref round-tripped like LMS\'s p
 	$F->follow( {%SCIENCE_SHOW} );
 	setTime( $T0 + 60 );
 	$F->follow( { title => 'Hack', path => '/triplej/programs/hack', network => 'triple j' } );
-	my @before = $F->list;
+	$F->follow( { title => 'Classic Drive', path => '/listen/programs/classic-drive' } );
+	$F->unfollow('/triplej/programs/hack');
+	my @before = $F->listWithUnfollowed;
+	is( scalar @before, 3, 'two follows and a tombstone' );
 
 	my $file = JSON::PP->new->canonical->encode( stored() );
 
@@ -306,8 +415,9 @@ subtest 'persistence across a stub restart (the pref round-tripped like LMS\'s p
 	Plugins::ABCListen::MyABC->init();
 	Plugins::ABCListen::OnDemand::_resetProviders();
 
-	is_deeply( [ $F->list ], \@before, 'the same follows, in the same order, after the restart' );
-	ok( $F->isFollowed($SCIENCE) && $F->isFollowed('/triplej/programs/hack'), 'both still followed' );
+	is_deeply( [ $F->listWithUnfollowed ], \@before, 'the same follows and tombstone, in the same order, after the restart' );
+	ok( $F->isFollowed($SCIENCE) && $F->isFollowed('/listen/programs/classic-drive'), 'both still followed' );
+	ok( !$F->isFollowed('/triplej/programs/hack'), 'the tombstone is not' );
 };
 
 subtest 'each write re-reads the list (another UI\'s write is never lost)' => sub {

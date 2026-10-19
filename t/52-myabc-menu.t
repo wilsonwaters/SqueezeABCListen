@@ -3,13 +3,16 @@
 # Australia/Sydney):
 #   * the top-level "My ABC listen" item (exact keys, weight, menuWeights, last among the hooks' items);
 #   * My ABC listen: the empty state (one instructional text item), "Latest episodes" and
-#     "Followed programs (N)"; Followed programs as OnDemand->programItem rows, A-Z;
+#     "Followed programs (N)" (N counts follows, not tombstones; both rows stay while only
+#     tombstones are left); Followed programs as OnDemand->programItem rows in follow order, an
+#     unfollowed program keeping its row for 30 min;
 #   * Latest episodes over three routed programs: merge order (date, then program, then id; undated
 #     last), one row per episode (its own program wins), the 50 cap, "<program>: " name/line1
 #     prefixes with the meta-cache title untouched, O2's programTitle rule, at most 4 programs in
 #     flight, a failing program skipped, all failing -> LOAD_FAILED, nothing -> NO_EPISODES, the
 #     25 s deadline (late results ignored), the 15 min cache (no request on a hit; a follow starts a
-#     new list), exactly one callback (also when LMS's callback dies);
+#     new list; an unfollowed program's episodes drop out), exactly one callback (also when LMS's
+#     callback dies);
 #   * the program-menu provider (OnDemand's registry): two follow rows from isFollowed (Follow + hint
 #     text, or "✓ Following" text + Unfollow), explicit op, [] without a path, exactly one callback;
 #     through OnDemand's real program menu;
@@ -17,16 +20,22 @@
 #     showBriefly / nextWindow, LOAD_FAILED for a bad request;
 #   * stale item ids on a rebuilt menu (program menu and song info, follow and unfollow): re-opening
 #     any id from before the change never changes the stored follows, and no later row moves;
+#   * stale item ids through My ABC listen -> Followed programs -> program menu: after an unfollow
+#     (the reviewer's sequence: two programs whose menus share a layout, the first unfollowed) and
+#     after a new follow (one that would sort first A-Z), every id from before opens the same row
+#     and never changes the follows; a re-follow within 30 min restores the follows exactly;
 #   * the song-info provider: the follow rows only for episode URLs whose meta-cache entry has a path
 #     under /programs/ or /audiobooks/ and a programTitle; the named labels follow the state; undef
-#     for live and foreign URLs; no HTTP; an exception contained.
+#     for live (even with a meta entry under the live id) and foreign URLs; no HTTP; an exception
+#     contained.
 #
 # Fixtures: t/data/ondemand/nextdata-program-scienceshow.trimmed.json (O2), the F3 search page
 # t/data/foundation/listen-search.trimmed.html (buildId build-3afcd04f), and t/data/myabc/
 # (synthetic, shaped like the recorded cards): Classic Drive and Hack program pages, the newest 5
 # episodes of The Science Show (4 own, one undated, plus a Lab Notes episode), Classic Drive (5)
 # and Hack (two at the same time, one undated, plus Classic Drive's 107300002). Programs for the cap,
-# concurrency and deadline cases are generated in code.
+# concurrency and deadline cases are generated in code, and so is "Atlas" (Classic Drive's page
+# under another title and path).
 
 use strict;
 use warnings;
@@ -189,6 +198,23 @@ sub route_three {
 
 sub follow_three { $F->follow($_) for {%SCIENCE_SHOW}, {%CLASSIC_DRIVE}, {%HACK_SHOW} }
 
+# Program menus for Classic Drive and Hack: one header row each (the description), so their follow
+# rows share an index.
+sub route_program_menus {
+	route( "$NEXT$CLASSIC.json", file => 'myabc/nextdata-program-classic-drive.synthetic.json', headers => $JSON_TYPE );
+	route( "$NEXT$HACK.json",    file => 'myabc/nextdata-program-hack.synthetic.json',          headers => $JSON_TYPE );
+	route( "$EPS?collectionId=90000102&offset=0&size=50", file => 'myabc/bff-episodesWithSegments-classic-drive.synthetic.json', headers => $JSON_TYPE );
+	route( "$EPS?collectionId=90000202&offset=0&size=50", file => 'myabc/bff-episodesWithSegments-hack.synthetic.json',          headers => $JSON_TYPE );
+}
+
+# A program at $path titled $title with Classic Drive's page (the same menu layout) and episodes.
+sub route_program_like_classic {
+	my ( $path, $title ) = @_;
+	my $page = JSON::PP::decode_json( fixture('myabc/nextdata-program-classic-drive.synthetic.json') );
+	$page->{pageProps}->{heroImageWithCTAPrepared}->{heading} = $title;
+	route( "$NEXT$path.json", content => to_json($page), headers => $JSON_TYPE );
+}
+
 # Generated programs /listen/programs/gen-<n>: a program page (collection 91000000 + n) and its
 # newest 5 episodes, published at $T0 - (n * 5 + i) hours. %opt: defer => 1 for the page.
 sub route_generated {
@@ -286,29 +312,48 @@ subtest 'My ABC listen with follows: Latest episodes, Followed programs (N)' => 
 	}
 
 	$F->unfollow($HACK);
-	is( items_of( feed( $MY_ABC, undef ) )->[1]->{name}, 'Followed programs (2)', 'the count follows the list' );
+	is( items_of( feed( $MY_ABC, undef ) )->[1]->{name}, 'Followed programs (2)', 'the count follows the list (a tombstone is not counted)' );
+
+	$F->unfollow($_) for $SCIENCE, $CLASSIC;
+	is_deeply( names( items_of( feed( $MY_ABC, undef ) ) ), [ 'Latest episodes', 'Followed programs (0)' ], 'only tombstones left: both rows stay (ids into Followed programs still work)' );
+	is_deeply( items_of( feed( $LATEST, undef ) ), [ text_item($HELP) ], '... Latest episodes: the help text (tombstones ignored)' );
+	advanceTime(1800);
+	is_deeply( items_of( feed( $MY_ABC, undef ) ), [ text_item($HELP) ], '30 min later: the help text' );
 	is( scalar requests(), 0, 'no network access' );
 };
 
-subtest 'Followed programs: OnDemand->programItem rows, A-Z' => sub {
+subtest 'Followed programs: OnDemand->programItem rows in follow order; an unfollowed program keeps its row 30 min' => sub {
 	fresh();
 	follow_three();
 	$F->follow( { title => 'The Bush Telegraph', path => '/listen/programs/bushtelegraph/' } );
 
 	my $items = items_of( feed( $FOLLOWED, undef ) );
-	is_deeply( names($items), [ 'The Bush Telegraph', 'Classic Drive', 'Hack', 'The Science Show' ], 'A-Z by sortKey ("The" ignored)' );
+	is_deeply( names($items), [ 'The Science Show', 'Classic Drive', 'Hack', 'The Bush Telegraph' ], 'follow order, oldest first (not A-Z): the newest follow is the last row' );
 
 	my @expected = map { Plugins::ABCListen::OnDemand->programItem( undef, $_ ) } (
+		{%SCIENCE_SHOW}, {%CLASSIC_DRIVE}, {%HACK_SHOW},
 		{ title => 'The Bush Telegraph', path => '/listen/programs/bushtelegraph' },
-		{%CLASSIC_DRIVE}, {%HACK_SHOW}, {%SCIENCE_SHOW},
 	);
 	is_deeply( $items, \@expected, 'each row is exactly programItem({title, path, id?, image?, network?}) (no followedAt)' );
-	is( $items->[3]->{line2}, 'Radio National', 'line2: the stored network' );
-	like( $items->[3]->{image}, qr/a9bfe6ad8b283391297dd347dd60de8f\?width=862/, 'image: the stored image' );
-	is( $items->[3]->{url}, $PROGRAM, 'rows open O2\'s program menu' );
-	is( $items->[0]->{image}, $ICON, 'no image: the plugin icon' );
+	is( $items->[0]->{line2}, 'Radio National', 'line2: the stored network' );
+	like( $items->[0]->{image}, qr/a9bfe6ad8b283391297dd347dd60de8f\?width=862/, 'image: the stored image' );
+	is( $items->[0]->{url}, $PROGRAM, 'rows open O2\'s program menu' );
+	is( $items->[3]->{image}, $ICON, 'no image: the plugin icon' );
 	ok( !( grep { exists $_->{description} } @$items ), 'no description on the browse rows (menu rule 1)' );
 	check_names( $items, 'Followed programs' );
+
+	$F->unfollow($CLASSIC);
+	is_deeply( items_of( feed( $FOLLOWED, undef ) ), \@expected, 'Classic Drive unfollowed: the same rows (its row stays, the same programItem row)' );
+	is( items_of( feed( $MY_ABC, undef ) )->[1]->{name}, 'Followed programs (3)', '... and not counted' );
+	advanceTime(1799);
+	is_deeply( items_of( feed( $FOLLOWED, undef ) ), \@expected, '... for 30 min' );
+	advanceTime(1);
+	is_deeply( names( items_of( feed( $FOLLOWED, undef ) ) ), [ 'The Science Show', 'Hack', 'The Bush Telegraph' ], 'then its row is gone' );
+
+	$F->unfollow($_) for $SCIENCE, $HACK, '/listen/programs/bushtelegraph';
+	is_deeply( names( items_of( feed( $FOLLOWED, undef ) ) ), [ 'The Science Show', 'Hack', 'The Bush Telegraph' ], 'all unfollowed: the rows stay for 30 min' );
+	advanceTime(1800);
+	is_deeply( items_of( feed( $FOLLOWED, undef ) ), [ text_item($HELP) ], 'then the help text' );
 	is( scalar requests(), 0, 'no network access' );
 };
 
@@ -551,7 +596,7 @@ subtest 'Latest episodes: cached 15 min; a cache hit makes no request; a follow 
 
 	$F->unfollow('/listen/programs/gen-1');
 	$count = scalar requests();
-	is_deeply( names( items_of( feed( $LATEST, undef ) ) ), names($first), 'after the unfollow: the earlier list' );
+	is_deeply( names( items_of( feed( $LATEST, undef ) ) ), names($first), 'after the unfollow: the earlier list (the tombstone is ignored: its episodes drop out)' );
 	is( scalar requests(), $count, '... still cached' );
 
 	advanceTime(901);
@@ -766,7 +811,8 @@ subtest 'stale ids, program menu: unfollow, then every id from before -> still n
 
 	open_id( $program, $k );
 	ok( !$F->isFollowed($SCIENCE), 'opening Unfollow (id k + 1) unfollows' );
-	is( stored_follows(), '[]', 'nothing followed' );
+	is_deeply( [ $F->list ], [], 'nothing followed (a tombstone is stored)' );
+	my $stored = stored_follows();
 
 	my $after = $program->();
 	is( scalar @$after, scalar @$before, 'the rebuilt menu has as many rows' );
@@ -781,7 +827,7 @@ subtest 'stale ids, program menu: unfollow, then every id from before -> still n
 	}
 	open_id( $program, $openable[1], 1 );
 	ok( !$F->isFollowed($SCIENCE), 'stale id of the first episode\'s "Play episode": still not following' );
-	is( stored_follows(), '[]', 'every stale id: the follows are unchanged' );
+	is( stored_follows(), $stored, 'every stale id: the follows are unchanged' );
 };
 
 # The song-info menu as Slim::Menu::TrackInfo::menu builds it for every request: a row before the
@@ -829,13 +875,141 @@ subtest 'stale ids, song info: follow / unfollow, then every id from before -> u
 	my @openableFollowing = openable($following);
 	open_id( $menu, $u );
 	ok( !$F->isFollowed($SCIENCE), 'opening Unfollow unfollows' );
+	$stored = stored_follows();
 
 	is_deeply( open_id( $menu, $u ), $HINT_ROW, 'the stale Unfollow id: a text row, a no-op' );
 	for my $i (@openableFollowing) {
 		open_id( $menu, $i );
 		ok( !$F->isFollowed($SCIENCE), "stale id $i ($following->[$i]->{name}): still not following" );
 	}
-	is( stored_follows(), '[]', 'the follows are unchanged' );
+	is( stored_follows(), $stored, 'the follows are unchanged' );
+};
+
+# Every id a client can hold into Followed programs, as index paths from My ABC listen: [1, i] per
+# program row and [1, i, k] per row of its program menu that opens.
+sub followed_ids {
+	my $my = shift;
+	my @ids;
+	for my $i ( openable( open_id( $my, 1 ) ) ) {
+		push @ids, [ 1, $i ], map { [ 1, $i, $_ ] } openable( open_id( $my, 1, $i ) );
+	}
+	return @ids;
+}
+
+# The name of the row an index path leads to now, without opening that row.
+sub row_at {
+	my ( $build, @index ) = @_;
+	my $last  = pop @index;
+	my $items = @index ? open_id( $build, @index ) : $build->();
+	return ref $items eq 'ARRAY' && ref $items->[$last] eq 'HASH' ? $items->[$last]->{name} : undef;
+}
+
+sub id_of { join '.', @{ $_[0] } }
+
+sub is_action_name { defined $_[0] && $_[0] =~ /\A(?:Follow|Unfollow) "/ }
+
+subtest 'stale ids, Followed programs: unfollow the first program, then every id from before -> no follow changes' => sub {
+	fresh();
+	route_program_menus();
+	my $my = sub { items_of( feed( $MY_ABC, undef ) ) };
+
+	# the reviewer's sequence: follow two programs whose menus share a layout ...
+	for my $program ( {%CLASSIC_DRIVE}, {%HACK_SHOW} ) {
+		my $menu = items_of( open_item( Plugins::ABCListen::OnDemand->programItem( undef, $program ) ) );
+		open_item( $menu->[ op_index( $menu, 'follow' ) ] );
+		advanceTime(60);
+	}
+	ok( $F->isFollowed($CLASSIC) && $F->isFollowed($HACK), 'following Classic Drive, then Hack' );
+
+	my $followed = open_id( $my, 1 );
+	is_deeply( names($followed), [ 'Classic Drive', 'Hack' ], 'Followed programs: Classic Drive, Hack' );
+	my $u = op_index( open_id( $my, 1, 0 ), 'unfollow' );
+	is( op_index( open_id( $my, 1, 1 ), 'unfollow' ), $u, "both program menus have Unfollow at index $u (a moved row would hit Hack's)" );
+
+	my @ids = followed_ids($my);
+	my %was = map { id_of($_) => row_at( $my, @$_ ) } @ids;
+	my $original = stored_follows();
+
+	# ... then unfollow the first through Followed programs
+	is_deeply( names( open_id( $my, 1, 0, $u ) ), ['No longer following Classic Drive'], "Unfollow at 1.0.$u: Classic Drive" );
+	ok( !$F->isFollowed($CLASSIC) && $F->isFollowed($HACK), 'Classic Drive unfollowed, Hack still followed' );
+	my $stored = stored_follows();
+
+	is( $my->()->[1]->{name}, 'Followed programs (1)', 'My ABC listen: Followed programs (1)' );
+	is_deeply( open_id( $my, 1 ), $followed, 'Followed programs: the same rows (Classic Drive keeps its row)' );
+	is_deeply( open_id( $my, 1, 0, $u ), $HINT_ROW, "the stale Unfollow id 1.0.$u: the hint text row of Classic Drive's menu, a no-op" );
+	is( stored_follows(), $stored, '... the follows are unchanged' );
+
+	for my $id (@ids) {
+		my $now = row_at( $my, @$id );
+
+		# an action that is still the same action (Unfollow "Hack") is not stale: skip it
+		if ( is_action_name($now) && $now eq $was{ id_of($id) } ) {
+			pass( 'id ' . id_of($id) . " is still $now (not re-opened)" );
+			next;
+		}
+		open_id( $my, @$id );
+		is( stored_follows(), $stored, 'stale id ' . id_of($id) . " (was $was{ id_of($id) }, now " . ( $now // 'nothing' ) . '): the follows are unchanged' );
+	}
+	ok( !$F->isFollowed($CLASSIC) && $F->isFollowed($HACK), 'after every stale id: Classic Drive unfollowed, Hack followed' );
+
+	# re-follow within 30 min, from the row Classic Drive kept: in place, with its followedAt
+	advanceTime(600);
+	my $f = op_index( open_id( $my, 1, 0 ), 'follow' );
+	is( $f, $u - 1, "its menu: Follow at index $f" );
+	is_deeply( names( open_id( $my, 1, 0, $f ) ), ['Following Classic Drive'], '10 min later, Follow: following Classic Drive' );
+	is( stored_follows(), $original, '... the stored follows are exactly as before the unfollow (place and followedAt kept)' );
+	is_deeply( open_id( $my, 1 ), $followed, '... and Followed programs has the same rows' );
+	is_deeply( open_id( $my, 1, 0, $f ), text_item('✓ Following "Classic Drive"'), 'the stale Follow id: the "✓ Following" text row, a no-op' );
+	is( stored_follows(), $original, '... unchanged' );
+
+	# the limit: 30 min after an unfollow its tombstone expires, and later rows move up
+	open_id( $my, 1, 0, $u );
+	advanceTime(1800);
+	is_deeply( names( open_id( $my, 1 ) ), ['Hack'], 'unfollowed again, 30 min later: the row is gone (the documented limit)' );
+};
+
+subtest 'stale ids, Followed programs: follow a new program, then every id from before -> the same rows' => sub {
+	fresh();
+	route_program_menus();
+	route_program_like_classic( '/listen/programs/atlas', 'Atlas' );
+	my $my = sub { items_of( feed( $MY_ABC, undef ) ) };
+
+	$F->follow( {%CLASSIC_DRIVE} );
+	advanceTime(60);
+	$F->follow( {%HACK_SHOW} );
+	advanceTime(60);
+
+	my $followed = open_id( $my, 1 );
+	is_deeply( names($followed), [ 'Classic Drive', 'Hack' ], 'Followed programs: Classic Drive, Hack' );
+	my $u = op_index( open_id( $my, 1, 0 ), 'unfollow' );
+	my @ids = followed_ids($my);
+	my %was = map { id_of($_) => row_at( $my, @$_ ) } @ids;
+
+	# follow Atlas (A-Z it would be the first row) from its own program menu
+	my $atlas = items_of( open_item( Plugins::ABCListen::OnDemand->programItem( undef, { title => 'Atlas', path => '/listen/programs/atlas' } ) ) );
+	my $f = op_index( $atlas, 'follow' );
+	is( $f, $u - 1, 'Atlas\'s menu has the same layout' );
+	is_deeply( names( items_of( open_item( $atlas->[$f] ) ) ), ['Following Atlas'], 'Follow "Atlas"' );
+	my $stored = stored_follows();
+
+	my $after = open_id( $my, 1 );
+	is_deeply( names($after), [ 'Classic Drive', 'Hack', 'Atlas' ], 'Followed programs: Atlas appended' );
+	is_deeply( [ @$after[ 0 .. $#$followed ] ], $followed, '... the rows from before are unchanged' );
+	is( $my->()->[1]->{name}, 'Followed programs (3)', 'My ABC listen: Followed programs (3)' );
+
+	for my $id (@ids) {
+		is( row_at( $my, @$id ), $was{ id_of($id) }, 'id ' . id_of($id) . " still leads to $was{ id_of($id) }" );
+	}
+
+	for my $id ( grep { !is_action_name( $was{ id_of($_) } ) } @ids ) {
+		open_id( $my, @$id );
+		is( stored_follows(), $stored, 'stale id ' . id_of($id) . " ($was{ id_of($id) }): the follows are unchanged" );
+	}
+
+	# the stale Unfollow id of the first row: still Classic Drive's, and only it
+	is_deeply( names( open_id( $my, 1, 0, $u ) ), ['No longer following Classic Drive'], "the stale id 1.0.$u: Unfollow \"Classic Drive\", as when it was issued" );
+	ok( $F->isFollowed($HACK) && $F->isFollowed('/listen/programs/atlas'), '... Hack and Atlas still followed' );
 };
 
 # ---------------------------------------------------------------------------
@@ -901,9 +1075,12 @@ subtest 'song info: no item without an episode URL, a known path or a program ti
 	Plugins::ABCListen::Util::setEpisodeMeta( '1002', { programTitle => 'No path', title => 'x' } );
 	Plugins::ABCListen::Util::setEpisodeMeta( '1003', { path => '/news/2026-10-19/a-story/1003', programTitle => 'News' } );
 	Plugins::ABCListen::Util::setEpisodeMeta( '1004', { path => '/listen/programs', programTitle => 'Too short' } );
+	Plugins::ABCListen::Util::setEpisodeMeta( '2885', { path => "$SCIENCE/x/2885", programTitle => 'The Science Show', title => 'x' } );
+	is( ref $TRACKINFO->( undef, 'abclisten://episode/2885' ), 'ARRAY', 'meta entry 2885: rows for abclisten://episode/2885' );
 
 	for my $case (
 		[ 'a live station',          'abclisten://live/TRIPLEJ' ],
+		[ 'a live id with a meta entry', 'abclisten://live/2885' ],
 		[ 'another scheme',          'https://www.abc.net.au/listen/programs/scienceshow/x/107266790' ],
 		[ 'undef',                   undef ],
 		[ 'no meta-cache entry',     'abclisten://episode/999999' ],

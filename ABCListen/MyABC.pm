@@ -16,11 +16,15 @@ package Plugins::ABCListen::MyABC;
 # ---- Menus (every feed calls $cb exactly once; $client may be undef) ------------------------------
 #   menuItems -> one link "My ABC listen" (weight Util::topWeight('myabc'), declared in menuWeights:
 #   the last top-level item) -> _myABC:
-#     no follows: one text item, "Open any program and choose Follow";
-#     else "Latest episodes" (_latestEpisodes) and "Followed programs (N)" (_followedPrograms: an
-#     OnDemand->programItem row per followed program, A-Z).
-#   Latest episodes: for each followed program (A-Z) Programs->program(path) -> its
-#     episodeCollectionId -> Programs->episodes(id, 0, 5); at most 4 programs in flight; a program
+#     no follows (and no tombstones): one text item, "Open any program and choose Follow";
+#     else "Latest episodes" (_latestEpisodes) and "Followed programs (N)" (_followedPrograms),
+#     N = the followed programs (tombstones don't count; N may be 0 while only tombstones are left).
+#   Followed programs: an OnDemand->programItem row per Follow::listWithUnfollowed entry, in follow
+#     order (oldest follow first), tombstones included: a program unfollowed in the last 30 min
+#     keeps its row (the same programItem row; its program menu then offers Follow).
+#   Latest episodes: for each followed program (Follow::list: follow order, no tombstones)
+#     Programs->program(path) -> its episodeCollectionId -> Programs->episodes(id, 0, 5); an
+#     unfollowed program's episodes drop out at once. At most 4 programs in flight; a program
 #     that fails is skipped (WARN). After 25 s (XMLBrowser gives a feed 35 s) the feed answers with
 #     what has arrived (WARN with the number of programs left out) and ignores later results.
 #     Merge: one row per episode id (the program the episode belongs to wins, else the first A-Z),
@@ -41,9 +45,21 @@ package Plugins::ABCListen::MyABC;
 #     following:     the text "<U+2713> Following "<program>"", then Unfollow "<program>" (action).
 #   LMS keeps no browse session for this plugin (its top level has code-ref feeds), so every item_id
 #   request runs the feeds again, providers included, and opens whatever row is at the index now.
-#   With this layout a stale Follow id lands on the "Following" text row and a stale Unfollow id on
-#   the hint text row (both no-ops), and every other row keeps its index, so re-opening any stale id
-#   never changes the follows.
+#   What keeps a stale id (one from before a follow or unfollow) from changing the follows:
+#   * the follow rows: a stale Follow id lands on the "Following" text row and a stale Unfollow id
+#     on the hint text row (both no-ops), and no row after them moves (program menu and song info);
+#   * Followed programs: a follow appends a row after every existing one, a refresh or a re-follow
+#     within 30 min keeps the row's place, and an unfollowed program keeps its row for 30 min
+#     (Follow.pm's tombstones, kept in the pref, so across LMS restarts too). Nothing is sorted, so
+#     same-second follows or a clock change never reorder rows either. So an id into Followed
+#     programs, and on into a program menu, keeps opening the program it was issued for until 30
+#     min after the first unfollow that came after it. Then that tombstone expires and the rows
+#     after it move up one: an id older than that may open the next program's menu, follow rows
+#     included. That residual window is the accepted limit of the guarantee.
+#   * Latest episodes: a follow or unfollow starts a new list, so its rows do move. A stale id there
+#     opens or plays another episode; the episode menu has no follow rows, so the follows never
+#     change. (If the episode menu ever links to its program, e.g. O4's "More from", this route
+#     needs the same care as Followed programs.)
 #   _programMenuExtras($client, $program, $cb) (OnDemand->registerProgramMenuProvider): $cb->(\@rows)
 #     once, the follow rows (after the program header); $cb->([]) without a program path.
 #   _trackInfo (Slim::Menu::TrackInfo provider 'abclistenfollow', after 'top'): synchronous, no
@@ -155,7 +171,9 @@ sub _myABC {
 
 	_respond( $client, $cb, sub {
 		my @follows = Plugins::ABCListen::Follow::list();
-		return [ _textItem( $client, 'PLUGIN_ABCLISTEN_NO_FOLLOWED_HELP' ) ] unless @follows;
+
+		# a tombstone keeps both rows, so ids into Followed programs still open it (see the header)
+		return [ _textItem( $client, 'PLUGIN_ABCLISTEN_NO_FOLLOWED_HELP' ) ] unless @follows || Plugins::ABCListen::Follow::listWithUnfollowed();
 
 		return [ {
 			name  => cstring( $client, 'PLUGIN_ABCLISTEN_LATEST_EPISODES' ),
@@ -171,11 +189,13 @@ sub _myABC {
 	} );
 }
 
+# One row per followed program and per tombstone, in follow order (see the header): never sorted,
+# so no row moves when a program is followed or unfollowed.
 sub _followedPrograms {
 	my ( $client, $cb, $args ) = @_;
 
 	_respond( $client, $cb, sub {
-		my @items = grep {defined} map { Plugins::ABCListen::OnDemand->programItem( $client, _programOf($_) ) } Plugins::ABCListen::Follow::list();
+		my @items = grep {defined} map { Plugins::ABCListen::OnDemand->programItem( $client, _programOf($_) ) } Plugins::ABCListen::Follow::listWithUnfollowed();
 		return @items ? \@items : [ _textItem( $client, 'PLUGIN_ABCLISTEN_NO_FOLLOWED_HELP' ) ];
 	} );
 }
