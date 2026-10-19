@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension>
+	<id>BB8E20A2-ED02-4A28-A017-56DA05CF312A</id>
+	<name>PLUGIN_ABCLISTEN</name>
+	<module>Plugins::ABCListen::Plugin</module>
+	<version>0.1.0</version>
+	<description>PLUGIN_ABCLISTEN_DESC</description>
+	<creator>Wilson Waters</creator>
+	<category>radio</category>
+	<defaultState>enabled</defaultState>
+	<icon>plugins/ABCListen/html/images/icon.png</icon>
+	<homepageURL>https://github.com/wilsonwaters/SqueezeABCListen</homepageURL>
+	<targetApplication>
+		<id>Lyrion Music Server</id>
+		<minVersion>8.3</minVersion>
+		<maxVersion>*</maxVersion>
+	</targetApplication>
+</extension>

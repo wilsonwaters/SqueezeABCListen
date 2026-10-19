@@ -1,0 +1,312 @@
+# Strings for the ABC listen plugin (English only).
+# Format: a TOKEN line, then one line per language: <TAB>EN<TAB>text
+# Each task edits only inside its own section below (new tokens are appended to the owner's section).
+# Sections are in wave order: F1 | F2 F3 R1 M1 | L1 O1 O2 | L2 L5 O3 D1 D3 M2 | L3 L4 O4 D2 | R2 | R3.
+# Station names (triple j, Radio National, ...) are ABC proper nouns and are not string tokens.
+
+# === F1 === Foundation: plugin name, description, generic error
+
+PLUGIN_ABCLISTEN
+	EN	ABC listen
+
+PLUGIN_ABCLISTEN_DESC
+	EN	Listen to ABC radio in Lyrion: ABC listen live stations, programs and episodes from the Australian Broadcasting Corporation. Unofficial plugin, not affiliated with or endorsed by the ABC.
+
+PLUGIN_ABCLISTEN_ERROR
+	EN	Sorry, part of the ABC listen menu could not be loaded. Please try again later.
+
+# === F2 === abclisten:// protocol handler
+
+PLUGIN_ABCLISTEN_BAD_URL
+	EN	This is not a valid ABC listen link
+
+PLUGIN_ABCLISTEN_UNAVAILABLE
+	EN	This ABC listen item can't be played yet
+
+PLUGIN_ABCLISTEN_STREAM_FAILED
+	EN	Couldn't play this from ABC listen. Please try again later.
+
+# === F3 === ABC data client
+
+PLUGIN_ABCLISTEN_RATE_LIMITED
+	EN	ABC listen is busy right now. Please try again in a few minutes.
+
+PLUGIN_ABCLISTEN_LOAD_FAILED
+	EN	Couldn't load this from ABC listen. Please try again later.
+
+# === R1 === Packaging and release (no runtime strings)
+
+# === M1 === Settings page and home state
+
+PLUGIN_ABCLISTEN_HOME_STATE
+	EN	Home state
+
+PLUGIN_ABCLISTEN_HOME_STATE_DESC
+	EN	Your state or territory. Its local radio stations are listed first, and the national networks play in your local time zone where ABC offers a time-zone version.
+
+PLUGIN_ABCLISTEN_HOME_STATE_NONE
+	EN	Not set
+
+# === L1 === All live stations and the Live radio menus
+
+PLUGIN_ABCLISTEN_LIVE_RADIO
+	EN	Live radio
+
+PLUGIN_ABCLISTEN_SPORT
+	EN	Sport
+
+PLUGIN_ABCLISTEN_LOCAL_RADIO
+	EN	Local radio
+
+PLUGIN_ABCLISTEN_TIMEZONE_VERSIONS
+	EN	Time-zone versions
+
+PLUGIN_ABCLISTEN_STATE_ACT
+	EN	Australian Capital Territory
+
+PLUGIN_ABCLISTEN_STATE_NSW
+	EN	New South Wales
+
+PLUGIN_ABCLISTEN_STATE_NT
+	EN	Northern Territory
+
+PLUGIN_ABCLISTEN_STATE_QLD
+	EN	Queensland
+
+PLUGIN_ABCLISTEN_STATE_SA
+	EN	South Australia
+
+PLUGIN_ABCLISTEN_STATE_TAS
+	EN	Tasmania
+
+PLUGIN_ABCLISTEN_STATE_VIC
+	EN	Victoria
+
+PLUGIN_ABCLISTEN_STATE_WA
+	EN	Western Australia
+
+PLUGIN_ABCLISTEN_YOUR_STATE
+	EN	%s (your state)
+
+PLUGIN_ABCLISTEN_CITY_TIME
+	EN	%s time
+
+PLUGIN_ABCLISTEN_LIVE_FAILED
+	EN	Couldn't play this live stream. Please try again later.
+
+PLUGIN_ABCLISTEN_LIVE_HLS_ONLY
+	EN	This station is only streamed in a format Lyrion can't play without the PlayHLS plugin
+
+PLUGIN_ABCLISTEN_LIVE_OFF_AIR
+	EN	This station is off air right now
+
+# === O1 === Episode playback
+
+PLUGIN_ABCLISTEN_EPISODE_EXPIRED
+	EN	This episode is no longer available
+
+PLUGIN_ABCLISTEN_EPISODE_RESTRICTED
+	EN	ABC doesn't allow this episode to be played outside its own apps
+
+PLUGIN_ABCLISTEN_EPISODE_GEO
+	EN	This episode is only available in Australia
+
+PLUGIN_ABCLISTEN_EPISODE_NOT_FOUND
+	EN	Couldn't find this episode on ABC listen
+
+# === O2 === Programs and episodes
+
+PLUGIN_ABCLISTEN_PROGRAMS
+	EN	Programs
+
+PLUGIN_ABCLISTEN_BY_NETWORK
+	EN	By network
+
+PLUGIN_ABCLISTEN_EPISODES
+	EN	Episodes
+
+PLUGIN_ABCLISTEN_PLAY_EPISODE
+	EN	Play episode
+
+PLUGIN_ABCLISTEN_NO_EPISODES
+	EN	No episodes available
+
+PLUGIN_ABCLISTEN_MORE_EPISODES
+	EN	More episodes…
+
+PLUGIN_ABCLISTEN_PRESENTED_BY
+	EN	Presented by %s
+
+PLUGIN_ABCLISTEN_BROADCAST
+	EN	Broadcast %s
+
+# === L2 === Program on air
+
+PLUGIN_ABCLISTEN_ON_AIR
+	EN	On air: %s
+
+PLUGIN_ABCLISTEN_NEXT
+	EN	Next: %s
+
+PLUGIN_ABCLISTEN_PROGRAM_INFO
+	EN	Program info
+
+# === L5 === Higher-quality live streams setting
+
+PLUGIN_ABCLISTEN_LIVE_QUALITY
+	EN	Live stream quality
+
+PLUGIN_ABCLISTEN_LIVE_QUALITY_DESC
+	EN	Standard plays ABC's Icecast streams, which work everywhere. The other options try a higher-quality stream first and fall back to the standard stream if it can't be played.
+
+PLUGIN_ABCLISTEN_LIVE_QUALITY_STANDARD
+	EN	Standard
+
+PLUGIN_ABCLISTEN_LIVE_QUALITY_MEDIAHUB
+	EN	Higher quality AAC (may not work outside Australia)
+
+PLUGIN_ABCLISTEN_LIVE_QUALITY_HLS
+	EN	Highest quality HLS (needs the PlayHLS plugin)
+
+PLUGIN_ABCLISTEN_LIVE_QUALITY_NO_PLAYHLS
+	EN	The PlayHLS plugin is not installed or not enabled, so the standard streams are used instead.
+
+# === O3 === All programs A-Z and by type
+
+PLUGIN_ABCLISTEN_AZ
+	EN	All programs A–Z
+
+PLUGIN_ABCLISTEN_BY_TYPE
+	EN	By type
+
+PLUGIN_ABCLISTEN_TYPE_PODCAST
+	EN	Podcasts
+
+PLUGIN_ABCLISTEN_TYPE_CATCHUP
+	EN	Catch-up radio
+
+PLUGIN_ABCLISTEN_TYPE_MUSIC
+	EN	Music
+
+PLUGIN_ABCLISTEN_TYPE_NEWS
+	EN	News briefings
+
+PLUGIN_ABCLISTEN_TYPE_AUDIOBOOK
+	EN	Audiobooks
+
+PLUGIN_ABCLISTEN_TYPE_OTHER
+	EN	Other
+
+PLUGIN_ABCLISTEN_INDEX_FALLBACK
+	EN	The full program list is unavailable right now, so only programs from the network lists are shown.
+
+# === D1 === Collections and Discover
+
+PLUGIN_ABCLISTEN_DISCOVER
+	EN	Discover
+
+PLUGIN_ABCLISTEN_FEATURED
+	EN	Featured
+
+PLUGIN_ABCLISTEN_MORE
+	EN	More…
+
+PLUGIN_ABCLISTEN_EMPTY_COLLECTION
+	EN	Nothing here right now
+
+# === D3 === Search and LMS global search
+
+PLUGIN_ABCLISTEN_SEARCH
+	EN	Search ABC listen
+
+PLUGIN_ABCLISTEN_SEARCH_PROGRAMS
+	EN	Programs (%s)
+
+PLUGIN_ABCLISTEN_SEARCH_EPISODES
+	EN	Episodes (%s)
+
+PLUGIN_ABCLISTEN_NO_RESULTS
+	EN	No results for '%s'
+
+PLUGIN_ABCLISTEN_GLOBAL_SEARCH_TITLE
+	EN	ABC listen
+
+# === M2 === Followed programs and My ABC listen
+
+PLUGIN_ABCLISTEN_MY_ABC
+	EN	My ABC listen
+
+PLUGIN_ABCLISTEN_LATEST_EPISODES
+	EN	Latest episodes
+
+PLUGIN_ABCLISTEN_FOLLOWED_PROGRAMS
+	EN	Followed programs (%s)
+
+PLUGIN_ABCLISTEN_FOLLOW
+	EN	Follow this program
+
+PLUGIN_ABCLISTEN_UNFOLLOW
+	EN	Unfollow this program
+
+PLUGIN_ABCLISTEN_FOLLOWED_OK
+	EN	Following %s
+
+PLUGIN_ABCLISTEN_UNFOLLOWED_OK
+	EN	No longer following %s
+
+PLUGIN_ABCLISTEN_NO_FOLLOWED_HELP
+	EN	Open any program and choose 'Follow this program'
+
+# === L3 === Now-playing songs on music stations
+
+PLUGIN_ABCLISTEN_RECENTLY_PLAYED
+	EN	Recently played
+
+PLUGIN_ABCLISTEN_NO_RECENT_TRACKS
+	EN	No recently played songs
+
+# === L4 === Station submenu and schedule
+
+PLUGIN_ABCLISTEN_LISTEN_LIVE
+	EN	Listen live
+
+PLUGIN_ABCLISTEN_TODAY
+	EN	Today
+
+PLUGIN_ABCLISTEN_YESTERDAY
+	EN	Yesterday
+
+PLUGIN_ABCLISTEN_NO_SCHEDULE
+	EN	No schedule available for this day
+
+PLUGIN_ABCLISTEN_ON_AIR_MARK
+	EN	(on air)
+
+# === O4 === Episode extras
+
+PLUGIN_ABCLISTEN_SEGMENTS
+	EN	Segments (%s)
+
+PLUGIN_ABCLISTEN_TRACKLIST
+	EN	Tracklist (%s)
+
+PLUGIN_ABCLISTEN_NO_TRACKLIST
+	EN	No tracklist
+
+PLUGIN_ABCLISTEN_MORE_FROM
+	EN	More from %s
+
+# === D2 === Popular now, categories and podcasts
+
+PLUGIN_ABCLISTEN_POPULAR_NOW
+	EN	Popular now
+
+PLUGIN_ABCLISTEN_CATEGORIES
+	EN	Categories
+
+PLUGIN_ABCLISTEN_PODCASTS
+	EN	Podcasts
+
+# === R2 === Docs and acceptance smoke test (no runtime strings; R2 may reword PLUGIN_ABCLISTEN_DESC in F1's section)
+
+# === R3 === v1.0.0 release and final verification (no runtime strings)
