@@ -269,12 +269,6 @@ PLUGIN_ABCLISTEN_LATEST_EPISODES
 PLUGIN_ABCLISTEN_FOLLOWED_PROGRAMS
 	EN	Followed programs (%s)
 
-PLUGIN_ABCLISTEN_FOLLOW
-	EN	Follow this program
-
-PLUGIN_ABCLISTEN_UNFOLLOW
-	EN	Unfollow this program
-
 PLUGIN_ABCLISTEN_FOLLOWED_OK
 	EN	Following %s
 
@@ -282,13 +276,19 @@ PLUGIN_ABCLISTEN_UNFOLLOWED_OK
 	EN	No longer following %s
 
 PLUGIN_ABCLISTEN_NO_FOLLOWED_HELP
-	EN	Open any program and choose 'Follow this program'
+	EN	Open any program and choose Follow
 
 PLUGIN_ABCLISTEN_FOLLOW_NAMED
 	EN	Follow "%s"
 
 PLUGIN_ABCLISTEN_UNFOLLOW_NAMED
 	EN	Unfollow "%s"
+
+PLUGIN_ABCLISTEN_FOLLOWING_NAMED
+	EN	✓ Following "%s"
+
+PLUGIN_ABCLISTEN_FOLLOW_HINT
+	EN	Follow to see its new episodes in My ABC listen
 
 # === L3 === Now-playing songs on music stations
 

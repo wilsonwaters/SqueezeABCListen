@@ -10,13 +10,16 @@
 #     flight, a failing program skipped, all failing -> LOAD_FAILED, nothing -> NO_EPISODES, the
 #     25 s deadline (late results ignored), the 15 min cache (no request on a hit; a follow starts a
 #     new list), exactly one callback (also when LMS's callback dies);
-#   * the program-menu provider (OnDemand's registry): label from isFollowed, explicit op, [] without
-#     a path, exactly one callback; through OnDemand's real program menu;
+#   * the program-menu provider (OnDemand's registry): two follow rows from isFollowed (Follow + hint
+#     text, or "✓ Following" text + Unfollow), explicit op, [] without a path, exactly one callback;
+#     through OnDemand's real program menu;
 #   * the action: idempotent explicit op (never a toggle), the confirmation text item with
 #     showBriefly / nextWindow, LOAD_FAILED for a bad request;
-#   * the song-info provider: an item only for episode URLs whose meta-cache entry has a path under
-#     /programs/ or /audiobooks/ and a programTitle; the named label follows the state; undef for
-#     live and foreign URLs; no HTTP; an exception contained.
+#   * stale item ids on a rebuilt menu (program menu and song info, follow and unfollow): re-opening
+#     any id from before the change never changes the stored follows, and no later row moves;
+#   * the song-info provider: the follow rows only for episode URLs whose meta-cache entry has a path
+#     under /programs/ or /audiobooks/ and a programTitle; the named labels follow the state; undef
+#     for live and foreign URLs; no HTTP; an exception contained.
 #
 # Fixtures: t/data/ondemand/nextdata-program-scienceshow.trimmed.json (O2), the F3 search page
 # t/data/foundation/listen-search.trimmed.html (buildId build-3afcd04f), and t/data/myabc/
@@ -111,6 +114,11 @@ sub fresh {
 
 sub to_json { JSON::PP->new->utf8->canonical->encode( $_[0] ) }
 
+sub route_science_menu {
+	route( "$NEXT$SCIENCE.json", file => 'ondemand/nextdata-program-scienceshow.trimmed.json', headers => $JSON_TYPE );
+	route( qr{\Q$EPS\E\?collectionId=2885458&offset=0&size=50\z}, file => 'myabc/bff-episodesWithSegments-scienceshow-latest.synthetic.json', headers => $JSON_TYPE );
+}
+
 sub feed {
 	my ( $code, $client, @passthrough ) = @_;
 	my $c = collector();
@@ -119,6 +127,33 @@ sub feed {
 }
 
 sub open_item { my ( $item, $client ) = @_; return feed( $item->{url}, $client, @{ $item->{passthrough} || [] } ) }
+
+# LMS keeps no browse session for this plugin (its top level has code-ref feeds), so every item_id
+# request rebuilds the menu and walks it by index (Slim::Control::XMLBrowser): $build->() returns
+# the rebuilt items, then each index opens that row's feed. A row without a feed (a text row) ends
+# the walk and opening it changes nothing. Returns the last feed's items, or that row.
+sub open_id {
+	my ( $build, @index ) = @_;
+	my $items = $build->();
+	for my $i (@index) {
+		my $item = $items->[$i];
+		return $item unless ref $item eq 'HASH' && ref $item->{url} eq 'CODE';
+		$items = items_of( open_item($item) );
+	}
+	return $items;
+}
+
+# The indexes of the rows a client can open (and so can hold an item id for).
+sub openable { my $items = shift; return grep { ref $items->[$_]->{url} eq 'CODE' } 0 .. $#$items }
+
+# The index of the row whose passthrough op is $op ('follow' | 'unfollow').
+sub op_index {
+	my ( $items, $op ) = @_;
+	my @found = grep { my $pt = $items->[$_]->{passthrough}; ref $pt eq 'ARRAY' && ref $pt->[0] eq 'HASH' && ( $pt->[0]->{op} || '' ) eq $op } 0 .. $#$items;
+	return $found[0];
+}
+
+sub stored_follows { to_json( prefs()->get('followed') ) }
 
 sub items_of {
 	my $c = shift;
@@ -225,7 +260,7 @@ subtest 'My ABC listen: no follows -> one instructional text item' => sub {
 	fresh();
 	my $c = feed( $MY_ABC, undef );
 	is( $c->count, 1, 'one callback' );
-	is_deeply( items_of($c), [ text_item("Open any program and choose 'Follow this program'") ], 'exactly one text item: the NO_FOLLOWED_HELP text' );
+	is_deeply( items_of($c), [ text_item('Open any program and choose Follow') ], 'exactly one text item: the NO_FOLLOWED_HELP text' );
 
 	is_deeply( items_of( feed( $LATEST,   undef ) ), [ text_item($HELP) ], 'Latest episodes with no follows (stale menu): the same help text' );
 	is_deeply( items_of( feed( $FOLLOWED, undef ) ), [ text_item($HELP) ], 'Followed programs with no follows (stale menu): the same help text' );
@@ -544,7 +579,7 @@ subtest 'Latest episodes: exactly one callback when LMS\'s callback dies' => sub
 # Follow / Unfollow in program menus
 # ---------------------------------------------------------------------------
 
-subtest 'program-menu provider: one Follow / Unfollow item, explicit op; [] without a path; one callback' => sub {
+subtest 'program-menu provider: two follow rows, explicit op; [] without a path; one callback' => sub {
 	fresh();
 	my $program = { %SCIENCE_SHOW, template => 'audio', restricted => 0, episodeCollectionId => '2885458', description => 'About science' };
 
@@ -554,22 +589,30 @@ subtest 'program-menu provider: one Follow / Unfollow item, explicit op; [] with
 	is_deeply(
 		( $c->args(0) )[0],
 		[ {
-			name        => 'Follow this program',
+			name        => 'Follow "The Science Show"',
 			type        => 'link',
 			url         => $ACTION,
 			nextWindow  => 'parent',
 			passthrough => [ { op => 'follow', program => {%SCIENCE_SHOW} } ],
-		} ],
-		'exact item: "Follow this program", op follow, program {title, path, id, image, network} only'
+		}, text_item('Follow to see its new episodes in My ABC listen') ],
+		'not following: Follow "<program>" (op follow, program {title, path, id, image, network} only), then the hint text'
 	);
 
 	$F->follow( {%SCIENCE_SHOW} );
 	$c = collector();
 	$EXTRAS->( ABCListenTest::FakeClient->new('00:00:00:00:00:01'), { %$program, path => "https://www.abc.net.au$SCIENCE/" }, $c->cb );
 	my ($items) = $c->args(0);
-	is( $items->[0]->{name}, 'Unfollow this program', 'followed: "Unfollow this program" (any path spelling)' );
-	is( $items->[0]->{passthrough}->[0]->{op}, 'unfollow', 'op unfollow' );
-	is( $items->[0]->{passthrough}->[0]->{program}->{path}, $SCIENCE, 'the canonical path' );
+	is_deeply(
+		$items,
+		[ text_item('✓ Following "The Science Show"'), {
+			name        => 'Unfollow "The Science Show"',
+			type        => 'link',
+			url         => $ACTION,
+			nextWindow  => 'parent',
+			passthrough => [ { op => 'unfollow', program => {%SCIENCE_SHOW} } ],
+		} ],
+		'following (any path spelling): the "✓ Following" text, then Unfollow "<program>" (op unfollow, the canonical path)'
+	);
 
 	for my $case ( [ 'no path', { title => 'No path' } ], [ 'the site root', { title => 'Root', path => '/' } ], [ 'another host', { path => 'https://example.com/x' } ], [ 'not a hash', 'junk' ] ) {
 		$c = collector();
@@ -580,7 +623,7 @@ subtest 'program-menu provider: one Follow / Unfollow item, explicit op; [] with
 
 	is( scalar requests(), 0, 'no network access' );
 	is_deeply( [ Plugins::ABCListen::OnDemand::_runProviders( undef, {%$program}, sub { $items = shift } ) ], [], 'registered with OnDemand (init)' );
-	is( $items->[0]->{name}, 'Unfollow this program', '... the registry runs it' );
+	is_deeply( names($items), [ '✓ Following "The Science Show"', 'Unfollow "The Science Show"' ], '... the registry runs it' );
 };
 
 subtest 'the action: explicit op, idempotent (never a toggle), a readable confirmation' => sub {
@@ -604,8 +647,8 @@ subtest 'the action: explicit op, idempotent (never a toggle), a readable confir
 
 	$c = collector();
 	$EXTRAS->( undef, {%SCIENCE_SHOW}, $c->cb );
-	my $unfollowItem = ( $c->args(0) )[0]->[0];
-	is( $unfollowItem->{name}, 'Unfollow this program', 're-opening the program: "Unfollow this program"' );
+	my $unfollowItem = ( $c->args(0) )[0]->[1];
+	is( $unfollowItem->{name}, 'Unfollow "The Science Show"', 're-opening the program: Unfollow "<program>"' );
 
 	$c = open_item($unfollowItem);
 	is_deeply( items_of($c), [ { name => 'No longer following The Science Show', type => 'text', showBriefly => 1, nextWindow => 'parent' } ], 'unfollow: "No longer following <program>"' );
@@ -635,26 +678,164 @@ subtest 'the action: explicit op, idempotent (never a toggle), a readable confir
 	is( scalar requests(), 0, 'no network access' );
 };
 
-subtest 'through OnDemand\'s program menu: Follow after the header, before the episodes' => sub {
+subtest 'through OnDemand\'s program menu: the follow rows after the header, before the episodes' => sub {
 	fresh();
-	route( "$NEXT$SCIENCE.json", file => 'ondemand/nextdata-program-scienceshow.trimmed.json', headers => $JSON_TYPE );
-	route( qr{\Q$EPS\E\?collectionId=2885458&offset=0&size=50\z}, file => 'myabc/bff-episodesWithSegments-scienceshow-latest.synthetic.json', headers => $JSON_TYPE );
+	route_science_menu();
 
 	my $row   = Plugins::ABCListen::OnDemand->programItem( undef, {%SCIENCE_SHOW} );
 	my $items = items_of( open_item($row) );
-	is_deeply( names( [ @$items[ 0 .. 3 ] ] )->[3], 'Follow this program', 'description, Presented by, network, then "Follow this program"' );
+	is_deeply(
+		[ @{ names( [ @$items[ 3, 4 ] ] ) } ],
+		[ 'Follow "The Science Show"', 'Follow to see its new episodes in My ABC listen' ],
+		'description, Presented by, network, then Follow "<program>" and the hint'
+	);
 	is( $items->[2]->{name}, 'ABC Radio National', 'item 3: the network row' );
-	like( $items->[4]->{name}, qr/\ASat 17 Oct $ENDASH /, 'then the first episode' );
+	like( $items->[5]->{name}, qr/\ASat 17 Oct $ENDASH /, 'then the first episode' );
+	is( scalar @$items, 11, 'two extra rows: description, presenters, network, Follow, hint, 5 episodes, More episodes' );
 
 	my $confirm = items_of( open_item( $items->[3] ) );
 	is_deeply( names($confirm), ['Following The Science Show'], 'opening it: the FOLLOWED_OK text' );
 	is_deeply( [ map { $_->{path} } $F->list ], [$SCIENCE], 'the program is followed' );
 
 	$items = items_of( open_item($row) );
-	is( $items->[3]->{name}, 'Unfollow this program', 're-opening the program: "Unfollow this program"' );
-	is( scalar @$items, 10, 'one extra item: description, presenters, network, Unfollow, 5 episodes, More episodes' );
+	is_deeply(
+		names( [ @$items[ 3, 4 ] ] ),
+		[ '✓ Following "The Science Show"', 'Unfollow "The Science Show"' ],
+		're-opening the program: the "✓ Following" text, then Unfollow "<program>"'
+	);
+	is( $items->[3]->{type}, 'text', '... the "✓ Following" row is plain text' );
+	like( $items->[5]->{name}, qr/\ASat 17 Oct $ENDASH /, '... the first episode has not moved' );
+	is( scalar @$items, 11, '... still 11 rows' );
 
 	is_deeply( [ sort keys %{ prefs()->get('followed')->[0] } ], [qw(followedAt id image network path title)], 'stored keys' );
+};
+
+# ---------------------------------------------------------------------------
+# Stale item ids: LMS rebuilds the menu for every item_id request, so an id opens whatever row is
+# at its index now. Re-opening an id from before a follow or unfollow must never change the follows.
+# ---------------------------------------------------------------------------
+
+my $FOLLOWING_ROW = { name => '✓ Following "The Science Show"', type => 'text' };
+my $HINT_ROW      = { name => 'Follow to see its new episodes in My ABC listen', type => 'text' };
+
+subtest 'stale ids, program menu: follow, then every id from before -> still following' => sub {
+	fresh();
+	route_science_menu();
+	my $row     = Plugins::ABCListen::OnDemand->programItem( undef, {%SCIENCE_SHOW} );
+	my $program = sub { items_of( open_item($row) ) };
+
+	my $before = $program->();
+	my $k      = op_index( $before, 'follow' );
+	is( $k, 3, 'Follow at k = 3, right after the header rows' );
+	is( op_index( $before, 'unfollow' ), undef, 'no Unfollow row anywhere' );
+	my @openable = openable($before);
+
+	open_id( $program, $k );
+	ok( $F->isFollowed($SCIENCE), 'opening Follow (id k) follows' );
+	my $stored = stored_follows();
+
+	my $after = $program->();
+	is( scalar @$after, scalar @$before, 'the rebuilt menu has as many rows' );
+	is_deeply( names( [ @$after[ $k + 2 .. $#$after ] ] ), names( [ @$before[ $k + 2 .. $#$before ] ] ), 'no row after the follow rows moved' );
+
+	is_deeply( open_id( $program, $k ), $FOLLOWING_ROW, 'the stale Follow id k: the "✓ Following" text row, a no-op' );
+	is( stored_follows(), $stored, '... the follows are unchanged' );
+
+	for my $i (@openable) {
+		open_id( $program, $i );
+		ok( $F->isFollowed($SCIENCE), "stale id $i ($before->[$i]->{name}): still following" );
+	}
+	open_id( $program, $openable[1], 1 );
+	ok( $F->isFollowed($SCIENCE), 'stale id of the first episode\'s "Play episode": still following' );
+	is( stored_follows(), $stored, 'every stale id: the follows are unchanged' );
+};
+
+subtest 'stale ids, program menu: unfollow, then every id from before -> still not following' => sub {
+	fresh();
+	route_science_menu();
+	$F->follow( {%SCIENCE_SHOW} );
+	my $row     = Plugins::ABCListen::OnDemand->programItem( undef, {%SCIENCE_SHOW} );
+	my $program = sub { items_of( open_item($row) ) };
+
+	my $before = $program->();
+	is( op_index( $before, 'follow' ), undef, 'following: no Follow row' );
+	my $k = op_index( $before, 'unfollow' );
+	is( $k, 4, 'Unfollow at k + 1 = 4' );
+	is_deeply( $before->[3], $FOLLOWING_ROW, 'row k = 3: the "✓ Following" text row' );
+	my @openable = openable($before);
+
+	open_id( $program, $k );
+	ok( !$F->isFollowed($SCIENCE), 'opening Unfollow (id k + 1) unfollows' );
+	is( stored_follows(), '[]', 'nothing followed' );
+
+	my $after = $program->();
+	is( scalar @$after, scalar @$before, 'the rebuilt menu has as many rows' );
+	is_deeply( names( [ @$after[ $k + 1 .. $#$after ] ] ), names( [ @$before[ $k + 1 .. $#$before ] ] ), 'no row after the follow rows moved' );
+
+	is_deeply( open_id( $program, $k ), $HINT_ROW, 'the stale Unfollow id k + 1: a text row, a no-op' );
+	ok( !$F->isFollowed($SCIENCE), '... still not following' );
+
+	for my $i (@openable) {
+		open_id( $program, $i );
+		ok( !$F->isFollowed($SCIENCE), "stale id $i ($before->[$i]->{name}): still not following" );
+	}
+	open_id( $program, $openable[1], 1 );
+	ok( !$F->isFollowed($SCIENCE), 'stale id of the first episode\'s "Play episode": still not following' );
+	is( stored_follows(), '[]', 'every stale id: the follows are unchanged' );
+};
+
+# The song-info menu as Slim::Menu::TrackInfo::menu builds it for every request: a row before the
+# provider's (top), the provider's item or items (a hashref or an arrayref), then a later row.
+sub song_info {
+	my ( $client, $url ) = @_;
+	my $ours = $TRACKINFO->( $client, $url );
+	return [
+		{ name => 'Trees', type => 'text' },
+		( ref $ours eq 'ARRAY' ? @$ours : ref $ours eq 'HASH' ? $ours : () ),
+		{ name => 'A later row', type => 'link', url => sub { $_[1]->( { items => [ text_item('later') ] } ) } },
+	];
+}
+
+subtest 'stale ids, song info: follow / unfollow, then every id from before -> unchanged' => sub {
+	fresh();
+	Plugins::ABCListen::Util::setEpisodeMeta( '107266790', { path => "$SCIENCE/trees-potatoes-brendan-may-step/107266790", programTitle => 'The Science Show', title => 'Trees' } );
+	my $client = ABCListenTest::FakeClient->new('00:00:00:00:00:01');
+	my $menu   = sub { song_info( $client, 'abclisten://episode/107266790' ) };
+
+	my $before = $menu->();
+	my $k      = op_index( $before, 'follow' );
+	is( $k, 1, 'not following: Follow right after the top row' );
+	is( op_index( $before, 'unfollow' ), undef, '... no Unfollow row' );
+	my @openable = openable($before);
+
+	open_id( $menu, $k );
+	ok( $F->isFollowed($SCIENCE), 'opening Follow follows' );
+	my $stored = stored_follows();
+
+	my $following = $menu->();
+	is( scalar @$following, scalar @$before, 'following: as many rows' );
+	is_deeply( $following->[$k], $FOLLOWING_ROW, '... row k: the "✓ Following" text row' );
+	my $u = op_index( $following, 'unfollow' );
+	is( $u, $k + 1, '... Unfollow at k + 1' );
+	is( $following->[-1]->{name}, 'A later row', '... the later row has not moved' );
+
+	is_deeply( open_id( $menu, $k ), $FOLLOWING_ROW, 'the stale Follow id: the text row, a no-op' );
+	for my $i (@openable) {
+		open_id( $menu, $i );
+		ok( $F->isFollowed($SCIENCE), "stale id $i ($before->[$i]->{name}): still following" );
+	}
+	is( stored_follows(), $stored, 'the follows are unchanged' );
+
+	my @openableFollowing = openable($following);
+	open_id( $menu, $u );
+	ok( !$F->isFollowed($SCIENCE), 'opening Unfollow unfollows' );
+
+	is_deeply( open_id( $menu, $u ), $HINT_ROW, 'the stale Unfollow id: a text row, a no-op' );
+	for my $i (@openableFollowing) {
+		open_id( $menu, $i );
+		ok( !$F->isFollowed($SCIENCE), "stale id $i ($following->[$i]->{name}): still not following" );
+	}
+	is( stored_follows(), '[]', 'the follows are unchanged' );
 };
 
 # ---------------------------------------------------------------------------
@@ -671,35 +852,45 @@ subtest 'song info: Follow "<program>" for a playing episode with a known progra
 	Plugins::ABCListen::Util::setEpisodeMeta( '107266790', { path => "$SCIENCE/trees-potatoes-brendan-may-step/107266790", programTitle => 'The Science Show', programId => '2885500', image => 'https://example.test/episode.jpg', title => 'Trees' } );
 
 	my $client = ABCListenTest::FakeClient->new('00:00:00:00:00:01');
-	my $item   = $TRACKINFO->( $client, 'abclisten://episode/107266790', undef, {}, {} );
+	my $rows   = $TRACKINFO->( $client, 'abclisten://episode/107266790', undef, {}, {} );
+	my $target = { title => 'The Science Show', path => $SCIENCE, id => '2885500', image => 'https://example.test/episode.jpg' };
 	is_deeply(
-		$item,
-		{
+		$rows,
+		[ {
 			name        => 'Follow "The Science Show"',
 			type        => 'link',
 			url         => $ACTION,
 			nextWindow  => 'parent',
-			passthrough => [ { op => 'follow', program => { title => 'The Science Show', path => $SCIENCE, id => '2885500', image => 'https://example.test/episode.jpg' } } ],
-		},
-		'one link item: Follow "<program>", the program path from the episode path'
+			passthrough => [ { op => 'follow', program => $target } ],
+		}, text_item('Follow to see its new episodes in My ABC listen') ],
+		'two rows: Follow "<program>" (the program path from the episode path), then the hint text'
 	);
 
-	my $c = open_item( $item, $client );
+	my $c = open_item( $rows->[0], $client );
 	is_deeply( names( items_of($c) ), ['Following The Science Show'], 'opening it: the FOLLOWED_OK text' );
 	is( items_of( feed( $MY_ABC, undef ) )->[1]->{name}, 'Followed programs (1)', 'Followed programs (1)' );
 
-	$item = $TRACKINFO->( undef, 'abclisten://episode/107266790' );
-	is( $item->{name}, 'Unfollow "The Science Show"', 'followed: Unfollow "<program>" (no player too)' );
-	is( $item->{passthrough}->[0]->{op}, 'unfollow', '... op unfollow' );
+	$rows = $TRACKINFO->( undef, 'abclisten://episode/107266790' );
+	is_deeply(
+		$rows,
+		[ text_item('✓ Following "The Science Show"'), {
+			name        => 'Unfollow "The Science Show"',
+			type        => 'link',
+			url         => $ACTION,
+			nextWindow  => 'parent',
+			passthrough => [ { op => 'unfollow', program => $target } ],
+		} ],
+		'following (no player too): the "✓ Following" text, then Unfollow "<program>"'
+	);
 
 	# Lab Notes listed in The Science Show, after O1's resolve: its own program, never a mismatch
 	Plugins::ABCListen::Util::setEpisodeMeta( '107232984', { path => '/listen/programs/lab-notes/lab-notes-when-astronomers-make-mistakes/107232984', programTitle => 'Lab Notes' } );
-	$item = $TRACKINFO->( undef, 'abclisten://episode/107232984' );
+	my $item = $TRACKINFO->( undef, 'abclisten://episode/107232984' )->[0];
 	is( $item->{name}, 'Follow "Lab Notes"', 'Lab Notes episode: Follow "Lab Notes"' );
 	is( $item->{passthrough}->[0]->{program}->{path}, '/listen/programs/lab-notes', '... for /listen/programs/lab-notes' );
 
 	Plugins::ABCListen::Util::setEpisodeMeta( '107400001', { path => '/triplej/programs/hack/hack-15-october/107400001', programTitle => 'Hack' } );
-	is( $TRACKINFO->( undef, 'abclisten://episode/107400001' )->{passthrough}->[0]->{program}->{path}, $HACK, 'triple j: /triplej/programs/hack' );
+	is( $TRACKINFO->( undef, 'abclisten://episode/107400001' )->[0]->{passthrough}->[0]->{program}->{path}, $HACK, 'triple j: /triplej/programs/hack' );
 
 	is( scalar requests(), 0, 'no HTTP' );
 };

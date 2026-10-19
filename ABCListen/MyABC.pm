@@ -3,8 +3,8 @@ package Plugins::ABCListen::MyABC;
 # My ABC listen hook (hook API: see Plugin.pm): settings page, home state, followed programs.
 # M1: the settings page (Plugins::ABCListen::Settings) and the homeState pref.
 # M2: followed programs (data: Plugins::ABCListen::Follow), without any ABC account: the top-level
-# "My ABC listen" menu, the Follow/Unfollow item on every program menu (OnDemand's program-menu
-# registry) and in song info.
+# "My ABC listen" menu, and the follow rows (Follow / Unfollow) on every program menu (OnDemand's
+# program-menu registry) and in song info.
 # Owned by the myabc stream (M1, then M2).
 #
 # homeState (contract 8 in ai-state/streams.md): '' (not set; consumers behave as NSW) or exactly
@@ -16,7 +16,7 @@ package Plugins::ABCListen::MyABC;
 # ---- Menus (every feed calls $cb exactly once; $client may be undef) ------------------------------
 #   menuItems -> one link "My ABC listen" (weight Util::topWeight('myabc'), declared in menuWeights:
 #   the last top-level item) -> _myABC:
-#     no follows: one text item, "Open any program and choose 'Follow this program'";
+#     no follows: one text item, "Open any program and choose Follow";
 #     else "Latest episodes" (_latestEpisodes) and "Followed programs (N)" (_followedPrograms: an
 #     OnDemand->programItem row per followed program, A-Z).
 #   Latest episodes: for each followed program (A-Z) Programs->program(path) -> its
@@ -34,22 +34,28 @@ package Plugins::ABCListen::MyABC;
 #     XMLBrowser re-runs this feed to open a row, and a row's index must not move meanwhile.
 #
 # ---- Follow / Unfollow ----------------------------------------------------------------------------
-#   _programMenuExtras($client, $program, $cb) (OnDemand->registerProgramMenuProvider): $cb->([item])
-#     once: "Follow this program", or "Unfollow this program" when followed; $cb->([]) without a
-#     program path. _trackInfo (Slim::Menu::TrackInfo provider 'abclistenfollow', after 'top'):
-#     synchronous, no network I/O; for an abclisten://episode/<id> URL whose meta-cache entry has a
-#     path and a programTitle: Follow "<program>" / Unfollow "<program>" for
-#     Follow::programPathFor(path); else undef.
-#   Each item is { name, type => 'link', url => \&_followAction, nextWindow => 'parent',
+#   The follow rows for a program are always two rows, so no row after them ever moves, and the two
+#   actions never share an index across states:
+#     not following: Follow "<program>" (action), then the text "Follow to see its new episodes in
+#                    My ABC listen";
+#     following:     the text "<U+2713> Following "<program>"", then Unfollow "<program>" (action).
+#   LMS keeps no browse session for this plugin (its top level has code-ref feeds), so every item_id
+#   request runs the feeds again, providers included, and opens whatever row is at the index now.
+#   With this layout a stale Follow id lands on the "Following" text row and a stale Unfollow id on
+#   the hint text row (both no-ops), and every other row keeps its index, so re-opening any stale id
+#   never changes the follows.
+#   _programMenuExtras($client, $program, $cb) (OnDemand->registerProgramMenuProvider): $cb->(\@rows)
+#     once, the follow rows (after the program header); $cb->([]) without a program path.
+#   _trackInfo (Slim::Menu::TrackInfo provider 'abclistenfollow', after 'top'): synchronous, no
+#     network I/O; for an abclisten://episode/<id> URL whose meta-cache entry has a path and a
+#     programTitle: the follow rows (an arrayref) for Follow::programPathFor(path); else undef.
+#   Each action is { name, type => 'link', url => \&_followAction, nextWindow => 'parent',
 #     passthrough => [ { op => 'follow' | 'unfollow', program => { path, title?, id?, image?, network? } } ] }.
 #   _followAction applies the explicit op (idempotent: never a toggle) and answers one text item,
 #     "Following <title>" / "No longer following <title>", with showBriefly => 1 and
 #     nextWindow => 'parent' (MQ2). In menu mode (Material, Jive) LMS shows that item as a
 #     showBriefly popup and lists nothing, so nextWindow is also on the action item: Material and
 #     Jive take it from the item that was opened, then go back.
-#   Note: LMS keeps no browse session for this plugin (its top level has code-ref feeds), so every
-#     item_id request runs the feeds again, providers included. Re-requesting an action's item_id
-#     after the state changed therefore opens the item as it is now (Unfollow after a follow).
 #
 # Nothing here talks to an ABC account, and the prefs hold no player data or credentials.
 
@@ -408,22 +414,22 @@ sub _cache { Slim::Utils::Cache->new( Plugins::ABCListen::Util::CACHE_NAMESPACE 
 # Follow / Unfollow
 # ---------------------------------------------------------------------------
 
-# Program-menu provider (OnDemand->registerProgramMenuProvider): one Follow/Unfollow item.
+# Program-menu provider (OnDemand->registerProgramMenuProvider): the follow rows.
 sub _programMenuExtras {
 	my ( $client, $program, $cb ) = @_;
 
-	my $item = eval { _followItem( $client, $program, 0 ) };
-	$log->error( "Building the Follow item failed: $@" ) if $@;
+	my $rows = eval { [ _followRows( $client, $program ) ] };
+	$log->error( "Building the Follow rows failed: $@" ) if $@;
 
-	$cb->( $item ? [$item] : [] );
+	$cb->( $rows || [] );
 }
 
-# Song-info provider (Slim::Menu::TrackInfo): Follow "<program>" / Unfollow "<program>" while an
-# episode with a known program plays, else undef.
+# Song-info provider (Slim::Menu::TrackInfo): the follow rows (an arrayref) while an episode with a
+# known program plays, else undef.
 sub _trackInfo {
 	my ( $client, $url ) = @_;
 
-	my $item = eval {
+	my $rows = eval {
 		my $parsed = Plugins::ABCListen::Util::parseUrl($url);
 		return undef unless $parsed && $parsed->{kind} eq 'episode';
 
@@ -433,40 +439,53 @@ sub _trackInfo {
 		my $path = Plugins::ABCListen::Follow::programPathFor( $meta->{path} );
 		return undef unless defined $path;
 
-		return _followItem( $client, { title => $meta->{programTitle}, path => $path, id => $meta->{programId}, image => $meta->{image} }, 1 );
+		my @rows = _followRows( $client, { title => $meta->{programTitle}, path => $path, id => $meta->{programId}, image => $meta->{image} } );
+		return @rows ? \@rows : undef;
 	};
 	$log->warn( "Song info Follow item failed: $@" ) if $@;
 
-	return $item;
+	return $rows;
 }
 
-# The Follow/Unfollow link for $program ({ path, title?, id?, image?, network? }), labelled by its
-# current state; $named: 'Follow "<title>"' instead of 'Follow this program'. undef without a path.
-sub _followItem {
-	my ( $client, $program, $named ) = @_;
-	return undef unless ref $program eq 'HASH';
+# The two follow rows for $program ({ path, title?, id?, image?, network? }) in its current state
+# (see the header): Follow "<title>" and the hint text, or the "Following" text and Unfollow
+# "<title>". Always two rows, and never an action at the other state's action index: LMS re-opens
+# stale item ids by index. () without a path.
+sub _followRows {
+	my ( $client, $program ) = @_;
+	return () unless ref $program eq 'HASH';
 
 	my $path = Plugins::ABCListen::API::sitePath( $program->{path} );
-	return undef unless defined $path && $path ne '/';
+	return () unless defined $path && $path ne '/';
 
 	my %target = ( path => $path );
 	for my $key (qw(title id image network)) {
 		$target{$key} = $program->{$key} if _hasText( $program->{$key} );
 	}
+	my $title = _titleOf( \%target );
 
-	my $followed = Plugins::ABCListen::Follow::isFollowed($path);
-
-	my $name = $named
-		? cstring( $client, $followed ? 'PLUGIN_ABCLISTEN_UNFOLLOW_NAMED' : 'PLUGIN_ABCLISTEN_FOLLOW_NAMED', _titleOf( \%target ) )
-		: cstring( $client, $followed ? 'PLUGIN_ABCLISTEN_UNFOLLOW' : 'PLUGIN_ABCLISTEN_FOLLOW' );
-
-	return {
-		name        => $name,
-		type        => 'link',
-		url         => \&_followAction,
-		passthrough => [ { op => $followed ? 'unfollow' : 'follow', program => \%target } ],
-		nextWindow  => 'parent',
+	my $action = sub {
+		my ( $op, $token ) = @_;
+		return {
+			name        => cstring( $client, $token, $title ),
+			type        => 'link',
+			url         => \&_followAction,
+			passthrough => [ { op => $op, program => \%target } ],
+			nextWindow  => 'parent',
+		};
 	};
+
+	if ( Plugins::ABCListen::Follow::isFollowed($path) ) {
+		return (
+			{ name => cstring( $client, 'PLUGIN_ABCLISTEN_FOLLOWING_NAMED', $title ), type => 'text' },
+			$action->( unfollow => 'PLUGIN_ABCLISTEN_UNFOLLOW_NAMED' ),
+		);
+	}
+
+	return (
+		$action->( follow => 'PLUGIN_ABCLISTEN_FOLLOW_NAMED' ),
+		{ name => cstring( $client, 'PLUGIN_ABCLISTEN_FOLLOW_HINT' ), type => 'text' },
+	);
 }
 
 # Apply the item's op (never a toggle) and confirm it in one text item.
