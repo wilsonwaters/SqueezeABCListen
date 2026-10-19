@@ -1,0 +1,151 @@
+{
+ "_fixture_note": "GET https://www.abc.net.au/core-next/api/collection/listen?collectionId=103194120&offset=0&size=10 (trimmed to 3)",
+ "data": {
+  "collection": {
+   "bentoCardType": "ContentCard",
+   "id": "103194120",
+   "title": "Most Popular Podcasts",
+   "productName": "core-next",
+   "analytics": {
+    "uri": "coremedia://dynamiccollection/103194120",
+    "moduleUri": "app://module/promo4",
+    "contentSource": "coremedia",
+    "contentType": "collection",
+    "id": "103194120",
+    "title": {
+     "title": "Most Popular Podcasts"
+    },
+    "items": [
+     {
+      "uri": "coremedia://program/104252122"
+     },
+     {
+      "uri": "coremedia://program/104525826"
+     },
+     {
+      "uri": "coremedia://program/104252132"
+     }
+    ]
+   },
+   "heading": "Most Popular Podcasts",
+   "loadMoreUrl": "/core-next/api/collection/listen",
+   "pagination": {
+    "offset": 0,
+    "size": 10,
+    "total": 55
+   },
+   "items": [
+    {
+     "articleLink": "https://www.abc.net.au/listen/programs/if-youre-listening/",
+     "cardAttributionPrepared": null,
+     "cardImagePrepared": {
+      "alt": "If-You're-Listening 3000x3000 Podcast square",
+      "imgSrc": "https://live-production.wcms.abc-cdn.net.au/0b00910f69470533fe28ab472d099166?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://live-production.wcms.abc-cdn.net.au/0b00910f69470533fe28ab472d099166?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w"
+      ],
+      "hideImageBorders": true,
+      "width": "862",
+      "height": "862"
+     },
+     "cardMediaIndicatorPrepared": null,
+     "contentLabelPrepared": null,
+     "contentUri": "coremedia://program/104252122",
+     "cardId": "9593170",
+     "cardTitle": "What's really going on behind the biggest news stories",
+     "noBorders": true,
+     "presentersPrepared": null,
+     "imagePositionPrepared": {
+      "mobile": "top"
+     },
+     "cardContentPositionPrepared": {},
+     "hasMobileFeatured": "all",
+     "hideImageBorders": true,
+     "featuredSettings": {
+      "mobile": true,
+      "tablet": false,
+      "desktop": false
+     },
+     "cardHeadingWeight": "regular"
+    },
+    {
+     "articleLink": "https://www.abc.net.au/listen/programs/global-roaming/",
+     "cardAttributionPrepared": null,
+     "cardImagePrepared": {
+      "alt": "Global Roaming podcast",
+      "imgSrc": "https://live-production.wcms.abc-cdn.net.au/58c0d4d2bb3eaeda6d7c9d98ca7d81be?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://live-production.wcms.abc-cdn.net.au/58c0d4d2bb3eaeda6d7c9d98ca7d81be?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w"
+      ],
+      "hideImageBorders": true,
+      "width": "862",
+      "height": "862"
+     },
+     "cardMediaIndicatorPrepared": null,
+     "contentLabelPrepared": null,
+     "contentUri": "coremedia://program/104525826",
+     "cardId": "103189086",
+     "cardTitle": "Global news and how to make sense of it",
+     "noBorders": true,
+     "presentersPrepared": null,
+     "imagePositionPrepared": {
+      "mobile": "top"
+     },
+     "cardContentPositionPrepared": {},
+     "hasMobileFeatured": "all",
+     "hideImageBorders": true,
+     "featuredSettings": {
+      "mobile": true,
+      "tablet": false,
+      "desktop": false
+     },
+     "cardHeadingWeight": "regular"
+    },
+    {
+     "articleLink": "https://www.abc.net.au/listen/programs/conversations/",
+     "cardAttributionPrepared": null,
+     "cardImagePrepared": {
+      "alt": "Conversations",
+      "imgSrc": "https://live-production.wcms.abc-cdn.net.au/9419a7d446ad3f4620983df5d8d048f1?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://live-production.wcms.abc-cdn.net.au/9419a7d446ad3f4620983df5d8d048f1?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w"
+      ],
+      "hideImageBorders": true,
+      "width": "862",
+      "height": "862"
+     },
+     "cardMediaIndicatorPrepared": null,
+     "contentLabelPrepared": null,
+     "contentUri": "coremedia://program/104252132",
+     "cardId": "7689108",
+     "cardTitle": "Meet someone who's seen and done amazing things",
+     "noBorders": true,
+     "presentersPrepared": null,
+     "imagePositionPrepared": {
+      "mobile": "top"
+     },
+     "cardContentPositionPrepared": {},
+     "hasMobileFeatured": "all",
+     "hideImageBorders": true,
+     "featuredSettings": {
+      "mobile": true,
+      "tablet": false,
+      "desktop": false
+     },
+     "cardHeadingWeight": "regular"
+    }
+   ],
+   "contentUri": "coremedia://collection/103194120",
+   "borders": false,
+   "linkUrl": "/listen/promo-4/103194120",
+   "linkTitle": "More Most Popular Podcasts",
+   "showTitleVisually": true,
+   "canonicalURI": "/listen/promo-4/103194120",
+   "robots": null,
+   "ratio": "1x1"
+  }
+ }
+}

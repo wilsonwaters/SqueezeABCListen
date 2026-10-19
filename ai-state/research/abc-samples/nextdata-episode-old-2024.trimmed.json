@@ -1,0 +1,257 @@
+{
+ "_fixture_note": "GET .../listen/programs/scienceshow/the-science-show/103022914.json : availableTo in the past but MP3 still served (downloadAvailableTo=2200)",
+ "data": {
+  "allowMediaDownload(top)": "all",
+  "documentProps": {
+   "id": "103022914",
+   "docType": "audioepisode",
+   "title": "H. G. Wells – father of science fiction",
+   "titleAlt": "H. G. Wells – father of science fiction",
+   "synopsis": "He imagined the atomic bomb, believed in a world government, wrote books about science and science fiction and was the first popular communicator of scientific ideas. Today we commemorate the life and achievements of Herbert George Wells.",
+   "synopsisAlt": "He imagined the atomic bomb, believed in a world government, wrote books about science and science fiction and was the first popular communicator of scientific ideas. Today we commemorate the life and achievements of Herbert George Wells.",
+   "canonicalURL": "https://www.abc.net.au/listen/programs/scienceshow/the-science-show/103022914",
+   "duration": 3247,
+   "programID": 2885500,
+   "availableFrom": "2024-01-20T01:00:00+00:00",
+   "availableTo": "2024-02-17T01:00:00+00:00",
+   "downloadAvailableFrom": "2024-01-20T01:00:00+00:00",
+   "downloadAvailableTo": "2200-01-01T00:00:00+00:00",
+   "allowMediaDownload": "all",
+   "webDistributionRestricted": false,
+   "renditions": [
+    {
+     "bitrate": 192,
+     "codec": "MPEG Audio",
+     "MIMEType": "audio/mpeg",
+     "fileSize": 77932268,
+     "height": null,
+     "url": "https://mediacore-live-production.akamaized.net/audio/01/pp/Z/3i.mp3"
+    }
+   ],
+   "datelinePrepared": {
+    "publishedDate": "2024-01-20T01:00:00+00:00",
+    "updatedDate": "2024-01-11T06:29:29+00:00"
+   },
+   "heroImageWithCTAPrepared": {
+    "heading": "H. G. Wells – father of science fiction",
+    "uri": "coremedia://audioepisode/103022914",
+    "shareUtilityProps": {
+     "utilityBarShareLinks": [
+      {
+       "shareBy": "facebook"
+      },
+      {
+       "shareBy": "twitter"
+      }
+     ],
+     "hasPopover": true,
+     "title": "H. G. Wells – father of science fiction",
+     "shareLink": "https://www.abc.net.au/listen/programs/scienceshow/the-science-show/103022914",
+     "synopsis": "He imagined the atomic bomb, believed in a world government, wrote books about science and science fiction and was the first popular communicator of scientific ideas. Today we commemorate the life and achievements of Herbert George Wells.",
+     "shareOn": {
+      "title": "Share this on",
+      "items": [
+       {
+        "shareBy": "facebook"
+       },
+       {
+        "shareBy": "linked-in"
+       },
+       {
+        "shareBy": "twitter",
+        "via": "ABCaustralia"
+       }
+      ]
+     },
+     "sendBy": {
+      "title": "Send this by",
+      "items": [
+       {
+        "shareBy": "mail"
+       },
+       {
+        "shareBy": "messenger",
+        "mobileOnly": true
+       },
+       {
+        "shareBy": "link"
+       }
+      ]
+     }
+    },
+    "heroImagePrepared": {
+     "alt": "",
+     "imgSrc": "https://live-production.wcms.abc-cdn.net.au/23b56445f570798642596347fe3a35f9?impolicy=wcms_crop_resize&cropH=1362&cropW=1362&xPos=134&yPos=0&width=862&height=862",
+     "ratio": "1x1",
+     "srcSet": [
+      "https://live-production.wcms.abc-cdn.net.au/23b56445f570798642596347fe3a35f9?impolicy=wcms_crop_resize&cropH=1362&cropW=1363&xPos=151&yPos=0&width=160&height=160 160w"
+     ],
+     "width": "862",
+     "height": "862"
+    },
+    "programImagePrepared": {
+     "alt": "ABC Science Show logo: A stylised black bird with yellow beak amidst colourful, textured planets and green star-like shapes.",
+     "imgSrc": "https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+     "ratio": "1x1",
+     "srcSet": [
+      "https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w"
+     ],
+     "width": "862",
+     "height": "862"
+    },
+    "channelLogoPrepared": [
+     {
+      "canonicalURI": "/listen/radionational/",
+      "canonicalURL": "https://www.abc.net.au/listen/radionational/",
+      "id": "2875892",
+      "label": {
+       "full": "ABC Radio National"
+      },
+      "contentImagePrepared": {
+       "alt": "ABC Radio National",
+       "imgSrc": "https://live-production.wcms.abc-cdn.net.au/556166359443f9aaa26ce7b905c4a29f?impolicy=wcms_crop_resize&cropH=500&cropW=500&xPos=0&yPos=0&width=862&height=862",
+       "ratio": "1x1",
+       "srcSet": [
+        "https://live-production.wcms.abc-cdn.net.au/556166359443f9aaa26ce7b905c4a29f?impolicy=wcms_crop_resize&cropH=500&cropW=500&xPos=0&yPos=0&width=160&height=160 160w"
+       ]
+      }
+     }
+    ],
+    "canonicalURI": "/listen/programs/scienceshow/the-science-show/103022914",
+    "attributionLinksPrepared": [
+     {
+      "url": "/listen/programs/scienceshow/",
+      "title": "The Science Show",
+      "screenReaderText": "Program:"
+     }
+    ],
+    "presentersProps": {
+     "linkPrepared": [
+      {
+       "canonicalURI": "/listen/radionational/robyn-williams/2913842",
+       "canonicalURL": "https://www.abc.net.au/listen/radionational/robyn-williams/2913842",
+       "id": "2913842",
+       "label": {
+        "full": "Robyn Williams"
+       },
+       "contentImagePrepared": {
+        "altText": "A smiling older man with short white hair wears a beige quarter-zip top.",
+        "imgRatio": "1x1",
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/a47f2fc993081609a3f7353c9f0c4b16?impolicy=wcms_crop_resize&cropH=542&cropW=542&xPos=420&yPos=70&width=862&height=862",
+        "srcSet": [
+         "https://live-production.wcms.abc-cdn.net.au/a47f2fc993081609a3f7353c9f0c4b16?impolicy=wcms_crop_resize&cropH=515&cropW=515&xPos=436&yPos=66&width=160&height=160 160w"
+        ]
+       }
+      }
+     ],
+     "label": "Presented by"
+    },
+    "hidePublicationDateCMS": null,
+    "datelinePrepared": {
+     "publishedDate": "2024-01-20T01:00:00+00:00",
+     "updatedDate": "2024-01-11T06:29:29+00:00"
+    }
+   },
+   "imageDetailsPrepared": {
+    "byline": {
+     "descriptor": {
+      "type": "tagname",
+      "key": "div",
+      "props": {},
+      "children": [
+       {
+        "type": "tagname",
+        "key": "@@standfirst",
+        "props": {},
+        "children": [
+         {
+          "type": "text",
+          "content": "Getty Images"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   },
+   "thumbnailLink": {
+    "__typename": "CoremediaImage",
+    "id": "103308640",
+    "contentSource": "coremedia",
+    "docType": "image",
+    "alt": "",
+    "byline": {
+     "plain": "Getty Images",
+     "json": "{\"type\":\"element\",\"tagname\":\"div\",\"parameters\":{\"xmlns\":\"http://www.coremedia.com/2003/richtext-1.0\",\"xmlns:xlink\":\"http://www.w3.org/1999/xlink\"},\"children\":[{\"type\":\"element\",\"tagname\":\"p\",\"children\":[{\"type\":\"text\",\"content\":\"Getty Images\"}]}]}"
+    },
+    "caption": null,
+    "teaserTitle": "Film posters",
+    "canonicalURL": "https://www.abc.net.au/listen/programs/scienceshow/c3.jpg/103308640",
+    "defaultRatio": "",
+    "cropInfo": [
+     {
+      "key": "large",
+      "value": [
+       {
+        "ratio": "1x1",
+        "height": 862,
+        "width": 862,
+        "url": "https://live-production.wcms.abc-cdn.net.au/23b56445f570798642596347fe3a35f9?impolicy=wcms_crop_resize&cropH=1362&cropW=1362&xPos=134&yPos=0&width=862&height=862"
+       },
+       {
+        "ratio": "3x2",
+        "height": 575,
+        "width": 862,
+        "url": "https://live-production.wcms.abc-cdn.net.au/23b56445f570798642596347fe3a35f9?impolicy=wcms_crop_resize&cropH=1362&cropW=2046&xPos=0&yPos=0&width=862&height=575"
+       },
+       {
+        "ratio": "3x4",
+        "height": 1149,
+        "width": 862,
+        "url": "https://live-production.wcms.abc-cdn.net.au/23b56445f570798642596347fe3a35f9?impolicy=wcms_crop_resize&cropH=1362&cropW=1023&xPos=70&yPos=0&width=862&height=1149"
+       }
+      ]
+     },
+     {
+      "key": "thumbnail",
+      "value": [
+       {
+        "ratio": "1x1",
+        "height": 160,
+        "width": 160,
+        "url": "https://live-production.wcms.abc-cdn.net.au/23b56445f570798642596347fe3a35f9?impolicy=wcms_crop_resize&cropH=1362&cropW=1363&xPos=151&yPos=0&width=160&height=160"
+       },
+       {
+        "ratio": "3x2",
+        "height": 107,
+        "width": 160,
+        "url": "https://live-production.wcms.abc-cdn.net.au/23b56445f570798642596347fe3a35f9?impolicy=wcms_crop_resize&cropH=1362&cropW=2040&xPos=0&yPos=0&width=160&height=107"
+       },
+       {
+        "ratio": "3x4",
+        "height": 213,
+        "width": 160,
+        "url": "https://live-production.wcms.abc-cdn.net.au/23b56445f570798642596347fe3a35f9?impolicy=wcms_crop_resize&cropH=1357&cropW=1023&xPos=29&yPos=5&width=160&height=213"
+       }
+      ]
+     }
+    ],
+    "picture": null
+   },
+   "contributors": [],
+   "tracklistPrepared": null,
+   "attributionLinksPrepared": {
+    "links": [
+     {
+      "url": "/listen/programs/scienceshow/",
+      "title": "The Science Show",
+      "screenReaderText": "Program:"
+     }
+    ]
+   },
+   "contentSource": "coremedia",
+   "caption": "He imagined the atomic bomb, believed in a world government, wrote books about science and science fiction and was the first popular communicator of scientific ideas. Today we commemorate the life and achievements of Herbert George Wells.\n\nH. G. Wells changed the way science was understood by the public, his writings and his warnings are part of the way we think today. The backdrop to all his work, both fiction and non-fiction, was what science will deliver in the future and what we will do with the knowledge. Will it be used for good or evil? Sharon Carleton reports. (this program was first broadcast June 2016)\n\nGuests\nGraham Farmelo\nAuthor\nLondon\n\nRoslynn Haynes\nAdjunct Associate Professor\nSchool of the Arts & Media\nUNSW Sydney\n\nDavid Powell\nResearch Fellow\nNonlinear Physics Centre\nAustralian National University\nCanberra ACT\n\nMichael Sherborne\nBiographer and science writer\nLondon\n\nJonathan Stoye\nGreat grandson of HG Wells\nVirologist\nThe Francis Crick Institute\nLondon\n\nAndrew White\nProfessor of Physics\nUniversity of Queensland\nBrisbane QLD\n\nWriter and Presenter\nSharon Carleton\n\nReader\nTim Reuben\n\nPresenter\nRobyn Williams\n\nProducer\nDavid Fisher\n\nSound Engineer\nMark Don",
+   "transcript": "(rich-text descriptor omitted)"
+  }
+ }
+}

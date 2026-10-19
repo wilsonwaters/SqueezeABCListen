@@ -1,0 +1,63 @@
+# GET https://abc.streamguys1.com/live/triplejnsw/icecast.audio (Icy-MetaData: 1) - note no icy-metaint
+HTTP/1.1 200 Connection Established
+
+HTTP/1.1 200 OK
+Server: Nimble/4.3.3-2
+Date: Mon, 19 Oct 2026 07:19:50 GMT
+Content-Type: audio/aacp
+Cache-Control: max-age=3600
+Access-Control-Allow-Origin: *
+ice-audio-info: bitrate=56
+icy-pub: 1
+icy-br: 56
+Connection: Keep-Alive
+
+# Ranged GET https://mediacore-live-production.akamaized.net/audio/02/pg/Z/ai.mp3 (Range: bytes=0-1023)
+HTTP/1.1 200 Connection Established
+
+HTTP/2 206 
+x-amz-request-id: FVDF0C6KJ52AV5B3
+x-amz-id-2: /+eT7jTxQlh0zxg4TIz9Mq2Zh/yYb20Gt0AuICTm5u+Ue7+aAMacU7S+H/4ny2U/e/sJ7s5fXSx65NgjeKhVjqn1E80s6IFS
+accept-ranges: bytes
+server: AmazonS3
+x-amz-version-id: Tt1L73ggeJIyM1T13Hq6KvC0wTda3EDx
+content-type: audio/mpeg
+x-amz-server-side-encryption: AES256
+x-amz-replication-status: PENDING
+last-modified: Fri, 16 Oct 2026 02:36:10 GMT
+etag: "2b26206345496e65adb4daa2b8d88350"
+date: Mon, 19 Oct 2026 07:19:53 GMT
+content-range: bytes 0-1023/78642070
+content-length: 1024
+akamai-request-bc: [a=2.17.114.209,b=1310963827,c=g,n=US_VA_CHANTILLY,o=20940]
+akamai-grn: 0.d1721102.1792394393.4e23b873
+
+# Ranged GET https://mediacore-live-production.akamaized.net/audio/02/pj/Z/2j.aac
+HTTP/1.1 200 Connection Established
+
+HTTP/2 206 
+x-amz-request-id: 61JCZPVQ8WKSKM89
+x-amz-id-2: fd85nQdHFeojvy2dHKvLhyDL7yxox0iZIOkkx4j1qBJGjg4OnrO1Ff8/zWLyd6lzDW4vlB38rc33AfUrsAXCo/T4+hIOz95O
+accept-ranges: bytes
+server: AmazonS3
+x-amz-version-id: EKngNo0kG.rMHstveNBUrfp_oXo1ixpU
+content-type: audio/aac
+x-amz-server-side-encryption: AES256
+x-amz-replication-status: PENDING
+last-modified: Mon, 19 Oct 2026 07:07:35 GMT
+etag: "c1893b189d850fc594d67ba80cd616c6"
+date: Mon, 19 Oct 2026 07:19:53 GMT
+content-range: bytes 0-1023/353025904
+content-length: 1024
+akamai-request-bc: [a=23.7.250.146,b=240332349,c=g,n=US_VA_CHANTILLY,o=20940]
+akamai-grn: 0.92fa0717.1792394393.e532e3d
+
+# GET https://live-radio01.mediahubaustralia.com/2TJW/mp3/ from test host (US datacenter egress)
+HTTP/1.1 200 Connection Established
+
+HTTP/2 403 
+date: Mon, 19 Oct 2026 07:19:54 GMT
+content-type: text/html; charset=UTF-8
+cache-control: private, max-age=0, no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+expires: Thu, 01 Jan 1970 00:00:01 GMT
+referrer-policy: same-origin

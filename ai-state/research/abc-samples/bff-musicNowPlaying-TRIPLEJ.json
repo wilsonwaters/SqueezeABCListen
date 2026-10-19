@@ -1,0 +1,175 @@
+{
+ "_fixture_note": "GET https://www.abc.net.au/core-next/api/musicNowPlaying/TRIPLEJ?tz=Australia%2FSydney (lists trimmed)",
+ "data": {
+  "nextUpdated": "2026-10-19T07:20:37+00:00",
+  "lastUpdated": "2026-10-19T07:18:44+00:00",
+  "serverTime": "2026-10-19T07:19:35.812Z",
+  "mapiNow": {
+   "isPreparedPlay": true,
+   "id": "mpnYvKGq0L",
+   "title": "AAAHHH!!!",
+   "artist": "Rachel Chinouriri",
+   "primaryImage": "https://resize.abcradio.net.au/c1lk-nmpkkUJHuVX89LEbCkmQ08=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Frachelchinouriri-ithinkispoketoosoon.jpg",
+   "primaryImageProps": {
+    "imgSrc": "https://resize.abcradio.net.au/c1lk-nmpkkUJHuVX89LEbCkmQ08=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Frachelchinouriri-ithinkispoketoosoon.jpg",
+    "srcSetArray": [
+     "https://resize.abcradio.net.au/yePbcjyr-P-KPZ5AoSzVB-WKPPU=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Frachelchinouriri-ithinkispoketoosoon.jpg 100w"
+    ],
+    "altText": "",
+    "width": 340,
+    "height": 340
+   },
+   "mediaArtwork": [
+    {
+     "src": "https://resize.abcradio.net.au/c1lk-nmpkkUJHuVX89LEbCkmQ08=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Frachelchinouriri-ithinkispoketoosoon.jpg",
+     "sizes": "340x340",
+     "type": "image/jpeg"
+    }
+   ],
+   "release": {
+    "uri": "mapi://release/mrDARDx72y",
+    "arid": "mrDARDx72y",
+    "id": "mrDARDx72y",
+    "contentType": "release",
+    "is_primary": false,
+    "isPrimary": false,
+    "title": "I think I spoke too soon",
+    "artwork": [
+     {
+      "arid": "mi7go5LBGe",
+      "id": "mi7go5LBGe",
+      "is_primary": false,
+      "contentType": "artwork",
+      "isPrimary": false,
+      "height": 600,
+      "width": 600,
+      "title": "",
+      "url": "https://www.abc.net.au/triplej/albums/rachelchinouriri-ithinkispoketoosoon.jpg",
+      "type": "cover",
+      "sizes": [
+       {
+        "aspectRatio": "1x1",
+        "height": 100,
+        "url": "https://resize.abcradio.net.au/yePbcjyr-P-KPZ5AoSzVB-WKPPU=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Frachelchinouriri-ithinkispoketoosoon.jpg",
+        "width": 100
+       },
+       {
+        "aspectRatio": "1x1",
+        "height": 160,
+        "url": "https://resize.abcradio.net.au/GxkKCh6qu5IAP0upFgx0fO1HRO4=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Frachelchinouriri-ithinkispoketoosoon.jpg",
+        "width": 160
+       }
+      ]
+     }
+    ]
+   },
+   "playedTime": "2026-10-19T07:18:24+00:00",
+   "releaseTitle": "I think I spoke too soon",
+   "properties": {},
+   "links": {
+    "apple": "https://music.apple.com/au/search?term=Rachel%20Chinouriri%20AAAHHH%21%21%21",
+    "spotify": "https://open.spotify.com/search/Rachel%20Chinouriri%20AAAHHH%21%21%21",
+    "youtube": "https://www.youtube.com/results?search_query=Rachel%20Chinouriri%20AAAHHH%21%21%21"
+   },
+   "duration": 143,
+   "isAustralian": false
+  },
+  "mapiPrev": {
+   "isPreparedPlay": true,
+   "id": "mpnN4zeqQd",
+   "title": "Could This Be Love",
+   "artist": "X & Ivy",
+   "primaryImage": "https://resize.abcradio.net.au/WI_hwOOIIvGtgNe3mE839c7y4fI=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg",
+   "primaryImageProps": {
+    "imgSrc": "https://resize.abcradio.net.au/WI_hwOOIIvGtgNe3mE839c7y4fI=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg",
+    "srcSetArray": [
+     "https://resize.abcradio.net.au/bQrkMNk1pUo-_5ApbWJwOmwddMU=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg 100w"
+    ],
+    "altText": "",
+    "width": 340,
+    "height": 340
+   },
+   "mediaArtwork": [
+    {
+     "src": "https://resize.abcradio.net.au/WI_hwOOIIvGtgNe3mE839c7y4fI=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg",
+     "sizes": "340x340",
+     "type": "image/jpeg"
+    }
+   ],
+   "release": {
+    "uri": "mapi://release/mrnynYkJB5",
+    "arid": "mrnynYkJB5",
+    "id": "mrnynYkJB5",
+    "contentType": "release",
+    "is_primary": false,
+    "isPrimary": false,
+    "title": "Could This Be Love",
+    "artwork": [
+     {
+      "arid": "mi2ewldQEP",
+      "id": "mi2ewldQEP",
+      "is_primary": false,
+      "contentType": "artwork",
+      "isPrimary": false,
+      "height": 1200,
+      "width": 1200,
+      "title": "",
+      "url": "https://www.abc.net.au/triplej/albums/xivy-couldthisbelove.jpg",
+      "type": "cover",
+      "sizes": [
+       {
+        "aspectRatio": "1x1",
+        "height": 100,
+        "url": "https://resize.abcradio.net.au/bQrkMNk1pUo-_5ApbWJwOmwddMU=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg",
+        "width": 100
+       },
+       {
+        "aspectRatio": "1x1",
+        "height": 160,
+        "url": "https://resize.abcradio.net.au/n4TEe5BxO3t8HKtfGyqZUrvMkis=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg",
+        "width": 160
+       }
+      ]
+     },
+     {
+      "arid": "miwPQBOLOg",
+      "id": "miwPQBOLOg",
+      "is_primary": false,
+      "contentType": "artwork",
+      "isPrimary": false,
+      "height": 600,
+      "width": 600,
+      "title": "",
+      "url": "https://abc.net.au/triplej/albums/playlist/9d029c24650dbe6be1c9cda67e9a90886584.jpg",
+      "type": "cover",
+      "sizes": [
+       {
+        "aspectRatio": "1x1",
+        "height": 100,
+        "url": "https://resize.abcradio.net.au/HfyD5fYtj6VYGgGq6fQi8Fh3hGk=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F9d029c24650dbe6be1c9cda67e9a90886584.jpg",
+        "width": 100
+       },
+       {
+        "aspectRatio": "1x1",
+        "height": 160,
+        "url": "https://resize.abcradio.net.au/ySZ-nVpYGAioscZPExdhqNyEY2A=/160x160/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F9d029c24650dbe6be1c9cda67e9a90886584.jpg",
+        "width": 160
+       }
+      ]
+     }
+    ]
+   },
+   "playedTime": "2026-10-19T07:11:23+00:00",
+   "releaseTitle": "Could This Be Love",
+   "properties": {},
+   "links": {
+    "unearthed": "https://www.abc.net.au/triplejunearthed/artist/x-ivy",
+    "apple": "https://music.apple.com/au/search?term=X%20%26%20Ivy%20Could%20This%20Be%20Love",
+    "spotify": "https://open.spotify.com/search/X%20%26%20Ivy%20Could%20This%20Be%20Love",
+    "youtube": "https://www.youtube.com/results?search_query=X%20%26%20Ivy%20Could%20This%20Be%20Love"
+   },
+   "duration": 212,
+   "isAustralian": true
+  }
+ }
+}

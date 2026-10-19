@@ -1,0 +1,535 @@
+{
+ "_fixture_note": "GET https://program.abcradio.net.au/api/v1/programitems/search.json?service=triplej&from=<ISO>&to=<ISO>&include=next,with_images,resized_images&limit=3 (trimmed)",
+ "data": {
+  "total": 2,
+  "offset": 0,
+  "count": 2,
+  "execution_time": 0.027424097061157227,
+  "items": [
+   {
+    "primary_image": {
+     "arid": "pa6613511f",
+     "role": "primary",
+     "sizes": [
+      {
+       "arid": "phnM94Jdxn",
+       "aspect_ratio": "1x1",
+       "width": 100,
+       "entity": "ImageResized",
+       "url": "https://resize.abcradio.net.au/N9keLG9p4TaYSQzbUQ1d61XgfqY=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FTanya_Bunter_2000x1125.jpg",
+       "height": 100
+      },
+      {
+       "arid": "phDzM4OjK7",
+       "aspect_ratio": "1x1",
+       "width": 160,
+       "entity": "ImageResized",
+       "url": "https://resize.abcradio.net.au/G1xybymNr_W43TJdAkV-dCoCSr0=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FTanya_Bunter_2000x1125.jpg",
+       "height": 160
+      }
+     ],
+     "width": 2000,
+     "title": "soul ctrl",
+     "entity": "Image",
+     "url": "https://www.abc.net.au/radio/images/presenter/triplej/Tanya_Bunter_2000x1125.jpg",
+     "height": 1125,
+     "last_updated_utc": "2025-01-24 04:02:18"
+    },
+    "arid": "pe9146105a",
+    "exclude_from_index": false,
+    "program": {
+     "primary_image": {
+      "arid": "pa6613511f",
+      "role": "primary",
+      "sizes": [
+       {
+        "arid": "phnM94Jdxn",
+        "aspect_ratio": "1x1",
+        "width": 100,
+        "entity": "ImageResized",
+        "url": "https://resize.abcradio.net.au/N9keLG9p4TaYSQzbUQ1d61XgfqY=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FTanya_Bunter_2000x1125.jpg",
+        "height": 100
+       },
+       {
+        "arid": "phDzM4OjK7",
+        "aspect_ratio": "1x1",
+        "width": 160,
+        "entity": "ImageResized",
+        "url": "https://resize.abcradio.net.au/G1xybymNr_W43TJdAkV-dCoCSr0=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FTanya_Bunter_2000x1125.jpg",
+        "height": 160
+       }
+      ],
+      "width": 2000,
+      "title": "soul ctrl",
+      "entity": "Image",
+      "url": "https://www.abc.net.au/radio/images/presenter/triplej/Tanya_Bunter_2000x1125.jpg",
+      "height": 1125
+     },
+     "arid": "ppyX73Pq26",
+     "short_synopsis": "Your weekly dose of neo-soul, RNB and smooth jams with Tanya Bunter.",
+     "images": [
+      {
+       "arid": "pa6613511f",
+       "role": "primary",
+       "sizes": [
+        {
+         "arid": "phnM94Jdxn",
+         "aspect_ratio": "1x1",
+         "width": 100,
+         "entity": "ImageResized",
+         "url": "https://resize.abcradio.net.au/N9keLG9p4TaYSQzbUQ1d61XgfqY=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FTanya_Bunter_2000x1125.jpg",
+         "height": 100
+        },
+        {
+         "arid": "phDzM4OjK7",
+         "aspect_ratio": "1x1",
+         "width": 160,
+         "entity": "ImageResized",
+         "url": "https://resize.abcradio.net.au/G1xybymNr_W43TJdAkV-dCoCSr0=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FTanya_Bunter_2000x1125.jpg",
+         "height": 160
+        }
+       ],
+       "width": 2000,
+       "title": "soul ctrl",
+       "entity": "Image",
+       "url": "https://www.abc.net.au/radio/images/presenter/triplej/Tanya_Bunter_2000x1125.jpg",
+       "height": 1125
+      },
+      {
+       "arid": "pa950093f3",
+       "role": "tile",
+       "sizes": [
+        {
+         "arid": "phnQNmGJG7",
+         "aspect_ratio": "1x1",
+         "width": 100,
+         "entity": "ImageResized",
+         "url": "https://resize.abcradio.net.au/N9keLG9p4TaYSQzbUQ1d61XgfqY=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FTanya_Bunter_2000x1125.jpg",
+         "height": 100
+        },
+        {
+         "arid": "phYG9KV1y7",
+         "aspect_ratio": "1x1",
+         "width": 160,
+         "entity": "ImageResized",
+         "url": "https://resize.abcradio.net.au/G1xybymNr_W43TJdAkV-dCoCSr0=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FTanya_Bunter_2000x1125.jpg",
+         "height": 160
+        }
+       ],
+       "width": 2000,
+       "title": "soul ctrl",
+       "entity": "Image",
+       "url": "https://www.abc.net.au/radio/images/presenter/triplej/Tanya_Bunter_2000x1125.jpg",
+       "height": 1125
+      }
+     ],
+     "mini_synopsis": "Your weekly dose of neo-soul, RNB and smooth jams with Tanya Bunter.",
+     "title": "soul ctrl"
+    },
+    "title": "soul ctrl",
+    "short_synopsis": "Your weekly dose of neo-soul, RNB and smooth jams with Tanya Bunter.",
+    "mini_synopsis": "Your weekly dose of neo-soul, RNB and smooth jams with Tanya Bunter.",
+    "creating_service": {
+     "arid": "pijKWndQGE",
+     "service_id": "triplej",
+     "title": "triple j"
+    },
+    "last_published_date": "2026-10-13T13:00:38+0000",
+    "series": {
+     "arid": "ps4e820f3e",
+     "title": "soul ctrl"
+    },
+    "primary_publication_event": {
+     "arid": "pu99f71999",
+     "schedule_type": "Live",
+     "start": "2026-10-19T10:00:00+0000",
+     "end": "2026-10-19T12:00:00+0000",
+     "defining_timezone": "Australia/Sydney"
+    },
+    "presenters": [
+     {
+      "primary_image": {
+       "arid": "pacdbb67d7",
+       "role": "primary",
+       "sizes": [
+        {
+         "arid": "phnyLqmjAY",
+         "aspect_ratio": "1x1",
+         "width": 100,
+         "entity": "ImageResized",
+         "url": "https://resize.abcradio.net.au/N9keLG9p4TaYSQzbUQ1d61XgfqY=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FTanya_Bunter_2000x1125.jpg",
+         "height": 100
+        },
+        {
+         "arid": "phDBpPlGOn",
+         "aspect_ratio": "1x1",
+         "width": 160,
+         "entity": "ImageResized",
+         "url": "https://resize.abcradio.net.au/G1xybymNr_W43TJdAkV-dCoCSr0=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FTanya_Bunter_2000x1125.jpg",
+         "height": 160
+        }
+       ],
+       "width": 2000,
+       "title": "Tanya Bunter",
+       "entity": "Image",
+       "url": "https://www.abc.net.au/radio/images/presenter/triplej/Tanya_Bunter_2000x1125.jpg",
+       "height": 1125
+      },
+      "arid": "prd9510ce0",
+      "display_name": "Tanya Bunter"
+     }
+    ],
+    "medium_synopsis": "Your weekly dose of neo-soul, RNB and smooth jams with Tanya Bunter.",
+    "primary_webpage": {
+     "arid": "pw8c541089",
+     "title": "soul ctrl",
+     "url": "https://www.abc.net.au/triplej/programs/soul-ctrl/"
+    },
+    "categories": [
+     {
+      "arid": "pxexg6ZlDM",
+      "parent_category": {
+       "arid": "pxobAEzx7O",
+       "label": "Music"
+      },
+      "label": "Roots, Blues & World"
+     }
+    ],
+    "entity": "Episode",
+    "live": [
+     {
+      "duration_seconds": 7200,
+      "arid": "pu99f71999",
+      "schedule_type": "Live",
+      "version_type": "BroadcastVersion",
+      "sync_linked_services": false,
+      "start": "2026-10-19T10:00:00+0000",
+      "outlets": [
+       {
+        "arid": "poRn3EPxEW",
+        "partof_service": {
+         "arid": "pijKWndQGE",
+         "service_id": "triplej",
+         "title": "triple j"
+        },
+        "title": "triple j on LiveStream",
+        "type": "LiveStream",
+        "entity": "Outlet"
+       }
+      ],
+      "end": "2026-10-19T12:00:00+0000",
+      "defining_timezone": "Australia/Sydney"
+     },
+     {
+      "duration_seconds": 7200,
+      "arid": "pu99f71999",
+      "schedule_type": "Live",
+      "version_type": "BroadcastVersion",
+      "sync_linked_services": false,
+      "start": "2026-10-19T10:30:00+0000",
+      "outlets": [
+       {
+        "arid": "poaOEBrzEQ",
+        "partof_service": {
+         "arid": "pi84njMp2y",
+         "service_id": "triplej_adelaide",
+         "title": "triple j Adelaide"
+        },
+        "title": "triple j Adelaide on LiveStream",
+        "type": "LiveStream",
+        "entity": "Outlet"
+       }
+      ],
+      "end": "2026-10-19T12:30:00+0000",
+      "defining_timezone": "Australia/Adelaide"
+     }
+    ],
+    "properties": [
+     {
+      "custom_value": {
+       "api_client_listen_app": null
+      },
+      "type": "show_in_app",
+      "user": [
+       "api_client_listen_app"
+      ],
+      "value": true
+     },
+     {
+      "custom_value": {
+       "api_client_triplej_app": null
+      },
+      "type": "show_text_button",
+      "user": [
+       "api_client_triplej_app"
+      ],
+      "value": true
+     }
+    ],
+    "child_segments": []
+   },
+   {
+    "primary_image": {
+     "arid": "pa66f5a86c",
+     "role": "primary",
+     "sizes": [
+      {
+       "arid": "phnxXgg3Kn",
+       "aspect_ratio": "1x1",
+       "width": 100,
+       "entity": "ImageResized",
+       "url": "https://resize.abcradio.net.au/lMguEypfVU1wYj1JryJSkCfuqYg=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FAnika_Luna_2000x1125.jpg",
+       "height": 100
+      },
+      {
+       "arid": "phYrXgg6d7",
+       "aspect_ratio": "1x1",
+       "width": 160,
+       "entity": "ImageResized",
+       "url": "https://resize.abcradio.net.au/NiRuHDp1x0sVC2J2ByHJTZ_S5BM=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FAnika_Luna_2000x1125.jpg",
+       "height": 160
+      }
+     ],
+     "width": 2000,
+     "title": "Home and Hosed",
+     "entity": "Image",
+     "url": "https://www.abc.net.au/radio/images/presenter/triplej/Anika_Luna_2000x1125.jpg",
+     "height": 1125,
+     "last_updated_utc": "2025-02-17 00:02:31"
+    },
+    "arid": "pea1f21100",
+    "exclude_from_index": false,
+    "program": {
+     "primary_image": {
+      "arid": "pa66f5a86c",
+      "role": "primary",
+      "sizes": [
+       {
+        "arid": "phnxXgg3Kn",
+        "aspect_ratio": "1x1",
+        "width": 100,
+        "entity": "ImageResized",
+        "url": "https://resize.abcradio.net.au/lMguEypfVU1wYj1JryJSkCfuqYg=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FAnika_Luna_2000x1125.jpg",
+        "height": 100
+       },
+       {
+        "arid": "phYrXgg6d7",
+        "aspect_ratio": "1x1",
+        "width": 160,
+        "entity": "ImageResized",
+        "url": "https://resize.abcradio.net.au/NiRuHDp1x0sVC2J2ByHJTZ_S5BM=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FAnika_Luna_2000x1125.jpg",
+        "height": 160
+       }
+      ],
+      "width": 2000,
+      "title": "Home and Hosed",
+      "entity": "Image",
+      "url": "https://www.abc.net.au/radio/images/presenter/triplej/Anika_Luna_2000x1125.jpg",
+      "height": 1125
+     },
+     "arid": "ppxa2ABp0b",
+     "short_synopsis": "The freshest local tunes from right around Australia on Home & Hosed with Anika Luna.",
+     "images": [
+      {
+       "arid": "pa66f5a86c",
+       "role": "primary",
+       "sizes": [
+        {
+         "arid": "phnxXgg3Kn",
+         "aspect_ratio": "1x1",
+         "width": 100,
+         "entity": "ImageResized",
+         "url": "https://resize.abcradio.net.au/lMguEypfVU1wYj1JryJSkCfuqYg=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FAnika_Luna_2000x1125.jpg",
+         "height": 100
+        },
+        {
+         "arid": "phYrXgg6d7",
+         "aspect_ratio": "1x1",
+         "width": 160,
+         "entity": "ImageResized",
+         "url": "https://resize.abcradio.net.au/NiRuHDp1x0sVC2J2ByHJTZ_S5BM=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FAnika_Luna_2000x1125.jpg",
+         "height": 160
+        }
+       ],
+       "width": 2000,
+       "title": "Home and Hosed",
+       "entity": "Image",
+       "url": "https://www.abc.net.au/radio/images/presenter/triplej/Anika_Luna_2000x1125.jpg",
+       "height": 1125
+      },
+      {
+       "arid": "pa519dc214",
+       "role": "tile",
+       "sizes": [
+        {
+         "arid": "phDJeyyg17",
+         "aspect_ratio": "1x1",
+         "width": 100,
+         "entity": "ImageResized",
+         "url": "https://resize.abcradio.net.au/lMguEypfVU1wYj1JryJSkCfuqYg=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FAnika_Luna_2000x1125.jpg",
+         "height": 100
+        },
+        {
+         "arid": "phY6jZZXlY",
+         "aspect_ratio": "1x1",
+         "width": 160,
+         "entity": "ImageResized",
+         "url": "https://resize.abcradio.net.au/NiRuHDp1x0sVC2J2ByHJTZ_S5BM=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FAnika_Luna_2000x1125.jpg",
+         "height": 160
+        }
+       ],
+       "width": 2000,
+       "title": "Home and Hosed",
+       "entity": "Image",
+       "url": "https://www.abc.net.au/radio/images/presenter/triplej/Anika_Luna_2000x1125.jpg",
+       "height": 1125
+      }
+     ],
+     "mini_synopsis": "The freshest local tunes from right around Australia on Home & Hosed with Anika Luna.",
+     "title": "Home and Hosed"
+    },
+    "title": "Home and Hosed",
+    "short_synopsis": "The freshest local tunes from right around Australia on Home & Hosed with Anika Luna.",
+    "mini_synopsis": "The freshest local tunes from right around Australia on Home & Hosed with Anika Luna.",
+    "creating_service": {
+     "arid": "pijKWndQGE",
+     "service_id": "triplej",
+     "title": "triple j"
+    },
+    "last_published_date": "2026-10-13T13:00:31+0000",
+    "series": {
+     "arid": "ps5f7d0f94",
+     "title": "Home and Hosed"
+    },
+    "primary_publication_event": {
+     "arid": "pub3b71a3f",
+     "schedule_type": "Live",
+     "start": "2026-10-19T08:00:00+0000",
+     "end": "2026-10-19T10:00:00+0000",
+     "defining_timezone": "Australia/Sydney"
+    },
+    "presenters": [
+     {
+      "primary_image": {
+       "arid": "pa16886ad5",
+       "role": "primary",
+       "sizes": [
+        {
+         "arid": "ph7am5VRz7",
+         "aspect_ratio": "1x1",
+         "width": 100,
+         "entity": "ImageResized",
+         "url": "https://resize.abcradio.net.au/lMguEypfVU1wYj1JryJSkCfuqYg=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FAnika_Luna_2000x1125.jpg",
+         "height": 100
+        },
+        {
+         "arid": "phYzM4XxaD",
+         "aspect_ratio": "1x1",
+         "width": 160,
+         "entity": "ImageResized",
+         "url": "https://resize.abcradio.net.au/NiRuHDp1x0sVC2J2ByHJTZ_S5BM=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2FAnika_Luna_2000x1125.jpg",
+         "height": 160
+        }
+       ],
+       "width": 2000,
+       "title": "Anika Luna",
+       "entity": "Image",
+       "url": "https://www.abc.net.au/radio/images/presenter/triplej/Anika_Luna_2000x1125.jpg",
+       "height": 1125
+      },
+      "arid": "prbb550be7",
+      "display_name": "Anika Luna"
+     }
+    ],
+    "medium_synopsis": "The freshest local tunes from right around Australia on Home & Hosed with Anika Luna.",
+    "primary_webpage": {
+     "arid": "pw8d761093",
+     "title": "Home and Hosed",
+     "url": "https://www.abc.net.au/triplej/programs/home-and-hosed/"
+    },
+    "categories": [
+     {
+      "arid": "pxbADzZxDO",
+      "parent_category": {
+       "arid": "pxobAEzx7O",
+       "label": "Music"
+      },
+      "label": "New, Live & Diverse"
+     }
+    ],
+    "entity": "Episode",
+    "live": [
+     {
+      "duration_seconds": 7200,
+      "arid": "pub3b71a3f",
+      "schedule_type": "Live",
+      "version_type": "BroadcastVersion",
+      "sync_linked_services": false,
+      "start": "2026-10-19T08:00:00+0000",
+      "outlets": [
+       {
+        "arid": "poRn3EPxEW",
+        "partof_service": {
+         "arid": "pijKWndQGE",
+         "service_id": "triplej",
+         "title": "triple j"
+        },
+        "title": "triple j on LiveStream",
+        "type": "LiveStream",
+        "entity": "Outlet"
+       }
+      ],
+      "end": "2026-10-19T10:00:00+0000",
+      "defining_timezone": "Australia/Sydney"
+     },
+     {
+      "duration_seconds": 7200,
+      "arid": "pub3b71a3f",
+      "schedule_type": "Live",
+      "version_type": "BroadcastVersion",
+      "sync_linked_services": false,
+      "start": "2026-10-19T08:30:00+0000",
+      "outlets": [
+       {
+        "arid": "poaOEBrzEQ",
+        "partof_service": {
+         "arid": "pi84njMp2y",
+         "service_id": "triplej_adelaide",
+         "title": "triple j Adelaide"
+        },
+        "title": "triple j Adelaide on LiveStream",
+        "type": "LiveStream",
+        "entity": "Outlet"
+       }
+      ],
+      "end": "2026-10-19T10:30:00+0000",
+      "defining_timezone": "Australia/Adelaide"
+     }
+    ],
+    "properties": [
+     {
+      "custom_value": {
+       "api_client_listen_app": null
+      },
+      "type": "show_in_app",
+      "user": [
+       "api_client_listen_app"
+      ],
+      "value": true
+     },
+     {
+      "custom_value": {
+       "api_client_triplej_app": null
+      },
+      "type": "show_text_button",
+      "user": [
+       "api_client_triplej_app"
+      ],
+      "value": true
+     }
+    ],
+    "child_segments": []
+   }
+  ]
+ }
+}

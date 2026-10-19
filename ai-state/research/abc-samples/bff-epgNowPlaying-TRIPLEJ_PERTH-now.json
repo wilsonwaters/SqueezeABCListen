@@ -1,0 +1,55 @@
+{
+ "_fixture_note": "GET https://www.abc.net.au/core-next/api/epgNowPlaying/TRIPLEJ_PERTH/now?imageRatio=1x1",
+ "data": {
+  "preparedImage": {
+   "alt": "Drive",
+   "imgSrc": "https://resize.abcradio.net.au/_uYeaUeb-0HCu3MjHoR_Xjvl_NI=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2Fjordan-and-luka-flipped.jpg",
+   "ratio": "1x1",
+   "srcSet": [
+    "https://resize.abcradio.net.au/_uYeaUeb-0HCu3MjHoR_Xjvl_NI=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2Fjordan-and-luka-flipped.jpg 100w",
+    "https://resize.abcradio.net.au/ZoeAIjJs0YPRsUnxaYGTw6R4uWg=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2Fjordan-and-luka-flipped.jpg 160w",
+    "https://resize.abcradio.net.au/kEh1hJaQe8ZWvdyKqmjLplu4Mm8=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2Fjordan-and-luka-flipped.jpg 340w",
+    "https://resize.abcradio.net.au/lzcLhTkFj7IZu-jXoM8A7ajaTVA=/580x580/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2Fjordan-and-luka-flipped.jpg 580w",
+    "https://resize.abcradio.net.au/W6_rbtWIryMJE1slTEt13Xe10cQ=/940x940/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ftriplej%2Fjordan-and-luka-flipped.jpg 940w"
+   ]
+  },
+  "preparedPresenters": [
+   {
+    "id": "pre6b20d31",
+    "names": {
+     "full": "Jordan & Luka"
+    }
+   }
+  ],
+  "start": "2026-10-19T04:00:00+00:00",
+  "end": "2026-10-19T06:30:00+00:00",
+  "title": "Drive",
+  "programLink": "https://www.abc.net.au/triplej/programs/drive/",
+  "variant": "now",
+  "papiServiceId": "TRIPLEJ_PERTH",
+  "imageRatio": "1x1",
+  "sources": [
+   {
+    "id": "ptbz2lnX40",
+    "contentType": "audiostream",
+    "contentSource": "papi",
+    "file": "https://streaming.abc-cdn.net.au/audio/hls/triplejwa.m3u8?source=web",
+    "type": "hls"
+   },
+   {
+    "id": "ptGanNkpxa",
+    "contentType": "audiostream",
+    "contentSource": "papi",
+    "file": "https://abcradiolivehds-lh.akamaihd.net/z/triplejwa_1@326635/manifest.f4m?source=web",
+    "type": "hds"
+   },
+   {
+    "id": "ptG0V8BXRz",
+    "contentType": "audiostream",
+    "contentSource": "papi",
+    "file": "http://live-radio01.mediahubaustralia.com/6TJW/aac/;*.mp3?source=web",
+    "type": "aac"
+   }
+  ]
+ }
+}

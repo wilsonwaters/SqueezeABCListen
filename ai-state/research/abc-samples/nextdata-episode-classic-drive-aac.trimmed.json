@@ -1,0 +1,238 @@
+{
+ "_fixture_note": "GET https://www.abc.net.au/_next/data/<buildId>/listen/programs/classic-drive/classic-drive/107174638.json -> streaming-only music program, AAC rendition",
+ "data": {
+  "allowMediaDownload(top)": "all",
+  "documentProps": {
+   "id": "107174638",
+   "docType": "audioepisode",
+   "title": "Classic Drive",
+   "titleAlt": "Classic Drive",
+   "synopsis": "Your ultimate drive time companion with punchy classical music to engage, entertain, and energise.",
+   "synopsisAlt": "Your ultimate drive time companion with punchy classical music to engage, entertain, and energise.",
+   "canonicalURL": "https://www.abc.net.au/listen/programs/classic-drive/classic-drive/107174638",
+   "duration": 10799,
+   "programID": 8812254,
+   "availableFrom": "2026-10-19T04:00:00+00:00",
+   "availableTo": "2026-11-16T04:00:00+00:00",
+   "downloadAvailableFrom": "2026-10-19T04:00:00+00:00",
+   "downloadAvailableTo": "2200-01-01T00:00:00+00:00",
+   "allowMediaDownload": "all",
+   "webDistributionRestricted": false,
+   "renditions": [
+    {
+     "bitrate": 0,
+     "codec": "AAC",
+     "MIMEType": "audio/aac",
+     "fileSize": 353025904,
+     "height": null,
+     "url": "https://mediacore-live-production.akamaized.net/audio/02/pj/Z/2j.aac"
+    },
+    {
+     "bitrate": 0,
+     "codec": "AAC",
+     "MIMEType": "application/vnd.apple.mpegurl",
+     "fileSize": 353025904,
+     "height": null,
+     "url": "https://mediacore-live-production.akamaized.net/audio/02/pj/Z/2j.aac"
+    }
+   ],
+   "datelinePrepared": {
+    "publishedDate": "2026-10-19T04:00:00+00:00",
+    "updatedDate": "2026-10-19T07:07:34+00:00"
+   },
+   "heroImageWithCTAPrepared": {
+    "heading": "Classic Drive",
+    "uri": "coremedia://audioepisode/107174638",
+    "shareUtilityProps": {
+     "utilityBarShareLinks": [
+      {
+       "shareBy": "facebook"
+      },
+      {
+       "shareBy": "twitter"
+      }
+     ],
+     "hasPopover": true,
+     "title": "Classic Drive",
+     "shareLink": "https://www.abc.net.au/listen/programs/classic-drive/classic-drive/107174638",
+     "synopsis": "Your ultimate drive time companion with punchy classical music to engage, entertain, and energise.",
+     "shareOn": {
+      "title": "Share this on",
+      "items": [
+       {
+        "shareBy": "facebook"
+       },
+       {
+        "shareBy": "linked-in"
+       },
+       {
+        "shareBy": "twitter",
+        "via": "ABCaustralia"
+       }
+      ]
+     },
+     "sendBy": {
+      "title": "Send this by",
+      "items": [
+       {
+        "shareBy": "mail"
+       },
+       {
+        "shareBy": "messenger",
+        "mobileOnly": true
+       },
+       {
+        "shareBy": "link"
+       }
+      ]
+     }
+    },
+    "heroImagePrepared": null,
+    "programImagePrepared": {
+     "alt": "Vanessa Hughes portrait",
+     "imgSrc": "https://live-production.wcms.abc-cdn.net.au/1a5e40456cd704992f3f4fd7252a97b6?impolicy=wcms_crop_resize&cropH=1688&cropW=1688&xPos=656&yPos=0&width=862&height=862",
+     "ratio": "1x1",
+     "srcSet": [
+      "https://live-production.wcms.abc-cdn.net.au/1a5e40456cd704992f3f4fd7252a97b6?impolicy=wcms_crop_resize&cropH=1688&cropW=1688&xPos=656&yPos=0&width=160&height=160 160w"
+     ],
+     "width": "862",
+     "height": "862"
+    },
+    "channelLogoPrepared": [
+     {
+      "canonicalURI": "/listen/classic/",
+      "canonicalURL": "https://www.abc.net.au/listen/classic/",
+      "id": "9087542",
+      "label": {
+       "full": "ABC Classic"
+      },
+      "contentImagePrepared": {
+       "alt": "",
+       "imgSrc": "https://live-production.wcms.abc-cdn.net.au/62f0c672746953390bf44ffb89bc26a0?impolicy=wcms_crop_resize&cropH=200&cropW=200&xPos=0&yPos=0&width=862&height=862",
+       "ratio": "1x1",
+       "srcSet": [
+        "https://live-production.wcms.abc-cdn.net.au/62f0c672746953390bf44ffb89bc26a0?impolicy=wcms_crop_resize&cropH=200&cropW=200&xPos=0&yPos=0&width=160&height=160 160w"
+       ]
+      }
+     }
+    ],
+    "canonicalURI": "/listen/programs/classic-drive/classic-drive/107174638",
+    "attributionLinksPrepared": [
+     {
+      "url": "/listen/programs/classic-drive/",
+      "title": "Classic Drive",
+      "screenReaderText": "Program:"
+     }
+    ],
+    "presentersProps": {
+     "linkPrepared": [],
+     "label": "Presented by"
+    },
+    "hidePublicationDateCMS": null,
+    "datelinePrepared": {
+     "publishedDate": "2026-10-19T04:00:00+00:00",
+     "updatedDate": "2026-10-19T07:07:34+00:00"
+    }
+   },
+   "imageDetailsPrepared": {},
+   "thumbnailLink": null,
+   "contributors": [],
+   "tracklistPrepared": {
+    "items": [
+     {
+      "id": "mpLApDARBn",
+      "title": "The Barber of Seville: Overture",
+      "artist": "Rossini, Gioachino",
+      "hasComposerLabel": true,
+      "countdown": null,
+      "duration": 442,
+      "cardImageFallbackType": "classic",
+      "cardImageProps": {
+       "imgSrc": "https://resize.abcradio.net.au/qWFGCG-XcEC9WkVD8ZRz2SQsItc=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fabcclassic-4613530.jpg",
+       "ratio": "1x1",
+       "alt": "",
+       "srcSet": [
+        "https://resize.abcradio.net.au/qWFGCG-XcEC9WkVD8ZRz2SQsItc=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fabcclassic-4613530.jpg 100w"
+       ]
+      },
+      "expandedTitle": "The Barber of Seville: Overture",
+      "primaryPerformer": "Ola Rudner (conductor), Tasmanian Symphony Orchestra",
+      "release": "Rossini: Opera Overtures",
+      "label": "ABC Classic 476 3530",
+      "timestamp": "00:55",
+      "timestampType": "relative",
+      "timestampRelativeSR": "55 seconds",
+      "timestampRelative": "00:55",
+      "isAustralian": true
+     },
+     {
+      "id": "mpneVogXlL",
+      "title": "Sonata in G minor: III. Scherzo & Trio",
+      "artist": "Schumann, Clara",
+      "hasComposerLabel": true,
+      "countdown": null,
+      "duration": 156,
+      "cardImageFallbackType": "classic",
+      "cardImageProps": null,
+      "expandedTitle": "Sonata in G minor: III. Scherzo & Trio",
+      "primaryPerformer": "Yoshiko Iwai (piano)",
+      "release": "Clara Schumann: Piano Music",
+      "label": "Naxos 8.553501",
+      "timestamp": "09:42",
+      "timestampType": "relative",
+      "timestampRelativeSR": "9 minutes and 42 seconds",
+      "timestampRelative": "09:42",
+      "isAustralian": true
+     },
+     {
+      "id": "mpL5qyVXxL",
+      "title": "Fantasia on Themes from Gounod's Faust, Op. 20: V. Tempo di valse. Allegro non troppo",
+      "artist": "Wieniawski, Henryk",
+      "hasComposerLabel": true,
+      "countdown": null,
+      "duration": 196,
+      "cardImageFallbackType": "classic",
+      "cardImageProps": {
+       "imgSrc": "https://resize.abcradio.net.au/bF-WP7zKnW1d_-pnC7VMg-MSDaY=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fdecca-4872210.jpg",
+       "ratio": "1x1",
+       "alt": "",
+       "srcSet": [
+        "https://resize.abcradio.net.au/bF-WP7zKnW1d_-pnC7VMg-MSDaY=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Fdecca-4872210.jpg 100w"
+       ]
+      },
+      "expandedTitle": "Fantasia on Themes from Gounod's Faust, Op. 20: V. Tempo di valse. Allegro non troppo",
+      "primaryPerformer": "Chelsea Wang (piano), HIMARI (violin)",
+      "release": "HIMARI: Debut",
+      "label": "Decca",
+      "year": "2026",
+      "timestamp": "13:18",
+      "timestampType": "relative",
+      "timestampRelativeSR": "13 minutes and 18 seconds",
+      "timestampRelative": "13:18",
+      "isAustralian": false
+     }
+    ],
+    "pagination": {
+     "offset": 0,
+     "total": 31,
+     "size": 200
+    },
+    "station": "CLASSIC",
+    "from": "2026-10-19T04:00:00+00:00",
+    "to": "2026-10-19T07:00:00+00:00"
+   },
+   "attributionLinksPrepared": {
+    "links": [
+     {
+      "url": "/listen/programs/classic-drive/",
+      "title": "Classic Drive",
+      "screenReaderText": "Program:"
+     }
+    ]
+   },
+   "contentSource": "coremedia",
+   "caption": "Your ultimate drive time companion with punchy classical music to engage, entertain, and energise",
+   "transcript": null
+  }
+ }
+}

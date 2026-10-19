@@ -1,0 +1,200 @@
+{
+ "_fixture_note": "GET https://program.abcradio.net.au/api/v1/services.json (108 services over 2 pages: offset=0, offset=100; trimmed to 3)",
+ "data": {
+  "total": 108,
+  "offset": 0,
+  "limit": 100,
+  "count": 100,
+  "items": [
+   {
+    "linked_services": [
+     {
+      "entity": "Service",
+      "type": "child",
+      "arid": "piyLnQmwnw",
+      "service_id": "doublej_brisbane",
+      "title": "Double J Brisbane"
+     },
+     {
+      "entity": "Service",
+      "type": "child",
+      "arid": "piBgYJebGD",
+      "service_id": "doublej_adelaide",
+      "title": "Double J Adelaide"
+     },
+     {
+      "entity": "Service",
+      "type": "child",
+      "arid": "piAXG08BG1",
+      "service_id": "doublej_darwin",
+      "title": "Double J Darwin"
+     }
+    ],
+    "entity": "Service",
+    "arid": "piO3DYD8YM",
+    "service_id": "doublej",
+    "title": "Double J",
+    "mini_synopsis": "A mix of your favourite music, new tunes and the stories behind the music.",
+    "primary_contact_details": "https://doublej.net.au/about/contact/",
+    "has_track_data": true,
+    "service_group": 1,
+    "service_timezone": "Australia/Sydney",
+    "service_sort_order": 8,
+    "service_promote": false,
+    "exclude_from_display": false,
+    "service_location": "NSW",
+    "properties": [
+     {
+      "type": "station_collection_id",
+      "value": true,
+      "custom_value": {
+       "api_client_listen_app": "13592978"
+      },
+      "user": [
+       "api_client_listen_app"
+      ]
+     },
+     {
+      "type": "GFK_contentID",
+      "value": true,
+      "custom_value": {
+       "api_client_default": "music"
+      },
+      "user": [
+       "api_client_default"
+      ]
+     },
+     {
+      "type": "GFK_mediaID",
+      "value": true,
+      "custom_value": {
+       "api_client_default": "doublej"
+      },
+      "user": [
+       "api_client_default"
+      ]
+     }
+    ]
+   },
+   {
+    "linked_services": [],
+    "entity": "Service",
+    "arid": "piwBNY782a",
+    "service_id": "classic2",
+    "title": "Classic 2",
+    "mini_synopsis": "The best in classical music performed by Australian musicians. Just music, 24 hours a day.",
+    "primary_contact_details": null,
+    "has_track_data": true,
+    "service_group": 6,
+    "service_timezone": "Australia/Sydney",
+    "service_sort_order": 17,
+    "service_promote": false,
+    "exclude_from_display": false,
+    "service_location": "NSW",
+    "properties": [
+     {
+      "type": "station_collection_id",
+      "value": true,
+      "custom_value": {
+       "api_client_listen_app": "13591350"
+      },
+      "user": [
+       "api_client_listen_app"
+      ]
+     },
+     {
+      "type": "GFK_contentID",
+      "value": true,
+      "custom_value": {
+       "api_client_default": "music"
+      },
+      "user": [
+       "api_client_default"
+      ]
+     },
+     {
+      "type": "GFK_mediaID",
+      "value": true,
+      "custom_value": {
+       "api_client_default": "classic2"
+      },
+      "user": [
+       "api_client_default"
+      ]
+     }
+    ]
+   },
+   {
+    "linked_services": [
+     {
+      "entity": "Service",
+      "type": "child",
+      "arid": "pi84njMp2y",
+      "service_id": "triplej_adelaide",
+      "title": "triple j Adelaide"
+     },
+     {
+      "entity": "Service",
+      "type": "child",
+      "arid": "piwb2xEJn6",
+      "service_id": "triplej_brisbane",
+      "title": "triple j Brisbane"
+     },
+     {
+      "entity": "Service",
+      "type": "child",
+      "arid": "pid8Yr3N2j",
+      "service_id": "triplej_perth",
+      "title": "triple j Perth"
+     }
+    ],
+    "entity": "Service",
+    "arid": "pijKWndQGE",
+    "service_id": "triplej",
+    "title": "triple j",
+    "mini_synopsis": "Live music, your favourite bands and the best new music.",
+    "primary_contact_details": "https://www.abc.net.au/triplej/about/contact.htm",
+    "has_track_data": true,
+    "service_group": 1,
+    "service_timezone": "Australia/Sydney",
+    "service_sort_order": 7,
+    "service_promote": false,
+    "exclude_from_display": false,
+    "service_location": "NSW",
+    "properties": [
+     {
+      "type": "keywords",
+      "value": true,
+      "custom_value": {
+       "api_client_listen_app": "jjj,JJJ,triple j,Triple.J,triplej"
+      },
+      "user": [
+       "api_client_listen_app"
+      ]
+     },
+     {
+      "type": "station_collection_id",
+      "value": true,
+      "custom_value": {
+       "api_client_listen_app": "13561224"
+      },
+      "user": [
+       "api_client_listen_app"
+      ]
+     },
+     {
+      "type": "GFK_contentID",
+      "value": true,
+      "custom_value": {
+       "api_client_default": "music"
+      },
+      "user": [
+       "api_client_default"
+      ]
+     }
+    ]
+   }
+  ],
+  "last_updated": "2026-10-19T06:00:17+0000"
+ }
+}

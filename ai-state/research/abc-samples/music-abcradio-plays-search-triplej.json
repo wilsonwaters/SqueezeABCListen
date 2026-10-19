@@ -1,0 +1,422 @@
+{
+ "_fixture_note": "GET https://music.abcradio.net.au/api/v1/plays/search.json?station=triplej&order=desc&limit=3 (trimmed to 2)",
+ "data": {
+  "total": 10000,
+  "offset": 0,
+  "limit": 3,
+  "items": [
+   {
+    "summary": {
+     "artist": "Rachel Chinouriri",
+     "title": "AAAHHH!!!",
+     "links": {
+      "Youtube": "https://www.youtube.com/results?search_query=Rachel%20Chinouriri%20AAAHHH%21%21%21",
+      "Spotify": "https://open.spotify.com/search/Rachel%20Chinouriri%20AAAHHH%21%21%21",
+      "Apple": "https://music.apple.com/au/search?term=Rachel%20Chinouriri%20AAAHHH%21%21%21"
+     }
+    },
+    "entity": "Play",
+    "arid": "mpnYvKGq0L",
+    "played_time": "2026-10-19T07:18:24+00:00",
+    "service_id": "triplej",
+    "recording": {
+     "entity": "Recording",
+     "arid": "mtPkVaeqxY",
+     "title": "AAAHHH!!!",
+     "metadata": null,
+     "description": null,
+     "duration": 143,
+     "artists": [
+      {
+       "entity": "Artist",
+       "arid": "maGYJVEBY7",
+       "name": "Rachel Chinouriri",
+       "artwork": [],
+       "links": [],
+       "is_australian": null,
+       "type": "primary",
+       "role": null
+      }
+     ],
+     "releases": [
+      {
+       "entity": "Release",
+       "arid": "mrDARDx72y",
+       "title": "I think I spoke too soon",
+       "format": null,
+       "artwork": [
+        {
+         "entity": "Artwork",
+         "arid": "mi7go5LBGe",
+         "url": "https://www.abc.net.au/triplej/albums/rachelchinouriri-ithinkispoketoosoon.jpg",
+         "type": "cover",
+         "title": null,
+         "mini_synopsis": null,
+         "short_synopsis": null,
+         "medium_synopsis": null,
+         "width": 600,
+         "height": 600,
+         "sizes": [
+          {
+           "url": "https://resize.abcradio.net.au/yePbcjyr-P-KPZ5AoSzVB-WKPPU=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Frachelchinouriri-ithinkispoketoosoon.jpg",
+           "width": 100,
+           "height": 100,
+           "aspect_ratio": "1x1"
+          },
+          {
+           "url": "https://resize.abcradio.net.au/GxkKCh6qu5IAP0upFgx0fO1HRO4=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Frachelchinouriri-ithinkispoketoosoon.jpg",
+           "width": 160,
+           "height": 160,
+           "aspect_ratio": "1x1"
+          }
+         ],
+         "is_primary": null
+        }
+       ],
+       "links": [],
+       "artists": [
+        {
+         "entity": "Artist",
+         "arid": "maGYJVEBY7",
+         "name": "Rachel Chinouriri",
+         "artwork": [],
+         "links": [],
+         "is_australian": null,
+         "type": "primary",
+         "role": null
+        }
+       ],
+       "record_label": null,
+       "release_year": "2026",
+       "release_album_id": null,
+       "is_primary": null
+      }
+     ],
+     "artwork": [],
+     "links": []
+    },
+    "release": {
+     "entity": "Release",
+     "arid": "mrDARDx72y",
+     "title": "I think I spoke too soon",
+     "format": null,
+     "artwork": [
+      {
+       "entity": "Artwork",
+       "arid": "mi7go5LBGe",
+       "url": "https://www.abc.net.au/triplej/albums/rachelchinouriri-ithinkispoketoosoon.jpg",
+       "type": "cover",
+       "title": null,
+       "mini_synopsis": null,
+       "short_synopsis": null,
+       "medium_synopsis": null,
+       "width": 600,
+       "height": 600,
+       "sizes": [
+        {
+         "url": "https://resize.abcradio.net.au/yePbcjyr-P-KPZ5AoSzVB-WKPPU=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Frachelchinouriri-ithinkispoketoosoon.jpg",
+         "width": 100,
+         "height": 100,
+         "aspect_ratio": "1x1"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/GxkKCh6qu5IAP0upFgx0fO1HRO4=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Frachelchinouriri-ithinkispoketoosoon.jpg",
+         "width": 160,
+         "height": 160,
+         "aspect_ratio": "1x1"
+        }
+       ],
+       "is_primary": null
+      }
+     ],
+     "links": [],
+     "artists": [
+      {
+       "entity": "Artist",
+       "arid": "maGYJVEBY7",
+       "name": "Rachel Chinouriri",
+       "artwork": [],
+       "links": [],
+       "is_australian": null,
+       "type": "primary",
+       "role": null
+      }
+     ],
+     "record_label": null,
+     "release_year": "2026",
+     "release_album_id": null
+    }
+   },
+   {
+    "summary": {
+     "artist": "X & Ivy",
+     "title": "Could This Be Love",
+     "links": {
+      "Unearthed": "https://www.abc.net.au/triplejunearthed/artist/x-ivy",
+      "Youtube": "https://www.youtube.com/results?search_query=X%20%26%20Ivy%20Could%20This%20Be%20Love",
+      "Spotify": "https://open.spotify.com/search/X%20%26%20Ivy%20Could%20This%20Be%20Love",
+      "Apple": "https://music.apple.com/au/search?term=X%20%26%20Ivy%20Could%20This%20Be%20Love"
+     }
+    },
+    "entity": "Play",
+    "arid": "mpnN4zeqQd",
+    "played_time": "2026-10-19T07:11:23+00:00",
+    "service_id": "triplej",
+    "recording": {
+     "entity": "Recording",
+     "arid": "mtMkRynJPY",
+     "title": "Could This Be Love",
+     "metadata": null,
+     "description": null,
+     "duration": 212,
+     "artists": [
+      {
+       "entity": "Artist",
+       "arid": "maPeRVZrbe",
+       "name": "X & Ivy",
+       "artwork": [],
+       "links": [
+        {
+         "entity": "Link",
+         "arid": "mlxyglEnK5",
+         "url": "https://www.abc.net.au/triplejunearthed/artist/x-ivy",
+         "id_component": "b2c6c7dcd46c5b6876e5e1dd6185e473",
+         "service_id": "unearthed",
+         "title": "Unearthed Artist",
+         "mini_synopsis": null,
+         "short_synopsis": null,
+         "medium_synopsis": null,
+         "type": "profile",
+         "provider": "unearthed",
+         "external": false
+        }
+       ],
+       "is_australian": true,
+       "type": "primary",
+       "role": null
+      }
+     ],
+     "releases": [
+      {
+       "entity": "Release",
+       "arid": "mrnynYkJB5",
+       "title": "Could This Be Love",
+       "format": null,
+       "artwork": [
+        {
+         "entity": "Artwork",
+         "arid": "mi2ewldQEP",
+         "url": "https://www.abc.net.au/triplej/albums/xivy-couldthisbelove.jpg",
+         "type": "cover",
+         "title": null,
+         "mini_synopsis": null,
+         "short_synopsis": null,
+         "medium_synopsis": null,
+         "width": 1200,
+         "height": 1200,
+         "sizes": [
+          {
+           "url": "https://resize.abcradio.net.au/bQrkMNk1pUo-_5ApbWJwOmwddMU=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg",
+           "width": 100,
+           "height": 100,
+           "aspect_ratio": "1x1"
+          },
+          {
+           "url": "https://resize.abcradio.net.au/n4TEe5BxO3t8HKtfGyqZUrvMkis=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg",
+           "width": 160,
+           "height": 160,
+           "aspect_ratio": "1x1"
+          }
+         ],
+         "is_primary": null
+        },
+        {
+         "entity": "Artwork",
+         "arid": "miwPQBOLOg",
+         "url": "https://abc.net.au/triplej/albums/playlist/9d029c24650dbe6be1c9cda67e9a90886584.jpg",
+         "type": "cover",
+         "title": null,
+         "mini_synopsis": null,
+         "short_synopsis": null,
+         "medium_synopsis": null,
+         "width": 600,
+         "height": 600,
+         "sizes": [
+          {
+           "url": "https://resize.abcradio.net.au/HfyD5fYtj6VYGgGq6fQi8Fh3hGk=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F9d029c24650dbe6be1c9cda67e9a90886584.jpg",
+           "width": 100,
+           "height": 100,
+           "aspect_ratio": "1x1"
+          },
+          {
+           "url": "https://resize.abcradio.net.au/ySZ-nVpYGAioscZPExdhqNyEY2A=/160x160/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F9d029c24650dbe6be1c9cda67e9a90886584.jpg",
+           "width": 160,
+           "height": 160,
+           "aspect_ratio": "1x1"
+          }
+         ],
+         "is_primary": null
+        }
+       ],
+       "links": [],
+       "artists": [
+        {
+         "entity": "Artist",
+         "arid": "maPeRVZrbe",
+         "name": "X & Ivy",
+         "artwork": [],
+         "links": [
+          {
+           "entity": "Link",
+           "arid": "mlxyglEnK5",
+           "url": "https://www.abc.net.au/triplejunearthed/artist/x-ivy",
+           "id_component": "b2c6c7dcd46c5b6876e5e1dd6185e473",
+           "service_id": "unearthed",
+           "title": "Unearthed Artist",
+           "mini_synopsis": null,
+           "short_synopsis": null,
+           "medium_synopsis": null,
+           "type": "profile",
+           "provider": "unearthed",
+           "external": false
+          }
+         ],
+         "is_australian": true,
+         "type": "primary",
+         "role": null
+        }
+       ],
+       "record_label": null,
+       "release_year": "2026",
+       "release_album_id": null,
+       "is_primary": null
+      }
+     ],
+     "artwork": [
+      {
+       "entity": "Artwork",
+       "arid": "miYeJBONke",
+       "url": "https://www.abc.net.au/triplej/albums/xivy-couldthisbelove.jpg",
+       "type": "cover",
+       "title": null,
+       "mini_synopsis": null,
+       "short_synopsis": null,
+       "medium_synopsis": null,
+       "width": 1200,
+       "height": 1200,
+       "sizes": [
+        {
+         "url": "https://resize.abcradio.net.au/bQrkMNk1pUo-_5ApbWJwOmwddMU=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg",
+         "width": 100,
+         "height": 100,
+         "aspect_ratio": "1x1"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/n4TEe5BxO3t8HKtfGyqZUrvMkis=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg",
+         "width": 160,
+         "height": 160,
+         "aspect_ratio": "1x1"
+        }
+       ],
+       "is_primary": null
+      }
+     ],
+     "links": []
+    },
+    "release": {
+     "entity": "Release",
+     "arid": "mrnynYkJB5",
+     "title": "Could This Be Love",
+     "format": null,
+     "artwork": [
+      {
+       "entity": "Artwork",
+       "arid": "mi2ewldQEP",
+       "url": "https://www.abc.net.au/triplej/albums/xivy-couldthisbelove.jpg",
+       "type": "cover",
+       "title": null,
+       "mini_synopsis": null,
+       "short_synopsis": null,
+       "medium_synopsis": null,
+       "width": 1200,
+       "height": 1200,
+       "sizes": [
+        {
+         "url": "https://resize.abcradio.net.au/bQrkMNk1pUo-_5ApbWJwOmwddMU=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg",
+         "width": 100,
+         "height": 100,
+         "aspect_ratio": "1x1"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/n4TEe5BxO3t8HKtfGyqZUrvMkis=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg",
+         "width": 160,
+         "height": 160,
+         "aspect_ratio": "1x1"
+        }
+       ],
+       "is_primary": null
+      },
+      {
+       "entity": "Artwork",
+       "arid": "miwPQBOLOg",
+       "url": "https://abc.net.au/triplej/albums/playlist/9d029c24650dbe6be1c9cda67e9a90886584.jpg",
+       "type": "cover",
+       "title": null,
+       "mini_synopsis": null,
+       "short_synopsis": null,
+       "medium_synopsis": null,
+       "width": 600,
+       "height": 600,
+       "sizes": [
+        {
+         "url": "https://resize.abcradio.net.au/HfyD5fYtj6VYGgGq6fQi8Fh3hGk=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F9d029c24650dbe6be1c9cda67e9a90886584.jpg",
+         "width": 100,
+         "height": 100,
+         "aspect_ratio": "1x1"
+        },
+        {
+         "url": "https://resize.abcradio.net.au/ySZ-nVpYGAioscZPExdhqNyEY2A=/160x160/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F9d029c24650dbe6be1c9cda67e9a90886584.jpg",
+         "width": 160,
+         "height": 160,
+         "aspect_ratio": "1x1"
+        }
+       ],
+       "is_primary": null
+      }
+     ],
+     "links": [],
+     "artists": [
+      {
+       "entity": "Artist",
+       "arid": "maPeRVZrbe",
+       "name": "X & Ivy",
+       "artwork": [],
+       "links": [
+        {
+         "entity": "Link",
+         "arid": "mlxyglEnK5",
+         "url": "https://www.abc.net.au/triplejunearthed/artist/x-ivy",
+         "id_component": "b2c6c7dcd46c5b6876e5e1dd6185e473",
+         "service_id": "unearthed",
+         "title": "Unearthed Artist",
+         "mini_synopsis": null,
+         "short_synopsis": null,
+         "medium_synopsis": null,
+         "type": "profile",
+         "provider": "unearthed",
+         "external": false
+        }
+       ],
+       "is_australian": true,
+       "type": "primary",
+       "role": null
+      }
+     ],
+     "record_label": null,
+     "release_year": "2026",
+     "release_album_id": null
+    }
+   }
+  ]
+ }
+}

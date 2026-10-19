@@ -1,0 +1,607 @@
+{
+ "_fixture_note": "POST https://1KTWJENJUU-dsn.algolia.net/1/indexes/listen_prod_all/query {\"query\":\"science show\",\"hitsPerPage\":3,\"facets\":[\"*\"]} (hits trimmed to 2, facets to 6 values)",
+ "data": {
+  "hits": [
+   {
+    "_geoloc": [
+     {}
+    ],
+    "accessibility": [
+     "closed captions",
+     "audio descriptions"
+    ],
+    "canonicalURI_fragments": [
+     "listen",
+     "programs"
+    ],
+    "canonicalURL": "https://www.abc.net.au/listen/programs/scienceshow/crossing-the-language-barrier-teaching-astronomy-and-physics/107277458",
+    "caption": "As a professor in astrophysics, Katherine Blundell studies variable objects in the night sky. These are colliding or exploding objects. She uses spectroscopy to infer the dynamics of the objects.\n\nIn addition to her astronomy, Professor Blundell has established the STEP initiative which offers science to students where science literature is unavailable in their native languages.  A monthly online magazine presents information about astronomy and physics.\n\nSTEP into the Cosmos \n\nGuest\nKatherine Blundell\nProfessor of Astrophysics\nUniversity of Oxford\nOxford UK\n\nPresenter\nRobyn Williams",
+    "channel_description": "The Science Show with Robyn Williams gives Australians unique insights into the latest scientific research and debate, from the physics of cricket to prime ministerial biorhythms.",
+    "contentSource": "coremedia",
+    "contentType": "audiosegment",
+    "contributors": [],
+    "country": "",
+    "dates": {
+     "firstUpdated": "2026-10-16T06:44:50+00:00",
+     "freshnessDate": "2026-10-17T01:05:00+00:00",
+     "freshnessHour": "2026-10-17T01:00:00+00:00",
+     "lastUpdated": "2026-10-16T06:51:18+00:00",
+     "liveDate": "2026-10-17T01:05:00+00:00",
+     "mediaDownloadAvailableFrom": "2026-10-17T01:05:00+00:00",
+     "mediaDownloadAvailableTo": "2200-01-01T00:00:00+00:00",
+     "mediaStreamingAvailableFrom": "2026-10-17T01:05:00+00:00",
+     "mediaStreamingAvailableTo": "2026-11-14T01:05:00+00:00",
+     "publicationDate": "2026-10-17T01:05:00+00:00",
+     "validFrom": null,
+     "validTo": null
+    },
+    "defaultThumbnail": {
+     "16x9": "https://live-production.wcms.abc-cdn.net.au/635483aa4bc93d52bf082b08c57a4419?impolicy=wcms_crop_resize&cropH=1193&cropW=2121&xPos=0&yPos=117&width=862&height=485",
+     "1x1": "https://live-production.wcms.abc-cdn.net.au/635483aa4bc93d52bf082b08c57a4419?impolicy=wcms_crop_resize&cropH=1414&cropW=1414&xPos=404&yPos=0&width=862&height=862",
+     "3x2": "https://live-production.wcms.abc-cdn.net.au/635483aa4bc93d52bf082b08c57a4419?impolicy=wcms_crop_resize&cropH=1414&cropW=2121&xPos=0&yPos=0&width=862&height=575",
+     "3x4": "https://live-production.wcms.abc-cdn.net.au/635483aa4bc93d52bf082b08c57a4419?impolicy=wcms_crop_resize&cropH=1414&cropW=1061&xPos=365&yPos=0&width=862&height=1149",
+     "4x3": "https://live-production.wcms.abc-cdn.net.au/635483aa4bc93d52bf082b08c57a4419?impolicy=wcms_crop_resize&cropH=1414&cropW=1885&xPos=118&yPos=0&width=862&height=647",
+     "9x16": "https://live-production.wcms.abc-cdn.net.au/635483aa4bc93d52bf082b08c57a4419?impolicy=wcms_crop_resize&cropH=1414&cropW=795&xPos=443&yPos=0&width=862&height=1533"
+    },
+    "duration": 550,
+    "freshnessScore": "1 week",
+    "genre": "",
+    "infoSource": "",
+    "keywords": [],
+    "lang": "",
+    "latitude": null,
+    "location": [],
+    "longitude": null,
+    "mediaDownloadStatus": "AVAILABLE",
+    "mediaRenditions": [
+     {
+      "audioBitrate": null,
+      "audioChannels": 2,
+      "audioCodec": "",
+      "audioProfileLevel": "Layer 3",
+      "audioSampleRate": 48000,
+      "bitrate": 192,
+      "codec": "MPEG Audio",
+      "contentType": "audio/mpeg",
+      "fileExtension": "mp3",
+      "fileName": "ssw-2026-10-17-1205.mp3",
+      "fileSize": 13207926,
+      "height": null,
+      "physicalLocation": "",
+      "pixelAspectRatio": "",
+      "url": "https://mediacore-live-production.akamaized.net/audio/02/pg/Z/m0.mp3",
+      "videoEncodeMode": "",
+      "videoFrameRate": null,
+      "videoMultiplexing": "MPEG Audio",
+      "videoProfileLevel": "Layer 3",
+      "width": null
+     }
+    ],
+    "mediaStreamingStatus": "NONE",
+    "programDefaultThumbnail": {
+     "16x9": "https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+     "1x1": "https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+     "3x2": "https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=2000&cropW=3000&xPos=0&yPos=500&width=862&height=575",
+     "3x4": "https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=3000&cropW=2250&xPos=375&yPos=0&width=862&height=1149",
+     "4x3": "https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=2250&cropW=3000&xPos=0&yPos=375&width=862&height=647",
+     "9x16": "https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=3000&cropW=1688&xPos=656&yPos=0&width=862&height=1533"
+    },
+    "programID": 2885500,
+    "programTitle": "The Science Show",
+    "shortTeaserText": "As a professor in astrophysics, Katherine Blundell studies variable objects in the night sky. These are colliding or exploding objects. She uses spectroscopy to infer the dynamics of the objects.\n\nIn addition to her astronomy, Professor Blundell has established the STEP initiative which offers science to students where science literature is unavailable in their native languages.  A monthly online magazine presents information about astronomy and physics.",
+    "shortTeaserTitle": "Crossing the language barrier teaching astronomy and physics",
+    "siteSegment": "listen",
+    "siteTitle": "Listen",
+    "subject": [
+     {
+      "canonicalURI": "science",
+      "canonicalURL": "https://www.abc.net.au/news/topic/science",
+      "id": "1340",
+      "name": "Science",
+      "parent": null
+     }
+    ],
+    "synopsis": "As a professor in astrophysics, Katherine Blundell studies variable objects in the night sky. These are colliding or exploding objects. She uses spectroscopy to infer the dynamics of the objects.\n\nIn addition to her astronomy, Professor Blundell has established the STEP initiative which offers science to students where science literature is unavailable in their native languages.  A monthly online magazine presents information about astronomy and physics.",
+    "teaserText": "As a professor in astrophysics, Katherine Blundell studies variable objects in the night sky. These are colliding or exploding objects. She uses spectroscopy to infer the dynamics of the objects.\n\nIn addition to her astronomy, Professor Blundell has established the STEP initiative which offers science to students where science literature is unavailable in their native languages.  A monthly online magazine presents information about astronomy and physics.",
+    "teaserTitle": "Crossing the language barrier teaching astronomy and physics",
+    "title": "Crossing the language barrier teaching astronomy and physics",
+    "unixDates": {
+     "firstUpdated": 1792133090,
+     "freshnessDate": 1792199100,
+     "freshnessHour": 1792198800,
+     "lastUpdated": 1792133478,
+     "liveDate": 1792199100,
+     "mediaDownloadAvailableFrom": 1792199100,
+     "mediaDownloadAvailableTo": 7258118400,
+     "mediaStreamingAvailableFrom": 1792199100,
+     "mediaStreamingAvailableTo": 1794618300,
+     "publicationDate": 1792199100,
+     "validFrom": null,
+     "validTo": null
+    },
+    "version": 5,
+    "objectID": "coremedia://audiosegment/107277458"
+   },
+   {
+    "_geoloc": [
+     {}
+    ],
+    "accessibility": [
+     "closed captions",
+     "audio descriptions"
+    ],
+    "canonicalURI_fragments": [
+     "listen",
+     "programs"
+    ],
+    "canonicalURL": "https://www.abc.net.au/listen/programs/scienceshow/breeding-potatoes-is-like-herding-cats/107277436",
+    "caption": "So says potato geneticist Ingo Hein. It’s due to the chaos which results when two potato plants are crossed. The result can be one of tens of thousands of variations, which is challenging when you just want to combine a few favourable traits. As Professor Hein explains, potato geneticists are using all the tools in the box to painstakingly come up with new potato varieties to suit the demands of modern agrifood in a changing climate.\n\nThe humble spud — Is the potato a hero or a dud? – Every Bite, ABC Radio National, October 17, 2026\n\nGuest\nIngo Hein\nHead of Potato Genetics\nDeputy Director\nNational Potato Innovation Centre\nJames Hutton Institute\n\nProfessor of Crop Genetics\nUniversity of Dundee\nAberdeen Scotland\n\nPresenter\nBelinda Smith",
+    "channel_description": "The Science Show with Robyn Williams gives Australians unique insights into the latest scientific research and debate, from the physics of cricket to prime ministerial biorhythms.",
+    "contentSource": "coremedia",
+    "contentType": "audiosegment",
+    "contributors": [],
+    "country": "",
+    "dates": {
+     "firstUpdated": "2026-10-16T06:44:50+00:00",
+     "freshnessDate": "2026-10-17T01:03:00+00:00",
+     "freshnessHour": "2026-10-17T01:00:00+00:00",
+     "lastUpdated": "2026-10-18T13:11:21+00:00",
+     "liveDate": "2026-10-17T01:03:00+00:00",
+     "mediaDownloadAvailableFrom": "2026-10-17T01:03:00+00:00",
+     "mediaDownloadAvailableTo": "2200-01-01T00:00:00+00:00",
+     "mediaStreamingAvailableFrom": "2026-10-17T01:03:00+00:00",
+     "mediaStreamingAvailableTo": "2026-11-14T01:03:00+00:00",
+     "publicationDate": "2026-10-17T01:03:00+00:00",
+     "validFrom": null,
+     "validTo": null
+    },
+    "defaultThumbnail": {
+     "16x9": "https://live-production.wcms.abc-cdn.net.au/f0ef4305f35395f9e8d1554ea08f8c4d?impolicy=wcms_crop_resize&cropH=576&cropW=1024&xPos=0&yPos=53&width=862&height=485",
+     "1x1": "https://live-production.wcms.abc-cdn.net.au/f0ef4305f35395f9e8d1554ea08f8c4d?impolicy=wcms_crop_resize&cropH=683&cropW=683&xPos=105&yPos=0&width=862&height=862",
+     "3x2": "https://live-production.wcms.abc-cdn.net.au/f0ef4305f35395f9e8d1554ea08f8c4d?impolicy=wcms_crop_resize&cropH=683&cropW=1024&xPos=0&yPos=0&width=862&height=575",
+     "3x4": "https://live-production.wcms.abc-cdn.net.au/f0ef4305f35395f9e8d1554ea08f8c4d?impolicy=wcms_crop_resize&cropH=683&cropW=512&xPos=236&yPos=0&width=862&height=1149",
+     "4x3": "https://live-production.wcms.abc-cdn.net.au/f0ef4305f35395f9e8d1554ea08f8c4d?impolicy=wcms_crop_resize&cropH=683&cropW=911&xPos=57&yPos=0&width=862&height=647",
+     "9x16": "https://live-production.wcms.abc-cdn.net.au/f0ef4305f35395f9e8d1554ea08f8c4d?impolicy=wcms_crop_resize&cropH=679&cropW=382&xPos=266&yPos=1&width=862&height=1533"
+    },
+    "duration": 746,
+    "freshnessScore": "1 week",
+    "genre": "",
+    "infoSource": "",
+    "keywords": [
+     "potatoes",
+     "genetics"
+    ],
+    "lang": "",
+    "latitude": null,
+    "location": [],
+    "longitude": null,
+    "mediaDownloadStatus": "AVAILABLE",
+    "mediaRenditions": [
+     {
+      "audioBitrate": null,
+      "audioChannels": 2,
+      "audioCodec": "",
+      "audioProfileLevel": "Layer 3",
+      "audioSampleRate": 48000,
+      "bitrate": 192,
+      "codec": "MPEG Audio",
+      "contentType": "audio/mpeg",
+      "fileExtension": "mp3",
+      "fileName": "ssw-2026-10-17-1203.mp3",
+      "fileSize": 17910966,
+      "height": null,
+      "physicalLocation": "",
+      "pixelAspectRatio": "",
+      "url": "https://mediacore-live-production.akamaized.net/audio/02/pg/Z/lv.mp3",
+      "videoEncodeMode": "",
+      "videoFrameRate": null,
+      "videoMultiplexing": "MPEG Audio",
+      "videoProfileLevel": "Layer 3",
+      "width": null
+     }
+    ],
+    "mediaStreamingStatus": "NONE",
+    "programDefaultThumbnail": {
+     "16x9": "https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+     "1x1": "https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+     "3x2": "https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=2000&cropW=3000&xPos=0&yPos=500&width=862&height=575",
+     "3x4": "https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=3000&cropW=2250&xPos=375&yPos=0&width=862&height=1149",
+     "4x3": "https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=2250&cropW=3000&xPos=0&yPos=375&width=862&height=647",
+     "9x16": "https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=3000&cropW=1688&xPos=656&yPos=0&width=862&height=1533"
+    },
+    "programID": 2885500,
+    "programTitle": "The Science Show",
+    "shortTeaserText": "So says potato geneticist Ingo Hein. It’s due to the chaos which results when two potato plants are crossed. The result can be one of tens of thousands of variations, which is challenging when you just want to combine a few favourable traits. As Professor Hein explains, potato geneticists are using all the tools in the box to painstakingly come up with new potato varieties to suit the demands of modern agrifood in a changing climate.",
+    "shortTeaserTitle": "Breeding potatoes is like herding cats",
+    "siteSegment": "listen",
+    "siteTitle": "Listen",
+    "subject": [],
+    "synopsis": "So says potato geneticist Ingo Hein. It’s due to the chaos which results when two potato plants are crossed. The result can be one of tens of thousands of variations, which is challenging when you just want to combine a few favourable traits. As Professor Hein explains, potato geneticists are using all the tools in the box to painstakingly come up with new potato varieties to suit the demands of modern agrifood in a changing climate.",
+    "teaserText": "So says potato geneticist Ingo Hein. It’s due to the chaos which results when two potato plants are crossed. The result can be one of tens of thousands of variations, which is challenging when you just want to combine a few favourable traits. As Professor Hein explains, potato geneticists are using all the tools in the box to painstakingly come up with new potato varieties to suit the demands of modern agrifood in a changing climate.",
+    "teaserTitle": "Breeding potatoes is like herding cats",
+    "title": "Breeding potatoes is like herding cats",
+    "unixDates": {
+     "firstUpdated": 1792133090,
+     "freshnessDate": 1792198980,
+     "freshnessHour": 1792198800,
+     "lastUpdated": 1792329081,
+     "liveDate": 1792198980,
+     "mediaDownloadAvailableFrom": 1792198980,
+     "mediaDownloadAvailableTo": 7258118400,
+     "mediaStreamingAvailableFrom": 1792198980,
+     "mediaStreamingAvailableTo": 1794618180,
+     "publicationDate": 1792198980,
+     "validFrom": null,
+     "validTo": null
+    },
+    "version": 7,
+    "objectID": "coremedia://audiosegment/107277436"
+   }
+  ],
+  "nbHits": 14875,
+  "page": 0,
+  "nbPages": 4959,
+  "hitsPerPage": 3,
+  "facets": {
+   "lang": {
+    "en": 15085,
+    "zh": 4,
+    "id": 1
+   },
+   "slug": {
+    "amazing-animal-friends": 1,
+    "australia-remastered-wild-treasures": 1,
+    "back-to-earth-stargazing-live": 1,
+    "contraption-masters": 1,
+    "dish-life": 1,
+    "download-this-show": 1
+   },
+   "tags": {
+    "science": 151,
+    "abc3": 114,
+    "factual": 114,
+    "learn": 106,
+    "bigkids": 101,
+    "abcfamily": 92
+   },
+   "title": {
+    "Full transcript": 87,
+    "Afternoons": 24,
+    "Breakfast": 14,
+    "National Rural News highlights": 14,
+    "Episodes": 13,
+    "News in 90 Seconds": 13
+   },
+   "status": {
+    "auto": 2
+   },
+   "country": {
+    "AU": 15068,
+    "CN": 4,
+    "ID": 1
+   },
+   "duration": {
+    "0": 3814,
+    "3230": 148,
+    "3232": 134,
+    "3600": 120,
+    "14099": 115,
+    "3246": 90
+   },
+   "keywords": {
+    "science": 1539,
+    "podcast": 594,
+    "robyn williams": 499,
+    "Research": 362,
+    "climate change": 311,
+    "health": 266
+   },
+   "siteTitle": {
+    "Listen": 11240,
+    "ABC News": 3027,
+    "Gardening Australia": 429,
+    "ABC Education": 256,
+    "ABC iview": 170,
+    "triple j": 96
+   },
+   "mlKeywords": {
+    "australia": 741,
+    "first": 574,
+    "science": 511,
+    "australian": 454,
+    "abc": 349,
+    "people": 318
+   },
+   "contentType": {
+    "audiosegment": 8207,
+    "audioepisode": 2820,
+    "article": 2816,
+    "video": 825,
+    "videosegment": 491,
+    "audio": 374
+   },
+   "location.id": {
+    "6864": 1275,
+    "26866": 643,
+    "11238": 192,
+    "21708": 186,
+    "10232": 163,
+    "24886": 153
+   },
+   "programType": {
+    "podcast": 6,
+    "catch-up": 1
+   },
+   "siteSegment": {
+    "listen": 11240,
+    "news": 3027,
+    "Gardening Australia": 429,
+    "education": 256,
+    "ABC iview": 170,
+    "triplej": 96
+   },
+   "canonicalURL": {
+    "https://iview.abc.net.au/show/adventure-time/series/2/video/ZW4807A015S00": 1,
+    "https://iview.abc.net.au/show/against-all-odds-inside-statistics/series/1/video/ZW1263A027S00": 1,
+    "https://iview.abc.net.au/show/amazing-animal-friends": 1,
+    "https://iview.abc.net.au/show/australia-remastered-wild-treasures": 1,
+    "https://iview.abc.net.au/show/back-to-earth-stargazing-live": 1,
+    "https://iview.abc.net.au/show/big-lizard/series/0/video/ZW4439A032S00": 1
+   },
+   "programTitle": {
+    "The Science Show": 8480,
+    "Gardening Australia": 429,
+    "Radio National Breakfast": 284,
+    "Nightlife": 203,
+    "Download This Show": 196,
+    "AM": 154
+   },
+   "status.theme": {
+    "default": 5
+   },
+   "status.title": {
+    "ALL EPISODES": 3,
+    "SPECIAL": 2
+   },
+   "subject.name": {
+    "Science and Technology": 3344,
+    "Scientific Research": 887,
+    "Space": 831,
+    "Climate Change": 801,
+    "Health": 710,
+    "Environment": 666
+   },
+   "contentSource": {
+    "coremedia": 15456,
+    "iview": 170
+   },
+   "location.name": {
+    "Australia": 1275,
+    "United States": 643,
+    "QLD": 192,
+    "Melbourne": 186,
+    "Sydney": 163,
+    "Perth": 157
+   },
+   "freshnessScore": {
+    "oldest": 15429,
+    "30 days": 100,
+    "1 week": 29,
+    "2 weeks": 23,
+    "2 days": 2,
+    "1 day": 1
+   },
+   "mlSentiment.label": {
+    "POSITIVE": 2452,
+    "NEGATIVE": 2059
+   },
+   "mlSentiment.score": {
+    "0": 92,
+    "0.9997614026069641": 18,
+    "0.9998036026954651": 11,
+    "0.9944630265235901": 5,
+    "0.9996727705001831": 5,
+    "0.9987755417823792": 4
+   },
+   "participants.list": {
+    "Aaron Pedersen": 1,
+    "Al Jean, Merrick Cheney": 1,
+    "Ben Francishelli": 1,
+    "Chris Van Tulleken, Xand Van Tulleken": 1,
+    "Colin Buchanan": 1,
+    "Dr Vanessa Pirotta": 1
+   },
+   "location.parent.id": {
+    "6864": 638,
+    "11238": 407,
+    "6866": 396,
+    "18842": 303,
+    "23328": 286,
+    "16838": 239
+   },
+   "participants.title": {
+    "Guest": 5,
+    "Cast": 3,
+    "Host": 3
+   },
+   "mediaDownloadStatus": {
+    "AVAILABLE": 8401,
+    "NONE": 3539,
+    "EXPIRED": 648,
+    "PENDING": 6
+   },
+   "location.parent.name": {
+    "Australia": 638,
+    "QLD": 407,
+    "NSW": 396,
+    "VIC": 303,
+    "WA": 286,
+    "SA": 239
+   },
+   "mediaStreamingStatus": {
+    "EXPIRED": 11447,
+    "NONE": 1121,
+    "AVAILABLE": 20,
+    "PENDING": 6
+   },
+   "location.canonicalURI": {
+    "australia": 1275,
+    "united-states": 643,
+    "qld": 192,
+    "melbourne-3000": 186,
+    "sydney-2000": 163,
+    "perth-6000": 153
+   },
+   "location.canonicalURL": {
+    "https://www.abc.net.au/news/topic/australia": 1275,
+    "https://www.abc.net.au/news/topic/united-states": 643,
+    "https://www.abc.net.au/news/topic/qld": 192,
+    "https://www.abc.net.au/news/topic/melbourne-3000": 186,
+    "https://www.abc.net.au/news/topic/sydney-2000": 163,
+    "https://www.abc.net.au/news/topic/perth-6000": 153
+   },
+   "canonicalURI_fragments": {
+    "programs": 11449,
+    "listen": 11240,
+    "scienceshow": 8535,
+    "news": 3047,
+    "gardening": 430,
+    "science": 321
+   },
+   "unixDates.publicationDate": {
+    "1117202400": 8,
+    "1118412000": 8,
+    "1120831200": 8,
+    "1121436000": 8,
+    "1709406300": 8,
+    "885560400": 8
+   },
+   "location.parent.canonicalURI": {
+    "australia": 638,
+    "qld": 407,
+    "nsw": 396,
+    "vic": 303,
+    "wa": 286,
+    "sa": 239
+   },
+   "location.parent.canonicalURL": {
+    "https://www.abc.net.au/news/topic/australia": 638,
+    "https://www.abc.net.au/news/topic/qld": 407,
+    "https://www.abc.net.au/news/topic/nsw": 396,
+    "https://www.abc.net.au/news/topic/vic": 303,
+    "https://www.abc.net.au/news/topic/wa": 286,
+    "https://www.abc.net.au/news/topic/sa": 239
+   },
+   "contextSettings.service.title": {
+    "ABC Central Coast": 4,
+    "Radio Australia": 4,
+    "Sydney": 4,
+    "Adelaide": 1,
+    "Brisbane": 1,
+    "Canberra": 1
+   }
+  },
+  "facets_stats": {
+   "duration": {
+    "min": 0,
+    "max": 99000,
+    "avg": 1015,
+    "sum": 12967082
+   },
+   "keywords": {
+    "min": 0,
+    "max": 2035,
+    "avg": 1310.96,
+    "sum": 131096
+   },
+   "mlKeywords": {
+    "min": 0,
+    "max": 2026,
+    "avg": 1408.82,
+    "sum": 39447
+   },
+   "location.id": {
+    "min": 6844,
+    "max": 104483720,
+    "avg": 47694,
+    "sum": 345496928
+   },
+   "mlSentiment.score": {
+    "min": 0,
+    "max": 0.99989,
+    "avg": 0.93194,
+    "sum": 4289.72
+   },
+   "location.parent.id": {
+    "min": 6864,
+    "max": 26866,
+    "avg": 12768,
+    "sum": 34603800
+   },
+   "canonicalURI_fragments": {
+    "min": 42,
+    "max": 107284000.0,
+    "avg": 25659200.0,
+    "sum": 395434000000.0
+   },
+   "unixDates.publicationDate": {
+    "min": 871689600,
+    "max": 1794013200,
+    "avg": 1403050889,
+    "sum": 16276793364621
+   }
+  },
+  "exhaustiveFacetsCount": false,
+  "exhaustiveNbHits": false,
+  "exhaustiveTypo": false,
+  "exhaustive": {
+   "facetsCount": false,
+   "nbHits": false,
+   "typo": false
+  },
+  "query": "science show",
+  "params": "query=science+show&hitsPerPage=3&facets=%5B%22*%22%5D&optionalFilters=%5B%5B%22contentType%3A+article%22%2C%22contentType%3A+channel%22%2C%22contentType%3A+program%22%2C%22contentType%3A+recipe%22%2C%22contentSource%3A+iview%22%2C%22mediaStreamingStatus%3A+AVAILABLE%22%2C%22mediaDownloadStatus%3A++AVAILABLE%22%5D%5D&optionalFilters=%5B%5B%22contentType%3A+article%22%2C%22contentType%3A+channel%22%2C%22contentType%3A+program%22%2C%22contentType%3A+recipe%22%2C%22contentSource%3A+iview%22%2C%22mediaStreamingStatus%3A+AVAILABLE%22%2C%22mediaDownloadStatus%3A+AVAILABLE%22%5D%5D&optionalFilters=%5B%22contentType%3Aprogram%3Cscore%3D1%3E%22%5D",
+  "renderingContent": {
+   "facetOrdering": {
+    "facets": {
+     "order": []
+    }
+   }
+  },
+  "processingTimeMS": 1146,
+  "processingTimingsMS": {
+   "_request": {
+    "roundTrip": 199
+   },
+   "afterFetch": {
+    "dedupFacets": 1016,
+    "merge": {
+     "distinctProcessing": {
+      "assignGlobalIDs": {
+       "sortEntries": 1,
+       "total": 2
+      },
+      "gatherLocalIDs": 12,
+      "total": 14
+     },
+     "total": 15
+    },
+    "total": 1032
+   },
+   "fetch": {
+    "faceting": 51,
+    "query": 4,
+    "scanning": 52,
+    "total": 110
+   },
+   "getIdx": {
+    "load": {
+     "total": 1
+    },
+    "total": 1
+   },
+   "total": 1146
+  },
+  "serverTimeMS": 1147
+ }
+}

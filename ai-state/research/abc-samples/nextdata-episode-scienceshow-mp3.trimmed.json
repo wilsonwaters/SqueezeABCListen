@@ -1,0 +1,164 @@
+{
+ "_fixture_note": "GET https://www.abc.net.au/_next/data/<buildId>/listen/programs/scienceshow/trees-potatoes-brendan-may-step/107266790.json -> pageProps.data.documentProps (subset)",
+ "data": {
+  "allowMediaDownload(top)": "all",
+  "documentProps": {
+   "id": "107266790",
+   "docType": "audioepisode",
+   "title": "72 per cent of UK trees threatened by changing climate, plus the simple spud’s complex genetics",
+   "titleAlt": "72 per cent of UK trees threatened by changing climate, plus the simple spud’s complex genetics",
+   "synopsis": "And palm oil producers in South-East Asia have changed their ways, considering the environment more than they did. Brendan May is turning his attention now to nickel mines in tropical countries.",
+   "synopsisAlt": "And palm oil producers in South-East Asia have changed their ways, considering the environment more than they did. Brendan May is turning his attention now to nickel mines in tropical countries.",
+   "canonicalURL": "https://www.abc.net.au/listen/programs/scienceshow/trees-potatoes-brendan-may-step/107266790",
+   "duration": 3276,
+   "programID": 2885500,
+   "availableFrom": "2026-10-17T01:00:00+00:00",
+   "availableTo": "2026-11-14T01:00:00+00:00",
+   "downloadAvailableFrom": "2026-10-17T01:00:00+00:00",
+   "downloadAvailableTo": "2200-01-01T00:00:00+00:00",
+   "allowMediaDownload": "all",
+   "webDistributionRestricted": false,
+   "renditions": [
+    {
+     "bitrate": 192,
+     "codec": "MPEG Audio",
+     "MIMEType": "audio/mpeg",
+     "fileSize": 78642070,
+     "height": null,
+     "url": "https://mediacore-live-production.akamaized.net/audio/02/pg/Z/ai.mp3"
+    }
+   ],
+   "datelinePrepared": {
+    "publishedDate": "2026-10-17T01:00:00+00:00",
+    "updatedDate": "2026-10-18T13:07:23+00:00"
+   },
+   "heroImageWithCTAPrepared": {
+    "heading": "72 per cent of UK trees threatened by changing climate, plus the simple spud’s complex genetics",
+    "uri": "coremedia://audioepisode/107266790",
+    "shareUtilityProps": {
+     "utilityBarShareLinks": [
+      {
+       "shareBy": "facebook"
+      },
+      {
+       "shareBy": "twitter"
+      }
+     ],
+     "hasPopover": true,
+     "title": "72 per cent of UK trees threatened by changing climate, plus the simple spud’s complex genetics",
+     "shareLink": "https://www.abc.net.au/listen/programs/scienceshow/trees-potatoes-brendan-may-step/107266790",
+     "synopsis": "And palm oil producers in South-East Asia have changed their ways, considering the environment more than they did. Brendan May is turning his attention now to nickel mines in tropical countries.",
+     "shareOn": {
+      "title": "Share this on",
+      "items": [
+       {
+        "shareBy": "facebook"
+       },
+       {
+        "shareBy": "linked-in"
+       },
+       {
+        "shareBy": "twitter",
+        "via": "ABCaustralia"
+       }
+      ]
+     },
+     "sendBy": {
+      "title": "Send this by",
+      "items": [
+       {
+        "shareBy": "mail"
+       },
+       {
+        "shareBy": "messenger",
+        "mobileOnly": true
+       },
+       {
+        "shareBy": "link"
+       }
+      ]
+     }
+    },
+    "heroImagePrepared": null,
+    "programImagePrepared": {
+     "alt": "ABC Science Show logo: A stylised black bird with yellow beak amidst colourful, textured planets and green star-like shapes.",
+     "imgSrc": "https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+     "ratio": "1x1",
+     "srcSet": [
+      "https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w"
+     ],
+     "width": "862",
+     "height": "862"
+    },
+    "channelLogoPrepared": [
+     {
+      "canonicalURI": "/listen/radionational/",
+      "canonicalURL": "https://www.abc.net.au/listen/radionational/",
+      "id": "2875892",
+      "label": {
+       "full": "ABC Radio National"
+      },
+      "contentImagePrepared": {
+       "alt": "ABC Radio National",
+       "imgSrc": "https://live-production.wcms.abc-cdn.net.au/556166359443f9aaa26ce7b905c4a29f?impolicy=wcms_crop_resize&cropH=500&cropW=500&xPos=0&yPos=0&width=862&height=862",
+       "ratio": "1x1",
+       "srcSet": [
+        "https://live-production.wcms.abc-cdn.net.au/556166359443f9aaa26ce7b905c4a29f?impolicy=wcms_crop_resize&cropH=500&cropW=500&xPos=0&yPos=0&width=160&height=160 160w"
+       ]
+      }
+     }
+    ],
+    "canonicalURI": "/listen/programs/scienceshow/trees-potatoes-brendan-may-step/107266790",
+    "attributionLinksPrepared": [
+     {
+      "url": "/listen/programs/scienceshow/",
+      "title": "The Science Show",
+      "screenReaderText": "Program:"
+     }
+    ],
+    "presentersProps": {
+     "linkPrepared": [
+      {
+       "canonicalURI": "/listen/programs/scienceshow/robyn-williams-and-belinda-smith/106229792",
+       "canonicalURL": "https://www.abc.net.au/listen/programs/scienceshow/robyn-williams-and-belinda-smith/106229792",
+       "id": "106229792",
+       "label": {
+        "full": "Robyn Williams and  Belinda Smith"
+       },
+       "contentImagePrepared": {
+        "altText": "Two people smiling, a woman with dark hair in red and a man with white hair in a beige top.",
+        "imgRatio": "1x1",
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/fdfe935535f009f9c7361c63d0c6eda7?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862",
+        "srcSet": [
+         "https://live-production.wcms.abc-cdn.net.au/fdfe935535f009f9c7361c63d0c6eda7?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=160&height=160 160w"
+        ]
+       }
+      }
+     ],
+     "label": "Presented by"
+    },
+    "hidePublicationDateCMS": null,
+    "datelinePrepared": {
+     "publishedDate": "2026-10-17T01:00:00+00:00",
+     "updatedDate": "2026-10-18T13:07:23+00:00"
+    }
+   },
+   "imageDetailsPrepared": {},
+   "thumbnailLink": null,
+   "contributors": [],
+   "tracklistPrepared": null,
+   "attributionLinksPrepared": {
+    "links": [
+     {
+      "url": "/listen/programs/scienceshow/",
+      "title": "The Science Show",
+      "screenReaderText": "Program:"
+     }
+    ]
+   },
+   "contentSource": "coremedia",
+   "caption": "* Some success with palm oil. Nickel mines the next challenge\n* London street trees threatened by changing climate\n* Breeding potatoes is like herding cats\n* Investigating primary sclerosing cholangitis\n* Crossing the language barrier teaching astronomy and physics",
+   "transcript": "(rich-text descriptor omitted)"
+  }
+ }
+}

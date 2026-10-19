@@ -1,0 +1,135 @@
+{
+ "_fixture_note": "GET https://www.abc.net.au/core-next/api/episodesWithSegments/listen/programs/scienceshow?collectionId=2885458&offset=240&size=10&total=250&programTemplate=audio (trimmed to 2)",
+ "data": {
+  "collection": {
+   "id": "2885458",
+   "headingPrepared": "More from Latest Programs",
+   "items": [
+    {
+     "articleLink": "/listen/programs/scienceshow/the-science-show/103022914",
+     "cardAttributionPrepared": {
+      "publishedDate": "2024-01-20T01:00:00+00:00",
+      "publishedDateFormat": false
+     },
+     "cardImagePrepared": {
+      "alt": "",
+      "imgSrc": "https://live-production.wcms.abc-cdn.net.au/23b56445f570798642596347fe3a35f9?impolicy=wcms_crop_resize&cropH=1362&cropW=1362&xPos=134&yPos=0&width=862&height=862",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://live-production.wcms.abc-cdn.net.au/23b56445f570798642596347fe3a35f9?impolicy=wcms_crop_resize&cropH=1362&cropW=1363&xPos=151&yPos=0&width=160&height=160 160w"
+      ],
+      "width": "862",
+      "height": "862"
+     },
+     "cardMediaIndicatorPrepared": {
+      "icon": "audio",
+      "duration": 3247
+     },
+     "contentLabelPrepared": null,
+     "contentUri": "coremedia://audioepisode/103022914",
+     "description": "He imagined the atomic bomb, believed in a world government, wrote books about science and science fiction and was the first popular communicator of scientific ideas. Today we commemorate the life and achievements of Herbert George Wells.",
+     "cardId": "103022914",
+     "cardTitle": "H. G. Wells – father of science fiction",
+     "noBorders": true,
+     "presentersPrepared": [
+      {
+       "canonicalURI": "/listen/radionational/robyn-williams/2913842",
+       "canonicalURL": "https://www.abc.net.au/listen/radionational/robyn-williams/2913842",
+       "id": "2913842",
+       "names": {
+        "full": "Robyn Williams"
+       },
+       "role": "Presenter"
+      }
+     ],
+     "imagePositionPrepared": {
+      "mobile": "left",
+      "tablet": "left",
+      "desktop": "left"
+     },
+     "cardContentPositionPrepared": {},
+     "hasMobileFeatured": true,
+     "docType": "audioepisode",
+     "segments": null,
+     "programTemplate": "audio",
+     "expanded": true
+    },
+    {
+     "articleLink": "/listen/programs/scienceshow/science-extra-falling-antimatter-beethoven-jupiter-telescope/103190018",
+     "cardAttributionPrepared": {
+      "publishedDate": "2024-01-13T20:00:00+00:00",
+      "publishedDateFormat": false
+     },
+     "cardImagePrepared": {
+      "alt": "GettyImages-1443334508",
+      "imgSrc": "https://live-production.wcms.abc-cdn.net.au/accfc939443547f7d8bb797d7faf0fe9?impolicy=wcms_crop_resize&cropH=1414&cropW=1414&xPos=354&yPos=0&width=862&height=862",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://live-production.wcms.abc-cdn.net.au/accfc939443547f7d8bb797d7faf0fe9?impolicy=wcms_crop_resize&cropH=1414&cropW=1414&xPos=354&yPos=0&width=160&height=160 160w"
+      ],
+      "width": "862",
+      "height": "862"
+     },
+     "cardMediaIndicatorPrepared": {
+      "icon": "audio",
+      "duration": 1230
+     },
+     "contentLabelPrepared": null,
+     "contentUri": "coremedia://audioepisode/103190018",
+     "description": "Clearly, there's no such thing as too much AI, you can't escape it; and we can't ignore avian 'flu, or 2023 being the hottest year on record; But, meanwhile ...",
+     "cardId": "103190018",
+     "cardTitle": "Science Extra: Antimatter, Jupiter's new moons, Beethoven's hair, and that telescope",
+     "noBorders": true,
+     "presentersPrepared": [
+      {
+       "canonicalURI": "/news/jonathan-webb/8462328",
+       "canonicalURL": "https://www.abc.net.au/news/jonathan-webb/8462328",
+       "id": "8462328",
+       "names": {
+        "full": "Jonathan Webb"
+       },
+       "role": "Presenter"
+      }
+     ],
+     "imagePositionPrepared": {
+      "mobile": "left",
+      "tablet": "left",
+      "desktop": "left"
+     },
+     "cardContentPositionPrepared": {},
+     "hasMobileFeatured": true,
+     "docType": "audioepisode",
+     "segments": null,
+     "programTemplate": "audio",
+     "expanded": false
+    }
+   ],
+   "analytics": {
+    "uri": "coremedia://dynamiccollection/2885458",
+    "moduleUri": "app://module/programsCollection",
+    "contentSource": "coremedia",
+    "contentType": "collection",
+    "id": "2885458",
+    "title": {
+     "title": "Latest Programs"
+    },
+    "items": [
+     {
+      "uri": "coremedia://audioepisode/103022914"
+     },
+     {
+      "uri": "coremedia://audioepisode/103190018"
+     }
+    ]
+   },
+   "pagination": {
+    "collectionLoaderLimit": "10",
+    "offset": 240,
+    "size": 10,
+    "total": 250
+   },
+   "programId": null,
+   "programTemplate": "audio"
+  }
+ }
+}

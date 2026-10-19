@@ -1,0 +1,150 @@
+{
+ "_fixture_note": "GET https://www.abc.net.au/core-next/api/schedule?service=RN&date=2026-10-19&tz=Australia/Sydney&ratio=1x1 (4 time blocks, items trimmed to 2)",
+ "data": {
+  "formattedScheduleArray": [
+   {
+    "timeBlockTitle": "Early",
+    "items": [
+     {
+      "id": "pea2b710bb",
+      "rawStartTime": "2026-10-18T13:00:00+00:00",
+      "rawEndTime": "2026-10-18T13:30:00+00:00",
+      "cardImagePrepared": {
+       "alt": "Download This Show",
+       "imgSrc": "https://resize.abcradio.net.au/4XXd_ExvF9KxoxhABEGZzJ3xQZI=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FDTS_3000x3000.jpg",
+       "ratio": "1x1",
+       "srcSet": [
+        "https://resize.abcradio.net.au/4XXd_ExvF9KxoxhABEGZzJ3xQZI=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FDTS_3000x3000.jpg 100w"
+       ]
+      },
+      "presenters": [
+       {
+        "id": "prca940c6a",
+        "displayName": "Rae Johnston"
+       }
+      ],
+      "synopsis": "Explore the latest in technology, social media, consumer electronics, digital culture and more.",
+      "title": "Download This Show",
+      "url": "https://www.abc.net.au/radionational/programs/downloadthisshow/",
+      "stationsInfo": [
+       {
+        "title": "Radio National",
+        "papiServiceId": "RN",
+        "primaryImage": {
+         "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+        }
+       }
+      ],
+      "timeBlock": "Early",
+      "onNow": false,
+      "start": "12:00am",
+      "end": "12:30am"
+     },
+     {
+      "id": "ped6b111cf",
+      "rawStartTime": "2026-10-18T13:30:00+00:00",
+      "rawEndTime": "2026-10-18T14:00:00+00:00",
+      "cardImagePrepared": {
+       "alt": "Crowdscience (BBC)",
+       "imgSrc": "https://resize.abcradio.net.au/NT6FjyK5DAkcD-37elTPclvpN54=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fservice%2Frn-logo-2025.png",
+       "ratio": "1x1",
+       "srcSet": [
+        "https://resize.abcradio.net.au/NT6FjyK5DAkcD-37elTPclvpN54=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fservice%2Frn-logo-2025.png 100w"
+       ]
+      },
+      "presenters": [],
+      "synopsis": "We take your questions about life, Earth and the universe to researchers hunting for answers at the frontiers of knowledge. (BBC)",
+      "title": "Crowdscience (BBC)",
+      "stationsInfo": [
+       {
+        "title": "Radio National",
+        "papiServiceId": "RN",
+        "primaryImage": {
+         "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+        }
+       }
+      ],
+      "timeBlock": "Early",
+      "onNow": false,
+      "start": "12:30am",
+      "end": "1:00am"
+     }
+    ]
+   },
+   {
+    "timeBlockTitle": "Morning",
+    "items": [
+     {
+      "id": "pe6a0a806b",
+      "rawStartTime": "2026-10-18T18:30:00+00:00",
+      "rawEndTime": "2026-10-18T19:00:00+00:00",
+      "cardImagePrepared": {
+       "alt": "ABC News Daily and Radio National Hour Highlights",
+       "imgSrc": "https://resize.abcradio.net.au/vUSRFwN3N5y1sABEh7HDmMyCIbE=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FABC-NEWS-DAILY-tile-2024.jpg",
+       "ratio": "1x1",
+       "srcSet": [
+        "https://resize.abcradio.net.au/vUSRFwN3N5y1sABEh7HDmMyCIbE=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FABC-NEWS-DAILY-tile-2024.jpg 100w"
+       ]
+      },
+      "presenters": [],
+      "synopsis": "The podcast that explains the issues affecting your world. Also highlights from the Radio National Hour with Fran Kelly.",
+      "title": "ABC News Daily and Radio National Hour Highlights",
+      "url": "https://www.abc.net.au/listen/programs/abc-news-daily",
+      "stationsInfo": [
+       {
+        "title": "Radio National",
+        "papiServiceId": "RN",
+        "primaryImage": {
+         "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+        }
+       }
+      ],
+      "timeBlock": "Morning",
+      "onNow": false,
+      "start": "5:30am",
+      "end": "6:00am"
+     },
+     {
+      "id": "pe94ee5712",
+      "rawStartTime": "2026-10-18T19:00:00+00:00",
+      "rawEndTime": "2026-10-18T20:10:00+00:00",
+      "cardImagePrepared": {
+       "alt": "Radio National Breakfast",
+       "imgSrc": "https://resize.abcradio.net.au/FSBcReFTEo6IAalBs_EHxAz0F5E=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FRN-Breakfast_3000x3000.jpg",
+       "ratio": "1x1",
+       "srcSet": [
+        "https://resize.abcradio.net.au/FSBcReFTEo6IAalBs_EHxAz0F5E=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FRN-Breakfast_3000x3000.jpg 100w"
+       ]
+      },
+      "presenters": [
+       {
+        "id": "prc48f0c1f",
+        "displayName": "Sally Sara"
+       }
+      ],
+      "synopsis": "Agenda-setting news coverage, breaking news and the most significant stories impacting the lives of all Australians.",
+      "title": "Radio National Breakfast",
+      "url": "https://www.abc.net.au/radionational/programs/breakfast/",
+      "stationsInfo": [
+       {
+        "title": "Radio National",
+        "papiServiceId": "RN",
+        "primaryImage": {
+         "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+        }
+       }
+      ],
+      "timeBlock": "Morning",
+      "onNow": false,
+      "start": "6:00am",
+      "end": "7:10am"
+     }
+    ]
+   }
+  ],
+  "papiServiceIds": [
+   "RN"
+  ],
+  "serviceTimezone": "Australia/Sydney"
+ }
+}

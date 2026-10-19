@@ -1,0 +1,330 @@
+{
+ "_fixture_note": "POST .../listen_prod_all/query {\"filters\":\"contentType:program AND (siteSegment:listen OR siteSegment:triplej OR siteSegment:kidslisten OR siteSegment:triplejunearthed OR siteSegment:pacific)\",\"hitsPerPage\":1000} -> 724 programs (trimmed to 3)",
+ "data": {
+  "hits": [
+   {
+    "accessibility": [
+     "closed captions",
+     "audio descriptions"
+    ],
+    "canonicalURI_fragments": [
+     "listen",
+     "programs",
+     "saturdaynightcountry"
+    ],
+    "canonicalURL": "https://www.abc.net.au/listen/programs/saturdaynightcountry/",
+    "channel_description": "All your favourite programs and podcasts in one place",
+    "contentSource": "coremedia",
+    "contentType": "program",
+    "contributors": [
+     {
+      "contributorItems": [
+       {
+        "canonicalURI": "/listen/melody-moko/106408710",
+        "canonicalURL": "https://www.abc.net.au/listen/melody-moko/106408710",
+        "contentSource": "coremedia",
+        "contentType": "person",
+        "firstName": "Melody",
+        "id": "106408710",
+        "lastName": "Moko",
+        "uri": "coremedia://person/106408710",
+        "version": 8
+       }
+      ],
+      "roleName": "Presenter"
+     }
+    ],
+    "country": "AU",
+    "dates": {
+     "firstUpdated": "2016-05-31T00:41:49+00:00",
+     "freshnessDate": "2016-05-31T00:41:49+00:00",
+     "freshnessHour": "2016-05-31T00:00:00+00:00",
+     "lastUpdated": "2026-10-19T02:00:53+00:00",
+     "liveDate": "2016-05-31T00:41:49+00:00",
+     "validFrom": null,
+     "validTo": null
+    },
+    "defaultThumbnail": {
+     "16x9": "https://live-production.wcms.abc-cdn.net.au/0af840be01308fcdc934b82c3cf0336e?impolicy=wcms_crop_resize&cropH=1125&cropW=2000&xPos=0&yPos=438&width=862&height=485",
+     "1x1": "https://live-production.wcms.abc-cdn.net.au/0af840be01308fcdc934b82c3cf0336e?impolicy=wcms_crop_resize&cropH=2000&cropW=2000&xPos=0&yPos=0&width=862&height=862",
+     "3x2": "https://live-production.wcms.abc-cdn.net.au/0af840be01308fcdc934b82c3cf0336e?impolicy=wcms_crop_resize&cropH=1333&cropW=2000&xPos=0&yPos=333&width=862&height=575",
+     "3x4": "https://live-production.wcms.abc-cdn.net.au/0af840be01308fcdc934b82c3cf0336e?impolicy=wcms_crop_resize&cropH=2000&cropW=1500&xPos=250&yPos=0&width=862&height=1149",
+     "4x3": "https://live-production.wcms.abc-cdn.net.au/0af840be01308fcdc934b82c3cf0336e?impolicy=wcms_crop_resize&cropH=1500&cropW=2000&xPos=0&yPos=250&width=862&height=647",
+     "9x16": "https://live-production.wcms.abc-cdn.net.au/0af840be01308fcdc934b82c3cf0336e?impolicy=wcms_crop_resize&cropH=2000&cropW=1125&xPos=438&yPos=0&width=862&height=1533"
+    },
+    "description": "Saturday Night Country has been Australia's home of country music for over 30 years.\n\nJoin Melody Moko every Saturday night for contemporary and classic country music with a strong focus on Aussie artists. \n\nListen on ABC Country from 9pm, as well as on ABC Radio and ABC listen.",
+    "freshnessScore": "oldest",
+    "genre": [
+     {
+      "id": "102416102"
+     }
+    ],
+    "infoSource": "ABC Country",
+    "lang": "en",
+    "programType": "music",
+    "shortTeaserText": "For over 30 years, Saturday Night Country has been Australia's home of country music.",
+    "shortTeaserTitle": "Saturday Night Country",
+    "siteSegment": "listen",
+    "siteTitle": "Listen",
+    "status": "auto",
+    "synopsis": "For over 30 years, Saturday Night Country has been Australia's home of country music.",
+    "teaserText": "For over 30 years, Saturday Night Country has been Australia's home of country music.",
+    "teaserTitle": "Saturday Night Country",
+    "title": "Saturday Night Country",
+    "unixDates": {
+     "firstUpdated": 1464655309,
+     "freshnessDate": 1464655309,
+     "freshnessHour": 1464652800,
+     "lastUpdated": 1792375253,
+     "liveDate": 1464655309,
+     "validFrom": null,
+     "validTo": null
+    },
+    "version": 360,
+    "objectID": "coremedia://program/7462314"
+   },
+   {
+    "accessibility": [
+     "closed captions",
+     "audio descriptions"
+    ],
+    "canonicalURI_fragments": [
+     "listen",
+     "programs",
+     "the-walkers-the-real-salt-path"
+    ],
+    "canonicalURL": "https://www.abc.net.au/listen/programs/the-walkers-the-real-salt-path/",
+    "channel_description": "All your favourite programs and podcasts in one place",
+    "contentSource": "coremedia",
+    "contentType": "program",
+    "contributors": [
+     {
+      "contributorItems": [
+       {
+        "canonicalURI": null,
+        "canonicalURL": null,
+        "contentSource": null,
+        "contentType": null,
+        "firstName": null,
+        "id": null,
+        "lastName": null,
+        "uri": null,
+        "version": null
+       }
+      ],
+      "roleName": null
+     }
+    ],
+    "country": "",
+    "dates": {
+     "firstUpdated": "2026-10-11T21:39:04+00:00",
+     "freshnessDate": "2026-10-11T21:39:04+00:00",
+     "freshnessHour": "2026-10-11T21:00:00+00:00",
+     "lastUpdated": "2026-10-13T04:53:55+00:00",
+     "liveDate": null,
+     "validFrom": null,
+     "validTo": null
+    },
+    "defaultThumbnail": {
+     "16x9": "https://live-production.wcms.abc-cdn.net.au/91163025f09e7bada615d35e4dd95355?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+     "1x1": "https://live-production.wcms.abc-cdn.net.au/91163025f09e7bada615d35e4dd95355?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+     "3x2": "https://live-production.wcms.abc-cdn.net.au/91163025f09e7bada615d35e4dd95355?impolicy=wcms_crop_resize&cropH=2000&cropW=3000&xPos=0&yPos=500&width=862&height=575",
+     "3x4": "https://live-production.wcms.abc-cdn.net.au/91163025f09e7bada615d35e4dd95355?impolicy=wcms_crop_resize&cropH=3000&cropW=2250&xPos=375&yPos=0&width=862&height=1149",
+     "4x3": "https://live-production.wcms.abc-cdn.net.au/91163025f09e7bada615d35e4dd95355?impolicy=wcms_crop_resize&cropH=2250&cropW=3000&xPos=0&yPos=375&width=862&height=647",
+     "9x16": "https://live-production.wcms.abc-cdn.net.au/91163025f09e7bada615d35e4dd95355?impolicy=wcms_crop_resize&cropH=3000&cropW=1688&xPos=656&yPos=0&width=862&height=1533"
+    },
+    "description": "Raynor Winn’s memoir The Salt Path was a bestseller and literary phenomenon with millions of people captivated by this true story of financial ruin, terminal illness, and healing through nature. Raynor Winn has since published two more books and The Salt Path has been adapted for the big screen, starring Jason Isaacs and Gillian Anderson. \n\nAt its heart it is a simple tale, of a couple embarking on a 630 mile trek in the face of stark adversity. When faced with nothing, they chose to walk. \n\nBut a tip-off last summer revealed a memoir that might not be the \"unflinchingly honest\" account it claimed to be. How far can you bend the truth before it begins to break? ",
+    "freshnessScore": "2 weeks",
+    "genre": [
+     {
+      "contentSource": "coremedia",
+      "contentType": "taxonomy",
+      "id": "102416046",
+      "name": "Conversations & Storytelling",
+      "uri": "coremedia://taxonomy/102416046"
+     },
+     {
+      "contentSource": "coremedia",
+      "contentType": "taxonomy",
+      "id": "102416130",
+      "name": "Society & Culture",
+      "uri": "coremedia://taxonomy/102416130"
+     },
+     {
+      "contentSource": "coremedia",
+      "contentType": "taxonomy",
+      "id": "102416138",
+      "name": "True Crime",
+      "uri": "coremedia://taxonomy/102416138"
+     }
+    ],
+    "infoSource": "ABC Listen",
+    "lang": "",
+    "programType": "podcast",
+    "shortTeaserText": "Penniless and homeless, the Winns found fame and fortune with the story of their 630-mile walk to salvation. But the truth behind the hit memoir is very different.",
+    "shortTeaserTitle": "The Walkers: The Real Salt Path ",
+    "siteSegment": "listen",
+    "siteTitle": "Listen",
+    "status": "",
+    "synopsis": "Penniless and homeless, the Winns found fame and fortune with the story of their 630-mile walk to salvation. But the truth behind the hit memoir is very different.",
+    "teaserText": "Penniless and homeless, the Winns found fame and fortune with the story of their 630-mile walk to salvation. But the truth behind the hit memoir is very different.",
+    "teaserTitle": "The Walkers: The Real Salt Path ",
+    "title": "The Walkers: The Real Salt Path ",
+    "unixDates": {
+     "firstUpdated": 1791754744,
+     "freshnessDate": 1791754744,
+     "freshnessHour": 1791752400,
+     "lastUpdated": 1791867235,
+     "liveDate": null,
+     "validFrom": null,
+     "validTo": null
+    },
+    "version": 10,
+    "objectID": "coremedia://program/107242394"
+   },
+   {
+    "accessibility": [
+     "closed captions",
+     "audio descriptions"
+    ],
+    "canonicalURI_fragments": [
+     "listen",
+     "programs",
+     "the-making-of-an-autocrat"
+    ],
+    "canonicalURL": "https://www.abc.net.au/listen/programs/the-making-of-an-autocrat/",
+    "channel_description": "All your favourite programs and podcasts in one place",
+    "contentSource": "coremedia",
+    "contentType": "program",
+    "contributors": [
+     {
+      "contributorItems": [
+       {
+        "canonicalURI": null,
+        "canonicalURL": null,
+        "contentSource": null,
+        "contentType": null,
+        "firstName": null,
+        "id": null,
+        "lastName": null,
+        "uri": null,
+        "version": null
+       }
+      ],
+      "roleName": null
+     }
+    ],
+    "country": "",
+    "dates": {
+     "firstUpdated": "2026-10-05T21:37:37+00:00",
+     "freshnessDate": "2026-10-05T21:37:37+00:00",
+     "freshnessHour": "2026-10-05T21:00:00+00:00",
+     "lastUpdated": "2026-10-05T21:44:19+00:00",
+     "liveDate": null,
+     "validFrom": null,
+     "validTo": null
+    },
+    "defaultThumbnail": {
+     "16x9": "https://live-production.wcms.abc-cdn.net.au/60282478b37bf2433024c8f086afc5b2?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=197&width=862&height=485",
+     "1x1": "https://live-production.wcms.abc-cdn.net.au/60282478b37bf2433024c8f086afc5b2?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+     "3x2": "https://live-production.wcms.abc-cdn.net.au/60282478b37bf2433024c8f086afc5b2?impolicy=wcms_crop_resize&cropH=2000&cropW=3000&xPos=0&yPos=500&width=862&height=575",
+     "3x4": "https://live-production.wcms.abc-cdn.net.au/60282478b37bf2433024c8f086afc5b2?impolicy=wcms_crop_resize&cropH=3000&cropW=2250&xPos=375&yPos=0&width=862&height=1149",
+     "4x3": "https://live-production.wcms.abc-cdn.net.au/60282478b37bf2433024c8f086afc5b2?impolicy=wcms_crop_resize&cropH=2250&cropW=3000&xPos=0&yPos=375&width=862&height=647",
+     "9x16": "https://live-production.wcms.abc-cdn.net.au/60282478b37bf2433024c8f086afc5b2?impolicy=wcms_crop_resize&cropH=3000&cropW=1688&xPos=656&yPos=0&width=862&height=1533"
+    },
+    "description": "We used to have a pretty clear idea of what an autocrat was. History is full of examples: Adolf Hitler, Joseph Stalin, Mao Zedong, along with Vladimir Putin, Xi Jinping and Viktor Orban today. The list goes on.\n\nSo, where does US President Donald Trump fit in?\n\nIn The Conversation's new podcast, The Making of an Autocrat, we asked six experts on authoritarianism and US politics to explain exactly how an autocrat is made — and whether Trump is on his way to becoming one.\n\nThis is the step-by-step guide Trump is following, tried and tested the world over by the strongmen Trump seeks to emulate.",
+    "freshnessScore": "2 weeks",
+    "genre": [
+     {
+      "contentSource": "coremedia",
+      "contentType": "taxonomy",
+      "id": "102416114",
+      "name": "News & Analysis",
+      "uri": "coremedia://taxonomy/102416114"
+     }
+    ],
+    "infoSource": "ABC Listen",
+    "lang": "",
+    "programType": "podcast",
+    "shortTeaserText": "There's a recipe for autocracy: six steps tried and tested by some of the world's most notorious leaders. How many has Donald Trump ticked off?",
+    "shortTeaserTitle": "The Making of an Autocrat",
+    "siteSegment": "listen",
+    "siteTitle": "Listen",
+    "status": "",
+    "synopsis": "There's a recipe for autocracy: six steps tried and tested by some of the world's most notorious leaders. How many has Donald Trump ticked off?",
+    "teaserText": "There's a recipe for autocracy: six steps tried and tested by some of the world's most notorious leaders. How many has Donald Trump ticked off?",
+    "teaserTitle": "The Making of an Autocrat",
+    "title": "The Making of an Autocrat",
+    "unixDates": {
+     "firstUpdated": 1791236257,
+     "freshnessDate": 1791236257,
+     "freshnessHour": 1791234000,
+     "lastUpdated": 1791236659,
+     "liveDate": null,
+     "validFrom": null,
+     "validTo": null
+    },
+    "version": 10,
+    "objectID": "coremedia://program/107221908"
+   }
+  ],
+  "nbHits": 724,
+  "page": 0,
+  "nbPages": 1,
+  "hitsPerPage": 1000,
+  "exhaustiveNbHits": true,
+  "exhaustiveTypo": true,
+  "exhaustive": {
+   "nbHits": true,
+   "typo": true
+  },
+  "query": "",
+  "params": "hitsPerPage=1000&filters=contentType%3Aprogram+AND+%28siteSegment%3Alisten+OR+siteSegment%3Atriplej+OR+siteSegment%3Akidslisten+OR+siteSegment%3Atriplejunearthed+OR+siteSegment%3Apacific%29&attributesToHighlight=%5B%5D&optionalFilters=%5B%5B%22contentType%3A+article%22%2C%22contentType%3A+channel%22%2C%22contentType%3A+program%22%2C%22contentType%3A+recipe%22%2C%22contentSource%3A+iview%22%2C%22mediaStreamingStatus%3A+AVAILABLE%22%2C%22mediaDownloadStatus%3A++AVAILABLE%22%5D%5D&optionalFilters=%5B%5B%22contentType%3A+article%22%2C%22contentType%3A+channel%22%2C%22contentType%3A+program%22%2C%22contentType%3A+recipe%22%2C%22contentSource%3A+iview%22%2C%22mediaStreamingStatus%3A+AVAILABLE%22%2C%22mediaDownloadStatus%3A+AVAILABLE%22%5D%5D&optionalFilters=%5B%22contentType%3Aprogram%3Cscore%3D1%3E%22%5D",
+  "renderingContent": {
+   "facetOrdering": {
+    "facets": {
+     "order": []
+    }
+   }
+  },
+  "processingTimeMS": 14,
+  "processingTimingsMS": {
+   "_request": {
+    "roundTrip": 200
+   },
+   "afterFetch": {
+    "format": {
+     "total": 17
+    },
+    "merge": {
+     "distinctProcessing": {
+      "gatherLocalIDs": 1,
+      "total": 1
+     },
+     "entries": {
+      "decompress": 1,
+      "parse": 3,
+      "total": 4
+     },
+     "mergeLoop": {
+      "total": 4
+     },
+     "total": 6
+    },
+    "total": 6
+   },
+   "fetch": {
+    "query": 3,
+    "total": 4
+   },
+   "getIdx": {
+    "load": {
+     "total": 1
+    },
+    "total": 2
+   },
+   "total": 14
+  },
+  "serverTimeMS": 32
+ }
+}

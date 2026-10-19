@@ -1,0 +1,108 @@
+local_katherine	ABC Katherine	0	Australia/Darwin	true	-	13601594	
+local_southcoast	ABC South Coast	0		true	-	-	
+RN_sa	Radio National SA	0	Australia/Adelaide	true	-	-	
+RN_qld	Radio National Qld	0	Australia/Brisbane	true	-	-	
+RN_vic	Radio National Vic	0		true	-	-	
+RN_wa	Radio National WA	0	Australia/Perth	true	-	-	
+RN_tas	Radio National Tas	0		true	-	-	
+RN_nt	Radio National NT	0	Australia/Darwin	true	-	-	
+dig	Double J	0			-	-	
+firstrun	First Run	0	Australia/Sydney	true	-	-	
+classic_adelaide	ABC Classic Adelaide	0	Australia/Adelaide	true	-	-	
+classic_brisbane	ABC Classic Brisbane	0	Australia/Brisbane	true	-	-	
+classic_darwin	ABC Classic Darwin	0	Australia/Darwin	true	-	-	
+classic_perth	ABC Classic Perth	0	Australia/Perth	true	-	-	
+sport_aflw	ABC AFLW	0	Australia/Sydney	true	-	-	
+sport_bbl	ABC BBL	0	Australia/Sydney	true	-	-	
+sport_wbbl	ABC WBBL	0	Australia/Sydney	true	-	-	
+sport_tennis	ABC Tennis	0	Australia/Melbourne	true	-	-	
+sport_worldcup	ABC Rugby League World Cup	0	Australia/Sydney	false	-	-	
+grandstand_extra	ABC Sport Extra	0	Australia/Sydney	true	-	-	
+sport_afl	ABC AFL	0	Australia/Melbourne	true	-	-	
+sport_afl_extra	ABC AFL Extra	0	Australia/Melbourne	true	-	-	
+sport_cricket	ABC Cricket	0	Australia/Sydney	true	-	-	
+triplej_adelaide	triple j Adelaide	0	Australia/Adelaide	true	-	-	
+triplej_brisbane	triple j Brisbane	0	Australia/Brisbane	true	-	-	
+triplej_perth	triple j Perth	0	Australia/Perth	true	-	-	
+triplej_darwin	triple j Darwin	0	Australia/Darwin	true	-	-	
+doublej_brisbane	Double J Brisbane	0	Australia/Brisbane	true	-	-	
+doublej_adelaide	Double J Adelaide	0	Australia/Adelaide	true	-	-	
+doublej_darwin	Double J Darwin	0	Australia/Darwin	true	-	-	
+doublej_perth	Double J Perth	0	Australia/Perth	true	-	-	
+kidslisten_sa	Kids Listen South Australia	1	Australia/Adelaide	true	-	-	
+kidslisten_nt	Kids Listen Northern Territory	1	Australia/Darwin	true	-	-	
+kidslisten_wa	Kids Listen Western Australia	1	Australia/Perth	true	-	-	
+kidslisten_qld	Kids Listen Queensland	1	Australia/Brisbane	true	-	-	
+classic	ABC Classic	1	Australia/Sydney	false	-	13591296	classic_adelaide,classic_brisbane,classic_darwin,classic_perth
+triplej	triple j	1	Australia/Sydney	false	https://www.abc.net.au/triplej/live/triplej	13561224	triplej_adelaide,triplej_brisbane,triplej_perth,triplej_darwin
+doublej	Double J	1	Australia/Sydney	false	https://www.abc.net.au/triplej/live/doublej	13592978	doublej_brisbane,doublej_adelaide,doublej_darwin,doublej_perth
+abcsportsync	ABC SPORT RAPID	1	Australia/Sydney	false	-	13574852	
+abc_afl_rapid	ABC RLWC RAPID	1	Australia/Melbourne	false	-	105873426	
+itinerant_two	ABC AFLW	1	Australia/Sydney	false	-	13597046	
+h100	triple j Hottest	1	Australia/Sydney	false	-	102536996	
+kidslisten	ABC KIDS listen	2	Australia/Sydney	false	-	13579554	kidslisten_sa,kidslisten_nt,kidslisten_wa,kidslisten_qld
+itinerant_four	ABC CRICKET	2	Australia/Sydney	false	-	13574916	
+grandstand	ABC SPORT	3	Australia/Sydney	false	-	13574852	abcsportsync
+country	ABC Country	3	Australia/Sydney	false	-	13591390	
+jazz	ABC Jazz	3	Australia/Sydney	false	-	13592736	
+unearthed	triple j Unearthed	3	Australia/Sydney	false	-	13592940	
+news	NewsRadio	4	Australia/Sydney	false	-	13579684	
+ra	Radio Australia	4	Australia/Brisbane	false	-	13588300	
+ra_ml	Radio Australia	4	Australia/Brisbane	true	-	13588300	
+itinerant_one	ABC Rugby League World Cup	4	Australia/Sydney	false	-	105873426	abc_afl_rapid
+local_northandwest	ABC North and West SA	5	Australia/Adelaide	false	-	13601626	
+local_eyre	ABC Eyre Peninsula	5	Australia/Adelaide	false	-	13601656	
+RN	Radio National	5	Australia/Sydney	false	-	13588460	RN_sa,RN_qld,RN_wa,RN_nt
+local_riverland	ABC Riverland	6	Australia/Adelaide	false	-	13601636	
+local_southeastsa	ABC South East SA	6	Australia/Adelaide	false	-	13601646	
+itinerant_three	ABC SPORT EXTRA	6	Australia/Sydney	false	-	13574930	
+classic2	Classic 2	6	Australia/Sydney	false	-	13591350	
+local_brokenhill	ABC Broken Hill	7	Australia/Broken_Hill	false	https://www.abc.net.au/listen/live/brokenhill	13595210	
+local_centralcoast	ABC Central Coast	7	Australia/Sydney	false	https://www.abc.net.au/listen/live/centralcoast	13595276	
+local_centralwest	ABC Central West	8	Australia/Sydney	false	https://www.abc.net.au/listen/live/centralwest	13595338	
+local_coffscoast	ABC Coffs Coast	8	Australia/Sydney	false	https://www.abc.net.au/listen/live/coffscoast	13595366	
+local_illawarra	ABC Illawarra	9	Australia/Sydney	false	https://www.abc.net.au/listen/live/illawarra	13597090	
+local_midnorthcoast	ABC Mid North Coast	9	Australia/Sydney	false	https://www.abc.net.au/listen/live/midnorthcoast	13595402	
+local_newcastle	ABC Newcastle	10	Australia/Sydney	false	https://www.abc.net.au/listen/live/newcastle	13597124	
+local_newengland	ABC New England North West	10	Australia/Sydney	false	https://www.abc.net.au/listen/live/newengland	13595428	
+local_northcoast	ABC North Coast	11	Australia/Sydney	false	-	13596554	
+local_riverina	ABC Riverina	11	Australia/Sydney	false	-	13597150	
+local_southeastnsw	ABC South East NSW 	12	Australia/Sydney	false	-	13597342	
+local_upperhunter	ABC Upper Hunter	12	Australia/Sydney	false	-	13598770	
+local_westernplains	ABC Western Plains	13	Australia/Sydney	false	-	13598780	
+local_alicesprings	ABC Alice Springs	13	Australia/Darwin	false	-	13601584	
+local_ballarat	ABC Ballarat	14	Australia/Melbourne	false	-	13596668	
+local_centralvic	ABC Central Victoria	14	Australia/Melbourne	false	-	13591374	
+local_gippsland	ABC Gippsland	15	Australia/Melbourne	false	-	13596682	
+local_goulburnmurray	ABC Goulburn Murray	15	Australia/Melbourne	false	-	13596692	
+local_milduraswanhill	ABC Mildura-Swan Hill	16	Australia/Melbourne	false	-	13596702	
+local_shepparton	ABC Shepparton	16	Australia/Melbourne	false	-	13596714	
+local_southwestvic	ABC South West Victoria	17	Australia/Melbourne	false	-	13596724	
+local_northtas	ABC Northern Tasmania	17	Australia/Hobart	false	-	13601678	
+local_goldcoast	ABC Gold Coast	18	Australia/Brisbane	false	https://www.abc.net.au/listen/live/goldcoast	13596544	
+local_capricornia	ABC Capricornia	18	Australia/Brisbane	false	https://www.abc.net.au/listen/live/capricornia	13596482	
+local_farnorth	ABC Far North	19	Australia/Brisbane	false	-	13596570	
+local_northqld	ABC North Queensland	19	Australia/Brisbane	false	-	13596586	
+local_southqld	ABC Southern Queensland	20	Australia/Brisbane	false	-	13598732	
+local_sunshine	ABC Sunshine Coast	20	Australia/Brisbane	false	-	13598792	
+local_tropic	ABC Tropical North	21	Australia/Brisbane	false	-	13601718	
+local_westqld	ABC Western Queensland	21	Australia/Brisbane	false	-	13601736	
+local_widebay	ABC Wide Bay	22	Australia/Brisbane	false	-	13601746	
+local_esperance	ABC Esperance	22	Australia/Perth	false	-	13597138	
+local_goldfields	ABC Goldfields	23	Australia/Perth	false	-	13597160	
+local_greatsouthern	ABC Great Southern	23	Australia/Perth	false	-	13597170	
+local_kimberley	ABC Kimberley	24	Australia/Perth	false	https://www.abc.net.au/listen/live/kimberley	13597180	
+local_wheatbelt	ABC Midwest & Wheatbelt	24	Australia/Perth	false	-	13597210	
+local_westernvic	ABC Wimmera	25	Australia/Melbourne	false	-	13596734	
+local_northwestwa	ABC Pilbara	25	Australia/Perth	false	-	13597200	
+local_northwest	ABC North West Queensland	26	Australia/Brisbane	false	-	13596600	
+local_southwestwa	ABC South West WA	26	Australia/Perth	false	-	13597190	
+local_canberra	666 ABC Canberra	27	Australia/Canberra	false	-	13598864	
+local_sydney	702 ABC Sydney	27	Australia/Sydney	false	https://www.abc.net.au/listen/live/sydney	13561242	
+local_darwin	105.7 ABC Darwin	28	Australia/Darwin	false	https://www.abc.net.au/listen/live/darwin	13601604	
+local_melbourne	774 ABC Melbourne	28	Australia/Melbourne	false	https://www.abc.net.au/listen/live/melbourne	13598814	
+local_adelaide	891 ABC Adelaide	29	Australia/Adelaide	false	-	13601614	
+local_hobart	936 ABC Hobart	29	Australia/Hobart	false	https://www.abc.net.au/listen/live/hobart	13601668	
+news_bulletin	News Bulletin	30	Australia/Sydney	true	-	-	
+local_brisbane	612 ABC Brisbane	30	Australia/Brisbane	false	-	13595018	
+local_perth	102.5 ABC Perth	30	Australia/Perth	false	https://www.abc.net.au/listen/live/perth	13597404	

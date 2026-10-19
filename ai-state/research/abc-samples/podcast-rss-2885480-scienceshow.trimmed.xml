@@ -1,0 +1,103 @@
+<!-- GET https://www.abc.net.au/feeds/2885480/podcast.xml (250 items; trimmed to 2) -->
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel> <programarid>ppVx79EE7O</programarid>
+
+<itunes:author>ABC Australia</itunes:author>
+
+<itunes:category text="Science">
+<itunes:category text="Natural Sciences" />
+
+</itunes:category>
+
+<itunes:image href="https://www.abc.net.au/radio/images/programs-2026/TheScienceShow_3000x3000.jpg"/>
+
+<itunes:owner>
+ <itunes:name>Australian Broadcasting Corporation</itunes:name>
+
+
+ <itunes:email>abcpodcasts@abc.net.au</itunes:email>
+</itunes:owner>
+
+ 
+
+ 
+
+  
+        <title>The Science Show - Full Program Podcast</title>
+        <link>https://www.abc.net.au/listen/programs/scienceshow/</link>
+        <description>The Science Show gives Australians unique insights into the latest scientific research and debate, from the physics of cricket to prime ministerial biorhythms.</description>
+        <language>en</language>
+        <copyright>Copyright 2026, Australian Broadcasting Corporation. All right reserved.</copyright>
+        <pubDate>Sat, 17 Oct 2026 12:00:00 +1100</pubDate>
+        <lastBuildDate>Sat, 17 Oct 2026 12:00:00 +1100</lastBuildDate>
+        <image>
+            <title>The Science Show - ABC RN</title>
+            <url>https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f.jpg?src</url>
+            <link>https://www.abc.net.au/listen/programs/scienceshow/</link>
+            <description>The Science Show gives Australians unique insights into the latest scientific research and debate, from the physics of cricket to prime ministerial biorhythms.</description>
+        </image>
+        <ttl>30</ttl>
+        <atom:link href="https://www.abc.net.au/feeds/2885480/podcast.xml" rel="self" type="application/rss+xml"/>
+        <itunes:explicit>no</itunes:explicit>
+        <itunes:summary>The Science Show gives Australians unique insights into the latest scientific research and debate, from the physics of cricket to prime ministerial biorhythms.</itunes:summary>
+        <itunes:subtitle>The Science Show gives Australians unique insights into the latest scientific research and debate, from the physics of cricket to prime ministerial biorhythms.</itunes:subtitle>
+        <itunes:image href="https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f.jpg?src"/>
+        <item>
+            <title>72 per cent of UK trees threatened by changing climate, plus the simple spud’s complex genetics</title>
+            <link>https://www.abc.net.au/listen/programs/scienceshow/trees-potatoes-brendan-may-step/107266790</link>
+            <description>
+                <![CDATA[ <p>And palm oil producers in South-East Asia have changed their ways, considering the environment more than they did. Brendan May is turning his attention now to nickel mines in tropical countries.</p> ]]>
+            </description>
+            <enclosure url="https://mediacore-live-production.akamaized.net/audio/02/pg/Z/ai.mp3" length="78642070" type="audio/mpeg"/>
+            <guid isPermaLink="true">https://www.abc.net.au/listen/programs/scienceshow/trees-potatoes-brendan-may-step/107266790</guid>
+            <pubDate>Sat, 17 Oct 2026 12:00:00 +1100</pubDate>
+            <itunes:author>Australian Broadcasting Corporation</itunes:author>
+            <itunes:summary>And palm oil producers in South-East Asia have changed their ways, considering the environment more than they did. Brendan May is turning his attention now to nickel mines in tropical countries.</itunes:summary>
+            <itunes:subtitle>And palm oil producers in South-East Asia have changed their ways, considering the environment more than they did. Brendan May is turning his attention now to nickel mines in tropical countries.</itunes:subtitle>
+            <itunes:duration>0:54:36</itunes:duration>
+        </item>
+<item>
+            <title>Lab Notes: When astronomers make mistakes</title>
+            <link>https://www.abc.net.au/listen/programs/lab-notes/lab-notes-when-astronomers-make-mistakes/107232984</link>
+            <description>
+                <![CDATA[ <p>In March 2018, a South African astronomer looking into the distant universe "discovered" a bright red spot in the sky that hadn't been there previously; it felt like an exciting potential discovery. A message was sent to other astronomers, asking them to look at this new dot and study it further.</p><p>After forty minutes and a few more calculations, he realised this "star" was much closer to home and nothing new at all: it was the planet Mars.</p><p>According to Dr Kat Ross, making this kind of mistake is something of a rite of passage for astronomers.</p><p>You can binge more episodes of the Lab Notes podcast with science editor and presenter Jonathan Webb on the ABC Listen app (Australia). You'll find episodes on animal behaviour, human health, space exploration and so much more.</p><p>Get in touch with us: <a href="mailto:labnotes@abc.net.au" target="_blank">labnotes@abc.net.au</a></p><p>Featuring:</p><ul><li>Dr Kat Ross, Curtin University</li></ul><p>This episode of Lab Notes was produced on the lands of the Gadigal, Ngunnawal and Ngambri people.</p> ]]>
+            </description>
+            <enclosure url="https://mediacore-live-production.akamaized.net/audio/02/pd/Z/s8.mp3" length="15519991" type="audio/mpeg"/>
+            <guid isPermaLink="true">https://www.abc.net.au/listen/programs/lab-notes/lab-notes-when-astronomers-make-mistakes/107232984</guid>
+            <pubDate>Wed, 14 Oct 2026 14:00:00 +1100</pubDate>
+            <itunes:author>Australian Broadcasting Corporation</itunes:author>
+            <itunes:summary>In March 2018, a South African astronomer looking into the distant universe "discovered" a bright red spot in the sky that hadn't been there previously; it felt like an exciting potential discovery. A message was sent to other astronomers, asking them to look at this new dot and study it further.
+
+After forty minutes and a few more calculations, he realised this "star" was much closer to home and nothing new at all: it was the planet Mars.
+
+According to Dr Kat Ross, making this kind of mistake is something of a rite of passage for astronomers.
+
+You can binge more episodes of the Lab Notes podcast with science editor and presenter Jonathan Webb on the ABC Listen app (Australia). You'll find episodes on animal behaviour, human health, space exploration and so much more.
+
+Get in touch with us: labnotes@abc.net.au
+
+Featuring:
+Dr Kat Ross, Curtin University
+
+This episode of Lab Notes was produced on the lands of the Gadigal, Ngunnawal and Ngambri people.</itunes:summary>
+            <itunes:subtitle>In March 2018, a South African astronomer looking into the distant universe "discovered" a bright red spot in the sky that hadn't been there previously; it felt like an exciting potential discovery. A message was sent to other astronomers, asking them to look at this new dot and study it further.
+
+After forty minutes and a few more calculations, he realised this "star" was much closer to home and nothing new at all: it was the planet Mars.
+
+According to Dr Kat Ross, making this kind of mistake is something of a rite of passage for astronomers.
+
+You can binge more episodes of the Lab Notes podcast with science editor and presenter Jonathan Webb on the ABC Listen app (Australia). You'll find episodes on animal behaviour, human health, space exploration and so much more.
+
+Get in touch with us: labnotes@abc.net.au
+
+Featuring:
+Dr Kat Ross, Curtin University
+
+This episode of Lab Notes was produced on the lands of the Gadigal, Ngunnawal and Ngambri people.</itunes:subtitle>
+            <itunes:duration>0:10:46</itunes:duration>
+            <itunes:keywords>Lab Notes, astronomers making mistakes, Kat Ross, Top 5, astronomy, the astronomer's telegram, space, astronomy telegram</itunes:keywords>
+        </item>
+
+    </channel>
+</rss>

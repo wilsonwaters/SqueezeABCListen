@@ -1,0 +1,699 @@
+{
+ "_fixture_note": "GET https://music.abcradio.net.au/api/v1/plays/triplej/now.json (lists trimmed to 2)",
+ "data": {
+  "next_updated": "2026-10-19T07:14:45+00:00",
+  "last_updated": "2026-10-19T07:11:59+00:00",
+  "next": {},
+  "now": {
+   "summary": {
+    "artist": "X & Ivy",
+    "title": "Could This Be Love",
+    "links": {
+     "Unearthed": "https://www.abc.net.au/triplejunearthed/artist/x-ivy",
+     "Youtube": "https://www.youtube.com/results?search_query=X%20%26%20Ivy%20Could%20This%20Be%20Love",
+     "Spotify": "https://open.spotify.com/search/X%20%26%20Ivy%20Could%20This%20Be%20Love",
+     "Apple": "https://music.apple.com/au/search?term=X%20%26%20Ivy%20Could%20This%20Be%20Love"
+    }
+   },
+   "entity": "Play",
+   "arid": "mpnN4zeqQd",
+   "played_time": "2026-10-19T07:11:23+00:00",
+   "service_id": "triplej",
+   "recording": {
+    "entity": "Recording",
+    "arid": "mtMkRynJPY",
+    "title": "Could This Be Love",
+    "metadata": null,
+    "description": null,
+    "duration": 212,
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "maPeRVZrbe",
+      "name": "X & Ivy",
+      "artwork": [],
+      "links": [
+       {
+        "entity": "Link",
+        "arid": "mlxyglEnK5",
+        "url": "https://www.abc.net.au/triplejunearthed/artist/x-ivy",
+        "id_component": "b2c6c7dcd46c5b6876e5e1dd6185e473",
+        "service_id": "unearthed",
+        "title": "Unearthed Artist",
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "type": "profile",
+        "provider": "unearthed",
+        "external": false
+       }
+      ],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "releases": [
+     {
+      "entity": "Release",
+      "arid": "mrnynYkJB5",
+      "title": "Could This Be Love",
+      "format": null,
+      "artwork": [
+       {
+        "entity": "Artwork",
+        "arid": "mi2ewldQEP",
+        "url": "https://www.abc.net.au/triplej/albums/xivy-couldthisbelove.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 1200,
+        "height": 1200,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/bQrkMNk1pUo-_5ApbWJwOmwddMU=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         },
+         {
+          "url": "https://resize.abcradio.net.au/n4TEe5BxO3t8HKtfGyqZUrvMkis=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg",
+          "width": 160,
+          "height": 160,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       },
+       {
+        "entity": "Artwork",
+        "arid": "miwPQBOLOg",
+        "url": "https://abc.net.au/triplej/albums/playlist/9d029c24650dbe6be1c9cda67e9a90886584.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 600,
+        "height": 600,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/HfyD5fYtj6VYGgGq6fQi8Fh3hGk=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F9d029c24650dbe6be1c9cda67e9a90886584.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         },
+         {
+          "url": "https://resize.abcradio.net.au/ySZ-nVpYGAioscZPExdhqNyEY2A=/160x160/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F9d029c24650dbe6be1c9cda67e9a90886584.jpg",
+          "width": 160,
+          "height": 160,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       }
+      ],
+      "links": [],
+      "artists": [
+       {
+        "entity": "Artist",
+        "arid": "maPeRVZrbe",
+        "name": "X & Ivy",
+        "artwork": [],
+        "links": [
+         {
+          "entity": "Link",
+          "arid": "mlxyglEnK5",
+          "url": "https://www.abc.net.au/triplejunearthed/artist/x-ivy",
+          "id_component": "b2c6c7dcd46c5b6876e5e1dd6185e473",
+          "service_id": "unearthed",
+          "title": "Unearthed Artist",
+          "mini_synopsis": null,
+          "short_synopsis": null,
+          "medium_synopsis": null,
+          "type": "profile",
+          "provider": "unearthed",
+          "external": false
+         }
+        ],
+        "is_australian": true,
+        "type": "primary",
+        "role": null
+       }
+      ],
+      "record_label": null,
+      "release_year": "2026",
+      "release_album_id": null,
+      "is_primary": null
+     }
+    ],
+    "artwork": [
+     {
+      "entity": "Artwork",
+      "arid": "miYeJBONke",
+      "url": "https://www.abc.net.au/triplej/albums/xivy-couldthisbelove.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 1200,
+      "height": 1200,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/bQrkMNk1pUo-_5ApbWJwOmwddMU=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       },
+       {
+        "url": "https://resize.abcradio.net.au/n4TEe5BxO3t8HKtfGyqZUrvMkis=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg",
+        "width": 160,
+        "height": 160,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     }
+    ],
+    "links": []
+   },
+   "release": {
+    "entity": "Release",
+    "arid": "mrnynYkJB5",
+    "title": "Could This Be Love",
+    "format": null,
+    "artwork": [
+     {
+      "entity": "Artwork",
+      "arid": "mi2ewldQEP",
+      "url": "https://www.abc.net.au/triplej/albums/xivy-couldthisbelove.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 1200,
+      "height": 1200,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/bQrkMNk1pUo-_5ApbWJwOmwddMU=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       },
+       {
+        "url": "https://resize.abcradio.net.au/n4TEe5BxO3t8HKtfGyqZUrvMkis=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg",
+        "width": 160,
+        "height": 160,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     },
+     {
+      "entity": "Artwork",
+      "arid": "miwPQBOLOg",
+      "url": "https://abc.net.au/triplej/albums/playlist/9d029c24650dbe6be1c9cda67e9a90886584.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 600,
+      "height": 600,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/HfyD5fYtj6VYGgGq6fQi8Fh3hGk=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F9d029c24650dbe6be1c9cda67e9a90886584.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       },
+       {
+        "url": "https://resize.abcradio.net.au/ySZ-nVpYGAioscZPExdhqNyEY2A=/160x160/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F9d029c24650dbe6be1c9cda67e9a90886584.jpg",
+        "width": 160,
+        "height": 160,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     }
+    ],
+    "links": [],
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "maPeRVZrbe",
+      "name": "X & Ivy",
+      "artwork": [],
+      "links": [
+       {
+        "entity": "Link",
+        "arid": "mlxyglEnK5",
+        "url": "https://www.abc.net.au/triplejunearthed/artist/x-ivy",
+        "id_component": "b2c6c7dcd46c5b6876e5e1dd6185e473",
+        "service_id": "unearthed",
+        "title": "Unearthed Artist",
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "type": "profile",
+        "provider": "unearthed",
+        "external": false
+       }
+      ],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "record_label": null,
+    "release_year": "2026",
+    "release_album_id": null
+   }
+  },
+  "prev": {
+   "summary": {
+    "artist": "South Summit",
+    "title": "ON THE DASH",
+    "links": {
+     "Unearthed": "https://www.abc.net.au/triplejunearthed/artist/south-summit/",
+     "Youtube": "https://www.youtube.com/results?search_query=South%20Summit%20ON%20THE%20DASH",
+     "Spotify": "https://open.spotify.com/search/South%20Summit%20ON%20THE%20DASH",
+     "Apple": "https://music.apple.com/au/search?term=South%20Summit%20ON%20THE%20DASH"
+    }
+   },
+   "entity": "Play",
+   "arid": "mpLgAqoZkr",
+   "played_time": "2026-10-19T07:07:52+00:00",
+   "service_id": "triplej",
+   "recording": {
+    "entity": "Recording",
+    "arid": "mtNYXlxxJY",
+    "title": "ON THE DASH",
+    "metadata": null,
+    "description": null,
+    "duration": 206,
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "maX5BERn1z",
+      "name": "South Summit",
+      "artwork": [
+       {
+        "entity": "Artwork",
+        "arid": "miZP1vzXOg",
+        "url": "https://www.triplejunearthed.com/sites/default/files/artists/public/1/0/1/7/7/8/8/1/43e4ecbe-4dd9-4800-afdb-0a1112981485.jpg",
+        "type": "press",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 1280,
+        "height": 853,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/MEiEl4lyzhi76llhuf1fAtFze2w=/100x100/center/middle/https%3A%2F%2Fwww.triplejunearthed.com%2Fsites%2Fdefault%2Ffiles%2Fartists%2Fpublic%2F1%2F0%2F1%2F7%2F7%2F8%2F8%2F1%2F43e4ecbe-4dd9-4800-afdb-0a1112981485.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         },
+         {
+          "url": "https://resize.abcradio.net.au/9Paid0qQMzb_MFloJ_IUusgJj08=/160x160/center/middle/https%3A%2F%2Fwww.triplejunearthed.com%2Fsites%2Fdefault%2Ffiles%2Fartists%2Fpublic%2F1%2F0%2F1%2F7%2F7%2F8%2F8%2F1%2F43e4ecbe-4dd9-4800-afdb-0a1112981485.jpg",
+          "width": 160,
+          "height": 160,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       }
+      ],
+      "links": [
+       {
+        "entity": "Link",
+        "arid": "mlV5EvB6ek",
+        "url": "https://www.abc.net.au/triplejunearthed/artist/south-summit/",
+        "id_component": "10177881",
+        "service_id": "unearthed",
+        "title": "Unearthed artist",
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "type": "service",
+        "provider": "unearthed",
+        "external": false
+       }
+      ],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "releases": [
+     {
+      "entity": "Release",
+      "arid": "mr45LwGxqA",
+      "title": "Run It Back",
+      "format": null,
+      "artwork": [
+       {
+        "entity": "Artwork",
+        "arid": "mioPpWJxLe",
+        "url": "https://www.abc.net.au/triplej/albums/southsummit-runitback.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 1080,
+        "height": 1080,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/EdPfXyVtPui8bQ_zWy1kf6HRmH0=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fsouthsummit-runitback.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         },
+         {
+          "url": "https://resize.abcradio.net.au/ms3Imu45cH5vUkxIMj6jt2fo1tU=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fsouthsummit-runitback.jpg",
+          "width": 160,
+          "height": 160,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       }
+      ],
+      "links": [],
+      "artists": [
+       {
+        "entity": "Artist",
+        "arid": "maX5BERn1z",
+        "name": "South Summit",
+        "artwork": [
+         {
+          "entity": "Artwork",
+          "arid": "miZP1vzXOg",
+          "url": "https://www.triplejunearthed.com/sites/default/files/artists/public/1/0/1/7/7/8/8/1/43e4ecbe-4dd9-4800-afdb-0a1112981485.jpg",
+          "type": "press",
+          "title": null,
+          "mini_synopsis": null,
+          "short_synopsis": null,
+          "medium_synopsis": null,
+          "width": 1280,
+          "height": 853,
+          "sizes": [
+           {
+            "url": "https://resize.abcradio.net.au/MEiEl4lyzhi76llhuf1fAtFze2w=/100x100/center/middle/https%3A%2F%2Fwww.triplejunearthed.com%2Fsites%2Fdefault%2Ffiles%2Fartists%2Fpublic%2F1%2F0%2F1%2F7%2F7%2F8%2F8%2F1%2F43e4ecbe-4dd9-4800-afdb-0a1112981485.jpg",
+            "width": 100,
+            "height": 100,
+            "aspect_ratio": "1x1"
+           },
+           {
+            "url": "https://resize.abcradio.net.au/9Paid0qQMzb_MFloJ_IUusgJj08=/160x160/center/middle/https%3A%2F%2Fwww.triplejunearthed.com%2Fsites%2Fdefault%2Ffiles%2Fartists%2Fpublic%2F1%2F0%2F1%2F7%2F7%2F8%2F8%2F1%2F43e4ecbe-4dd9-4800-afdb-0a1112981485.jpg",
+            "width": 160,
+            "height": 160,
+            "aspect_ratio": "1x1"
+           }
+          ],
+          "is_primary": null
+         }
+        ],
+        "links": [
+         {
+          "entity": "Link",
+          "arid": "mlV5EvB6ek",
+          "url": "https://www.abc.net.au/triplejunearthed/artist/south-summit/",
+          "id_component": "10177881",
+          "service_id": "unearthed",
+          "title": "Unearthed artist",
+          "mini_synopsis": null,
+          "short_synopsis": null,
+          "medium_synopsis": null,
+          "type": "service",
+          "provider": "unearthed",
+          "external": false
+         }
+        ],
+        "is_australian": true,
+        "type": "primary",
+        "role": null
+       }
+      ],
+      "record_label": null,
+      "release_year": "2026",
+      "release_album_id": null,
+      "is_primary": null
+     },
+     {
+      "entity": "Release",
+      "arid": "mrZXrNpB0X",
+      "title": "RUN IT BACK",
+      "format": null,
+      "artwork": [
+       {
+        "entity": "Artwork",
+        "arid": "miV9ZQkbMg",
+        "url": "https://www.abc.net.au/triplej/albums/southsummit-runitback.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 1080,
+        "height": 1080,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/EdPfXyVtPui8bQ_zWy1kf6HRmH0=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fsouthsummit-runitback.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         },
+         {
+          "url": "https://resize.abcradio.net.au/ms3Imu45cH5vUkxIMj6jt2fo1tU=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fsouthsummit-runitback.jpg",
+          "width": 160,
+          "height": 160,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       },
+       {
+        "entity": "Artwork",
+        "arid": "mi6gm6X2O9",
+        "url": "https://abc.net.au/triplej/albums/playlist/65e8fe2914445a83e5a6c6a69021e2ac4204.jpg",
+        "type": "cover",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 800,
+        "height": 800,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/B8_auPvi3wXgnQDtyez8eyItmw8=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F65e8fe2914445a83e5a6c6a69021e2ac4204.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         },
+         {
+          "url": "https://resize.abcradio.net.au/haqg9q_MpEMVvUJHjMcHZm35af0=/160x160/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F65e8fe2914445a83e5a6c6a69021e2ac4204.jpg",
+          "width": 160,
+          "height": 160,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       }
+      ],
+      "links": [],
+      "artists": [
+       {
+        "entity": "Artist",
+        "arid": "maX5BERn1z",
+        "name": "South Summit",
+        "artwork": [
+         {
+          "entity": "Artwork",
+          "arid": "miZP1vzXOg",
+          "url": "https://www.triplejunearthed.com/sites/default/files/artists/public/1/0/1/7/7/8/8/1/43e4ecbe-4dd9-4800-afdb-0a1112981485.jpg",
+          "type": "press",
+          "title": null,
+          "mini_synopsis": null,
+          "short_synopsis": null,
+          "medium_synopsis": null,
+          "width": 1280,
+          "height": 853,
+          "sizes": [
+           {
+            "url": "https://resize.abcradio.net.au/MEiEl4lyzhi76llhuf1fAtFze2w=/100x100/center/middle/https%3A%2F%2Fwww.triplejunearthed.com%2Fsites%2Fdefault%2Ffiles%2Fartists%2Fpublic%2F1%2F0%2F1%2F7%2F7%2F8%2F8%2F1%2F43e4ecbe-4dd9-4800-afdb-0a1112981485.jpg",
+            "width": 100,
+            "height": 100,
+            "aspect_ratio": "1x1"
+           },
+           {
+            "url": "https://resize.abcradio.net.au/9Paid0qQMzb_MFloJ_IUusgJj08=/160x160/center/middle/https%3A%2F%2Fwww.triplejunearthed.com%2Fsites%2Fdefault%2Ffiles%2Fartists%2Fpublic%2F1%2F0%2F1%2F7%2F7%2F8%2F8%2F1%2F43e4ecbe-4dd9-4800-afdb-0a1112981485.jpg",
+            "width": 160,
+            "height": 160,
+            "aspect_ratio": "1x1"
+           }
+          ],
+          "is_primary": null
+         }
+        ],
+        "links": [
+         {
+          "entity": "Link",
+          "arid": "mlV5EvB6ek",
+          "url": "https://www.abc.net.au/triplejunearthed/artist/south-summit/",
+          "id_component": "10177881",
+          "service_id": "unearthed",
+          "title": "Unearthed artist",
+          "mini_synopsis": null,
+          "short_synopsis": null,
+          "medium_synopsis": null,
+          "type": "service",
+          "provider": "unearthed",
+          "external": false
+         }
+        ],
+        "is_australian": true,
+        "type": "primary",
+        "role": null
+       }
+      ],
+      "record_label": null,
+      "release_year": "2026",
+      "release_album_id": null,
+      "is_primary": null
+     }
+    ],
+    "artwork": [],
+    "links": []
+   },
+   "release": {
+    "entity": "Release",
+    "arid": "mrZXrNpB0X",
+    "title": "RUN IT BACK",
+    "format": null,
+    "artwork": [
+     {
+      "entity": "Artwork",
+      "arid": "miV9ZQkbMg",
+      "url": "https://www.abc.net.au/triplej/albums/southsummit-runitback.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 1080,
+      "height": 1080,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/EdPfXyVtPui8bQ_zWy1kf6HRmH0=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fsouthsummit-runitback.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       },
+       {
+        "url": "https://resize.abcradio.net.au/ms3Imu45cH5vUkxIMj6jt2fo1tU=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fsouthsummit-runitback.jpg",
+        "width": 160,
+        "height": 160,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     },
+     {
+      "entity": "Artwork",
+      "arid": "mi6gm6X2O9",
+      "url": "https://abc.net.au/triplej/albums/playlist/65e8fe2914445a83e5a6c6a69021e2ac4204.jpg",
+      "type": "cover",
+      "title": null,
+      "mini_synopsis": null,
+      "short_synopsis": null,
+      "medium_synopsis": null,
+      "width": 800,
+      "height": 800,
+      "sizes": [
+       {
+        "url": "https://resize.abcradio.net.au/B8_auPvi3wXgnQDtyez8eyItmw8=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F65e8fe2914445a83e5a6c6a69021e2ac4204.jpg",
+        "width": 100,
+        "height": 100,
+        "aspect_ratio": "1x1"
+       },
+       {
+        "url": "https://resize.abcradio.net.au/haqg9q_MpEMVvUJHjMcHZm35af0=/160x160/center/middle/https%3A%2F%2Fabc.net.au%2Ftriplej%2Falbums%2Fplaylist%2F65e8fe2914445a83e5a6c6a69021e2ac4204.jpg",
+        "width": 160,
+        "height": 160,
+        "aspect_ratio": "1x1"
+       }
+      ],
+      "is_primary": null
+     }
+    ],
+    "links": [],
+    "artists": [
+     {
+      "entity": "Artist",
+      "arid": "maX5BERn1z",
+      "name": "South Summit",
+      "artwork": [
+       {
+        "entity": "Artwork",
+        "arid": "miZP1vzXOg",
+        "url": "https://www.triplejunearthed.com/sites/default/files/artists/public/1/0/1/7/7/8/8/1/43e4ecbe-4dd9-4800-afdb-0a1112981485.jpg",
+        "type": "press",
+        "title": null,
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "width": 1280,
+        "height": 853,
+        "sizes": [
+         {
+          "url": "https://resize.abcradio.net.au/MEiEl4lyzhi76llhuf1fAtFze2w=/100x100/center/middle/https%3A%2F%2Fwww.triplejunearthed.com%2Fsites%2Fdefault%2Ffiles%2Fartists%2Fpublic%2F1%2F0%2F1%2F7%2F7%2F8%2F8%2F1%2F43e4ecbe-4dd9-4800-afdb-0a1112981485.jpg",
+          "width": 100,
+          "height": 100,
+          "aspect_ratio": "1x1"
+         },
+         {
+          "url": "https://resize.abcradio.net.au/9Paid0qQMzb_MFloJ_IUusgJj08=/160x160/center/middle/https%3A%2F%2Fwww.triplejunearthed.com%2Fsites%2Fdefault%2Ffiles%2Fartists%2Fpublic%2F1%2F0%2F1%2F7%2F7%2F8%2F8%2F1%2F43e4ecbe-4dd9-4800-afdb-0a1112981485.jpg",
+          "width": 160,
+          "height": 160,
+          "aspect_ratio": "1x1"
+         }
+        ],
+        "is_primary": null
+       }
+      ],
+      "links": [
+       {
+        "entity": "Link",
+        "arid": "mlV5EvB6ek",
+        "url": "https://www.abc.net.au/triplejunearthed/artist/south-summit/",
+        "id_component": "10177881",
+        "service_id": "unearthed",
+        "title": "Unearthed artist",
+        "mini_synopsis": null,
+        "short_synopsis": null,
+        "medium_synopsis": null,
+        "type": "service",
+        "provider": "unearthed",
+        "external": false
+       }
+      ],
+      "is_australian": true,
+      "type": "primary",
+      "role": null
+     }
+    ],
+    "record_label": null,
+    "release_year": "2026",
+    "release_album_id": null
+   }
+  }
+ }
+}

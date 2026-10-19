@@ -1,0 +1,190 @@
+{
+ "_fixture_note": "GET https://www.abc.net.au/_next/data/<buildId>/listen/live/radionational.json -> pageProps.data.componentsContent[0..1] (LiveAudioPlayerUpdate + MiniEPG)",
+ "data": [
+  {
+   "key": "LiveAudioPlayer",
+   "component": "LiveAudioPlayerUpdate",
+   "container": {
+    "width": "narrow",
+    "spacingTop": "none",
+    "spacingBottom": "small",
+    "spacingSides": {
+     "mobile": "none",
+     "desktop": "standard"
+    }
+   },
+   "componentProps": {
+    "analyticsData": {
+     "contentID": "RN",
+     "contentSource": "papi",
+     "contentType": "service",
+     "uri": "papi://service/RN",
+     "streamType": "live",
+     "title": "RN"
+    },
+    "title": "All In the Mind",
+    "config": {
+     "sources": [
+      {
+       "id": "ptfb171377",
+       "contentType": "audiostream",
+       "contentSource": "papi",
+       "file": "https://streaming.abc-cdn.net.au/audio/hls/rnnsw.m3u8?source=web",
+       "type": "hls"
+      },
+      {
+       "id": "ptf7461355",
+       "contentType": "audiostream",
+       "contentSource": "papi",
+       "file": "https://live-radio01.mediahubaustralia.com/2RNW/aac/?source=web",
+       "type": "aac"
+      }
+     ]
+    },
+    "start": "2026-10-19T06:30:00+00:00",
+    "end": "2026-10-19T07:00:00+00:00",
+    "id": "LiveAudioPlayer-dls-id-39649",
+    "station": "RN",
+    "papiServiceId": "RN",
+    "preparedImage": {
+     "alt": "All In the Mind",
+     "imgSrc": "https://resize.abcradio.net.au/X9FiAQ0rgrkJ48WlMMurPI55qHQ=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FAllInTheMind2000x1125.jpg",
+     "ratio": "1x1",
+     "srcSet": [
+      "https://resize.abcradio.net.au/X9FiAQ0rgrkJ48WlMMurPI55qHQ=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FAllInTheMind2000x1125.jpg 100w"
+     ]
+    },
+    "preparedPresenters": [
+     {
+      "id": "prbab60bdf",
+      "names": {
+       "full": "Sana Qadar"
+      }
+     }
+    ],
+    "programLink": "https://www.abc.net.au/radionational/programs/allinthemind/",
+    "imageRatio": "1x1",
+    "shareUtilityProps": {
+     "utilityBarShareLinks": [
+      {
+       "shareBy": "facebook"
+      },
+      {
+       "shareBy": "twitter"
+      }
+     ],
+     "hasPopover": true,
+     "title": "All In the Mind",
+     "shareLink": "https://www.abc.net.au/listen/live/radionational?program=pebc5f1198",
+     "shareOn": {
+      "title": "Share this on",
+      "items": [
+       {
+        "shareBy": "facebook"
+       },
+       {
+        "shareBy": "linked-in"
+       },
+       {
+        "shareBy": "twitter",
+        "via": "ABCaustralia"
+       }
+      ]
+     },
+     "sendBy": {
+      "title": "Send this by",
+      "items": [
+       {
+        "shareBy": "mail"
+       },
+       {
+        "shareBy": "messenger",
+        "mobileOnly": true
+       },
+       {
+        "shareBy": "link"
+       }
+      ]
+     },
+     "synopsis": ""
+    },
+    "timezoneInfo": {
+     "timezoneIdentifier": "Australia/Sydney",
+     "syncLinkedServices": false
+    },
+    "debug": false,
+    "radioHeadingPrepared": {
+     "logoPrepared": {
+      "imgSrc": "https://live-production.wcms.abc-cdn.net.au/556166359443f9aaa26ce7b905c4a29f?impolicy=wcms_crop_resize&cropH=500&cropW=500&xPos=0&yPos=0&width=862&height=862",
+      "srcSetArray": [
+       "https://live-production.wcms.abc-cdn.net.au/556166359443f9aaa26ce7b905c4a29f?impolicy=wcms_crop_resize&cropH=500&cropW=500&xPos=0&yPos=0&width=160&height=160 160w"
+      ],
+      "altText": "ABC Radio National"
+     }
+    },
+    "heading": "Radio National",
+    "headingLink": "/listen/radionational",
+    "stationControlsProps": {
+     "timeZoneSwitch": true,
+     "stationSwitch": false
+    }
+   }
+  },
+  {
+   "key": "MiniEPG-next",
+   "component": "MiniEPG",
+   "componentProps": {
+    "preparedImage": {
+     "alt": "The Radio National Hour",
+     "imgSrc": "https://resize.abcradio.net.au/5eDBSHyjFS2BXIV_I8MBldzcFHc=/220x124/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FTheRadioNationalHour_3000x3000.jpg",
+     "ratio": "16x9",
+     "srcSet": [
+      "https://resize.abcradio.net.au/5eDBSHyjFS2BXIV_I8MBldzcFHc=/220x124/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FTheRadioNationalHour_3000x3000.jpg 220w"
+     ]
+    },
+    "preparedPresenters": [
+     {
+      "id": "prqP0eRwdJ",
+      "names": {
+       "full": "Fran Kelly"
+      }
+     }
+    ],
+    "start": "2026-10-19T07:00:00+00:00",
+    "end": "2026-10-19T08:00:00+00:00",
+    "title": "The Radio National Hour",
+    "programLink": "https://www.abc.net.au/listen/programs/the-radio-national-hour",
+    "variant": "next",
+    "papiServiceId": "RN",
+    "imageRatio": "16x9",
+    "sources": [
+     {
+      "id": "ptfb171377",
+      "contentType": "audiostream",
+      "contentSource": "papi",
+      "file": "https://streaming.abc-cdn.net.au/audio/hls/rnnsw.m3u8?source=web",
+      "type": "hls"
+     },
+     {
+      "id": "ptf7461355",
+      "contentType": "audiostream",
+      "contentSource": "papi",
+      "file": "https://live-radio01.mediahubaustralia.com/2RNW/aac/?source=web",
+      "type": "aac"
+     }
+    ],
+    "innerHeading": "Up Next",
+    "scheduleLink": "/listen/radionational/guide",
+    "containerVariant": "flat"
+   },
+   "container": {
+    "width": "narrow",
+    "spacingTop": "small",
+    "spacingSides": {
+     "mobile": "none",
+     "desktop": "standard"
+    }
+   }
+  }
+ ]
+}
