@@ -178,3 +178,8 @@ Extras: playable segments and tracklists. The stream also supplies the **program
   `menuWeights`. Section-page probe: audiobooks have no web episode list → O2's `program()` adds `template`/`restricted`,
   providers get the merged detail, no "No episodes" row for restricted programs without a collection; O1 resolves
   chapters via an Algolia fallback (OQ8); O3's `programsByType` gains D4 as a consumer. #12, #16, #18, #19 amended.
+- 2026-10-19 — O1 merged (PR #28). New task **O6 (#30, S)**: seekable AAC catch-up episodes (bitrate derived from
+  fileSize/duration; fill-only bitrate/duration on the track via the episode kind's `onStream`), stale-renditions
+  EXPIRED fix, Algolia chapter artwork, O1 test gaps. Orchestrator decision: "never set song duration" narrowed to
+  fill-only when LMS left it empty. Triggered by O1 runtime verification + review analysis.
+

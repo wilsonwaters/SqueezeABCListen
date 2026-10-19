@@ -6,16 +6,19 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 ## Issue map (task ID → GitHub issue)
 - foundation: F1 #1 · F2 #3 · F3 #7
 - live: L1 #2 · L2 #4 · L3 #8 · L4 #10 · L5 #14
-- ondemand: O1 #12 · O2 #16 · O3 #18 · O4 #19
+- ondemand: O1 #12 · O2 #16 · O3 #18 · O4 #19 · O6 #30
 - discovery: D1 #5 · D2 #6 · D3 #13 · D4 #22 · D5 #23
 - myabc: M1 #11 · M2 #20
 - release: R1 #9 · R2 #15 · R3 #17
 
 ## Currently in flight
-- Wave 2 implementation agents (worktrees, parallel): #2 L1 all live stations, #12 O1 episode playback,
-  #16 O2 programs → episodes + public builders
+- #2 L1 all live stations — implementation in progress
+- #16 O2 → PR #29 — review + runtime verification running
+- #30 O6 AAC seek + O1 follow-ups — implementation dispatched
 
 ## Last completions
+- #12 O1 merged (PR #28, squash 95690b7): episode playback (MP3/AAC renditions, expired/not-found/geo messages,
+  favourites). Review APPROVE; runtime PASS with independent ids. AAC seek gap → new O6 (#30).
 - #7 F3 merged (PR #27, squash a8d2488): API.pm data client + drift probe (10/10 live). Review fix: cardRef
   naming no longer uses image alt text when the card title matches the article slug. **Wave 1 complete.**
 - **v0.1.0 released** (Release workflow; asset sha1 cacbeb99…; repo.xml commit ad751ff by Wilson Waters). Install
