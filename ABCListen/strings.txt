@@ -125,7 +125,7 @@ PLUGIN_ABCLISTEN_LIVE_OFF_AIR
 # === O1 === Episode playback
 
 PLUGIN_ABCLISTEN_EPISODE_EXPIRED
-	EN	This episode is no longer available
+	EN	This episode isn't available to play. ABC offers it for a limited time only.
 
 PLUGIN_ABCLISTEN_EPISODE_RESTRICTED
 	EN	ABC doesn't allow this episode to be played outside its own apps
@@ -135,6 +135,10 @@ PLUGIN_ABCLISTEN_EPISODE_GEO
 
 PLUGIN_ABCLISTEN_EPISODE_NOT_FOUND
 	EN	Couldn't find this episode on ABC listen
+
+# Now Playing title of an episode the plugin knows nothing about yet (added by O1)
+PLUGIN_ABCLISTEN_EPISODE
+	EN	ABC listen episode
 
 # === O2 === Programs and episodes
 

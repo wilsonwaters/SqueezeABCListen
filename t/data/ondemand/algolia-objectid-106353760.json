@@ -1,0 +1,98 @@
+{
+  "hits": [
+    {
+      "canonicalURL": "https://www.abc.net.au/listen/audiobooks/the-dictionary-of-lost-words-page/prologue-february-1886/106353760",
+      "dates": {
+        "firstUpdated": "2026-04-01T22:42:02+00:00",
+        "freshnessDate": "2026-04-01T13:00:00+00:00",
+        "freshnessHour": "2026-04-01T13:00:00+00:00",
+        "lastUpdated": "2026-04-01T22:42:02+00:00",
+        "liveDate": "2026-04-01T13:00:00+00:00",
+        "mediaDownloadAvailableFrom": "2026-04-01T13:00:00+00:00",
+        "mediaDownloadAvailableTo": "2027-04-01T13:00:00+00:00",
+        "mediaStreamingAvailableFrom": "2026-04-01T13:00:00+00:00",
+        "mediaStreamingAvailableTo": "2027-04-01T13:00:00+00:00",
+        "publicationDate": "2026-04-01T13:00:00+00:00",
+        "validFrom": null,
+        "validTo": "2027-04-01T13:00:00+00:00"
+      },
+      "duration": 257,
+      "mediaRenditions": [
+        {
+          "audioBitrate": null,
+          "audioChannels": 2,
+          "audioCodec": "",
+          "audioProfileLevel": "Layer 3",
+          "audioSampleRate": 44100,
+          "bitrate": 320,
+          "codec": "MPEG Audio",
+          "contentType": "audio/mpeg",
+          "fileExtension": "mp3",
+          "fileName": "9780655672395_01.mp3",
+          "fileSize": 10547937,
+          "height": null,
+          "physicalLocation": "",
+          "pixelAspectRatio": "",
+          "url": "https://mediacore-live-production.akamaized.net/geo-001/audio/02/j6/Z/rr.mp3",
+          "videoEncodeMode": "",
+          "videoFrameRate": null,
+          "videoMultiplexing": "",
+          "videoProfileLevel": "Layer 3",
+          "width": null
+        }
+      ],
+      "programID": 106353766,
+      "programTitle": "The Dictionary of Lost Words",
+      "title": "Prologue: February 1886",
+      "objectID": "coremedia://audioepisode/106353760",
+      "_highlightResult": {
+        "synopsis": {
+          "value": "In 1901, the word ‘Bondmaid’ was discovered missing from the Oxford English Dictionary. This is the story of the girl who stole it.",
+          "matchLevel": "none",
+          "matchedWords": []
+        },
+        "title": {
+          "value": "Prologue: February 1886",
+          "matchLevel": "none",
+          "matchedWords": []
+        }
+      }
+    }
+  ],
+  "nbHits": 1,
+  "page": 0,
+  "nbPages": 1,
+  "hitsPerPage": 1,
+  "exhaustiveNbHits": true,
+  "exhaustiveTypo": true,
+  "exhaustive": {
+    "nbHits": true,
+    "typo": true
+  },
+  "query": "",
+  "params": "hitsPerPage=1&filters=objectID%3A%22coremedia%3A%2F%2Faudioepisode%2F106353760%22+OR+objectID%3A%22coremedia%3A%2F%2Faudio%2F106353760%22+OR+objectID%3A%22coremedia%3A%2F%2Faudiosegment%2F106353760%22&attributesToRetrieve=%5B%22objectID%22%2C%22canonicalURL%22%2C%22title%22%2C%22programTitle%22%2C%22programID%22%2C%22duration%22%2C%22dates%22%2C%22mediaRenditions%22%5D&optionalFilters=%5B%5B%22contentType%3A+article%22%2C%22contentType%3A+channel%22%2C%22contentType%3A+program%22%2C%22contentType%3A+recipe%22%2C%22contentSource%3A+iview%22%2C%22mediaStreamingStatus%3A+AVAILABLE%22%2C%22mediaDownloadStatus%3A++AVAILABLE%22%5D%5D&optionalFilters=%5B%5B%22contentType%3A+article%22%2C%22contentType%3A+channel%22%2C%22contentType%3A+program%22%2C%22contentType%3A+recipe%22%2C%22contentSource%3A+iview%22%2C%22mediaStreamingStatus%3A+AVAILABLE%22%2C%22mediaDownloadStatus%3A+AVAILABLE%22%5D%5D&optionalFilters=%5B%22contentType%3Aprogram%3Cscore%3D1%3E%22%5D",
+  "renderingContent": {
+    "facetOrdering": {
+      "facets": {
+        "order": []
+      }
+    }
+  },
+  "processingTimeMS": 4,
+  "processingTimingsMS": {
+    "_request": {
+      "roundTrip": 202
+    },
+    "fetch": {
+      "total": 1
+    },
+    "getIdx": {
+      "load": {
+        "total": 1
+      },
+      "total": 1
+    },
+    "total": 4
+  },
+  "serverTimeMS": 4
+}
