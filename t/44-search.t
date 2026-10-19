@@ -61,6 +61,7 @@ my $T0           = 1_792_400_000;    # Mon 19 Oct 2026, 08:53 UTC (19:53 in Sydn
 my $ICON         = Plugins::ABCListen::Util::ICON;
 my $JSON_TYPE    = { 'Content-Type' => 'application/json' };
 my $WCMS         = 'https://live-production.wcms.abc-cdn.net.au';
+my $OPEN_END     = 4_102_444_800;    # an open window end in the episode meta cache (Episode.pm)
 
 my $LOAD_FAILED  = string('PLUGIN_ABCLISTEN_LOAD_FAILED');
 my $RATE_LIMITED = string('PLUGIN_ABCLISTEN_RATE_LIMITED');
@@ -367,10 +368,11 @@ subtest 'episode hits -> OnDemand->episodeItem with the contract-3 meta (+ rendi
 		duration            => 550,
 		renditions          => [ { url => 'https://mediacore-live-production.akamaized.net/audio/02/pg/Z/m0.mp3', mime => 'audio/mpeg', bitrate => 192, fileSize => 13207926 } ],
 		availableTo         => epoch( 2026, 11, 14, 1, 5 ),
+		downloadAvailableTo => $OPEN_END,
 		seenAt              => $T0,
 	};
-	is_deeply( $episodes->[0]->{passthrough}, [$meta], 'meta: id, docType, title, program, path, image (a plain-URL defaultThumbnail), teaserText, date, duration, renditions (with fileSize, O6), availableTo, seenAt' );
-	ok( !exists $episodes->[0]->{passthrough}->[0]->{downloadAvailableTo}, 'ABC\'s "permanent" 2200-01-01 download end is not an epoch: left out (an open window)' );
+	is_deeply( $episodes->[0]->{passthrough}, [$meta], 'meta: id, docType, title, program, path, image (a plain-URL defaultThumbnail), teaserText, date, duration, renditions (with fileSize, O6), windows, seenAt' );
+	is( $episodes->[0]->{passthrough}->[0]->{downloadAvailableTo}, Plugins::ABCListen::Episode::OPEN_END(), 'ABC\'s "permanent" 2200-01-01 download end: stored as an open end, exactly as Episode.pm stores one' );
 
 	my $row = $episodes->[0];
 	is( $row->{play},     'abclisten://episode/107277458', 'play: the stable abclisten://episode URL' );
@@ -535,7 +537,7 @@ subtest 'episodes: missing thumbnails, renditions, dates; malformed objectIDs; d
 		'renditions as {url, mime, bitrate, fileSize when the hit has one}, in order; an entry without a URL dropped'
 	);
 	is( $meta{900004}->{availableTo}, epoch( 2025, 6, 28, 23, 30 ), 'availableTo: the past streaming end (O1 then plays the MP3 only)' );
-	ok( !exists $meta{900004}->{downloadAvailableTo}, '"permanent" download end left out' );
+	is( $meta{900004}->{downloadAvailableTo}, $OPEN_END, '"permanent" download end: open' );
 	is( $meta{900004}->{path}, '/listen/programs/edgeshow/permanent-mp3/900004', 'path: canonical (no trailing slash)' );
 	is( $meta{900004}->{date}, epoch( 2025, 5, 31, 23, 30 ), 'date: the publication date with its offset' );
 	like( $row{900004}->{name}, qr/\ASun 1 Jun 2025 \x{2013} Permanent MP3/, 'an older year is shown' );
@@ -560,7 +562,8 @@ subtest 'episodes: missing thumbnails, renditions, dates; malformed objectIDs; d
 	ok( !exists $meta{900012}->{date},     'an unparseable date: no date' );
 	ok( !exists $meta{900012}->{duration}, 'duration 0: left out' );
 	is( $meta{900012}->{docType}, 'audioepisode', 'docType' );
-	ok( exists $meta{900012}->{renditions} && !exists $meta{900012}->{availableTo} && !exists $meta{900012}->{downloadAvailableTo}, 'renditions without window dates: open windows (left out)' );
+	ok( exists $meta{900012}->{renditions}, 'renditions without window dates: seeded' );
+	is_deeply( [ @{ $meta{900012} }{qw(availableTo downloadAvailableTo)} ], [ $OPEN_END, $OPEN_END ], '... with open windows (a missing end is open, ABC §4.3)' );
 
 	ok( !exists $meta{900006}->{renditions} && !exists $meta{900006}->{seenAt}, 'a window that opens later (PENDING): not seeded, O1 checks the page at play time' );
 	is( $meta{900006}->{date}, epoch( 2026, 10, 25, 20, 0 ), '... but listed, with its date' );
@@ -568,6 +571,25 @@ subtest 'episodes: missing thumbnails, renditions, dates; malformed objectIDs; d
 	my $cached = Plugins::ABCListen::Util::getEpisodeMeta('900007');
 	ok( $cached && !exists $cached->{renditions} && !exists $cached->{seenAt}, 'meta cache: no renditions or seenAt without renditions' );
 	check_names( $episodes, 'episode rows' );
+};
+
+subtest 'windows O1 closed earlier (not yet released then) are reopened by a seed, so the result plays' => sub {
+	fresh();
+	serve_science();
+
+	# O1 saw the episode before its release: windows closed (both = then), no renditions
+	Plugins::ABCListen::Util::setEpisodeMeta( '107277436', { title => 'Breeding potatoes', availableTo => $T0 - 86400 * 3, downloadAvailableTo => $T0 - 86400 * 3 } );
+
+	search( { search => 'science show' } );
+	my $cached = Plugins::ABCListen::Util::getEpisodeMeta('107277436');
+	is( $cached->{downloadAvailableTo}, $OPEN_END,                  'the permanent download window is open again' );
+	is( $cached->{availableTo},         epoch( 2026, 11, 14, 1, 3 ), 'the streaming window end from the hit' );
+
+	@Slim::Networking::SimpleAsyncHTTP::REQUESTS = ();
+	my $c = collector();
+	Plugins::ABCListen::Episode->resolve( '107277436', $c->cb );
+	is( ( $c->args(0) )[0]->{url}, 'https://mediacore-live-production.akamaized.net/audio/02/pg/Z/lv.mp3', 'O1 plays the seeded MP3 (not EPISODE_EXPIRED)' );
+	is( scalar requests(), 0, 'without a request' );
 };
 
 subtest 'a cached entry with older renditions is not refreshed by a hit without renditions' => sub {

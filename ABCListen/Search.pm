@@ -43,8 +43,9 @@ package Plugins::ABCListen::Search;
 #            programDefaultThumbnail 1x1), description (teaserText, else synopsis), date
 #            (publicationDate), duration } and, when the hit has renditions, renditions
 #            [ { url, mime, bitrate, fileSize (when the hit has one; O6 AAC seeking) } ],
-#            availableTo / downloadAvailableTo (parseISO8601 of the streaming / download window
-#            ends; ABC's "permanent" 2200-01-01 is beyond it and left out, i.e. open) and seenAt.
+#            availableTo / downloadAvailableTo (the streaming / download window ends as epochs;
+#            ABC's "permanent" 2200-01-01 or a missing end is stored as Episode.pm's open end,
+#            OPEN_END, so a seed reopens windows O1 closed before the release) and seenAt.
 #            episodeItem stores them in the episode meta cache, so O1 plays a result without
 #            fetching the episode page (Episode.pm's 6 h shortcut). Like O1's own writer, a hit
 #            whose window opens later is listed but not seeded (the cache has no "from" field),
@@ -75,6 +76,7 @@ use constant MAX_QUERY    => 100;     # characters
 use constant PROGRAM_HITS => 20;      # DQ6: no paging
 use constant EPISODE_HITS => 40;
 use constant RESULT_TTL   => 3600;    # seconds (API.pm result cache)
+use constant OPEN_END     => 4_102_444_800;    # an open window end in the episode meta cache (= Episode.pm's)
 
 use constant LOAD_FAILED  => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
 use constant RATE_LIMITED => 'PLUGIN_ABCLISTEN_RATE_LIMITED';
@@ -331,12 +333,20 @@ sub _episodeMeta {
 
 	if ( @$renditions && !$notYet ) {
 		$meta{renditions}          = $renditions;
-		$meta{availableTo}         = Plugins::ABCListen::Util::parseISO8601( $dates->{mediaStreamingAvailableTo} );
-		$meta{downloadAvailableTo} = Plugins::ABCListen::Util::parseISO8601( $dates->{mediaDownloadAvailableTo} );
+		$meta{availableTo}         = _windowEnd( $dates->{mediaStreamingAvailableTo} );
+		$meta{downloadAvailableTo} = _windowEnd( $dates->{mediaDownloadAvailableTo} );
 		$meta{seenAt}              = $now;
 	}
 
 	return _defined(%meta);
+}
+
+# A window end as the episode meta cache stores it (like Episode.pm): the epoch, else (ABC's
+# "permanent" 2200-01-01 is beyond parseISO8601, or the end is missing: an open window) OPEN_END.
+# Never undef: the cache merge would keep an end O1 closed before the episode was released.
+sub _windowEnd {
+	my $epoch = Plugins::ABCListen::Util::parseISO8601(shift);
+	return defined $epoch ? $epoch : OPEN_END;
 }
 
 # mediaRenditions -> [ { url, mime, bitrate, fileSize? } ] (entries without an http(s) URL dropped).
