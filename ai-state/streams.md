@@ -45,7 +45,7 @@ Not streams: `dev/` (local LMS 9.1.1 + squeezelite "DevPlayer" test bed — dev-
 | L3 | Now-playing songs on music stations (music API track mode, last-good, recently played) | M | L2 | Must | 4 |
 | L4 | Station submenu: listen live + Today/Yesterday/7-day schedule linking to catch-up programs | M | L2, O2 | Should | 4 |
 | O4 | Episode extras: segments (playable), tracklist, "More from <program>", episode song info | M | O1, O2 | Could | 4 |
-| D2 | Categories, Popular now (recommendations), Podcasts collections | M | D1 | Must | 4 |
+| D2 | Top-level Podcasts menu (podcast collections, 8 categories, A–Z) + Popular now (recommendations) | M | D1 (soft O3) | Must | 4 |
 | R2 | `scripts/smoke.sh` acceptance test; README usage/screenshots/troubleshooting; official-repo guide; CHANGELOG | M | all shipping tasks | Must | 5 |
 | R3 | v1.0.0 via workflow; clean-profile install from GitHub repo.xml; smoke pass; final verification; pi14 checklist | S | R2 | Must | 6 |
 | _L6_ | _Stretch (out of v1): own HLS protocol handler (MPEG-TS → ADTS) for 221–246 kbps live, HLS-only stations, live rewind_ | L | L1, L5 | Stretch | – |

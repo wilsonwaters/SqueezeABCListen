@@ -20,7 +20,7 @@ uses (ondemand builders, live `stationItem`), so playback, favourites and follow
 | ID | Summary | Size | Depends on | Status |
 |---|---|---|---|---|
 | D1 | Collection engine (`Collections.pm`: home Next data → collections → paged cards → typed items) + **Discover** menu: Featured (hero) and every home collection | M | F3, O2 (soft L1, O1) | planned |
-| D2 | **Popular now** (recommendations), **Categories** (8 podcast categories → programs), **Podcasts** collections (New & Noteworthy, Most Popular, Award Winning) in Discover | M | D1 | planned |
+| D2 | **Popular now** (recommendations) in Discover; top-level **Podcasts** menu: podcast collections (New & Noteworthy, Most Popular, Award Winning), **Browse by category** (8 podcast categories → programs), **All podcasts A–Z** (O3's podcast type list) | M | D1 (soft O3) | planned |
 | D3 | **Search ABC listen** (`Search.pm`, Algolia programs + playable episodes, cached, budget-aware) + `Slim::Menu::GlobalSearch` provider | M | F3, O2 (soft O1) | planned |
 
 D1 and D3 run in parallel (separate hooks/modules); D2 follows D1.
@@ -60,7 +60,14 @@ D1 and D3 run in parallel (separate hooks/modules); D2 follows D1.
 - **Podcasts**: podcasts page MetaCollection 106118844 → sub-collections (New & Noteworthy 105492374, Most Popular
   Podcasts, Award Winning Podcasts) via `bff('collection/x', {collectionId, rootMetaCollectionId => 106118844,
   metaInMeta => 'false'})`.
-- **Discover root** (owned from now on): Featured, **Popular now**, **Categories**, **Podcasts**, then home collections.
+- **Top-level "Podcasts" menu** (revision 2026-10-19, stakeholder: podcasts must be prominent and browsable). The
+  Discover hook returns TWO top-level items, **Podcasts** then **Discover** (the frozen hook API already allows a hook
+  to return several items; no Plugin.pm change). Podcasts contains, in order: New & Noteworthy, Most Popular Podcasts,
+  Award Winning Podcasts (the podcasts-page sub-collections above), **Browse by category** (the 8 categories above),
+  and **All podcasts A–Z** — a link to O3's public "programs of type podcast" list when O3 is merged (soft dependency;
+  omit the entry if O3's function is absent). Every podcast program opens O2's program → episodes menu.
+- **Discover root** (owned from now on): Featured, **Popular now**, then home collections (Categories/Podcasts moved to
+  the top-level Podcasts menu; don't duplicate them under Discover).
 - **Tests** `t/42-categories.t` (podcasts-page and category-page fixtures recorded by D2; static-id fallback),
   `t/43-recommendations.t` (fixture `bff-recommendations-homepagePopularNow`; card dispatch; empty response).
 - **Runtime**: Discover → Categories → True Crime → program → episode plays; Popular now lists ~24 items with durations
@@ -124,3 +131,5 @@ D1 and D3 run in parallel (separate hooks/modules); D2 follows D1.
 
 ## Changelog
 - 2026-10-19 — Initial master plan (stream-planning sub-agent).
+- 2026-10-19 — D2: Podcasts promoted to a top-level menu (collections, categories, A–Z via O3) at stakeholder request;
+  Discover keeps Featured, Popular now and home collections.
