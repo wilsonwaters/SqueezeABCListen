@@ -54,8 +54,11 @@ package Plugins::ABCListen::Search;
 # Global search: init registers Slim::Menu::GlobalSearch provider 'abclisten', when this LMS has
 # registerInfoProvider (else DEBUG log; the plugin still loads). For a non-empty $tags->{search}
 # the provider returns { name => PLUGIN_ABCLISTEN_GLOBAL_SEARCH_TITLE ("ABC listen"), type => 'link',
-# url => \&_search, passthrough => [ { search => $tags->{search} } ] }, else undef. It makes no
-# request: the search runs only when the entry is opened (library-only global searches cost no
+# items => [ { name => PLUGIN_ABCLISTEN_SEARCH_RESULTS ("Results for '<query>'"), type => 'link',
+# url => \&_search, passthrough => [ { search => $tags->{search} } ] } ] }, else undef. No url on
+# the top-level item: LMS 9.1.1 numbers a global search session only when no top-level item has a
+# code ref url, and its globalsearch item ids don't resolve without one. The provider makes no
+# request: the search runs only when the link is opened (library-only global searches cost no
 # Algolia budget), through the same _search and API.pm cache as the Search item.
 
 use strict;
@@ -147,11 +150,19 @@ sub _globalSearchItem {
 	my $search = ref $tags eq 'HASH' ? $tags->{search} : undef;
 	return undef unless length _normalise($search);
 
+	# The search link sits inside "ABC listen": Slim::Control::XMLBrowser only numbers a global
+	# search session ("<sid>_<query>.N" item ids) when no top-level item has a code ref url, and
+	# without that id a later "globalsearch items item_id:..." (Jive, hardware players, apps)
+	# can't find the item.
 	return {
-		name        => cstring( $client, 'PLUGIN_ABCLISTEN_GLOBAL_SEARCH_TITLE' ),
-		type        => 'link',
-		url         => \&_search,
-		passthrough => [ { search => $search } ],
+		name  => cstring( $client, 'PLUGIN_ABCLISTEN_GLOBAL_SEARCH_TITLE' ),
+		type  => 'link',
+		items => [ {
+			name        => cstring( $client, 'PLUGIN_ABCLISTEN_SEARCH_RESULTS', _tidy($search) ),
+			type        => 'link',
+			url         => \&_search,
+			passthrough => [ { search => $search } ],
+		} ],
 	};
 }
 

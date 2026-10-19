@@ -1,9 +1,10 @@
 #!/usr/bin/perl
 # Plugins::ABCListen::Search as an LMS global search provider (D3), offline: Search->init registers
 # the 'abclisten' provider with Slim::Menu::GlobalSearch (F1's stub); for a non-empty search the
-# provider returns the "ABC listen" link with the search in its passthrough, else undef; calling
-# it makes no request; opening the link runs the plugin's own search through the shared API.pm
-# cache (in either order); init survives an LMS without registerInfoProvider, or one that dies.
+# provider returns "ABC listen" holding one link with the search in its passthrough (no url on the
+# top-level item: LMS numbers a global search session only then), else undef; calling it makes no
+# request; opening the link runs the plugin's own search through the shared API.pm cache (in
+# either order); init survives an LMS without registerInfoProvider, or one that dies.
 #
 # Fixtures: t/data/discovery/ (see t/44-search.t) and F3's search page
 # t/data/foundation/listen-search.trimmed.html (app id TESTAPPID, key testsearchkey).
@@ -58,6 +59,9 @@ sub ask {
 	return provider()->{func}->( $client, $tags );
 }
 
+# The search link inside the provider's "ABC listen" item
+sub search_link { my $item = shift; return ref $item eq 'HASH' && ref $item->{items} eq 'ARRAY' ? $item->{items}->[0] : undef }
+
 # Open a link as XMLBrowser does: url->($client, $cb, $args, @passthrough)
 sub open_item {
 	my ( $item, $client, $args ) = @_;
@@ -92,7 +96,7 @@ subtest 'init registers the "abclisten" provider with LMS global search' => sub 
 	is( scalar errors_logged(), 0, 'no errors logged' );
 };
 
-subtest 'the provider returns the "ABC listen" link with the search in its passthrough' => sub {
+subtest 'the provider returns "ABC listen" holding the search link (search in its passthrough)' => sub {
 	fresh();
 	Plugins::ABCListen::Search->init();
 
@@ -100,14 +104,26 @@ subtest 'the provider returns the "ABC listen" link with the search in its passt
 	my $item   = ask( $client, { search => 'science show', apps => [], menuMode => 0 } );
 	is_deeply(
 		$item,
-		{ name => 'ABC listen', type => 'link', url => $SEARCH_FEED, passthrough => [ { search => 'science show' } ] },
-		'exact keys: name, type link, url _search, passthrough [{ search }]'
+		{
+			name  => 'ABC listen',
+			type  => 'link',
+			items => [ { name => q{Results for 'science show'}, type => 'link', url => $SEARCH_FEED, passthrough => [ { search => 'science show' } ] } ],
+		},
+		'exact keys: "ABC listen" link with one inline link: name, type link, url _search, passthrough [{ search }]'
 	);
 	is( $item->{name}, string('PLUGIN_ABCLISTEN_GLOBAL_SEARCH_TITLE'), 'from PLUGIN_ABCLISTEN_GLOBAL_SEARCH_TITLE' );
-	ok( !exists $item->{description}, 'no description on the link (LMS menu rule 1)' );
+	is( $item->{items}->[0]->{name}, string( 'PLUGIN_ABCLISTEN_SEARCH_RESULTS', 'science show' ), 'the inner link from PLUGIN_ABCLISTEN_SEARCH_RESULTS' );
+	ok( !exists $item->{description} && !exists $item->{items}->[0]->{description}, 'no description on either link (LMS menu rule 1)' );
 
-	is_deeply( ask( undef, { search => 'Science Show' } )->{passthrough}, [ { search => 'Science Show' } ], 'without a client (CLI "-"): still the link, the text as typed' );
-	is_deeply( ask( $client, { search => 'café 🎧' } )->{passthrough}, [ { search => 'café 🎧' } ], 'non-ASCII text passed on unchanged' );
+	# Slim::Control::XMLBrowser only gives a global search a browse session id (which the
+	# "<sid>_<query>.N" item ids of every later globalsearch request need) when no top-level item
+	# has a code ref url: our top-level item must not have one.
+	ok( !exists $item->{url}, 'no url on the top-level item (so LMS can number the global search session)' );
+
+	my $other = ask( undef, { search => '  Science   Show ' } );
+	is_deeply( $other->{items}->[0]->{passthrough}, [ { search => '  Science   Show ' } ], 'without a client (CLI "-"): still the link, the text as typed' );
+	is( $other->{items}->[0]->{name}, q{Results for 'Science Show'}, 'the name shows the text tidied (case kept)' );
+	is_deeply( ask( $client, { search => 'café 🎧' } )->{items}->[0]->{passthrough}, [ { search => 'café 🎧' } ], 'non-ASCII text passed on unchanged' );
 };
 
 subtest 'empty search: the provider returns undef' => sub {
@@ -133,7 +149,7 @@ subtest 'opening the link runs the same search; it shares the cache with the Sea
 	fresh();
 	Plugins::ABCListen::Search->init();
 
-	my $c = open_item( ask( undef, { search => 'Science  Show' } ) );
+	my $c = open_item( search_link( ask( undef, { search => 'Science  Show' } ) ) );
 	is( $c->count, 1, 'one callback' );
 	my $items = items_of($c);
 	is_deeply( names($items), [ 'Programs (3)', 'Episodes (2)' ], 'the Programs/Episodes groups' );
@@ -151,7 +167,7 @@ subtest 'opening the link runs the same search; it shares the cache with the Sea
 	$own = collector();
 	$SEARCH_FEED->( undef, $own->cb, { search => 'science show' } );
 	is( scalar algolia_requests(), 2, 'the Search item first: two queries' );
-	$c = open_item( ask( undef, { search => 'SCIENCE SHOW' } ) );
+	$c = open_item( search_link( ask( undef, { search => 'SCIENCE SHOW' } ) ) );
 	is_deeply( items_of($c), items_of($own), 'then the global search link: the same items' );
 	is( scalar algolia_requests(), 2, '... without a new request' );
 };
@@ -163,7 +179,7 @@ subtest 'opening the link for a search with no results: one NO_RESULTS text item
 	route( $ALGOLIA, file => 'discovery/algolia-search-empty.synthetic.json', headers => $JSON_TYPE );
 	Plugins::ABCListen::Search->init();
 
-	my $c = open_item( ask( undef, { search => 'zzqxvbnm' } ) );
+	my $c = open_item( search_link( ask( undef, { search => 'zzqxvbnm' } ) ) );
 	is( $c->count, 1, 'one callback' );
 	is_deeply( items_of($c), [ { name => q{No results for 'zzqxvbnm'}, type => 'text' } ], 'exactly one text item' );
 };
