@@ -4,7 +4,7 @@
 Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 
 ## Issue map (task ID → GitHub issue)
-- foundation: F1 #1 · F2 #3 · F3 #7 · F4 #34 (bug) · F5 #37 (cardRef names)
+- foundation: F1 #1 · F2 #3 · F3 #7 · F4 #34 (bug) · F5 #37 (cardRef names) · F6 #41 (F4 follow-ups)
 - live: L1 #2 · L2 #4 · L3 #8 · L4 #10 · L5 #14
 - ondemand: O1 #12 · O2 #16 · O3 #18 · O4 #19 · O6 #30 · O7 #40
 - discovery: D1 #5 · D2 #6 · D3 #13 · D4 #22 · D5 #23
@@ -12,11 +12,11 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - release: R1 #9 · R2 #15 · R3 #17
 
 ## Currently in flight
-- #6 D2 top-level Podcasts + Popular now — implementation dispatched (stakeholder priority)
-- #20 M2 → PR #35: stale Follow id could unfollow — fix agent applying orchestrator design (Follow row becomes
-  "✓ Following" text; Unfollow on its own row)
-- #13 D3 search — implementation in progress
-- #34 F4 non-ASCII paths + 308/307 nextData redirects — implementation in progress
+- System verification of main for v0.2.0 (SYS-v0.2.0) — then version bump + CHANGELOG → release → install check
+- #6 D2 top-level Podcasts — implementation
+- #22 D4 News/Sport/Kids listen/Audiobooks sections — implementation
+- #4 L2 program on air — implementation
+- #20 M2 → PR #35 — fix round 2 (follow-order list + 30-min tombstones; Material track-info screenshot)
 
 ## Interruptions
 - 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
@@ -24,6 +24,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   in-flight agents (L1, O3, D1, D3, M2, O6 review, IC-1) resumed from their saved state. Lesson: ≤5 concurrent agents.
 
 ## Last completions
+- #34 F4 merged (PR #39, squash 834f446): lower-case nextData paths, 308 follow, cached-path fallback. Follow-ups F6 (#41).
+- #13 D3 merged (PR #38, squash 137af39): Search + LMS global search (nested results per LMS 9.1.1).
 - #18 O3 merged (PR #36, squash e427302): A–Z (708 programs) + By type + public programsByType. Orchestrator
   resolved the t/10 module-list conflict. Follow-up O7 (#40, Hottest 100 redirect paths).
 - #2 L1 merged (PR #32, squash 5d262e2): all live stations (101 services, generated StationData.pm with committed
