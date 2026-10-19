@@ -2,8 +2,9 @@
 # Plugins::ABCListen::Programs (O2 data layer), offline (SimpleAsyncHTTP stub, fake clock):
 # the networks() table; networkPrograms paging, merge, de-duplication, teaser cards, names and
 # sortKey order; program() detail on the Science Show, audiobook and synthetic pages; episodes()
-# refs, segments, the 250 cap and no request at offset >= 250; the ttl / stale_ok options passed
-# to API.pm; { error => TOKEN } on failure; exactly one callback on every path.
+# refs, segments, the 250 cap and no request at offset >= 250; the ttl / stale_ok / timeout (8 s)
+# options passed to API.pm; { error => TOKEN } on failure; exactly one callback on every path, also
+# when the consumer's callback dies.
 #
 # Fixtures in t/data/ondemand/ (raw response bodies as served; research copies from
 # ai-state/research/abc-samples/ with the {_fixture_note, data} wrapper stripped and _next/data
@@ -109,6 +110,14 @@ sub result { my $c = shift; my ($r) = $c->args(0); return $r }
 
 sub warnings_logged { grep { $_->{level} eq 'WARN' } Slim::Utils::Log->messages( category => 'plugin.abclisten' ) }
 
+# The HTTP timeouts of the recorded requests (the F3 search page left out)
+sub http_timeouts { map { $_->{params}->{timeout} } grep { $_->{url} !~ m{/listen/search\z} } requests() }
+
+# A consumer's die was caught and logged by the callback guard (not mistaken for a data error)
+sub callback_failure_logged {
+	return scalar grep { $_->{level} eq 'ERROR' && $_->{message} =~ /\AABC listen programs callback failed: consumer broke/ } Slim::Utils::Log->messages( category => 'plugin.abclisten' );
+}
+
 my $GOD_FORBID_IMG = "$WCMS/9b022a1c24f404a4755241bb86365781?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=300&height=300";
 
 # ---------------------------------------------------------------------------
@@ -158,7 +167,8 @@ subtest 'networkPrograms(rn): paging, merge with Featured, de-duplication, tease
 		'main list (total 56, size 50): exactly 2 requests (offset 0 and 50, size 50); Featured: 1'
 	);
 	is_deeply( [ map { $_->{path} } @API_CALLS ], [ ('programAggregationCollection/x') x 3 ], 'through API::bff' );
-	is_deeply( $API_CALLS[0]->{opts}, { ttl => 6 * 3600, stale_ok => 1 }, 'API opts: ttl 6 h, stale_ok' );
+	is_deeply( $API_CALLS[0]->{opts}, { ttl => 6 * 3600, stale_ok => 1, timeout => 8 }, 'API opts: ttl 6 h, stale_ok, timeout 8 s' );
+	is_deeply( [ http_timeouts() ], [ 8, 8, 8 ], 'every aggregation request goes out with an 8 s timeout (not HTTP.pm\'s 15 s)' );
 
 	my $items = result($c)->{items};
 	is_deeply(
@@ -348,7 +358,7 @@ subtest 'program(): The Science Show' => sub {
 	is( $p->{image},   "$WCMS/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862", 'image = heroImagePrepared.imgSrc' );
 	is( $p->{network}, 'ABC Radio National', 'network = attributionLinksPrepared[0].title' );
 	is( $p->{episodeCollectionId}, '2885458', 'episodeCollectionId = programCollectionPrepared.id' );
-	is( $p->{total},      250,     'total (capped at 250)' );
+	is( $p->{total},      250,     'total = pagination.total (250 on this page; the cap is tested on a synthetic page)' );
 	is( $p->{template},   'audio', 'template = programTemplate' );
 	is( $p->{restricted}, 0,       'restricted 0' );
 
@@ -366,7 +376,8 @@ subtest 'program(): The Science Show' => sub {
 	is_deeply( $first->[1]->{segments}, [], 'segments: null -> []' );
 	is( $first->[1]->{path}, '/listen/programs/lab-notes/lab-notes-when-astronomers-make-mistakes/107232984', 'another program\'s episode keeps its own path' );
 
-	is_deeply( $API_CALLS[0], { fn => 'nextData', path => '/listen/programs/scienceshow', opts => { ttl => 6 * 3600, stale_ok => 1 } }, 'API::nextData with ttl 6 h and stale_ok' );
+	is_deeply( $API_CALLS[0], { fn => 'nextData', path => '/listen/programs/scienceshow', opts => { ttl => 6 * 3600, stale_ok => 1, timeout => 8 } }, 'API::nextData with ttl 6 h, stale_ok and timeout 8 s' );
+	is_deeply( [ http_timeouts() ], [8], 'the program page request goes out with an 8 s timeout' );
 
 	@API_CALLS = ();
 	my $requests = scalar requests();
@@ -438,6 +449,16 @@ subtest 'program(): synthetic pages (missing fields, rich text edge cases, empty
 	$p = result( call( 'program', '/listen/programs/bare' ) );
 	is( $p->{title}, undef, 'empty pageProps: no title' );
 	is( $p->{restricted}, 0, 'empty pageProps: restricted 0' );
+
+	# The Science Show page with more episodes than ABC lists
+	for my $total ( 251, 1529 ) {
+		my $page = json_fixture('nextdata-program-scienceshow.trimmed.json');
+		$page->{pageProps}->{programCollectionPrepared}->{pagination}->{total} = $total;
+		route( "$NEXT/listen/programs/long-running-$total.json", content => to_json($page), headers => $JSON_TYPE );
+
+		$p = result( call( 'program', "/listen/programs/long-running-$total" ) );
+		is( $p->{total}, 250, "pagination.total $total -> total capped at 250" );
+	}
 };
 
 subtest 'program(): failures' => sub {
@@ -472,7 +493,8 @@ subtest 'episodes(): The Science Show page at offset 240' => sub {
 	my $c = call( 'episodes', '2885458', 240, 10 );
 	is( $c->count, 1, 'one callback' );
 	is_deeply( [ urls() ], ["$EPS?collectionId=2885458&offset=240&size=10"], 'one request: collectionId, offset, size' );
-	is_deeply( $API_CALLS[0]->{opts}, { ttl => 900 }, 'API opts: ttl 15 min' );
+	is_deeply( $API_CALLS[0]->{opts}, { ttl => 900, timeout => 8 }, 'API opts: ttl 15 min, timeout 8 s' );
+	is_deeply( [ http_timeouts() ], [8], 'the episode page request goes out with an 8 s timeout' );
 
 	my $r = result($c);
 	is( $r->{total},  250, 'total' );
@@ -576,6 +598,43 @@ subtest 'episodes(): empty, errors, bad collection id' => sub {
 		is_deeply( result($c), { error => $LOAD_FAILED }, 'bad collection id: LOAD_FAILED' );
 	}
 	is( scalar urls(), 0, 'bad collection ids: no request' );
+};
+
+subtest 'program() and episodes(): a consumer callback that dies is called once, logged, and never escapes' => sub {
+	my $calls;
+	my $dying = sub { $calls++; die "consumer broke\n" };
+
+	my $run = sub {
+		my ( $label, $fn, @args ) = @_;
+		$calls = 0;
+		ok( eval { $P->can($fn)->( @args, $dying ); 1 }, "$label: the die does not reach the caller" ) or diag $@;
+		is( $calls, 1, "$label: called once" );
+		ok( callback_failure_logged(), "$label: logged at ERROR as a callback failure" );
+	};
+
+	fresh();
+	route( "$NEXT/listen/programs/scienceshow.json", file => 'ondemand/nextdata-program-scienceshow.trimmed.json', headers => $JSON_TYPE );
+	$run->( 'program(), loaded', 'program', '/listen/programs/scienceshow' );
+	$run->( 'program(), from the cache (synchronous)', 'program', '/listen/programs/scienceshow' );
+
+	fresh();
+	route( "$NEXT/listen/programs/broken.json", error => 'Timed out waiting for data' );
+	$run->( 'program(), transport error', 'program', '/listen/programs/broken' );
+
+	fresh();
+	$run->( 'program(), not an ABC page (synchronous error)', 'program', 'https://example.com/listen/programs/x' );
+
+	fresh();
+	route( qr{\Q$EPS\E\?}, file => 'ondemand/bff-episodesWithSegments-scienceshow.json', headers => $JSON_TYPE );
+	$run->( 'episodes(), loaded', 'episodes', '2885458', 240, 10 );
+
+	fresh();
+	route( qr{\Q$EPS\E\?}, code => 500 );
+	$run->( 'episodes(), HTTP 500', 'episodes', '2885458', 0, 50 );
+
+	fresh();
+	$run->( 'episodes(), offset 250 (no request, synchronous)', 'episodes', '2885458', 250, 50 );
+	$run->( 'episodes(), bad collection id (synchronous)', 'episodes', 'abc', 0, 50 );
 };
 
 done_testing();

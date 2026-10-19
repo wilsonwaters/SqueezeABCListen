@@ -24,7 +24,7 @@ package Plugins::ABCListen::Programs;
 #
 #   networkPrograms($key, $cb) -> $cb->({ items => [program refs] }) | $cb->({ error => TOKEN })
 #       Every collection of the network (API::bff('programAggregationCollection/x',
-#       {collectionId, offset, size => 50}), ttl 6 h, stale_ok), paged until
+#       {collectionId, offset, size => 50}), ttl 6 h, stale_ok, timeout 8 s), paged until
 #       collection.pagination.total (without a total: until a page shorter than 50; always stops
 #       at an empty page). Collections are merged in table order, de-duplicated by path, and
 #       sorted by sortKey(title). A collection whose later page fails keeps the programs it has.
@@ -37,11 +37,15 @@ package Plugins::ABCListen::Programs;
 #       (presentersPrepared[].names.full). Optional keys are absent when unknown.
 #       Cards without a title or a path on www.abc.net.au are skipped.
 #
+#   Every request here is on a menu path, so it gets API_TIMEOUT (8 s) instead of HTTP.pm's 15 s:
+#   a slow ABC then answers the menu with an error item instead of keeping it waiting.
+#
 #   sortKey($title) -> the program list sort key: lower case, accents folded, a leading "The "
 #       ignored, whitespace collapsed ('' for undef). O3 and M2 reuse it.
 #
 #   program($path, $cb) -> $cb->(\%detail) | $cb->({ error => TOKEN })
-#       API::nextData($path) (ttl 6 h, stale_ok; stale buildIds and __N_REDIRECT are handled there),
+#       API::nextData($path) (ttl 6 h, stale_ok, timeout 8 s; stale buildIds and __N_REDIRECT are
+#       handled there),
 #       pageProps ->
 #         { id                  (heroImageWithCTAPrepared.uri coremedia://program/<id>) or undef,
 #           title               (heroImageWithCTAPrepared.heading) or undef,
@@ -58,9 +62,10 @@ package Plugins::ABCListen::Programs;
 #
 #   episodes($collectionId, $offset, $size, $cb) -> $cb->({ items => [episode refs], total, offset })
 #                                                   | $cb->({ error => TOKEN })
-#       API::bff('episodesWithSegments/x', {collectionId, offset, size}) (ttl 15 min), newest first.
-#       ABC lists only the newest 250: total = min(pagination.total, 250); size is trimmed so a page
-#       never passes 250; offset >= 250 -> { items => [], total => 250, offset } without a request.
+#       API::bff('episodesWithSegments/x', {collectionId, offset, size}) (ttl 15 min, timeout 8 s),
+#       newest first. ABC lists only the newest 250: total = min(pagination.total, 250); size is
+#       trimmed so a page never passes 250; offset >= 250 -> { items => [], total => 250, offset }
+#       without a request (so total is 250 there even when the program has fewer episodes).
 #       offset defaults to 0 and size to 50 (1..250). A collection id that isn't digits -> error.
 #       Episodes published between two page loads may repeat a row at a page boundary.
 #   Episode ref (contract 3 keys plus list extras), every key present (undef/[] when unknown):
@@ -92,6 +97,7 @@ use constant PROGRAM_TTL      => 6 * 3600;
 use constant EPISODES_TTL     => 900;
 use constant EPISODE_PAGE     => 50;     # default episodes() page size
 use constant MAX_EPISODES     => 250;    # ABC lists only the newest 250 episodes of a program
+use constant API_TIMEOUT      => 8;      # seconds per request (menu paths; HTTP.pm's default is 15)
 
 my $log = logger('plugin.abclisten');
 
@@ -218,7 +224,7 @@ sub _collectionPages {
 			# a later page failed: keep the programs we have
 			$settle->( @$cards ? { cards => $cards } : { error => _token($error) } );
 		},
-		{ ttl => AGGREGATION_TTL, stale_ok => 1 },
+		{ ttl => AGGREGATION_TTL, stale_ok => 1, timeout => API_TIMEOUT },
 	);
 
 	return;
@@ -287,7 +293,7 @@ sub program {
 			_guard( $once, sub { $once->( _programDetail($pageProps) ) } );
 		},
 		sub { $once->( { error => _token(shift) } ) },
-		{ ttl => PROGRAM_TTL, stale_ok => 1 },
+		{ ttl => PROGRAM_TTL, stale_ok => 1, timeout => API_TIMEOUT },
 	);
 
 	return;
@@ -355,7 +361,9 @@ sub episodes {
 		return $once->( { error => LOAD_FAILED } );
 	}
 
-	# ABC never returns more than the newest 250
+	# ABC never returns more than the newest 250. No request is made here, so the real total is
+	# unknown: at offset >= 250 the reported total is 250 even when the program has fewer episodes
+	# (OnDemand's "More episodes" link never asks past the total, so its menus never show this).
 	return $once->( { items => [], total => MAX_EPISODES, offset => $offset } ) if $offset >= MAX_EPISODES;
 	$size = MAX_EPISODES - $offset if $offset + $size > MAX_EPISODES;
 
@@ -375,7 +383,7 @@ sub episodes {
 			} );
 		},
 		sub { $once->( { error => _token(shift) } ) },
-		{ ttl => EPISODES_TTL },
+		{ ttl => EPISODES_TTL, timeout => API_TIMEOUT },
 	);
 
 	return;
