@@ -1,0 +1,39 @@
+{
+ "preparedImage": {
+  "alt": "ABC News Daily and Radio National Hour Highlights",
+  "imgSrc": "https://resize.abcradio.net.au/vUSRFwN3N5y1sABEh7HDmMyCIbE=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FABC-NEWS-DAILY-tile-2024.jpg",
+  "ratio": "1x1",
+  "srcSet": [
+   "https://resize.abcradio.net.au/vUSRFwN3N5y1sABEh7HDmMyCIbE=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FABC-NEWS-DAILY-tile-2024.jpg 100w",
+   "https://resize.abcradio.net.au/SAdnN7NyiKyWmY37cgNU9Y1Wal4=/160x160/center/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FABC-NEWS-DAILY-tile-2024.jpg 160w",
+   "https://resize.abcradio.net.au/_biVW6fngUVIvApQC3dQIFX8q3w=/340x340/center/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FABC-NEWS-DAILY-tile-2024.jpg 340w",
+   "https://resize.abcradio.net.au/AoVs1txssJXlGxS2fEpy9v4G93M=/580x580/center/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FABC-NEWS-DAILY-tile-2024.jpg 580w",
+   "https://resize.abcradio.net.au/iQGXQmaOXo5_IG2EdbsK4LCRMeU=/940x940/center/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FABC-NEWS-DAILY-tile-2024.jpg 940w",
+   "https://resize.abcradio.net.au/YYmDXNLCn5GXUciAWRbBvAqEnic=/1300x1300/center/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FABC-NEWS-DAILY-tile-2024.jpg 1300w"
+  ]
+ },
+ "preparedPresenters": [],
+ "start": "2026-10-19T18:30:00+00:00",
+ "end": "2026-10-19T19:00:00+00:00",
+ "title": "ABC News Daily and Radio National Hour Highlights",
+ "programLink": "https://www.abc.net.au/listen/programs/abc-news-daily",
+ "variant": "next",
+ "papiServiceId": "RN",
+ "imageRatio": "1x1",
+ "sources": [
+  {
+   "id": "ptfb171377",
+   "contentType": "audiostream",
+   "contentSource": "papi",
+   "file": "https://streaming.abc-cdn.net.au/audio/hls/rnnsw.m3u8?source=web",
+   "type": "hls"
+  },
+  {
+   "id": "ptf7461355",
+   "contentType": "audiostream",
+   "contentSource": "papi",
+   "file": "https://live-radio01.mediahubaustralia.com/2RNW/aac/?source=web",
+   "type": "aac"
+  }
+ ]
+}

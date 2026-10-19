@@ -7,6 +7,11 @@
 # HLS-only, duplicate and off-air services, with the 3 s event-check deadline on the fake clock;
 # stationItem (undef for unknown/hidden/unplayable ids); no player ($client undef); readable names
 # (no raw tokens); and exactly one callback on every path, also when building a menu dies.
+# L2 (on air): line2 "On air: <program> · <presenters>" and description "<program> (<slot>) —
+# <presenters>" + the L1 text on a new line; one programNow per listed station (time-zone versions
+# use their own EPG); the 3 s deadline with 7 slow stations (<= 6 requests at a time, cached and
+# last-good data used, answered once); stationItem from cached data only, never fetching; Sport
+# fetches the listed stations after the event checks.
 
 use strict;
 use warnings;
@@ -21,14 +26,21 @@ use Slim::Utils::Log;
 use Slim::Utils::Prefs;
 use Slim::Utils::Strings qw(string);
 
+use POSIX ();
+
 use ABCListenTest::FakeClient;
 
 use Plugins::ABCListen::Live;
+use Plugins::ABCListen::NowPlaying;
 use Plugins::ABCListen::Stations;
 use Plugins::ABCListen::API;
 use Plugins::ABCListen::Util qw(topWeight ICON);
 
+$ENV{TZ} = 'Australia/Sydney';
+POSIX::tzset();
+
 my $S     = 'Plugins::ABCListen::Stations';
+my $NP    = 'Plugins::ABCListen::NowPlaying';
 my $BFF   = 'https://www.abc.net.au/core-next/api/';
 my $NOW   = 1_792_389_600;    # 2026-10-19 19:00 AEDT
 my $prefs = preferences('plugin.abclisten');
@@ -76,6 +88,7 @@ sub logged { Slim::Utils::Log->messages( category => 'plugin.abclisten', level =
 sub reset_all {
 	resetStubs();
 	$S->_reset();
+	$NP->_reset();
 	$S->_setRecords();
 	setTime($NOW);
 	$prefs->set( homeState => '' );
@@ -365,7 +378,14 @@ subtest 'Sport: listed services; no HLS-only, duplicate or off-air services' => 
 	is_deeply( [ map { $_->{name} } @$items ], [ 'ABC SPORT', 'ABC SPORT EXTRA', 'ABC Rugby League World Cup', 'ABC AFLW' ], 'their names' );
 	is( scalar( grep { $_->{name} =~ /RAPID|CRICKET/i } @$items ), 0, 'no ABC SPORT RAPID / RLWC RAPID / CRICKET rows' );
 	is( scalar( grep { $_->{url} =~ /SPORT_WORLDCUP|SPORT_AFLW/ } @$items ), 0, 'duplicates listed once (under ITINERANT_ONE / ITINERANT_TWO)' );
-	is( scalar( grep { $_->{url} =~ m{/epgNowPlaying/} } requests() ), 7, 'one check per event-only service' );
+	my %event = map { $_->{id} => 1 } grep { $_->{eventOnly} } $S->list('sport');
+	is( scalar( grep { m{/epgNowPlaying/(\w+)/} && $event{$1} } map { $_->{url} } requests() ), 7, 'one check per event-only service' );
+	my %sport = map { $_->{id} => 1 } $S->list('sport');
+	is_deeply(
+		[ sort map { m{/epgNowPlaying/(\w+)/now} && $sport{$1} && !$event{$1} ? $1 : () } map { $_->{url} } requests() ],
+		[ sort qw(GRANDSTAND ITINERANT_THREE ITINERANT_ONE ITINERANT_TWO) ],
+		'the program on air of each listed station is fetched (L2)'
+	);
 
 	reset_all();
 	route( "${BFF}epgNowPlaying/SPORT_BBL/now?imageRatio=1x1", file => 'live/epg-event-onair-pls.json' );
@@ -385,10 +405,10 @@ subtest 'Sport: listed services; no HLS-only, duplicate or off-air services' => 
 
 subtest 'Sport: 3 s deadline for the event checks; unknown = hidden; once only' => sub {
 	reset_all();
+	my $feed = sport_feed(undef);    # (Radio first: L2 waits for the networks' programs too)
 	route( "${BFF}epgNowPlaying/SPORT_BBL/now?imageRatio=1x1", file => 'live/epg-event-onair-pls.json', defer => 1 );
 	route( qr{epgNowPlaying/}, file => 'live/bff-epgNowPlaying-SPORT_BBL-now.json', defer => 1 );
 
-	my $feed = sport_feed(undef);
 	my $c    = open_feed( undef, $feed );
 	is( $c->count, 0, 'waits for the checks' );
 	advanceTime(2.9);
@@ -402,13 +422,17 @@ subtest 'Sport: 3 s deadline for the event checks; unknown = hidden; once only' 
 	is( $c->count, 1, 'late answers do not call back again' );
 	is( scalar( Slim::Utils::Timers::pending() ), 0, 'no timer left' );
 
-	my $again = open_feed( undef, $feed );
-	is( $again->count, 1, 'next open: answers at once from the cache' );
+	my $checks = scalar requests();
+	my $again  = open_feed( undef, $feed );
+	is( scalar( requests() ) - $checks, 1, 'next open: event status from the cache; only the newly listed station\'s program is fetched (L2)' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is( $again->count, 1, '... then answers' );
 	is( scalar( grep { id_of($_) eq 'SPORT_BBL' } @{ items_of($again) } ), 1, '... with the event service the late check found on air' );
 
 	reset_all();
+	$feed = sport_feed(undef);
 	route( qr{epgNowPlaying/}, file => 'live/bff-epgNowPlaying-SPORT_BBL-now.json', defer => 1 );
-	$c = open_feed( undef, sport_feed(undef) );
+	$c = open_feed( undef, $feed );
 	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
 	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
 	is( $c->count, 1, 'all checks done before the deadline: answers then' );
@@ -438,6 +462,136 @@ subtest 'stationItem: undef for unknown, hidden and unplayable ids' => sub {
 	route( qr{epgNowPlaying/SPORT_TENNIS}, file => 'live/epg-event-onair-mediahub.json' );
 	$S->eventStatus( 'SPORT_TENNIS', sub { } );
 	is( Plugins::ABCListen::Live->stationItem( undef, 'SPORT_TENNIS' )->{name}, 'ABC Tennis', 'an event service while on air' );
+};
+
+# ---- on air (L2) ----
+
+my $RN_START = Plugins::ABCListen::Util::parseISO8601('2026-10-19T07:00:00Z');    # 6:00pm AEDT
+
+sub epg_requests { return scalar grep { $_->{url} =~ m{/epgNowPlaying/} } requests() }
+
+sub row_of {
+	my ( $items, $id ) = @_;
+	my ($row) = grep { ( id_of($_) // '' ) eq $id } @$items;
+	return $row;
+}
+
+subtest 'on air: line2 and description from the program on air' => sub {
+	reset_all();
+	setTime( $RN_START + 1800 );
+	route( "${BFF}epgNowPlaying/RN/now?imageRatio=1x1", file => 'live/bff-epgNowPlaying-RN-now.json' );
+	route( "${BFF}epgNowPlaying/NEWS/now?imageRatio=1x1", content => '{"title":"BBC World","start":"2026-10-19T11:00:00+00:00","end":"2026-10-19T19:00:00+00:00","preparedPresenters":[],"preparedImage":null}' );
+
+	my $c     = open_feed( undef, radio_item(undef) );
+	my $items = items_of($c);
+	is( $c->count, 1, 'Radio answers once (no player)' );
+	is( epg_requests(), 12, 'one programNow per network' );
+
+	my $rn = row_of( $items, 'RN' );
+	is( $rn->{line2}, "On air: The Radio National Hour \x{B7} Fran Kelly", 'line2 "On air: <program> · <presenters>"' );
+	is( $rn->{description}, "The Radio National Hour (6:00pm\x{2013}7:00pm) \x{2014} Fran Kelly\n" . $S->get('RN')->{synopsis}, 'description "<program> (<slot>) — <presenters>", then the synopsis on a new line' );
+	is_deeply( [ sort keys %$rn ], [ sort @STATION_KEYS, 'line2' ], 'station keys plus line2' );
+	is( $rn->{name}, 'Radio National', 'the name stays the station\'s' );
+	is( string('PLUGIN_ABCLISTEN_ON_AIR'), 'On air: %s', '(PLUGIN_ABCLISTEN_ON_AIR has a placeholder)' );
+
+	my $news = row_of( $items, 'NEWS' );
+	is( $news->{line2}, 'On air: BBC World', 'no presenters: no " · "' );
+	like( $news->{description}, qr/\ABBC World \(10:00pm\x{2013}6:00am\)\n/, 'no presenters: no " — "; a slot across midnight' );
+
+	my $tj = row_of( $items, 'TRIPLEJ' );
+	ok( !exists $tj->{line2}, 'a station without program data: no line2' );
+	is( $tj->{description}, $S->get('TRIPLEJ')->{synopsis}, '... and the L1 description' );
+	check_names( $items, 'Radio (on air)' );
+
+	is( epg_requests(), 12, '(still 12 requests)' );
+	$c = open_feed( $PLAYER, radio_item($PLAYER) );
+	is( epg_requests(), 12, 'opened again at once: no request (programs cached, failures in the 60 s negative cache)' );
+	is( row_of( items_of($c), 'RN' )->{line2}, $rn->{line2}, '... RN from the cache' );
+	advanceTime(60);
+	open_feed( $PLAYER, radio_item($PLAYER) );
+	is( epg_requests(), 22, '60 s later: the 10 failed ones are asked again, RN and NEWS are still cached' );
+};
+
+subtest 'on air: a home-state time-zone version uses its own EPG' => sub {
+	reset_all();
+	setTime( Plugins::ABCListen::Util::parseISO8601('2026-10-19T05:00:00Z') );
+	$prefs->set( homeState => 'WA' );
+	route( "${BFF}epgNowPlaying/TRIPLEJ_PERTH/now?imageRatio=1x1", file => 'live/bff-epgNowPlaying-TRIPLEJ_PERTH-now.json' );
+	route( "${BFF}epgNowPlaying/TRIPLEJ/now?imageRatio=1x1", file => 'live/bff-epgNowPlaying-RN-now.json' );
+
+	my $tj = row_of( radio(undef), 'TRIPLEJ_PERTH' );
+	is( $tj->{name},  'triple j', 'the triple j row plays TRIPLEJ_PERTH' );
+	is( $tj->{line2}, "On air: Drive \x{B7} Jordan & Luka", 'line2 from TRIPLEJ_PERTH\'s EPG' );
+	like( $tj->{description}, qr/\ADrive \(3:00pm\x{2013}5:30pm\) \x{2014} Jordan & Luka\nPerth time - /, 'description: on air, then "Perth time - <synopsis>"' );
+	is( scalar( grep { $_->{url} =~ m{/epgNowPlaying/TRIPLEJ/} } requests() ), 0, 'the network\'s own EPG is not fetched for it' );
+};
+
+subtest 'on air: 3 s deadline with 7 slow stations, <= 6 requests at a time, cached data used, once' => sub {
+	reset_all();
+	setTime( $RN_START + 1800 );
+	my @seven = grep { ( $_->{state} // '' ) eq 'NSW' && $_->{group} eq 'local' } Plugins::ABCListen::StationData::records();
+	@seven = @seven[ 0 .. 6 ];
+	$S->_setRecords(@seven);
+	my ( $first, $last ) = map { $_->{id} } @seven[ 0, 6 ];
+
+	# a program fetched earlier for one station: stale now, but still on air (last good)
+	route( "${BFF}epgNowPlaying/$first/now?imageRatio=1x1", file => 'live/bff-epgNowPlaying-RN-now.json' );
+	$NP->programNow( $first, sub { } );
+	advanceTime(900);
+	resetStubs();
+	route( qr{/epgNowPlaying/}, file => 'live/bff-epgNowPlaying-RN-now.json', defer => 1 );
+
+	my $c = collector();
+	Plugins::ABCListen::Live::_stateMenu( undef, $c->cb, {}, 'NSW' );
+	is( scalar( Slim::Networking::SimpleAsyncHTTP->deferred ), 6, '7 stations: 6 requests in flight' );
+	advanceTime(2.9);
+	is( $c->count, 0, 'waits at 2.9 s' );
+	advanceTime(0.1);
+	is( $c->count, 1, 'answers at 3 s' );
+
+	my $items = items_of($c);
+	is( scalar @$items, 7, '7 rows' );
+	my %row = map { id_of($_) => $_ } @$items;
+	is( $row{$first}->{line2}, "On air: The Radio National Hour \x{B7} Fran Kelly", 'the last-good program is used at the deadline' );
+	is( scalar( grep { exists $_->{line2} } @$items ), 1, 'stations without data get no on-air text' );
+
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is( epg_requests(), 7, 'the 7th request starts once a slot is free' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is( $c->count, 1, 'late answers do not call back again' );
+	is( scalar( Slim::Utils::Timers::pending() ), 0, 'no timer left' );
+
+	$c = collector();
+	Plugins::ABCListen::Live::_stateMenu( undef, $c->cb, {}, 'NSW' );
+	is( $c->count, 1, 'opened again: answered at once' );
+	is( scalar( grep { exists $_->{line2} } @{ items_of($c) } ), 7, '... with on-air text for every station' );
+	is( epg_requests(), 7, '... from the cache' );
+	ok( exists $row{$last}, '(the 7th station is listed)' );
+};
+
+subtest 'stationItem: cached and last-good data only, never a fetch; a new hash each time' => sub {
+	reset_all();
+	setTime( $RN_START + 1800 );
+
+	my $item = Plugins::ABCListen::Live->stationItem( undef, 'RN' );
+	ok( !exists $item->{line2}, 'nothing cached: no line2' );
+	is( epg_requests(), 0, 'stationItem makes no request' );
+
+	route( "${BFF}epgNowPlaying/RN/now?imageRatio=1x1", file => 'live/bff-epgNowPlaying-RN-now.json' );
+	$NP->programNow( 'RN', sub { } );
+	$item = Plugins::ABCListen::Live->stationItem( $PLAYER, 'RN' );
+	is( $item->{line2}, "On air: The Radio National Hour \x{B7} Fran Kelly", 'cached: line2' );
+	like( $item->{description}, qr/\AThe Radio National Hour \(6:00pm\x{2013}7:00pm\) \x{2014} Fran Kelly\n/, 'cached: description' );
+
+	advanceTime(900);
+	is( Plugins::ABCListen::Live->stationItem( undef, 'RN' )->{line2}, $item->{line2}, 'stale but still on air: the last-good program' );
+	is( epg_requests(), 1, '... still no request from stationItem' );
+
+	$item->{line2} = 'Event title';
+	isnt( Plugins::ABCListen::Live->stationItem( undef, 'RN' )->{line2}, 'Event title', 'changing a returned item does not change the next one' );
+
+	setTime( $RN_START + 3600 );
+	ok( !exists Plugins::ABCListen::Live->stationItem( undef, 'RN' )->{line2}, 'once the program has ended: no on-air text' );
 };
 
 # ---- robustness ----
