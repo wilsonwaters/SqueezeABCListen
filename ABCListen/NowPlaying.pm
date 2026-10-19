@@ -12,8 +12,9 @@ package Plugins::ABCListen::NowPlaying;
 #   NowPlaying->programNext($id, $cb)   the same for /next; fetched only when asked for (song info).
 #   NowPlaying->cached($id)             the fresh "now" program, or undef
 #   NowPlaying->lastGood($id)           the last "now" program fetched, while its end is still in the
-#                                       future, else undef (menus and metadata at a deadline or after
-#                                       a failure)
+#                                       future (also while a refresh is in flight, up to MAX_TTL
+#                                       after its end: ABC's EPG lags its schedule), else undef
+#                                       (menus and metadata at a deadline or after a failure)
 #   parse($data, $id)                   pure: the decoded epgNowPlaying body -> $program or undef
 #   timeSlot($program)                  pure: '6:00am–9:00am' (server local time), the start time
 #                                       alone without an end, undef without a start
@@ -101,9 +102,17 @@ sub lastGood {
 	return undef unless _isServiceId($id);
 
 	my $program = $LAST_GOOD{$id} or return undef;
-	return undef unless defined $program->{end} && $program->{end} > time();
+	return undef unless defined $program->{end};
 
-	return {%$program};
+	my $now = time();
+	return {%$program} if $program->{end} > $now;
+
+	# ABC's EPG lags behind its schedule (by minutes, CDN max-age ~3 min): while the refresh is in
+	# flight, the program it replaces is still ABC's latest answer, so Now Playing doesn't flicker
+	# to the station name between the cache expiring and the refresh landing
+	return {%$program} if $WAITERS{"now:$id"} && $now - $program->{end} < MAX_TTL;
+
+	return undef;
 }
 
 sub parse {

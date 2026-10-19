@@ -283,6 +283,38 @@ subtest 'program change: exactly one push; unchanged data: none; finished progra
 	is( scalar( pushes() ), 1, '... pushed once' );
 };
 
+subtest 'ABC\'s EPG lags the schedule: no flicker to the station name while refreshing' => sub {
+	reset_all();
+	my $player = player( '00:00:00:00:00:01', $RN_URL );
+	$PH->onStream( $player, $player->playingSong );    # 6:55pm: The Radio National Hour, until 7:00pm
+	$EPG{'RN/now'} = { content => fixture('live/bff-epgNowPlaying-RN-now.json'), defer => 1 };    # slow, still the ended program
+
+	my @titles;
+	my $status = sub {    # two status calls, the (slow) refresh lands, another status call
+		push @titles, map { $PH->getMetadataFor( $player, $RN_URL )->{title} } 1 .. 2;
+		Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+		push @titles, $PH->getMetadataFor( $player, $RN_URL )->{title};
+	};
+
+	advanceTime(305);    # 7:00:05: the program ended and the cache expired; the poll comes at 7:00:30
+	is( epg_requests(), 1, '(no refresh before the first status call)' );
+	$status->();
+	is( epg_requests(), 2, 'the status call starts the refresh' );
+	advanceTime(25);     # 7:00:30: the poll, answered from the cache
+	advanceTime(36);     # 7:01:06: expired again (60 s for an ended program): a status call refreshes
+	$status->();
+	advanceTime(84);     # 7:02:30: this time the poll (60 s after 7:01:30) starts the refresh
+	$status->();
+	is( epg_requests(), 4, '(3 refreshes: two from status calls, one from the poll)' );
+	is_deeply( [ grep { $_ ne 'The Radio National Hour' } @titles ], [], 'every status call shows the last program ABC reported (' . scalar(@titles) . ' calls), never the station name' );
+	is( scalar( pushes() ), 1, 'no push (unchanged)' );
+
+	$EPG{'RN/now'} = $LNL;
+	advanceTime(60);
+	is( $PH->getMetadataFor( $player, $RN_URL )->{title}, 'Late Night Live', 'ABC catches up: the new program' );
+	is( scalar( pushes() ), 2, '... pushed once' );
+};
+
 subtest 'a failed fetch or push: next poll in 30 s; logged at ERROR once' => sub {
 	reset_all();
 	$EPG{'RN/now'} = { code => 500 };
