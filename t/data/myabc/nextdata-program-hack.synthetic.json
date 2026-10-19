@@ -1,0 +1,113 @@
+{
+ "pageProps": {
+  "heroImageWithCTAPrepared": {
+   "heading": "Hack",
+   "heroImagePrepared": {
+    "alt": "",
+    "imgSrc": "https://live-production.wcms.abc-cdn.net.au/4ac00000000000000000000000000000?impolicy=wcms_crop_resize&cropH=1000&cropW=1000&xPos=0&yPos=0&width=862&height=862",
+    "ratio": "1x1",
+    "srcSet": [
+     "https://live-production.wcms.abc-cdn.net.au/4ac00000000000000000000000000000?impolicy=wcms_crop_resize&cropH=1000&cropW=1000&xPos=0&yPos=0&width=160&height=160 160w"
+    ],
+    "width": "862",
+    "height": "862"
+   },
+   "uri": "coremedia://program/90000201",
+   "attributionLinksPrepared": [
+    {
+     "url": "https://www.abc.net.au/triplej/",
+     "title": "triple j",
+     "screenReaderText": "Source:"
+    }
+   ]
+  },
+  "heroDescriptionPrepared": {
+   "descriptionPrepared": {
+    "descriptor": {
+     "type": "tagname",
+     "key": "div",
+     "props": {},
+     "children": [
+      {
+       "type": "tagname",
+       "key": "p",
+       "props": {},
+       "children": [
+        {
+         "type": "text",
+         "content": "About Hack."
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "presentersPrepared": [],
+  "programCollectionPrepared": {
+   "id": "90000202",
+   "items": [
+    {
+     "articleLink": "/triplej/programs/hack/hack-15-october-later/107400002",
+     "cardImagePrepared": {
+      "alt": "",
+      "imgSrc": "https://live-production.wcms.abc-cdn.net.au/4ac0000000000000000000000000000a?impolicy=wcms_crop_resize&cropH=1000&cropW=1000&xPos=0&yPos=0&width=862&height=862",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://live-production.wcms.abc-cdn.net.au/4ac0000000000000000000000000000a?impolicy=wcms_crop_resize&cropH=1000&cropW=1000&xPos=0&yPos=0&width=160&height=160 160w"
+      ],
+      "width": "862",
+      "height": "862"
+     },
+     "cardMediaIndicatorPrepared": {
+      "icon": "audio",
+      "duration": 1740
+     },
+     "contentLabelPrepared": null,
+     "contentUri": "coremedia://audioepisode/107400002",
+     "description": "Synopsis of Hack: The later story",
+     "cardId": "107400002",
+     "cardTitle": "Hack: The later story",
+     "noBorders": true,
+     "presentersPrepared": [],
+     "docType": "audioepisode",
+     "segments": null,
+     "programTemplate": "audio",
+     "cardAttributionPrepared": {
+      "publishedDate": "2026-10-15T08:00:00+00:00",
+      "publishedDateFormat": false
+     }
+    },
+    {
+     "articleLink": "/triplej/programs/hack/hack-15-october/107400001",
+     "cardImagePrepared": null,
+     "cardMediaIndicatorPrepared": {
+      "icon": "audio",
+      "duration": 1740
+     },
+     "contentLabelPrepared": null,
+     "contentUri": "coremedia://audioepisode/107400001",
+     "description": "Synopsis of Hack: The story",
+     "cardId": "107400001",
+     "cardTitle": "Hack: The story",
+     "noBorders": true,
+     "presentersPrepared": [],
+     "docType": "audioepisode",
+     "segments": null,
+     "programTemplate": "audio",
+     "cardAttributionPrepared": {
+      "publishedDate": "2026-10-15T08:00:00+00:00",
+      "publishedDateFormat": false
+     }
+    }
+   ],
+   "pagination": {
+    "offset": 0,
+    "size": 10,
+    "total": 120
+   }
+  },
+  "programTemplate": "audio",
+  "webDistributionRestricted": false
+ }
+}

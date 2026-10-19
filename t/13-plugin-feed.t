@@ -7,7 +7,7 @@
 # itself. The weighted top-level order: items from all hooks merged and stable-sorted by their
 # `weight` (missing = 100), weights stripped, a failing hook's error item at its declared weight.
 # Also the hooks' top level: the "Radio" link (since L1 a feed; its menus are in
-# t/21-live-menu.t), and the empty OnDemand/Discover/Search/MyABC hooks.
+# t/21-live-menu.t), and the other hooks' init and declared weights.
 
 use strict;
 use warnings;
@@ -243,16 +243,17 @@ subtest 'a hook module that fails to load (compile error): logged, and its slot 
 	is_deeply( items_of($c), [ $A, $B, $ERROR_ITEM, $D, $E ], 'the broken hook is one error item in its slot; the others keep their order' );
 };
 
-subtest 'default feed: "Home", "Radio", "Programs" and "Search" links; the other hooks add nothing yet' => sub {
+subtest 'default feed: "Home", "Radio", "Programs", "Search" and "My ABC listen" links' => sub {
 	resetStubs();
 	my $c = feed();
 
 	is( $c->count, 1, 'callback called once' );
 	my $items = items_of($c);
-	is( scalar @$items, 4, 'exactly four top-level items' );
+	is( scalar @$items, 5, 'exactly five top-level items' );
 	is( $items->[0]->{name}, 'Home', 'first "Home" (D1; exact keys in t/41)' );
 	is( $items->[2]->{name}, 'Programs', 'then "Programs" (O2; exact keys in t/33)' );
-	is( $items->[3]->{name}, 'Search',   'then "Search" (D3; exact keys in t/44)' );
+	is( $items->[3]->{name}, 'Search',        'then "Search" (D3; exact keys in t/44)' );
+	is( $items->[4]->{name}, 'My ABC listen', 'then "My ABC listen" (M2; exact keys in t/52)' );
 
 	my $live = $items->[1];
 	is( $live->{name}, 'Radio', 'named "Radio"' );
@@ -265,16 +266,7 @@ subtest 'default feed: "Home", "Radio", "Programs" and "Search" links; the other
 	check_names( $items, 'top level' );
 };
 
-subtest 'the empty hooks: init is harmless and menuItems answers [] once' => sub {
-	for my $name (qw(MyABC)) {
-		resetStubs();
-		my $class = "Plugins::ABCListen::$name";
-		ok( eval { $class->init(); 1 }, "$class->init does not die" ) or diag $@;
-		my $c = collector();
-		$class->menuItems( undef, $c->cb, {} );
-		is( $c->count, 1, "$class->menuItems calls back once" );
-		is_deeply( [ $c->args(0) ], [ [] ], "$class->menuItems answers []" );
-	}
+subtest 'the hooks: init is harmless; the declared weights' => sub {
 	ok( eval { Plugins::ABCListen::Episode->init(); 1 }, 'Episode->init does not die' );
 
 	resetStubs();
@@ -287,7 +279,8 @@ subtest 'the empty hooks: init is harmless and menuItems answers [] once' => sub
 	is_deeply( [ Plugins::ABCListen::Live->menuWeights ], [20], 'Live declares the "radio" weight (for its error item)' );
 	ok( eval { Plugins::ABCListen::OnDemand->init(); 1 }, 'OnDemand->init does not die' ) or diag $@;
 	is_deeply( [ Plugins::ABCListen::OnDemand->menuWeights ], [75], 'OnDemand declares the "programs" weight (O2; its menus are tested in t/33)' );
-	ok( !$_->can('menuWeights'), "$_ declares no weights yet" ) for map {"Plugins::ABCListen::$_"} qw(MyABC);
+	ok( eval { Plugins::ABCListen::MyABC->init(); 1 }, 'MyABC->init does not die' ) or diag $@;
+	is_deeply( [ Plugins::ABCListen::MyABC->menuWeights ], [90], 'MyABC declares the "myabc" weight (M2; its menus are tested in t/52)' );
 	is_deeply( [ Plugins::ABCListen::Discover->menuWeights ], [10], 'Discover declares the "home" weight (D1; its menus are tested in t/41)' );
 	ok( eval { Plugins::ABCListen::Search->init(); 1 }, 'Search->init does not die' ) or diag $@;
 	is_deeply( [ Plugins::ABCListen::Search->menuWeights ], [80], 'Search declares the "search" weight (D3; its menus are tested in t/44)' );
@@ -404,7 +397,8 @@ subtest 'a hook calling back with undef or a non-array becomes an error item' =>
 		is_deeply( items_of($c), [ $ERROR_ITEM, $C ], "Live calls back with $label: error item" );
 		ok( scalar errors_logged(), "Live calls back with $label: error logged" );
 
-		$c = feed_with( Live => sync_hook($A), MyABC => sub { $_[2]->($value) } );
+		# MyABC's declared weight (90) would sort its error item before $A (100): undeclared here
+		$c = feed_with( Live => sync_hook($A), MyABC => sub { $_[2]->($value) }, declare => { MyABC => undef } );
 		is_deeply( items_of($c), [ $A, $ERROR_ITEM ], "MyABC calls back with $label: error item" );
 	}
 
@@ -486,7 +480,8 @@ subtest 'a hook that never calls back: error item after HOOK_TIMEOUT, the feed s
 	is( $c->count, 0, 'Live answered, MyABC silent: still waiting' );
 	advanceTime( $TIMEOUT - 3 );
 	is( $c->count, 1, 'Live answered, MyABC silent: callback at the timeout' );
-	is_deeply( items_of($c), [ $A, $ERROR_ITEM ], 'Live answered, MyABC silent: order kept' );
+	# the timeout's error item sorts at MyABC's declared weight (90, M2), before $A (no weight: 100)
+	is_deeply( items_of($c), [ $ERROR_ITEM, $A ], 'Live answered, MyABC silent: the error item at MyABC\'s weight' );
 
 	clearTime();
 };
