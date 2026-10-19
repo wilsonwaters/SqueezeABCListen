@@ -43,6 +43,16 @@ subtest 'constants' => sub {
 	ok( -f 'ABCListen/HTML/EN/' . ICON, 'the icon path points at the shipped icon file' );
 };
 
+subtest 'top-level menu weights' => sub {
+	my %expected = (
+		home => 10, radio => 20, podcasts => 30, news => 40, sport => 50,
+		kids => 60, audiobooks => 70, programs => 75, search => 80, myabc => 90,
+	);
+	is( topWeight($_), $expected{$_}, "topWeight('$_') is $expected{$_}" ) for sort { $expected{$a} <=> $expected{$b} } keys %expected;
+	is( DEFAULT_TOP_WEIGHT, 100, 'items without a weight sort at 100, after every named weight' );
+	is( topWeight($_), undef, 'topWeight(' . show($_) . ') is undef' ) for ( undef, '', 'Radio', 'live', 'unknown' );
+};
+
 # 2026-10-19 06:30 AEDT (Sydney, UTC+11) = 2026-10-18 19:30 UTC
 my $T = timegm( 0, 30, 19, 18, 9, 2026 );
 

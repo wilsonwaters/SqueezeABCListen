@@ -4,7 +4,7 @@
 # Sections are in wave order: F1 | F2 F3 R1 M1 | L1 O1 O2 | L2 L5 O3 D1 D3 M2 | L3 L4 O4 D2 | R2 | R3.
 # Station names (triple j, Radio National, ...) are ABC proper nouns and are not string tokens.
 
-# === F1 === Foundation: plugin name, description, generic error
+# === F1 === Foundation: plugin name, description, generic error, top-level menu names
 
 PLUGIN_ABCLISTEN
 	EN	ABC listen
@@ -14,6 +14,28 @@ PLUGIN_ABCLISTEN_DESC
 
 PLUGIN_ABCLISTEN_ERROR
 	EN	Sorry, part of the ABC listen menu could not be loaded. Please try again later.
+
+# Top-level menu names (mirroring the ABC listen app; order: Util::topWeight). Tokens that already
+# name one of these menus are reused from their owner's section: PLUGIN_ABCLISTEN_PODCASTS (D2),
+# PLUGIN_ABCLISTEN_SPORT (L1), PLUGIN_ABCLISTEN_SEARCH (D3), PLUGIN_ABCLISTEN_MY_ABC (M2).
+
+PLUGIN_ABCLISTEN_HOME
+	EN	Home
+
+PLUGIN_ABCLISTEN_RADIO
+	EN	Radio
+
+PLUGIN_ABCLISTEN_NEWS
+	EN	News
+
+PLUGIN_ABCLISTEN_KIDS
+	EN	Kids listen
+
+PLUGIN_ABCLISTEN_AUDIOBOOKS
+	EN	Audiobooks
+
+PLUGIN_ABCLISTEN_PROGRAMS_AZ
+	EN	Programs (A–Z)
 
 # === F2 === abclisten:// protocol handler
 
@@ -217,7 +239,7 @@ PLUGIN_ABCLISTEN_EMPTY_COLLECTION
 # === D3 === Search and LMS global search
 
 PLUGIN_ABCLISTEN_SEARCH
-	EN	Search ABC listen
+	EN	Search
 
 PLUGIN_ABCLISTEN_SEARCH_PROGRAMS
 	EN	Programs (%s)

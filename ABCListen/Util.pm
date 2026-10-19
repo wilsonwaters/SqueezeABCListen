@@ -2,6 +2,7 @@ package Plugins::ABCListen::Util;
 
 # Shared constants and pure helper functions for the ABC listen plugin:
 #   - constants: display name, icon, cache namespace, ABC site base;
+#   - topWeight: the canonical weights that order the top-level menu (home, radio, ...);
 #   - parseISO8601: ISO-8601 date-times with a UTC offset (ABC's APIs send 'Z' or an offset) -> epoch;
 #   - display helpers in the LMS server's local time zone (localtime): friendlyDate,
 #     friendlyTime, friendlyDuration. ABC data spans AEST/AEDT/ACST/ACDT/AWST, so times are
@@ -23,6 +24,7 @@ use Slim::Utils::Cache;
 use Exporter qw(import);
 our @EXPORT_OK = qw(
 	DISPLAY_NAME ICON CACHE_NAMESPACE SITE_BASE EPISODE_META_TTL
+	DEFAULT_TOP_WEIGHT topWeight
 	parseISO8601 friendlyDate friendlyTime friendlyDuration
 	decodeEntities
 	liveUrl episodeUrl parseUrl
@@ -39,6 +41,34 @@ use constant EPISODE_META_TTL => 30 * 86400;     # seconds
 
 my @DAY_NAMES   = qw(Sun Mon Tue Wed Thu Fri Sat);
 my @MONTH_NAMES = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
+
+# ---------------------------------------------------------------------------
+# Top-level menu weights
+# ---------------------------------------------------------------------------
+
+# The top-level menu mirrors the ABC listen app/site navigation. Hooks put a `weight` on each
+# top-level item (Plugin.pm sorts by it), always by name through topWeight, never a bare number.
+my %TOP_WEIGHTS = (
+	home       => 10,
+	radio      => 20,
+	podcasts   => 30,
+	news       => 40,
+	sport      => 50,
+	kids       => 60,
+	audiobooks => 70,
+	programs   => 75,
+	search     => 80,
+	myabc      => 90,
+);
+
+# Weight of a top-level item without one (or with a non-numeric one).
+use constant DEFAULT_TOP_WEIGHT => 100;
+
+# topWeight('radio') -> 20. undef for an unknown name.
+sub topWeight {
+	my $name = shift;
+	return defined $name ? $TOP_WEIGHTS{$name} : undef;
+}
 
 # ---------------------------------------------------------------------------
 # Date and time

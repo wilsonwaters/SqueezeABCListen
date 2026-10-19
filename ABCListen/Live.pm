@@ -1,8 +1,8 @@
 package Plugins::ABCListen::Live;
 
-# Live radio hook (hook API: see Plugin.pm). F1 vertical slice: one "Live radio" link holding the
-# five national networks, played from ABC's plain StreamGuys Icecast streams (HE-AAC). These are
-# the live streams Lyrion plays natively everywhere; ABC's HLS streams need a third-party plugin.
+# Live radio hook (hook API: see Plugin.pm). F1 vertical slice: one top-level "Radio" link holding
+# the five national networks, played from ABC's plain StreamGuys Icecast streams (HE-AAC). These
+# are the live streams Lyrion plays natively everywhere; ABC's HLS streams need a third-party plugin.
 #
 # The stations are a small table keyed by PAPI/BFF service id, so F2 can switch the URLs to
 # Plugins::ABCListen::Util::liveUrl(<ID>); L1 replaces the table with the full station catalogue.
@@ -37,14 +37,18 @@ my @ORDER = qw(TRIPLEJ DOUBLEJ RN CLASSIC JAZZ);
 
 sub init { return }
 
+# The top-level "Radio" item sorts at the "radio" weight (see Plugin.pm, Util::topWeight).
+sub menuWeights { Plugins::ABCListen::Util::topWeight('radio') }
+
 sub menuItems {
 	my ( $class, $client, $cb, $args ) = @_;
 
 	$cb->( [ {
-		name  => cstring( $client, 'PLUGIN_ABCLISTEN_LIVE_RADIO' ),
-		type  => 'link',
-		image => Plugins::ABCListen::Util::ICON,
-		items => [ map { _stationItem($_) } @ORDER ],
+		name   => cstring( $client, 'PLUGIN_ABCLISTEN_RADIO' ),
+		type   => 'link',
+		image  => Plugins::ABCListen::Util::ICON,
+		items  => [ map { _stationItem($_) } @ORDER ],
+		weight => Plugins::ABCListen::Util::topWeight('radio'),
 	} ] );
 }
 

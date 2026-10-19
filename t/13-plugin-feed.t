@@ -4,14 +4,19 @@
 # Search -> MyABC; feed = the hooks' items concatenated in that order, one callback) and its
 # failure handling: dying hooks, modules that fail to load, bad callback values, double callbacks,
 # hooks that never call back (timeout), concurrent requests and errors in the feed callback
-# itself. Also the F1 hook stubs: the "Live radio" link with its 5 stations (exact item keys),
-# and the empty OnDemand/Discover/Search/MyABC hooks.
+# itself. The weighted top-level order: items from all hooks merged and stable-sorted by their
+# `weight` (missing = 100), weights stripped, a failing hook's error item at its declared weight.
+# Also the F1 hook stubs: the top-level "Radio" link with its 5 stations (exact item keys), and
+# the empty OnDemand/Discover/Search/MyABC hooks.
 
 use strict;
 use warnings;
+use utf8;
 
 use ABCListenTest qw(:all);
 use Test::More;
+
+binmode( Test::More->builder->$_, ':encoding(UTF-8)' ) for qw(output failure_output todo_output);
 
 use File::Path ();
 use File::Temp ();
@@ -21,6 +26,7 @@ use Slim::Utils::Strings qw(string);
 use ABCListenTest::FakeClient;
 
 use Plugins::ABCListen::Plugin;
+use Plugins::ABCListen::Util qw(topWeight);
 use Plugins::ABCListen::Live;
 use Plugins::ABCListen::OnDemand;
 use Plugins::ABCListen::Discover;
@@ -31,7 +37,8 @@ use Plugins::ABCListen::Episode;
 my @NAMES = qw(Live OnDemand Discover Search MyABC);
 my @HOOKS = map {"Plugins::ABCListen::$_"} @NAMES;
 
-my %ORIG = map { $_ => \&{"Plugins::ABCListen::${_}::menuItems"} } @NAMES;
+my %ORIG         = map { $_ => \&{"Plugins::ABCListen::${_}::menuItems"} } @NAMES;
+my %ORIG_WEIGHTS = map { $_ => "Plugins::ABCListen::$_"->can('menuWeights') } @NAMES;
 
 my $ICON = 'plugins/ABCListen/html/images/icon.png';
 
@@ -46,9 +53,12 @@ my $ERROR_ITEM = { name => $ERROR_TEXT, type => 'text' };
 
 # Build the top-level feed with the given hook implementations, keyed by hook name (default: the
 # real hooks). An undef implementation removes the method, as if the module had failed to load.
+# declare => { Name => [weights] | \&code | undef } replaces a hook's menuWeights (default: the
+# real one, if any; undef removes it).
 # Returns the collector that received the feed callback (unless cb => \&code replaces it).
 sub feed {
-	my %impl = @_;
+	my %impl    = @_;
+	my %declare = %{ $impl{declare} || {} };
 
 	no strict 'refs';
 	no warnings 'redefine';
@@ -57,10 +67,22 @@ sub feed {
 	local *Plugins::ABCListen::Discover::menuItems;
 	local *Plugins::ABCListen::Search::menuItems;
 	local *Plugins::ABCListen::MyABC::menuItems;
+	local *Plugins::ABCListen::Live::menuWeights;
+	local *Plugins::ABCListen::OnDemand::menuWeights;
+	local *Plugins::ABCListen::Discover::menuWeights;
+	local *Plugins::ABCListen::Search::menuWeights;
+	local *Plugins::ABCListen::MyABC::menuWeights;
 
 	for my $name (@NAMES) {
 		my $code = exists $impl{$name} ? $impl{$name} : $ORIG{$name};
 		*{"Plugins::ABCListen::${name}::menuItems"} = $code if $code;
+
+		my $weights = exists $declare{$name} ? $declare{$name} : $ORIG_WEIGHTS{$name};
+		if ( ref $weights eq 'ARRAY' ) {
+			my @list = @$weights;
+			$weights = sub {@list};
+		}
+		*{"Plugins::ABCListen::${name}::menuWeights"} = $weights if $weights;
 	}
 
 	my $c = collector();
@@ -221,7 +243,7 @@ subtest 'a hook module that fails to load (compile error): logged, and its slot 
 	is_deeply( items_of($c), [ $A, $B, $ERROR_ITEM, $D, $E ], 'the broken hook is one error item in its slot; the others keep their order' );
 };
 
-subtest 'default feed: one "Live radio" link; the other hooks add nothing yet' => sub {
+subtest 'default feed: one "Radio" link; the other hooks add nothing yet' => sub {
 	resetStubs();
 	my $c = feed();
 
@@ -230,9 +252,11 @@ subtest 'default feed: one "Live radio" link; the other hooks add nothing yet' =
 	is( scalar @$items, 1, 'exactly one top-level item' );
 
 	my $live = $items->[0];
-	is( $live->{name}, 'Live radio', 'named "Live radio"' );
-	is( $live->{name}, string('PLUGIN_ABCLISTEN_LIVE_RADIO'), 'from PLUGIN_ABCLISTEN_LIVE_RADIO' );
+	is( $live->{name}, 'Radio', 'named "Radio"' );
+	is( $live->{name}, string('PLUGIN_ABCLISTEN_RADIO'), 'from PLUGIN_ABCLISTEN_RADIO' );
 	is( $live->{type}, 'link', 'a link' );
+	is( $live->{image}, $ICON, 'with the plugin icon' );
+	ok( !exists $live->{weight}, 'its weight was used for sorting and removed' );
 	is( ref $live->{items}, 'ARRAY', 'with its items inline' );
 
 	my @stations = (
@@ -284,7 +308,11 @@ subtest 'the empty hooks: init is harmless and menuItems answers [] once' => sub
 	my $c = collector();
 	Plugins::ABCListen::Live->menuItems( undef, $c->cb, {} );
 	is( $c->count, 1, 'Live->menuItems calls back once' );
-	is( scalar @{ ( $c->args(0) )[0] }, 1, 'Live->menuItems answers one item' );
+	my ($liveItems) = $c->args(0);
+	is( scalar @$liveItems, 1, 'Live->menuItems answers one item' );
+	is( $liveItems->[0]->{weight}, Plugins::ABCListen::Util::topWeight('radio'), 'the Radio item carries the "radio" weight (20)' );
+	is_deeply( [ Plugins::ABCListen::Live->menuWeights ], [20], 'Live declares the "radio" weight (for its error item)' );
+	ok( !$_->can('menuWeights'), "$_ declares no weights yet" ) for map {"Plugins::ABCListen::$_"} qw(OnDemand Discover Search MyABC);
 	is( scalar errors_logged(), 0, 'no errors logged' );
 };
 
@@ -550,6 +578,118 @@ subtest 'an error in the feed callback is not blamed on a hook' => sub {
 	is( scalar Slim::Utils::Timers->pending, 0, 'asynchronous hook: timeout timer killed' );
 
 	clearTime();
+};
+
+# ---- weighted top-level ordering ----
+
+my @TOP = qw(home radio podcasts news sport kids audiobooks programs search myabc);
+my %TOP_ITEM = map { $_ => { name => "Top $_", type => 'link', url => "https://example.test/$_" } } @TOP;
+
+# a top-level item for $name carrying the canonical weight (a fresh copy each time)
+sub top { my $name = shift; return { %{ $TOP_ITEM{$name} }, weight => topWeight($name) } }
+
+sub names_of { [ map { $_->{name} } @{ items_of(shift) || [] } ] }
+
+subtest 'weights: items from all hooks are merged and sorted by weight' => sub {
+	resetStubs();
+
+	my $radio = top('radio');
+	my $c = feed(
+		Live     => sync_hook( $radio, top('sport') ),
+		OnDemand => sync_hook( top('programs'), top('podcasts'), top('audiobooks') ),
+		Discover => sync_hook( top('kids'), top('home'), top('news') ),
+		Search   => sync_hook( top('search') ),
+		MyABC    => sync_hook( top('myabc') ),
+	);
+	is( $c->count, 1, 'callback once' );
+	is_deeply( names_of($c), [ map {"Top $_"} @TOP ], 'interleaved across hooks: home, radio, podcasts, news, sport, kids, audiobooks, programs, search, myabc' );
+	is_deeply( items_of($c), [ map { $TOP_ITEM{$_} } @TOP ], 'the items are unchanged apart from the weight key' );
+	is( scalar( grep { exists $_->{weight} } @{ items_of($c) } ), 0, 'no item in the feed has a weight key' );
+	is( $radio->{weight}, 20, "the hook's own item hash keeps its weight (the feed holds copies)" );
+
+	# async answers are sorted the same way
+	setTime($T0);
+	$c = feed_with( Live => later_hook( 2, top('radio') ), Discover => sync_hook( top('home') ), MyABC => later_hook( 1, top('myabc') ) );
+	advanceTime(2);
+	is_deeply( names_of($c), [ 'Top home', 'Top radio', 'Top myabc' ], 'asynchronous answers: sorted by weight' );
+	clearTime();
+};
+
+subtest 'weights: ties keep hook order, then item order; missing or non-numeric weight is 100' => sub {
+	resetStubs();
+
+	my $n = sub { my ( $name, $weight ) = @_; return { name => $name, type => 'text', ( @_ > 1 ? ( weight => $weight ) : () ) } };
+	my $c = feed(
+		Live     => sync_hook( $n->( 'L1', 50 ), $n->( 'L2', 50 ) ),
+		OnDemand => sync_hook( $n->( 'O1', 50 ), $n->('O2') ),
+		Discover => sync_hook( $n->( 'D1', 10 ), $n->( 'D2', 'abc' ), $n->( 'D3', undef ), $n->( 'D4', '' ) ),
+		Search   => sync_hook( $n->( 'S1', 100 ), $n->( 'S2', 99.5 ) ),
+		MyABC    => sync_hook( $n->( 'M1', 150 ), $n->( 'M2', 0 ), $n->( 'M3', -5 ) ),
+	);
+	is_deeply(
+		names_of($c),
+		[qw(M3 M2 D1 L1 L2 O1 S2 O2 D2 D3 D4 S1 M1)],
+		'stable: equal weights keep hook order then item order; missing, undef, empty and non-numeric weights sort as 100'
+	);
+	is( scalar( grep { exists $_->{weight} } @{ items_of($c) } ), 0, 'every weight key removed, valid or not' );
+
+	$c = feed_with( Live => sync_hook( $n->('A'), $n->('B') ), MyABC => sync_hook( $n->('C') ) );
+	is_deeply( names_of($c), [qw(A B C)], 'no weights at all: plain hook order (as before weights existed)' );
+};
+
+subtest 'weights: the error item for a failing hook keeps that hook\'s position' => sub {
+	resetStubs();
+
+	# Live (the real hook) declares radio = 20
+	my $c = feed_with( Live => sub { die "live broke\n" }, OnDemand => sync_hook( top('podcasts') ), Discover => sync_hook( top('news'), top('home') ) );
+	is_deeply( names_of($c), [ 'Top home', $ERROR_TEXT, 'Top podcasts', 'Top news' ], 'dying Live: error item at its declared weight (radio, 20)' );
+	is_deeply( items_of($c)->[1], $ERROR_ITEM, 'the error item has no weight key' );
+
+	$c = feed_with( Live => sub { $_[2]->(undef) }, Discover => sync_hook( top('home'), top('news') ) );
+	is_deeply( names_of($c), [ 'Top home', $ERROR_TEXT, 'Top news' ], 'Live calls back with undef: same position' );
+
+	$c = feed( Live => sync_hook( top('radio') ), OnDemand => sub { die "x\n" }, Discover => sync_hook( top('home'), top('news') ),
+		Search => sync_hook(), MyABC => sync_hook(), declare => { OnDemand => [ 75, 30, 'x', 70 ] } );
+	is_deeply( names_of($c), [ 'Top home', 'Top radio', $ERROR_TEXT, 'Top news' ], 'several declared weights: the lowest numeric one (30)' );
+
+	$c = feed_with( Search => sub { die "x\n" }, MyABC => sync_hook( top('myabc'), { name => 'Unweighted', type => 'text' } ), Live => sync_hook( top('radio') ) );
+	is_deeply( names_of($c), [ 'Top radio', 'Top myabc', $ERROR_TEXT, 'Unweighted' ], 'no declared weights: 100, before a later hook\'s unweighted item' );
+
+	$c = feed_with( Live => sub { die "x\n" }, Discover => sync_hook( top('home'), top('myabc') ), declare => { Live => sub { die "weights broke\n" } } );
+	is_deeply( names_of($c), [ 'Top home', 'Top myabc', $ERROR_TEXT ], 'menuWeights dies: 100' );
+
+	$c = feed_with( Live => sub { die "x\n" }, Discover => sync_hook( top('myabc') ), declare => { Live => [ 'abc', undef ] } );
+	is_deeply( names_of($c), [ 'Top myabc', $ERROR_TEXT ], 'only non-numeric declared weights: 100' );
+
+	$c = feed_with( Live => undef, Discover => sync_hook( top('home'), top('podcasts') ) );
+	is_deeply( names_of($c), [ 'Top home', $ERROR_TEXT, 'Top podcasts' ], 'missing menuItems (module did not load) with menuWeights declared: its weight' );
+
+	resetStubs();
+	setTime($T0);
+	$c = feed_with( Live => never_hook(), OnDemand => sync_hook( top('podcasts') ), Discover => sync_hook( top('home') ) );
+	advanceTime($TIMEOUT);
+	is_deeply( names_of($c), [ 'Top home', $ERROR_TEXT, 'Top podcasts' ], 'timeout: error item at the silent hook\'s declared weight' );
+	clearTime();
+};
+
+subtest 'top-level menu names are pre-seeded for every canonical weight' => sub {
+	my %names = (
+		home       => [ PLUGIN_ABCLISTEN_HOME        => 'Home' ],
+		radio      => [ PLUGIN_ABCLISTEN_RADIO       => 'Radio' ],
+		podcasts   => [ PLUGIN_ABCLISTEN_PODCASTS    => 'Podcasts' ],
+		news       => [ PLUGIN_ABCLISTEN_NEWS        => 'News' ],
+		sport      => [ PLUGIN_ABCLISTEN_SPORT       => 'Sport' ],
+		kids       => [ PLUGIN_ABCLISTEN_KIDS        => 'Kids listen' ],
+		audiobooks => [ PLUGIN_ABCLISTEN_AUDIOBOOKS  => 'Audiobooks' ],
+		programs   => [ PLUGIN_ABCLISTEN_PROGRAMS_AZ => 'Programs (A–Z)' ],
+		search     => [ PLUGIN_ABCLISTEN_SEARCH      => 'Search' ],
+		myabc      => [ PLUGIN_ABCLISTEN_MY_ABC      => 'My ABC listen' ],
+	);
+	for my $name (@TOP) {
+		my ( $token, $text ) = @{ $names{$name} };
+		ok( defined topWeight($name), "'$name' has a weight" );
+		is( string($token), $text, "$name: $token is '$text'" );
+	}
 };
 
 subtest 'the error item is a readable text item (screen readers, hardware displays)' => sub {
