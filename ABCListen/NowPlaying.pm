@@ -284,10 +284,14 @@ sub _ttl {
 	return $ttl < MIN_TTL ? MIN_TTL : $ttl > MAX_TTL ? MAX_TTL : $ttl;
 }
 
-# HTTP.pm reports a JSON `null` (or other non-object) body as an error.
+# HTTP.pm reports a JSON `null` (or other non-object) body as an error: "Unexpected JSON response
+# (not an object or array)", or, with LMS's JSON::XS (no allow_nonref), "Invalid JSON response:
+# JSON text must be an object or array (but found number, string, true, false or null, ...".
 sub _isEmptyBody {
 	my $failure = shift;
-	return ref $failure eq 'HASH' && defined $failure->{message} && $failure->{message} =~ /\AUnexpected JSON response \(not an object or array\)/ ? 1 : 0;
+	my $message = ref $failure eq 'HASH' ? $failure->{message} : undef;
+	return defined $message && !ref $message
+		&& $message =~ /\A(?:Unexpected JSON response \(not an object or array\)|Invalid JSON response: JSON text must be an object or array\b)/ ? 1 : 0;
 }
 
 # ---------------------------------------------------------------------------

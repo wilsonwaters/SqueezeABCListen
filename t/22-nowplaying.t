@@ -205,6 +205,24 @@ subtest 'nothing on air: {} and null are answered undef, cached 60 s, not logged
 		is( epg_requests(), 1, "$body: cached" );
 		is( scalar( logged('WARN') ), 0, "$body: no WARN" );
 	}
+
+	# LMS's JSON::XS rejects a `null` body instead of decoding it (HTTP.pm's message, seen on the testbed)
+	reset_all();
+	route( epg_url('CLASSIC2'), content => 'null' );
+	{
+		no warnings 'redefine';
+		local *Plugins::ABCListen::HTTP::_decodeJSON = sub {
+			( undef, 'Invalid JSON response: JSON text must be an object or array (but found number, string, true, false or null, use allow_nonref to allow this)' );
+		};
+		my $c = now_cb('CLASSIC2');
+		is_deeply( [ $c->args(0) ], [undef], 'null rejected by JSON::XS: nothing on air, no error' );
+	}
+	is( scalar( logged('WARN') ), 0, '... no WARN' );
+
+	reset_all();
+	route( epg_url('RN'), content => '<html>oops</html>' );
+	now_cb('RN');
+	is( scalar( logged('WARN') ), 1, 'other invalid JSON: a failure (WARN)' );
 };
 
 subtest 'errors: negative cache 60 s, WARN once per run of failures' => sub {
