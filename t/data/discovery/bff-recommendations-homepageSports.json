@@ -1,0 +1,142 @@
+{
+  "analytics": {
+    "contentSource": "recommendation",
+    "contentType": "collection",
+    "uri": "recommendation://collection/listen-app-popular-sport",
+    "moduleUri": "app://module/abc-listen-web-homepage-sports",
+    "id": "listen-app-popular-sport",
+    "variantId": "listen-app-popular-sport-variant-1",
+    "title": {
+      "title": "Sport"
+    },
+    "items": [
+      {
+        "recipeId": "mostpopular-1d-listen-app-sport-published-1d",
+        "uri": "coremedia://audioepisode/107285258"
+      },
+      {
+        "recipeId": "mostpopular-1d-listen-app-sport-published-1d",
+        "uri": "coremedia://audioepisode/107283010"
+      },
+      {
+        "recipeId": "mostpopular-1d-listen-app-sport-published-2d",
+        "uri": "coremedia://audioepisode/107281470"
+      },
+      {
+        "recipeId": "mostpopular-1d-listen-app-sport-published-2d",
+        "uri": "coremedia://audio/107280752"
+      }
+    ]
+  },
+  "title": "Sport",
+  "items": [
+    {
+      "articleLink": "/listen/programs/best-of-abc-sport-podcast/cricket-mkhaya-ntini-on-the-highs-and-lows-of-his-career/107285258",
+      "cardImagePrepared": {
+        "alt": "ABC Best of ABC Sport graphic with trophy on podium surrounded by cricket, football, basketball and soccer gear.",
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/c02733fa75c621321c0e9e4dbedc0dcb?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+        "ratio": "1x1",
+        "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/c02733fa75c621321c0e9e4dbedc0dcb?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w",
+          "https://live-production.wcms.abc-cdn.net.au/c02733fa75c621321c0e9e4dbedc0dcb?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862 862w"
+        ]
+      },
+      "cardMediaIndicatorPrepared": {
+        "icon": "audio",
+        "duration": 2306
+      },
+      "contentUri": "coremedia://audioepisode/107285258",
+      "cardId": "107285258",
+      "cardTitle": "Cricket: Makhaya Ntini on the highs and lows of his career",
+      "noBorders": false,
+      "imagePositionPrepared": {
+        "mobile": "top",
+        "tablet": "top"
+      },
+      "hasMobileFeatured": "all",
+      "programID": 11998518,
+      "recipeId": "mostpopular-1d-listen-app-sport-published-1d"
+    },
+    {
+      "articleLink": "/listen/programs/best-of-abc-sport-podcast/a-league-weekly-i-was-at-the-wanderers-last-season-and-we-leaked/107283010",
+      "cardImagePrepared": {
+        "alt": "Kosta Barbarouses celebrates a goal for Melbourne Victory",
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/6504db1a9a5dc2f4c9774b8842537b8e?impolicy=wcms_crop_resize&cropH=2000&cropW=2000&xPos=500&yPos=0&width=862&height=862",
+        "ratio": "1x1",
+        "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/6504db1a9a5dc2f4c9774b8842537b8e?impolicy=wcms_crop_resize&cropH=695&cropW=695&xPos=1765&yPos=42&width=160&height=160 160w",
+          "https://live-production.wcms.abc-cdn.net.au/6504db1a9a5dc2f4c9774b8842537b8e?impolicy=wcms_crop_resize&cropH=2000&cropW=2000&xPos=500&yPos=0&width=862&height=862 862w"
+        ]
+      },
+      "cardMediaIndicatorPrepared": {
+        "icon": "audio",
+        "duration": 1800
+      },
+      "contentUri": "coremedia://audioepisode/107283010",
+      "cardId": "107283010",
+      "cardTitle": "A-League Weekly: \"I was at the Wanderers last season and we leaked goals!\"",
+      "noBorders": false,
+      "imagePositionPrepared": {
+        "mobile": "top",
+        "tablet": "top"
+      },
+      "hasMobileFeatured": "all",
+      "programID": 11998518,
+      "recipeId": "mostpopular-1d-listen-app-sport-published-1d"
+    },
+    {
+      "articleLink": "/listen/programs/abc-cricket-podcast/grandstand-at-stumps-boland-shines-through-the-rain/107281470",
+      "cardImagePrepared": {
+        "alt": "Scott Boland celebrates",
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/01c6fcd0f54f2f62f7dfcbe685d4dd6e?impolicy=wcms_crop_resize&cropH=682&cropW=682&xPos=341&yPos=0&width=862&height=862",
+        "ratio": "1x1",
+        "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/01c6fcd0f54f2f62f7dfcbe685d4dd6e?impolicy=wcms_crop_resize&cropH=636&cropW=636&xPos=388&yPos=25&width=160&height=160 160w",
+          "https://live-production.wcms.abc-cdn.net.au/01c6fcd0f54f2f62f7dfcbe685d4dd6e?impolicy=wcms_crop_resize&cropH=682&cropW=682&xPos=341&yPos=0&width=862&height=862 862w"
+        ]
+      },
+      "cardMediaIndicatorPrepared": {
+        "icon": "audio",
+        "duration": 1440
+      },
+      "contentUri": "coremedia://audioepisode/107281470",
+      "cardId": "107281470",
+      "cardTitle": "Grandstand at Stumps: Boland shines through the rain",
+      "noBorders": false,
+      "imagePositionPrepared": {
+        "mobile": "top",
+        "tablet": "top"
+      },
+      "hasMobileFeatured": "all",
+      "programID": 10584496,
+      "recipeId": "mostpopular-1d-listen-app-sport-published-2d"
+    },
+    {
+      "articleLink": "/listen/programs/best-of-abc-sport-podcast/summer-grandstand-aussies-abroad-li-tu/107280752",
+      "cardImagePrepared": {
+        "alt": "Li Tu points",
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/5b4dcecac58403ac6462ff4d62bb0930?impolicy=wcms_crop_resize&cropH=1524&cropW=1524&xPos=0&yPos=65&width=862&height=862",
+        "ratio": "1x1",
+        "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/5b4dcecac58403ac6462ff4d62bb0930?impolicy=wcms_crop_resize&cropH=1524&cropW=1524&xPos=0&yPos=65&width=160&height=160 160w",
+          "https://live-production.wcms.abc-cdn.net.au/5b4dcecac58403ac6462ff4d62bb0930?impolicy=wcms_crop_resize&cropH=1524&cropW=1524&xPos=0&yPos=65&width=862&height=862 862w"
+        ]
+      },
+      "cardMediaIndicatorPrepared": {
+        "icon": "audio",
+        "duration": 1000
+      },
+      "contentUri": "coremedia://audio/107280752",
+      "cardId": "107280752",
+      "cardTitle": "Aussies Abroad: The reality of life on tour for a tennis pro outside the top 100",
+      "noBorders": false,
+      "imagePositionPrepared": {
+        "mobile": "top",
+        "tablet": "top"
+      },
+      "hasMobileFeatured": "all",
+      "programID": 11998518,
+      "recipeId": "mostpopular-1d-listen-app-sport-published-2d"
+    }
+  ]
+}

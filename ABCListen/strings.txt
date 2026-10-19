@@ -340,11 +340,18 @@ PLUGIN_ABCLISTEN_MORE_FROM
 PLUGIN_ABCLISTEN_POPULAR_NOW
 	EN	Popular now
 
+# The podcast categories entry in the top-level Podcasts menu
 PLUGIN_ABCLISTEN_CATEGORIES
-	EN	Categories
+	EN	Browse by category
 
 PLUGIN_ABCLISTEN_PODCASTS
 	EN	Podcasts
+
+PLUGIN_ABCLISTEN_POPULAR_SPORT
+	EN	Popular in sport
+
+PLUGIN_ABCLISTEN_PODCASTS_AZ
+	EN	All podcasts A–Z
 
 # === R2 === Docs and acceptance smoke test (no runtime strings; R2 may reword PLUGIN_ABCLISTEN_DESC in F1's section)
 

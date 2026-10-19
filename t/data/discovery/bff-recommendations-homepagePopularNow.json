@@ -1,0 +1,78 @@
+{
+  "analytics": {
+    "contentSource": "recommendation",
+    "contentType": "collection",
+    "uri": "recommendation://collection/listen-app-trending-july2024",
+    "moduleUri": "app://module/abc-listen-web-homepage-popular-now",
+    "id": "listen-app-trending-july2024",
+    "variantId": "this-weeks-most-listened-1w-23Apr25",
+    "title": {
+      "title": "This Week’s Most Listened"
+    },
+    "items": [
+      {
+        "recipeId": "mostpopular-1w-listen-app-dedup-program",
+        "uri": "coremedia://audioepisode/107238050"
+      },
+      {
+        "recipeId": "mostpopular-1w-listen-app-dedup-program",
+        "uri": "coremedia://audioepisode/107256246"
+      }
+    ]
+  },
+  "title": "This Week’s Most Listened",
+  "items": [
+    {
+      "articleLink": "/listen/programs/conversations/mimi-kwa-hong-kong-family-perth/107238050",
+      "cardImagePrepared": {
+        "alt": "Conversations",
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/9419a7d446ad3f4620983df5d8d048f1?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+        "ratio": "1x1",
+        "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/9419a7d446ad3f4620983df5d8d048f1?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w"
+        ]
+      },
+      "cardMediaIndicatorPrepared": {
+        "icon": "audio",
+        "duration": 2913
+      },
+      "contentUri": "coremedia://audioepisode/107238050",
+      "cardId": "107238050",
+      "cardTitle": "A little girl with a life split in three — how Mimi made it [PART I]",
+      "noBorders": false,
+      "imagePositionPrepared": {
+        "mobile": "top",
+        "tablet": "top"
+      },
+      "hasMobileFeatured": "all",
+      "programID": 7689108,
+      "recipeId": "mostpopular-1w-listen-app-dedup-program"
+    },
+    {
+      "articleLink": "/listen/programs/if-youre-listening/a-day-out-at-the-hezbollah-theme-park/107256246",
+      "cardImagePrepared": {
+        "alt": "Stylised image with the ABC logo, If You're Listening text, a globe, tank, missile, and buildings on a red background.",
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/0b00910f69470533fe28ab472d099166?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+        "ratio": "1x1",
+        "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/0b00910f69470533fe28ab472d099166?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w"
+        ]
+      },
+      "cardMediaIndicatorPrepared": {
+        "icon": "audio",
+        "duration": 1140
+      },
+      "contentUri": "coremedia://audioepisode/107256246",
+      "cardId": "107256246",
+      "cardTitle": "A day out at the Hezbollah theme park",
+      "noBorders": false,
+      "imagePositionPrepared": {
+        "mobile": "top",
+        "tablet": "top"
+      },
+      "hasMobileFeatured": "all",
+      "programID": 9593170,
+      "recipeId": "mostpopular-1w-listen-app-dedup-program"
+    }
+  ]
+}

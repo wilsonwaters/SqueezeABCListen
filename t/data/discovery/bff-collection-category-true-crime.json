@@ -1,0 +1,189 @@
+{
+  "collection": {
+    "bentoCardType": "ContentCard",
+    "id": "104142226",
+    "title": "True Crime & Investigations",
+    "productName": "core-next",
+    "analytics": {
+      "uri": "coremedia://dynamiccollection/104142226",
+      "moduleUri": "coremedia://dynamiccollection/104142226",
+      "contentSource": "coremedia",
+      "contentType": "collection",
+      "id": "104142226",
+      "title": {
+        "title": "True Crime & Investigations"
+      },
+      "items": [
+        {
+          "uri": "coremedia://program/103599952"
+        },
+        {
+          "uri": "coremedia://program/9738540"
+        },
+        {
+          "uri": "coremedia://program/106425190"
+        },
+        {
+          "uri": "coremedia://program/103251792"
+        }
+      ]
+    },
+    "heading": "True Crime & Investigations",
+    "loadMoreUrl": "/core-next/api/collection/x",
+    "pagination": {
+      "offset": 0,
+      "size": 20,
+      "total": 22
+    },
+    "items": [
+      {
+        "articleLink": "https://www.abc.net.au/listen/programs/the-case-of/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "ABC logo above text reading \"The Case Of\" overlaying an illustration of a person at a witness stand on a beige background.",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/b17557744df64624808b3e0adbee5729?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=1139&width=862&height=485",
+          "ratio": "16x9",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/b17557744df64624808b3e0adbee5729?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=1161&width=160&height=90 160w",
+            "https://live-production.wcms.abc-cdn.net.au/b17557744df64624808b3e0adbee5729?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=1139&width=862&height=485 862w"
+          ],
+          "hideImageBorders": false,
+          "width": "862",
+          "height": "485"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://program/103599952",
+        "description": "The Case Of is your eyes and ears inside the courtroom for Australia's biggest trials. Unpacking major trials recently heard in court, and cases in the headlines. This podcast will explain how it all works and answer your questions along the way.",
+        "cardId": "103599952",
+        "cardTitle": "The Case Of",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "right"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": true,
+        "hideImageBorders": false,
+        "featuredSettings": {
+          "mobile": true,
+          "tablet": false,
+          "desktop": false
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/listen/programs/truecrime/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/c79b6c33c2f11c5f4e7106c4ec8714ca?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+          "ratio": "16x9",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/c79b6c33c2f11c5f4e7106c4ec8714ca?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=160&height=90 160w",
+            "https://live-production.wcms.abc-cdn.net.au/c79b6c33c2f11c5f4e7106c4ec8714ca?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485 862w"
+          ],
+          "hideImageBorders": false,
+          "width": "862",
+          "height": "485"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://program/9738540",
+        "description": "Unravel is the ABC's award-winning true crime podcast.",
+        "cardId": "9738540",
+        "cardTitle": "Unravel",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "right"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": true,
+        "hideImageBorders": false,
+        "featuredSettings": {
+          "mobile": true,
+          "tablet": false,
+          "desktop": false
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/listen/programs/uncover/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "Sketch of a person with their hands up being interrogated under a bright lightbulb.",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/b64243a8f9c3dbaea2f67a22ec37b18a?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=405&width=862&height=485",
+          "ratio": "16x9",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/b64243a8f9c3dbaea2f67a22ec37b18a?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=372&width=160&height=90 160w",
+            "https://live-production.wcms.abc-cdn.net.au/b64243a8f9c3dbaea2f67a22ec37b18a?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=405&width=862&height=485 862w"
+          ],
+          "hideImageBorders": false,
+          "width": "862",
+          "height": "485"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://program/106425190",
+        "description": "CBC Podcast's Uncover is an award-winning investigative series, with each new season exploring a different high-stakes true crime and justice story.",
+        "cardId": "106425190",
+        "cardTitle": "Uncover",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "right"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": true,
+        "hideImageBorders": false,
+        "featuredSettings": {
+          "mobile": true,
+          "tablet": false,
+          "desktop": false
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/listen/programs/someone-knows-something/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/70053f6073f29d76a886aafeedac5990?impolicy=wcms_crop_resize&cropH=788&cropW=1400&xPos=0&yPos=613&width=862&height=485",
+          "ratio": "16x9",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/70053f6073f29d76a886aafeedac5990?impolicy=wcms_crop_resize&cropH=788&cropW=1400&xPos=0&yPos=613&width=160&height=90 160w",
+            "https://live-production.wcms.abc-cdn.net.au/70053f6073f29d76a886aafeedac5990?impolicy=wcms_crop_resize&cropH=788&cropW=1400&xPos=0&yPos=613&width=862&height=485 862w"
+          ],
+          "hideImageBorders": false,
+          "width": "862",
+          "height": "485"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://program/103251792",
+        "description": "Documentarian David Ridgen and the families of victims investigate unsolved true crimes in Someone Knows Something, a CBC podcast.",
+        "cardId": "103251792",
+        "cardTitle": "Someone Knows Something",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "right"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": true,
+        "hideImageBorders": false,
+        "featuredSettings": {
+          "mobile": true,
+          "tablet": false,
+          "desktop": false
+        }
+      }
+    ],
+    "contentUri": "coremedia://collection/104142226",
+    "borders": false,
+    "linkUrl": "",
+    "linkTitle": "",
+    "showTitleVisually": true,
+    "canonicalURI": "/listen/listenapp/true-crime/104142226",
+    "robots": null,
+    "ratio": "16x9"
+  }
+}
