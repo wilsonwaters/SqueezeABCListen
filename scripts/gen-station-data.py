@@ -136,7 +136,8 @@ HLS = {
 HLS_SLUG = {'LOCAL_WIDEBAY': 'localwidebay'}
 # names that would be confused with another station's (said the same by a screen reader)
 NAME_OVERRIDE = {
-    'RA': 'Radio Australia (English)',  # RA_ML is "Radio Australia"
+    'RA': 'Radio Australia (English)',                  # RA_ML is "Radio Australia"
+    'GRANDSTAND_EXTRA': 'ABC Sport Extra (Grandstand)',  # ITINERANT_THREE is "ABC SPORT EXTRA"
 }
 
 ORDER = ['id', 'name', 'group', 'network', 'state', 'city', 'capital', 'tz', 'slug', 'hlsSlug', 'mount', 'hls',

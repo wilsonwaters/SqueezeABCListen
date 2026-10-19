@@ -4,8 +4,9 @@ package Plugins::ABCListen::StationData;
 # One hash per PAPI/BFF service id, in catalogue order within each group:
 #
 #   id            upper-case PAPI/BFF service id (abclisten://live/<id>)
-#   name          station name: the PAPI services title (RA: "Radio Australia (English)", so it can be
-#                 told apart from RA_ML)
+#   name          station name: the PAPI services title, except where it would sound the same as another
+#                 station's: RA is "Radio Australia (English)" (RA_ML is "Radio Australia") and
+#                 GRANDSTAND_EXTRA is "ABC Sport Extra (Grandstand)" (ITINERANT_THREE: "ABC SPORT EXTRA")
 #   group         network | sport | local | variant | hidden
 #   network       networks: their own id; variants and hidden Kids listen versions: the parent
 #                 network's id; LOCAL for local stations; SPORT for sport services
@@ -333,7 +334,7 @@ my @RECORDS = (
 	},
 	{
 		id => 'GRANDSTAND_EXTRA',
-		name => 'ABC Sport Extra',
+		name => 'ABC Sport Extra (Grandstand)',
 		group => 'sport',
 		network => 'SPORT',
 		tz => 'Australia/Sydney',

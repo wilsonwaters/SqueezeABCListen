@@ -148,10 +148,14 @@ subtest 'catalogue: ids, groups and fields' => sub {
 	is( $RECORD{LOCAL_BROKENHILL}->{tz}, 'Australia/Broken_Hill', 'ABC Broken Hill is on Broken Hill time (an NSW station on SA time)' );
 	is( $RECORD{LOCAL_PERTH}->{tz},      'Australia/Perth',       '102.5 ABC Perth: Perth time (not the derived JSON\'s Sydney)' );
 
-	my @names = grep { $_->{id} ne 'RA' && do { ( my $t = $PAPI{ $_->{id} }->{title} ) =~ s/\A\s+|\s+\z//g; $t ne $_->{name} } } @RECORDS;
-	is_deeply( [ map { $_->{id} } @names ], [], 'names are the PAPI titles (trimmed)' );
+	my %renamed = ( RA => 1, GRANDSTAND_EXTRA => 1 );
+	my @names = grep { !$renamed{ $_->{id} } && do { ( my $t = $PAPI{ $_->{id} }->{title} ) =~ s/\A\s+|\s+\z//g; $t ne $_->{name} } } @RECORDS;
+	is_deeply( [ map { $_->{id} } @names ], [], 'names are the PAPI titles (trimmed), except RA and GRANDSTAND_EXTRA' );
 	is( $RECORD{RA}->{name},    'Radio Australia (English)', 'RA is told apart from RA_ML' );
 	is( $RECORD{RA_ML}->{name}, 'Radio Australia',           'RA_ML keeps "Radio Australia"' );
+	is( $RECORD{GRANDSTAND_EXTRA}->{name}, 'ABC Sport Extra (Grandstand)', 'GRANDSTAND_EXTRA is told apart from ITINERANT_THREE' );
+	is( $RECORD{ITINERANT_THREE}->{name},  'ABC SPORT EXTRA',              'ITINERANT_THREE keeps its PAPI title' );
+	isnt( lc $RECORD{GRANDSTAND_EXTRA}->{name}, lc $RECORD{ITINERANT_THREE}->{name}, 'the two Sport Extra services do not sound the same (case aside)' );
 
 	my @synopsis = grep {
 		my $papi = $PAPI{ $_->{id} }->{mini_synopsis};
