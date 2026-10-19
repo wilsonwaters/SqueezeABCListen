@@ -177,7 +177,7 @@ subtest 'top level: Home is first (weight 10)' => sub {
 	is( $c->count, 1, 'one callback' );
 	my $items = items_of($c);
 	is( $items->[0]->{name}, 'Home', 'Home first' );
-	is_deeply( names($items), [ 'Home', 'Radio', 'Programs' ], 'Home, Radio, Programs (Search and My ABC listen add nothing yet)' );
+	is_deeply( names($items), [ 'Home', 'Radio', 'Programs', 'Search' ], 'Home, Radio, Programs, Search (D3) (My ABC listen adds nothing yet)' );
 	ok( !exists $items->[0]->{weight}, 'weight removed by Plugin.pm' );
 	is( scalar requests(), 0, 'no HTTP request for the top level' );
 };
