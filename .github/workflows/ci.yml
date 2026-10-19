@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  # the Release workflow runs the same checks before it builds anything
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # libxml2-utils: xmllint. liburi-perl: URI::Escape, bundled with LMS but not core Perl.
+      # libhtml-parser-perl: HTML::Entities, also bundled with LMS, so the tests cover that
+      # decoding path too. shellcheck: scripts/*.sh. zip/unzip (package build and checks) and
+      # curl/jq (smoke-test script tests) are installed now so the release stream only appends steps.
+      # Everything else is core Perl or a t/lib stub/shim. The checks themselves run offline.
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libxml2-utils liburi-perl libhtml-parser-perl zip unzip shellcheck curl jq
+
+      - name: Run scripts/check.sh
+        run: scripts/check.sh
