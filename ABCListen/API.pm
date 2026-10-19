@@ -50,12 +50,19 @@ package Plugins::ABCListen::API;
 #       GET https://www.abc.net.au/_next/data/<buildId><path>.json -> its pageProps.
 #       $pagePath is a site path ('/listen', '/kidslisten', '/listen/programs/scienceshow') or an
 #       https://(www.)abc.net.au/... URL, normalised by sitePath (query, fragment, trailing '/' dropped).
+#       - F4: the path (and every __N_REDIRECT target) is requested as ABC serves it: characters
+#         outside the URL path characters %-encoded as UTF-8, then all lower-case ('/listen/x/
+#         el-ni%C3%B1o' -> '/listen/x/el-ni%c3%b1o'). Any other spelling gets a 307 with only an
+#         x-nextjs-redirect header (to the lower-cased path) and no Location: LMS can't follow it
+#         and HTTP.pm's error callback gets no headers, so it isn't followed. A 307 still answered
+#         (to another page, say) is LOAD_FAILED with status undef, without a buildId refresh.
 #       - 404 or a non-JSON body (stale buildId): refresh siteConfig once and retry once, only if the
 #         buildId changed. Refreshes are limited to one per 60 s across all callers: within that window
 #         a 404 is returned as LOAD_FAILED (status 404) without a new discovery.
 #       - Follows pageProps.__N_REDIRECT (site-relative or absolute) for up to 2 hops; a 3rd hop, a
 #         loop or an off-site target -> LOAD_FAILED.
-#       - Cached under the final path, and the path asked for, never under the buildId.
+#       - Cached under the final path, and the path asked for (both as requested, so every spelling
+#         of a page shares one entry), never under the buildId.
 #   algolia(\%params, $cb, $ecb, \%opts)
 #       POST https://<appId>-dsn.algolia.net/1/indexes/<indexName>/query, body = JSON of \%params, with
 #       the X-Algolia-Application-Id / X-Algolia-API-Key headers from siteConfig (never hard-coded).
@@ -322,7 +329,7 @@ sub nextData {
 	shift if _isClass( $_[0] );
 	my ( $pagePath, $cb, $ecb, $opts ) = @_;
 
-	my $path = sitePath($pagePath);
+	my $path = _servedPath( sitePath($pagePath) );
 	return _invalid( $ecb, 'nextData: not a page on www.abc.net.au: ' . _show($pagePath) ) unless defined $path;
 
 	_run( {
@@ -406,8 +413,8 @@ sub _nextDataResponse {
 	_nextDataGet( $state, $buildId, $next );
 }
 
-# __N_REDIRECT target (site-relative, relative to the current page, or absolute) -> site path, or
-# undef when it leaves the ABC site.
+# __N_REDIRECT target (site-relative, relative to the current page, or absolute) -> site path as
+# served (_servedPath), or undef when it leaves the ABC site.
 sub _redirectPath {
 	my ( $from, $target ) = @_;
 	return undef unless defined $target && !ref $target && length $target;
@@ -417,7 +424,26 @@ sub _redirectPath {
 		$target = $dir . $target;
 	}
 
-	return sitePath($target);
+	return _servedPath( sitePath($target) );
+}
+
+# F4: a site path spelled the way ABC serves its page data without a redirect: every character
+# outside the RFC 3986 path characters %-encoded as UTF-8, then all lower-case ('/listen/x/
+# El-Ni%C3%B1o' and '/listen/x/el-niño' -> '/listen/x/el-ni%c3%b1o'; '+' and other path
+# characters kept). ABC answers any path that isn't all lower-case, upper-case %XX escapes
+# included, with a 307 whose only pointer is an x-nextjs-redirect header to the lower-cased path
+# (measured on /listen, /kidslisten and /news pages, 2026-10-19). That 307 has no Location, so LMS
+# fails it ("Redirection without location"), and the header can't be followed here: HTTP.pm's
+# error callback gets no response headers. ABC's own links spell non-ASCII slugs with upper-case
+# escapes (articleLink, canonicalURL, __N_REDIRECT), so they are requested lower-cased instead.
+sub _servedPath {
+	my $path = shift;
+	return undef unless defined $path;
+
+	utf8::encode($path);
+	$path =~ s{([^A-Za-z0-9\-._~!\$&'()*+,;=:\@/%])}{sprintf( '%%%02x', ord $1 )}ge;
+
+	return lc $path;
 }
 
 sub _refreshBuildId {
