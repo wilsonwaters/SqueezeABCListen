@@ -16,6 +16,9 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - Attribution scrub of issue/PR text (stakeholder rule)
 
 ## Last completions
+- **v0.1.0 released** (Release workflow; asset sha1 cacbeb99…; repo.xml commit ad751ff by Wilson Waters). Install
+  from the GitHub repo.xml URL verified on the testbed (InstalledPlugins, 5 stations, play, settings, uninstall).
+  #9 closed.
 - #3 F2 merged (PR #25, squash 6791521): `abclisten://` protocol handler, kind registry; stations on stable URLs.
   Runtime PASS; review fixes (resolve eval scoped to kind code, rate-limited metadata warnings, contract notes).
 - R1 merged (PR #24, squash fb010bc): packaging, repo.xml, release.yml (review fixes: no dropped version bumps).
@@ -48,7 +51,6 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - Streams + master plans committed (6 streams, 20 v1 tasks + 3 stretch). Material Skin 6.4.14 added to testbed.
 
 ## Next
-- Merge F3 → update CHANGELOG [0.1.0] → dispatch release.yml → verify install from the GitHub repo.xml on the testbed.
 - Wave 2 in parallel once F3 merges: L1 (#2), O1 (#12), O2 (#16).
 
 ## Plan revisions
