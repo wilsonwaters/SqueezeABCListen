@@ -204,7 +204,7 @@ subtest 'topItems: News, Sport, Kids listen, Audiobooks - exact keys, weights 40
 
 	my $c = collector();
 	Plugins::ABCListen::Discover->menuItems( undef, $c->cb, {} );
-	is_deeply( [ map { $_->{name} } @{ ( $c->args(0) )[0] } ], [ 'Home', 'News', 'Sport', 'Kids listen', 'Audiobooks' ], 'Discover->menuItems: Home, then the four sections' );
+	is_deeply( [ map { $_->{name} } @{ ( $c->args(0) )[0] } ], [ 'Home', 'Podcasts', 'News', 'Sport', 'Kids listen', 'Audiobooks' ], 'Discover->menuItems: Home, Podcasts (D2), then the four sections' );
 	my %weights = map { $_ => 1 } Plugins::ABCListen::Discover->menuWeights;
 	ok( $weights{$_}, "Discover->menuWeights includes $_" ) for 40, 50, 60, 70;
 	is( scalar requests(), 0, 'no HTTP request' );
@@ -215,15 +215,19 @@ subtest 'topItems: News, Sport, Kids listen, Audiobooks - exact keys, weights 40
 		$c = collector();
 		Plugins::ABCListen::Discover->menuItems( undef, $c->cb, {} );
 	}
-	is_deeply( [ map { $_->{name} } @{ ( $c->args(0) )[0] } ], ['Home'], 'Sections->topItems dying: Discover still lists Home (logged)' );
+	is_deeply( [ map { $_->{name} } @{ ( $c->args(0) )[0] } ], [ 'Home', 'Podcasts' ], 'Sections->topItems dying: Discover still lists Home and Podcasts (logged)' );
 	is( scalar( grep { $_->{message} =~ /sections broke/ } errors_logged() ), 1, '... and logs it' );
 };
 
-subtest 'top level: Home, Radio, News, Sport, Kids listen, Audiobooks, Programs, Search' => sub {
+subtest 'top level: Home, Radio, Podcasts, News, Sport, Kids listen, Audiobooks, Programs, Search, My ABC listen' => sub {
 	fresh();
 	my $c = collector();
 	Plugins::ABCListen::Plugin::toplevel( undef, $c->cb, { params => {} } );
-	is_deeply( names( items_of($c) ), [ 'Home', 'Radio', 'News', 'Sport', 'Kids listen', 'Audiobooks', 'Programs', 'Search' ], 'sorted by weight between Radio (20) and Programs (75)' );
+	is_deeply(
+		names( items_of($c) ),
+		[ 'Home', 'Radio', 'Podcasts', 'News', 'Sport', 'Kids listen', 'Audiobooks', 'Programs', 'Search', 'My ABC listen' ],
+		'sorted by weight between Podcasts (30) and Programs (75)'
+	);
 	is( scalar requests(), 0, 'no HTTP request for the top level' );
 };
 

@@ -1,0 +1,151 @@
+{
+  "collection": {
+    "bentoCardType": "ContentCard",
+    "id": "105492374",
+    "title": "New & Noteworthy",
+    "productName": "core-next",
+    "analytics": {
+      "uri": "coremedia://collection/105492374",
+      "moduleUri": "coremedia://collection/105492374",
+      "contentSource": "coremedia",
+      "contentType": "collection",
+      "id": "105492374",
+      "title": {
+        "title": "New & Noteworthy"
+      },
+      "items": [
+        {
+          "uri": "coremedia://program/107223170"
+        },
+        {
+          "uri": "coremedia://program/107189690"
+        },
+        {
+          "uri": "coremedia://program/107254820"
+        }
+      ]
+    },
+    "heading": "New & Noteworthy",
+    "loadMoreUrl": "/core-next/api/collection/x",
+    "pagination": {
+      "offset": 0,
+      "size": 7,
+      "total": 7
+    },
+    "items": [
+      {
+        "articleLink": "https://www.abc.net.au/listen/programs/planet-america-page/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "Planet America podcast cover showing two men standing back to back in front of an American flag",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/60827c22efbb257fdaf54c4fd23c224e?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+          "ratio": "16x9",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/60827c22efbb257fdaf54c4fd23c224e?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=160&height=90 160w",
+            "https://live-production.wcms.abc-cdn.net.au/60827c22efbb257fdaf54c4fd23c224e?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485 862w"
+          ],
+          "hideImageBorders": false,
+          "width": "862",
+          "height": "485"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://program/107223170",
+        "description": "Planet America is now on the ABC listen app where John and Chas discuss all things America, Donald Trump and US politics giving their unique take and analysis in an entertaining and informative fireside chat.",
+        "cardId": "107208268",
+        "cardTitle": "John & Chas discuss the backflips, threats & thought-bubbles in Trump's America",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "right"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": true,
+        "hideImageBorders": false,
+        "featuredSettings": {
+          "mobile": true,
+          "tablet": false,
+          "desktop": false
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/listen/programs/abc-rewind/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "BONDY: FROM HERO TO ZERO ",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/ba55437ec5ecb309a93603f15c87e7de?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+          "ratio": "16x9",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/ba55437ec5ecb309a93603f15c87e7de?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=160&height=90 160w",
+            "https://live-production.wcms.abc-cdn.net.au/ba55437ec5ecb309a93603f15c87e7de?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485 862w"
+          ],
+          "hideImageBorders": false,
+          "width": "862",
+          "height": "485"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://program/107189690",
+        "description": "A deep dive into the past told by the people who lived through it. We interrogate the events and characters that have shaped our world and re-visit them through archives, interviews, and compelling storytelling.",
+        "cardId": "104706926",
+        "cardTitle": "The story of Alan Bond: 80s icon, sailing tycoon and conman",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "right"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": true,
+        "hideImageBorders": false,
+        "featuredSettings": {
+          "mobile": true,
+          "tablet": false,
+          "desktop": false
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/listen/programs/the-walkers-the-real-salt-path/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "Ocean swell breaking over rocks, viewed from above, with The Walkers: the real salt path printed over the image.",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/91163025f09e7bada615d35e4dd95355?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+          "ratio": "16x9",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/91163025f09e7bada615d35e4dd95355?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=160&height=90 160w",
+            "https://live-production.wcms.abc-cdn.net.au/91163025f09e7bada615d35e4dd95355?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485 862w"
+          ],
+          "hideImageBorders": false,
+          "width": "862",
+          "height": "485"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://program/107254820",
+        "description": "Penniless and homeless, the Winns found fame and fortune with the story of their 630-mile walk to salvation. But the truth behind the hit memoir is very different.",
+        "cardId": "107242394",
+        "cardTitle": "Revealing the truth behind a literary phenomenon",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "right"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": true,
+        "hideImageBorders": false,
+        "featuredSettings": {
+          "mobile": true,
+          "tablet": false,
+          "desktop": false
+        }
+      }
+    ],
+    "contentUri": "coremedia://collection/105492374",
+    "borders": false,
+    "linkUrl": "",
+    "linkTitle": "",
+    "showTitleVisually": true,
+    "canonicalURI": "/listen/listenapp/new-noteworthy-podcasts/105492374",
+    "robots": null,
+    "ratio": "16x9"
+  }
+}

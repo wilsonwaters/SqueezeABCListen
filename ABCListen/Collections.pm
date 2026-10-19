@@ -8,11 +8,11 @@ package Plugins::ABCListen::Collections;
 # behave the same everywhere. All I/O goes through Plugins::ABCListen::API (async).
 #
 # ---- Callbacks ------------------------------------------------------------------------------------
-#   page, home, items, aggregationItems, menuPage, itemsFor and checkOnAir call $cb EXACTLY ONCE, on every
-#   path. Failures are { error => TOKEN }, the API token passed through
-#   ('PLUGIN_ABCLISTEN_LOAD_FAILED' or 'PLUGIN_ABCLISTEN_RATE_LIMITED'). Cache hits call back
-#   synchronously, other calls later: code must work either way. A callback that dies is logged and
-#   never leads to a second call.
+#   page, home, items, aggregationItems, menuPage, itemsFor, checkOnAir, podcasts, recommendations
+#   and withImages call $cb EXACTLY ONCE, on every path. Failures are { error => TOKEN }, the API
+#   token passed through ('PLUGIN_ABCLISTEN_LOAD_FAILED' or 'PLUGIN_ABCLISTEN_RATE_LIMITED'). Cache
+#   hits call back synchronously, other calls later: code must work either way. A callback that
+#   dies is logged and never leads to a second call.
 #   Every public function works as a class method (Plugins::ABCListen::Collections->page(...)) or as
 #   a plain function (Plugins::ABCListen::Collections::itemFor($client, $ref, $depth)).
 #
@@ -66,15 +66,18 @@ package Plugins::ABCListen::Collections;
 #       An untitled StandardCollection keeps title undef; collectionItem names it Featured.
 #   home($cb)  = page('/listen', $cb).
 #
-#   items($collectionId, $offset, $size, $cb)
+#   items($collectionId, $offset, $size, $cb, \%extraQuery)
 #       -> $cb->({ title, total, count, cards => [refs] }) | $cb->({ error => TOKEN })
 #       API::bff('collection/x', { collectionId, offset, size }) (ttl 30 min, stale_ok, timeout 8 s).
 #       title = collection.title, else collection.heading; total = collection.pagination.total
 #       (undef when missing); count = how many cards ABC sent (for paging; cards without a parseable
 #       contentUri are dropped from cards). A null or empty collection is { total => undef or 0,
 #       count => 0, cards => [] }. offset defaults to 0, size to PAGE_SIZE (20).
+#       \%extraQuery (optional, D2): its plain-text values are merged into the query (e.g. a
+#       MetaCollection sub-collection's { rootMetaCollectionId, metaInMeta => 'false' });
+#       collectionId, offset and size always win. Without it the request is unchanged.
 #
-#   aggregationItems($collectionId, $offset, $size, $cb)                                        (D4)
+#   aggregationItems($collectionId, $offset, $size, $cb, \%extraQuery)                         (D4)
 #       As items(), from API::bff('programAggregationCollection/x', { collectionId, offset, size })
 #       (same response shape; ttl 6 h, stale_ok, timeout 8 s). E.g. All Kids listen programs, 9317914.
 #
@@ -129,14 +132,49 @@ package Plugins::ABCListen::Collections;
 #       The menu: one page per menu (menuPage + itemsFor), then "More…" (PLUGIN_ABCLISTEN_MORE)
 #       while the page had cards and offset + count < total. Nothing to list: one
 #       PLUGIN_ABCLISTEN_EMPTY_COLLECTION text item; fetch error: the error token's text item.
-#       Every feed answers exactly once. The collection hash travels in the passthrough.
+#       Every feed answers exactly once. The collection hash travels in the passthrough; its
+#       kind (D4) picks the fetcher (menuPage).
+#       Optional collection keys (D2):
+#         query        => \%extraQuery for the fetcher (MetaCollection sub-collections);
+#         fallbackPath => a site page (a podcast category's page): when the first page (offset 0)
+#                         fails or has no cards, the menu pages the first collection of
+#                         page(fallbackPath) instead, if its id differs (More… then pages that id).
+#                         Otherwise the first result stands.
 #
 #   menuPage(\%collection, $offset, $cb)                                                         (D4)
 #       One page of a collection's menu: the fetcher and page size of its kind in %FETCHERS
 #       (kind aggregation: aggregationItems, 50 per page, so All Kids listen programs (34) is one
-#       A–Z list; no or an unknown kind: items, PAGE_SIZE (20)). A new kind of collection needs a
-#       %FETCHERS entry, not a _collectionMenu edit. Callers that want a menu's first page ahead of
-#       time (D4's Sections) use this, so they share its request and cache.
+#       A–Z list; no or an unknown kind: items, PAGE_SIZE (20)), with the collection's query (D2).
+#       A new kind of collection needs a %FETCHERS entry, not a _collectionMenu edit. Callers that
+#       want a menu's first page ahead of time (D4's Sections) use this, so they share its request
+#       and cache. The menu itself adds D2's fallbackPath on top (_menuPage).
+#
+# ---- D2 additions (Podcasts menu, Popular now / Popular in sport) ---------------------------------
+#
+#   podcasts($cb) -> $cb->({ collections => [{ id, title, query }], categories => [{ id, title,
+#                    image, fallbackPath }], stale => 0|1 }) | $cb->({ error => TOKEN })
+#       API::nextData('/listen/podcasts') (ttl 1 h, stale_ok, timeout 8 s), componentsContent[]:
+#         the first MetaCollection -> collections: its componentProps.items[] { id, title } in
+#             order (no numeric id, or itemsCount 0: left out), each with query =>
+#             { rootMetaCollectionId => the MetaCollection's id, metaInMeta => 'false' };
+#         the first StandardCollection with dynamiccollection cards -> categories: per card
+#             id = the numeric last segment of articleLink (none: left out), title = cardTitle,
+#             image = the card image, fallbackPath = articleLink's site path.
+#       Missing parts are empty lists (callers decide: Discover shows LOAD_FAILED / the static list).
+#   staticCategories() -> the 8 podcast categories of 2026-10-19 as above (image undef), in ABC's
+#       order: the fallback when the podcasts page fails or lists none.
+#
+#   recommendations($name, $cb) -> $cb->({ title, cards => [refs], stale => 0|1 }) | $cb->({ error => TOKEN })
+#       API::bff("recommendations/listen/$name") (ttl 1 h, stale_ok, timeout 8 s); $name is
+#       letters and digits ('homepagePopularNow', 'homepageSports'), else LOAD_FAILED without a
+#       request. cards = API::cardRef of items[] (none, {} or no items: []). Recommendation cards
+#       carry no date (no cardAttributionPrepared): date stays undef.
+#
+#   withImages(\@collections, $cb) -> $cb->(\@copies)  (never an error)
+#       Copies of the collections; each one without an image gets the image of the first
+#       supported card of its first page (items($id, 0, PAGE_SIZE, ..., query): the same request,
+#       and cache entry, as opening it). Waits at most IMAGE_DEADLINE (3 s); fetch errors and late
+#       answers leave the image undef (collectionItem then uses the plugin icon).
 #
 # Owned by the discovery stream (D1 creates; D2 and D4 extend additively).
 
@@ -164,6 +202,10 @@ use constant MAX_DEPTH        => 3;
 use constant NAME_CONCURRENCY => 4;
 use constant NAME_DEADLINE    => 3;       # seconds per page
 use constant IMAGE_PX         => 300;
+
+use constant PODCASTS_PATH       => '/listen/podcasts';    # D2
+use constant RECOMMENDATIONS_TTL => 3600;                  # D2 recommendations()
+use constant IMAGE_DEADLINE      => 3;                     # D2 withImages(), seconds
 
 use constant LOAD_FAILED => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
 use constant EMPTY       => 'PLUGIN_ABCLISTEN_EMPTY_COLLECTION';
@@ -406,7 +448,7 @@ sub aggregationItems {
 }
 
 sub _bffCollection {
-	my ( $endpoint, $ttl, $id, $offset, $size, $cb ) = @_;
+	my ( $endpoint, $ttl, $id, $offset, $size, $cb, $extra ) = @_;
 	my $once = _once($cb);
 
 	$id = _digits($id);
@@ -415,9 +457,11 @@ sub _bffCollection {
 	$offset = _int($offset) || 0;
 	$size   = _int($size)   || PAGE_SIZE;
 
+	my %extra = ref $extra eq 'HASH' ? map { $_ => $extra->{$_} } grep { _isText( $extra->{$_} ) } keys %$extra : ();
+
 	Plugins::ABCListen::API::bff(
 		$endpoint,
-		{ collectionId => $id, offset => $offset, size => $size },
+		{ %extra, collectionId => $id, offset => $offset, size => $size },
 		sub {
 			my $data = shift;
 			_guard( $once, sub { $once->( _collectionPage($data) ) } );
@@ -473,8 +517,8 @@ sub _collectionMenu {
 	$depth      = _level( $depth, 1 );
 
 	_try( $client, $once, sub {
-		menuPage( $collection, $offset, sub {
-			my $result = shift;
+		_menuPage( $collection, $offset, sub {
+			my ( $result, $source ) = @_;
 
 			return _textFeed( $client, $once, $result->{error} ) if $result->{error};
 
@@ -494,7 +538,7 @@ sub _collectionMenu {
 							name        => cstring( $client, MORE ),
 							type        => 'link',
 							url         => \&_collectionMenu,
-							passthrough => [ $collection, $next, $depth ],
+							passthrough => [ $source, $next, $depth ],
 						} if $more;
 
 						return \@items;
@@ -516,7 +560,203 @@ sub menuPage {
 	my $kind    = $collection->{kind};
 	my $fetcher = ( _isText($kind) && $FETCHERS{$kind} ) || $DEFAULT_FETCHER;
 
-	return $fetcher->{fetch}->( $collection->{id}, $offset, $fetcher->{size}, $cb );
+	return $fetcher->{fetch}->( $collection->{id}, $offset, $fetcher->{size}, $cb, $collection->{query} );
+}
+
+# One page of a collection for its menu: menuPage() (its kind's fetcher, its query); at offset 0, when
+# that fails or has no cards and the collection has a fallbackPath, the first collection of
+# page(fallbackPath) if its id differs (D2: podcast categories). $cb->($result, $collection) once,
+# with the collection the result belongs to (More… pages it).
+sub _menuPage {
+	my ( $collection, $offset, $cb ) = @_;
+
+	menuPage( $collection, $offset, sub {
+		my $result = shift;
+		my $path   = $collection->{fallbackPath};
+
+		return $cb->( $result, $collection ) unless $offset == 0 && _hasText($path) && ( $result->{error} || !$result->{count} );
+
+		my $settled = 0;
+		my $keep    = sub { $cb->( $result, $collection ) unless $settled++ };
+
+		_guard( $keep, sub {
+			page( $path, sub {
+				my $page = shift;
+
+				_guard( $keep, sub {
+					my ($first) = _list( $page->{collections} );
+					return $keep->() if $page->{error} || ref $first ne 'HASH' || $first->{id} eq ( $collection->{id} // '' );
+
+					my %next = ( %$collection, id => $first->{id} );
+					delete @next{qw(fallbackPath query)};
+
+					main::INFOLOG && $log->is_info && $log->info("ABC listen: collection $collection->{id} has nothing; paging $next{id} from $path");
+
+					menuPage( \%next, 0, sub { $cb->( shift, \%next ) unless $settled++ } );
+				} );
+			} );
+		} );
+	} );
+
+	return;
+}
+
+# ---------------------------------------------------------------------------
+# D2: the podcasts page, recommendations, collection images
+# ---------------------------------------------------------------------------
+
+# The podcast categories (2026-10-19), ABC's order: [ page id, name, page slug ].
+my @STATIC_CATEGORIES = (
+	[ 104142082 => 'News & Analysis',              'news-and-analysis' ],
+	[ 104142226 => 'True Crime',                   'true-crime' ],
+	[ 104142200 => 'Sport',                        'sport' ],
+	[ 104141842 => 'Kids & Families',              'kids-and-families' ],
+	[ 104141924 => 'History',                      'history' ],
+	[ 104142164 => 'Society & Culture',            'society-and-culture' ],
+	[ 104142058 => 'Music',                        'music' ],
+	[ 104141814 => 'Conversations & Storytelling', 'conversations-storytelling' ],
+);
+
+sub podcasts {
+	shift if _isClass( $_[0] );
+	my ($cb) = @_;
+	my $once = _once($cb);
+
+	Plugins::ABCListen::API::nextData(
+		PODCASTS_PATH,
+		sub {
+			my ( $pageProps, $info ) = @_;
+			_guard( $once, sub { $once->( _parsePodcasts( $pageProps, $info ) ) } );
+		},
+		sub { $once->( { error => _token(shift) } ) },
+		{ ttl => PAGE_TTL, stale_ok => 1, timeout => API_TIMEOUT },
+	);
+
+	return;
+}
+
+sub _parsePodcasts {
+	my ( $pageProps, $info ) = @_;
+
+	my ( $collections, $categories );
+
+	for my $component ( _list( _hash( _hash($pageProps)->{data} )->{componentsContent} ) ) {
+		next unless ref $component eq 'HASH' && _isText( $component->{component} );
+
+		if ( $component->{component} eq 'MetaCollection' ) {
+			$collections ||= _subCollections($component);
+		}
+		elsif ( $component->{component} eq 'StandardCollection' && !( $categories && @$categories ) ) {
+			$categories = [
+				map { { id => _leaf( $_->{path} ), title => $_->{title}, image => $_->{image}, fallbackPath => $_->{path} } }
+				grep { $_->{type} eq 'dynamiccollection' && defined _leaf( $_->{path} ) }
+				grep {defined} map { Plugins::ABCListen::API::cardRef($_) } _list( _hash( $component->{componentProps} )->{items} )
+			];
+		}
+	}
+
+	return { collections => $collections || [], categories => $categories || [], stale => _hash($info)->{stale} ? 1 : 0 };
+}
+
+# A MetaCollection's sub-collections: [{ id, title, query }], those with itemsCount 0 left out.
+sub _subCollections {
+	my $component = shift;
+	my $props     = _hash( $component->{componentProps} );
+
+	my $metaId = _digits( $props->{rootMetaCollectionId} );
+	$metaId = _digits( $component->{key} ) unless defined $metaId;
+
+	my @collections;
+	for my $item ( grep { ref $_ eq 'HASH' } _list( $props->{items} ) ) {
+		my $id = _digits( $item->{id} );
+		next unless defined $id;
+
+		my $count = _int( $item->{itemsCount} );
+		next if defined $count && !$count;
+
+		push @collections, {
+			id    => $id,
+			title => _text( $item->{title} ),
+			defined $metaId ? ( query => { rootMetaCollectionId => $metaId, metaInMeta => 'false' } ) : (),
+		};
+	}
+
+	return \@collections;
+}
+
+sub staticCategories {
+	return map { { id => "$_->[0]", title => $_->[1], image => undef, fallbackPath => "/listen/listenapp/$_->[2]/$_->[0]" } } @STATIC_CATEGORIES;
+}
+
+sub recommendations {
+	shift if _isClass( $_[0] );
+	my ( $name, $cb ) = @_;
+	my $once = _once($cb);
+
+	return $once->( { error => LOAD_FAILED } ) unless _isText($name) && $name =~ /\A[A-Za-z0-9]+\z/;
+
+	Plugins::ABCListen::API::bff(
+		"recommendations/listen/$name",
+		undef,
+		sub {
+			my ( $data, $info ) = @_;
+			_guard( $once, sub {
+				$once->( {
+					title => _text( _hash($data)->{title} ),
+					cards => [ grep {defined} map { Plugins::ABCListen::API::cardRef($_) } _list( _hash($data)->{items} ) ],
+					stale => _hash($info)->{stale} ? 1 : 0,
+				} );
+			} );
+		},
+		sub { $once->( { error => _token(shift) } ) },
+		{ ttl => RECOMMENDATIONS_TTL, stale_ok => 1, timeout => API_TIMEOUT },
+	);
+
+	return;
+}
+
+sub withImages {
+	shift if _isClass( $_[0] );
+	my ( $collections, $cb ) = @_;
+	my $once = _once($cb);
+
+	my @copies  = map { {%$_} } grep { ref $_ eq 'HASH' } _list($collections);
+	my @pending = grep { !defined $_->{image} && defined _digits( $_->{id} ) } @copies;
+
+	return $once->( \@copies ) unless @pending;
+
+	my ( $left, $finished, $timer ) = ( scalar @pending, 0 );
+
+	my $finish = sub {
+		return if $finished++;
+		Slim::Utils::Timers::killSpecific($timer) if $timer;
+		undef $timer;
+		$once->( [ map { {%$_} } @copies ] );
+	};
+
+	$timer = Slim::Utils::Timers::setTimer( undef, Time::HiRes::time() + IMAGE_DEADLINE, sub {
+		undef $timer;
+		main::DEBUGLOG && $log->is_debug && $log->debug( 'ABC listen: collection images not all found within ' . IMAGE_DEADLINE . ' s' );
+		$finish->();
+	} );
+
+	for my $collection (@pending) {
+		my $settled = 0;
+		my $done    = sub {
+			my $result = shift;
+			return if $settled++;
+			my ($card) = grep { defined $_->{image} && _target($_) } _list( _hash($result)->{cards} );
+			$collection->{image} = $card->{image} if $card && !$finished;
+			$finish->() unless --$left;
+		};
+
+		eval { items( $collection->{id}, 0, PAGE_SIZE, $done, $collection->{query} ); 1 } or do {
+			$log->warn( "ABC listen: collection image lookup for $collection->{id} failed: " . ( $@ || 'unknown error' ) );
+			$done->( {} );
+		};
+	}
+
+	return;
 }
 
 # ---------------------------------------------------------------------------
