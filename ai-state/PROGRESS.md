@@ -12,9 +12,9 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - release: R1 #9 · R2 #15 · R3 #17
 
 ## Currently in flight
-- Integration agent: D2 (PR #42, approved) then D4 (PR #43, approved) onto main (with M2), + D4 review fixes
+- Integration agent phase B: D4 (PR #43, approved) onto main (with D2+M2) + D4 review fixes
 - #4 L2 program on air — implementation
-- v0.2.0 install-from-GitHub verification
+- #37 F5 cardRef names · #40 O7 Hottest 100 in A–Z · #14 L5 higher-quality live — implementation
 
 ## Interruptions
 - 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
@@ -22,6 +22,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   in-flight agents (L1, O3, D1, D3, M2, O6 review, IC-1) resumed from their saved state. Lesson: ≤5 concurrent agents.
 
 ## Last completions
+- #6 D2 merged (PR #42, squash e7e058d): top-level Podcasts + Popular now (integration agent merged main/M2 first).
+- v0.2.0 install from GitHub verified on the testbed (PASS).
 - #20 M2 merged (PR #35, squash 2911dbf): followed programs + My ABC listen (3 review rounds; stale-id safe).
 - **v0.2.0 released** (8a13cb4 bump → workflow a5f85cc; asset sha1 64527ef7…). System verification PASS_WITH_NOTES:
   8/8 journeys, 85/85 stations, no regressions, no plugin errors.
