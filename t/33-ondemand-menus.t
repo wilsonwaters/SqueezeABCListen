@@ -280,15 +280,14 @@ subtest 'a network: programItem rows; errors as one text item' => sub {
 				network     => 'Radio National',
 			} ],
 			image       => "$WCMS/9b022a1c24f404a4755241bb86365781?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=300&height=300",
-			description => 'Religion is at the centre of world affairs, but profound questions remain: Why are you here? What happens when you die? Does God matter? God Forbid seeks the answers.',
 		},
-		'program row: exact keys (line2 = network)'
+		'program row: exact keys (line2 = network; the description only in the passthrough)'
 	);
 
 	my ($emigre) = grep { $_->{name} eq 'Émigré Stories' } @$items;
 	is( $emigre->{image}, $ICON, 'no artwork: the plugin icon' );
 	is( $emigre->{line2}, 'Radio National', 'no artwork: still a second line' );
-	ok( !exists $emigre->{description}, 'no description: no description key' );
+	ok( !( grep { exists $_->{description} } @$items ), 'no row has a description key (JSON-RPC clients would show it as an information leaf)' );
 	check_names( $items, 'RN programs' );
 
 	fresh();
@@ -333,9 +332,8 @@ subtest 'programItem: exact keys, canonical path, optional keys, undef cases' =>
 			url         => $PROGRAM_MENU,
 			passthrough => [ { %$input, path => $SCIENCE } ],
 			image       => $SCIENCE_IMG_300,
-			description => 'Science, weekly.',
 		},
-		'exact keys; image resized to 300 px; passthrough with the canonical path'
+		'exact keys; image resized to 300 px; passthrough with the canonical path; no description key on the row'
 	);
 	is( $input->{path}, 'https://www.abc.net.au/listen/programs/scienceshow/', 'the caller\'s hash is not changed' );
 	ok( !exists $item->{on_select} && !exists $item->{play}, 'a browse row (no on_select, no play)' );
@@ -343,7 +341,7 @@ subtest 'programItem: exact keys, canonical path, optional keys, undef cases' =>
 	is_deeply(
 		$OD->programItem( undef, { title => 'Bare', path => '/triplej/programs/bare/', network => '', description => ' ' } ),
 		{ name => 'Bare', line1 => 'Bare', type => 'link', url => $PROGRAM_MENU, passthrough => [ { title => 'Bare', path => '/triplej/programs/bare', network => '', description => ' ' } ], image => $ICON },
-		'no image -> icon; empty network/description -> no line2/description'
+		'no image -> icon; empty network -> no line2'
 	);
 
 	for my $variant ( '/listen/programs/godforbid/', 'https://abc.net.au/listen/programs/godforbid', '/kidslisten/programs/godforbid?x=1', '/listen/audiobooks/godforbid-page/' ) {
@@ -705,6 +703,7 @@ subtest 'episode submenu: Play episode, synopsis, Broadcast line' => sub {
 	is_deeply(
 		items_of($c),
 		[
+			{ name => 'Palm oil and nickel.', type => 'textarea' },
 			{
 				name            => 'Play episode',
 				type            => 'audio',
@@ -715,10 +714,9 @@ subtest 'episode submenu: Play episode, synopsis, Broadcast line' => sub {
 				favorites_icon  => $SCIENCE_IMG_300,
 				image           => $SCIENCE_IMG_300,
 			},
-			{ name => 'Palm oil and nickel.', type => 'textarea' },
 			text_item("Broadcast Sat 17 Oct \x{B7} 55 min"),
 		],
-		'exact items: Play episode (favorites_url = the abclisten:// URL), synopsis textarea, Broadcast line'
+		'exact items: synopsis textarea first (menu-mode XMLBrowser would blank an item before it), Play episode (favorites_url = the abclisten:// URL), Broadcast line'
 	);
 
 	$c = open_item( $OD->episodeItem( undef, { id => '1', title => 'From the row', duration => 120 } ) );
@@ -733,7 +731,7 @@ subtest 'episode submenu: Play episode, synopsis, Broadcast line' => sub {
 	is_deeply( items_of($c), [ text_item($LOAD_FAILED) ], 'no id: LOAD_FAILED' );
 
 	$c = feed( $EPISODE_MENU, ABCListenTest::FakeClient->new('00:00:00:00:00:01'), $episode );
-	is( items_of($c)->[0]->{name}, 'Play episode', 'with a client' );
+	is( items_of($c)->[1]->{name}, 'Play episode', 'with a client' );
 	check_names( items_of($c), 'episode submenu' );
 };
 

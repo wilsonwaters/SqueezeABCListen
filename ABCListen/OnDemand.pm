@@ -24,8 +24,12 @@ package Plugins::ABCListen::OnDemand;
 #   trailing slash). title falls back to that path.
 #   Item: { name => title, line1 => title, line2 => network, type => 'link', url => \&_programMenu,
 #           passthrough => [ { %program, path => canonical path } ],
-#           image => API::imageUrl(image, 300) || Util::ICON, description }
-#   line2 and description are absent when empty. Callers may override name/line1 only (L4).
+#           image => API::imageUrl(image, 300) || Util::ICON }
+#   line2 is absent when empty. Callers may override name/line1 only (L4). There is deliberately
+#   no 'description' key on the row (nor may callers add one): Slim::Control::XMLBrowser treats a
+#   non-audio item with a description as an information leaf, so JSON-RPC clients (Material, Jive,
+#   CLI) could not open the program. The description travels in the passthrough program and is
+#   the first item of the program menu.
 #
 # Plugins::ABCListen::OnDemand->episodeItem($client, \%episode) -> \%item | undef
 #   \%episode = the episode meta-cache shape (contract 3): { id, docType, title, programTitle,
@@ -61,8 +65,10 @@ package Plugins::ABCListen::OnDemand;
 # chapters). Episode rows get programImage, and programTitle/programId only when the episode path
 # is under the program path ('<program path>/...'); otherwise O1 fills them at play time.
 #
-# Episode menu (_episodeMenu; O4 extends it): "Play episode" (type audio, favourites keep the
-# abclisten:// URL) · synopsis (textarea) · "Broadcast <date> · <duration>".
+# Episode menu (_episodeMenu; O4 extends it): synopsis (textarea) · "Play episode" (type audio,
+# favourites keep the abclisten:// URL) · "Broadcast <date> · <duration>". The textarea must stay
+# first (Slim::Control::XMLBrowser's menu mode replaces item 0 with an empty item when it moves a
+# textarea into the window), so items O4 adds go after it.
 #
 # Ownership: O2 creates everything; O3 then owns _programsRoot, O4 owns episodeItem/_episodeMenu;
 # programItem, _programMenu and the provider registry stay with O2.
@@ -193,8 +199,12 @@ sub programItem {
 	};
 
 	# line2: Material, Jive and the CLI menu mode (the Default web skin shows only the name)
-	$item->{line2}       = $program{network}     if _hasText( $program{network} );
-	$item->{description} = $program{description} if _hasText( $program{description} );
+	$item->{line2} = $program{network} if _hasText( $program{network} );
+
+	# No 'description' key: LMS's CLI/JSON-RPC browser (Slim::Control::XMLBrowser, "Bug 17385")
+	# shows a non-audio item that has a description as an information leaf (Title/Description)
+	# instead of opening it, so Material, Jive and the CLI could not open the program. The
+	# description stays in the passthrough program and heads the program menu (textarea).
 
 	return $item;
 }
@@ -482,7 +492,14 @@ sub _episodeMenu {
 		my $title = _episodeTitle($episode);
 		my $image = Plugins::ABCListen::API::imageUrl( _episodeImage($episode), IMAGE_PX ) || Plugins::ABCListen::Util::ICON;
 
-		my @items = ( {
+		my @items;
+
+		# The synopsis comes first: in menu mode (Jive, Material, CLI menu:1) Slim::Control::XMLBrowser
+		# moves a textarea into the window and writes an empty item at index 0, which would wipe out
+		# a "Play episode" item listed before it.
+		push @items, { name => $episode->{description}, type => 'textarea' } if _hasText( $episode->{description} );
+
+		push @items, {
 			name            => cstring( $client, 'PLUGIN_ABCLISTEN_PLAY_EPISODE' ),
 			type            => 'audio',
 			on_select       => 'play',
@@ -491,9 +508,7 @@ sub _episodeMenu {
 			favorites_title => $title,
 			favorites_icon  => $image,
 			image           => $image,
-		} );
-
-		push @items, { name => $episode->{description}, type => 'textarea' } if _hasText( $episode->{description} );
+		};
 
 		my $date     = Plugins::ABCListen::Util::friendlyDate( $episode->{date} );
 		my $duration = Plugins::ABCListen::Util::friendlyDuration( $episode->{duration} );
