@@ -51,11 +51,11 @@ package Plugins::ABCListen::MyABC;
 #   * Followed programs: a follow appends a row after every existing one, a refresh or a re-follow
 #     within 30 min keeps the row's place, and an unfollowed program keeps its row for 30 min
 #     (Follow.pm's tombstones, kept in the pref, so across LMS restarts too). Nothing is sorted, so
-#     same-second follows or a clock change never reorder rows either. So an id into Followed
-#     programs, and on into a program menu, keeps opening the program it was issued for until 30
-#     min after the first unfollow that came after it. Then that tombstone expires and the rows
-#     after it move up one: an id older than that may open the next program's menu, follow rows
-#     included. That residual window is the accepted limit of the guarantee.
+#     same-second follows or a clock change never reorder rows either. Rows move only when a
+#     tombstone expires, 30 min after its unfollow: then every row below it moves up one. Any id into
+#     Followed programs (and on into a program menu) that is used across that moment - including a
+#     menu left open on screen - may open the next program's menu, follow rows included. That
+#     residual window is the accepted limit of the guarantee.
 #   * Latest episodes: a follow or unfollow starts a new list, so its rows do move. A stale id there
 #     opens or plays another episode; the episode menu has no follow rows, so the follows never
 #     change. (If the episode menu ever links to its program, e.g. O4's "More from", this route

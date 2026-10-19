@@ -104,7 +104,7 @@ sub follow {
 		my @oldest = sort { $entries[$a]->{followedAt} <=> $entries[$b]->{followedAt} || $a <=> $b } grep { $entries[$_]->{path} ne $path } @followed;
 		for my $i ( @oldest[ 0 .. $excess - 1 ] ) {
 			$entries[$i] = { %{ $entries[$i] }, unfollowedAt => time() };
-			main::INFOLOG && $log->is_info && $log->info( 'Followed programs: more than ' . MAX_FOLLOWED . " followed, so the oldest follow was dropped: $entries[$i]->{title} ($entries[$i]->{path})" );
+			main::INFOLOG && $log->is_info && $log->info( 'Followed programs: more than ' . MAX_FOLLOWED . " followed, so the oldest follow was unfollowed: $entries[$i]->{title} ($entries[$i]->{path})" );
 		}
 	}
 
