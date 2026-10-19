@@ -188,7 +188,10 @@ books without chapters; they play only in Australia anyway), then L4, then M2 (M
    (or undef for unknown/hidden/off-air/HLS-only); `Stations->byPageSlug($slugOrUrl)` → service id for live-page links
    (`/listen/live/<slug>`, `/triplej/live/<slug>`), network homes (`/listen/radionational/`, `/triplej/`, `/kidslisten/`,
    `/pacific/live/`, …) and `abc.net.au` links without `www`. Consumers: D1 (Home "Radio Stations"), D4 (News, Sport,
-   Kids listen station rows; may override `line2`/`description` on a copy), L4.
+   Kids listen station rows; may override `line2`/`description` on a copy), L4. Event-only services (sport events):
+   `stationItem` returns undef unless on air — call `Stations->checkOnAir(\@ids, $cb)` first (≤ 6 concurrent checks,
+   3 s deadline) when listing them (L1 review, PR #32). `/news` (ABC News website) is NOT NewsRadio; only `/listen/news`
+   and the live slug `news` map to `NEWS`.
 8. **Prefs (`plugin.abclisten`).** `homeState` ('' | ACT | NSW | NT | QLD | SA | TAS | VIC | WA; '' behaves as NSW;
    owner M1, read by L1/L4), `liveQuality` (`standard` | `mediahub` | `hls`; owner L5, default `standard`), `followed`
    (array; owner M2). Each owner calls `$prefs->init` for its own keys in its hook `init`; readers treat undef as the
