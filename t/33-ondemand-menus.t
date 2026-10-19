@@ -4,10 +4,12 @@
 # menuWeights, its place among the other hooks' items); init still calls Episode->init;
 # _programsRoot and the network list; programItem / episodeItem exact keys (no on_select, play URL,
 # name/line2 formats, image fallbacks, meta-cache writes incl. the programTitle rule); the program
-# menu order (header -> provider extras -> episodes -> More) and paging to 250; NO_EPISODES /
-# LOAD_FAILED states (restricted audiobooks without a collection: no NO_EPISODES row); the provider
-# registry (order, merged program detail, dying / silent / double / non-array providers); the
-# episode submenu; readable names everywhere; exactly one callback on every path.
+# menu order (header -> provider extras -> episodes -> More) and paging to 250; the 8 s timeout on
+# the menu's requests; NO_EPISODES / LOAD_FAILED states (restricted audiobooks without a
+# collection: no NO_EPISODES row, unless nothing else would be listed: never an empty list); the
+# provider registry (order, merged program detail, dying / silent / double / non-array providers);
+# the episode submenu; readable names everywhere; exactly one callback on every path, also when
+# LMS's callback dies.
 #
 # Fixtures: t/data/ondemand/ (see t/32-programs.t for provenance) and the F3 search page
 # t/data/foundation/listen-search.trimmed.html (buildId build-3afcd04f). Episode pages for paging
@@ -486,6 +488,11 @@ subtest 'program menu (The Science Show): header, 50 episodes newest first, More
 
 	is_deeply( [ map { $_->{fn} } @API_CALLS ], [qw(nextData bff)], 'one program page, one episode page' );
 	is_deeply( [ episode_requests() ], ["$EPS?collectionId=2885458&offset=0&size=50"], 'episodes 0..49 of collection 2885458' );
+	is_deeply(
+		[ map { $_->{params}->{timeout} } grep { $_->{url} !~ m{/listen/search\z} } requests() ],
+		[ 8, 8 ],
+		'program page and episode page requests: 8 s timeout (a slow ABC answers the menu in time)'
+	);
 	check_names( $items, 'program menu' );
 
 	# More: 4 more pages of 50, the last without a More link (ABC's 250)
@@ -518,12 +525,14 @@ subtest 'program menu: programImage, and programTitle/programId only for the pro
 	my $page = json_file('nextdata-program-scienceshow.trimmed.json')->{pageProps}->{programCollectionPrepared};
 	my @cards = @{ $page->{items} };
 	push @cards, { %{ $cards[0] }, contentUri => 'coremedia://audioepisode/107000001', cardId => '107000001', articleLink => "$SCIENCE/no-art/107000001", cardImagePrepared => undef };
-	route( qr{\Q$EPS\E\?}, content => to_json( { collection => { id => '2885458', items => \@cards, pagination => { offset => 0, size => 50, total => 3 } } } ), headers => $JSON_TYPE );
+	# a sibling program whose path starts with the program path: /listen/programs/scienceshowcase
+	push @cards, { %{ $cards[0] }, contentUri => 'coremedia://audioepisode/107000002', cardId => '107000002', articleLink => "${SCIENCE}case/sibling/107000002" };
+	route( qr{\Q$EPS\E\?}, content => to_json( { collection => { id => '2885458', items => \@cards, pagination => { offset => 0, size => 50, total => 4 } } } ), headers => $JSON_TYPE );
 
 	my $c     = feed( $PROGRAM_MENU, undef, { title => 'The Science Show', path => $SCIENCE } );
 	my $items = items_of($c);
-	is_deeply( [ map { $_->{play} } grep { $_->{play} } @$items ], [ map {"abclisten://episode/$_"} qw(107266790 107232984 107000001) ], 'all three listed (Lab Notes too) and playable' );
-	ok( !( grep { $_->{name} eq $MORE } @$items ), 'total 3: no More link' );
+	is_deeply( [ map { $_->{play} } grep { $_->{play} } @$items ], [ map {"abclisten://episode/$_"} qw(107266790 107232984 107000001 107000002) ], 'all four listed (Lab Notes and the sibling too) and playable' );
+	ok( !( grep { $_->{name} eq $MORE } @$items ), 'total 4: no More link' );
 
 	my $own = Plugins::ABCListen::Util::getEpisodeMeta('107266790');
 	is( $own->{programTitle}, 'The Science Show', 'own episode: programTitle cached' );
@@ -532,6 +541,12 @@ subtest 'program menu: programImage, and programTitle/programId only for the pro
 	my $lab = Plugins::ABCListen::Util::getEpisodeMeta('107232984');
 	ok( !exists $lab->{programTitle} && !exists $lab->{programId}, 'Lab Notes episode (/listen/programs/lab-notes/…): no programTitle/programId' );
 	like( $lab->{image}, qr/6d28416a630b86cc332eb7aa3cf680ba/, 'Lab Notes episode keeps its own artwork' );
+
+	my $sibling = Plugins::ABCListen::Util::getEpisodeMeta('107000002');
+	is( $sibling->{path}, '/listen/programs/scienceshowcase/sibling/107000002', 'sibling episode: its own path' );
+	ok( !exists $sibling->{programTitle} && !exists $sibling->{programId}, 'sibling program sharing the path prefix (/listen/programs/scienceshowcase/…): no programTitle/programId' );
+	my ($siblingRow) = grep { ( $_->{play} || '' ) eq 'abclisten://episode/107000002' } @$items;
+	ok( !exists $siblingRow->{passthrough}->[0]->{programTitle}, 'sibling episode row: no programTitle in the passthrough' );
 
 	my ($noArt) = grep { ( $_->{play} || '' ) eq 'abclisten://episode/107000001' } @$items;
 	is( $noArt->{image}, $SCIENCE_IMG_300, 'episode without artwork: the program image' );
@@ -598,6 +613,85 @@ subtest 'program menu: empty and error states (one readable text item, never emp
 	route_episodes();
 	$c = feed( $PROGRAM_MENU, $client, { title => 'The Science Show', path => $SCIENCE } );
 	is( scalar @{ items_of($c) }, 54, 'with a client: the same menu' );
+};
+
+subtest 'program menu: a restricted program with nothing else to list says "No episodes available" (never an empty list)' => sub {
+	my $path = '/listen/audiobooks/bare-book';
+	my $page = to_json( {
+		pageProps => {
+			heroImageWithCTAPrepared  => { heading => 'Bare Book', uri => 'coremedia://program/90000030', attributionLinksPrepared => [] },
+			presentersPrepared        => [],
+			programCollectionPrepared => undef,
+			programTemplate           => 'audiobook',
+			webDistributionRestricted => JSON::PP::true,
+		},
+	} );
+
+	# open the program with these providers registered
+	my $open = sub {
+		fresh();
+		route( "$NEXT$path.json", content => $page, headers => $JSON_TYPE );
+		$OD->registerProgramMenuProvider($_) for @_;
+		return feed( $PROGRAM_MENU, undef, { title => 'Bare Book', path => $path } );
+	};
+
+	my $c = $open->();
+	is( $c->count, 1, 'no providers: one callback' );
+	is_deeply( items_of($c), [ text_item($NO_EPISODES) ], 'restricted, no collection, no header rows, no providers: "No episodes available"' );
+	is( scalar episode_requests(), 0, 'no episode request' );
+
+	$c = $open->( sub { $_[2]->( [] ) } );
+	is_deeply( items_of($c), [ text_item($NO_EPISODES) ], 'a provider with nothing to add: "No episodes available"' );
+
+	$c = $open->( sub { die "chapters broke\n" } );
+	is( $c->count, 1, 'a provider that dies: one callback' );
+	is_deeply( items_of($c), [ text_item($NO_EPISODES) ], 'a provider that dies: "No episodes available"' );
+
+	$c = $open->( sub { $_[2]->('not an array') } );
+	is_deeply( items_of($c), [ text_item($NO_EPISODES) ], 'a provider that calls back with a non-array: "No episodes available"' );
+
+	$c = $open->( sub { } );
+	is( $c->count, 0, 'a provider that never calls back: waiting' );
+	advanceTime(5);
+	is( $c->count, 1, 'after the 5 s provider timeout: one callback' );
+	is_deeply( items_of($c), [ text_item($NO_EPISODES) ], 'a provider that times out: "No episodes available"' );
+
+	$c = $open->( sub { $_[2]->( [ { name => 'Chapters', type => 'link', url => 'x' } ] ) } );
+	is_deeply( names( items_of($c) ), ['Chapters'], 'a provider that lists the chapters: only its item (no "No episodes available")' );
+};
+
+subtest 'program menu: an LMS callback that dies is called once' => sub {
+	my $calls;
+	my $dying = sub { $calls++; die "LMS broke\n" };
+
+	# answered while the menu is being built (no episode collection, no providers): the builder's
+	# error handler must not answer a second time
+	fresh();
+	route( "$NEXT/listen/programs/minimal.json", file => 'ondemand/nextdata-program-minimal.synthetic.json', headers => $JSON_TYPE );
+	$calls = 0;
+	ok( eval { $PROGRAM_MENU->( undef, $dying, {}, { title => 'Minimal', path => '/listen/programs/minimal' } ); 1 }, 'answered by the menu builder: the die does not reach the caller' ) or diag $@;
+	is( $calls, 1, 'answered by the menu builder: called once (no second LOAD_FAILED answer)' );
+	ok( ( grep { $_->{message} =~ /LMS broke/ } errors_logged() ), 'answered by the menu builder: logged at ERROR' );
+
+	# answered from the episode page callback
+	fresh();
+	route_science();
+	route_episodes();
+	$calls = 0;
+	ok( eval { $PROGRAM_MENU->( undef, $dying, {}, { title => 'The Science Show', path => $SCIENCE } ); 1 }, 'with episodes: the die does not reach the caller' ) or diag $@;
+	is( $calls, 1, 'with episodes: called once' );
+	ok( ( grep { $_->{message} =~ /LMS broke/ } errors_logged() ), 'with episodes: logged at ERROR' );
+
+	fresh();
+	route( qr{/_next/data/}, error => 'Timed out waiting for data' );
+	$calls = 0;
+	ok( eval { $PROGRAM_MENU->( undef, $dying, {}, { title => 'Broken', path => '/listen/programs/broken' } ); 1 }, 'program page fails: the die does not reach the caller' ) or diag $@;
+	is( $calls, 1, 'program page fails: called once' );
+
+	fresh();
+	$calls = 0;
+	ok( eval { $PROGRAM_MENU->( undef, $dying, {}, undef ); 1 }, 'no program passthrough: the die does not reach the caller' ) or diag $@;
+	is( $calls, 1, 'no program passthrough: called once' );
 };
 
 subtest 'registry: order, merged program detail, isolation' => sub {

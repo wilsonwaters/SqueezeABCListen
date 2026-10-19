@@ -62,8 +62,10 @@ package Plugins::ABCListen::OnDemand;
 # (Programs->program attribution title) · provider extras · the newest 50 episodes · "More
 # episodes…" (the next 50, to ABC's 250). No episodes: "No episodes available", except for a
 # restricted program without an episode collection (an ABC audiobook: D5's provider lists its
-# chapters). Episode rows get programImage, and programTitle/programId only when the episode path
-# is under the program path ('<program path>/...'); otherwise O1 fills them at play time.
+# chapters) that has a header row or provider extras to show: the menu is never empty, so with
+# none of those it is "No episodes available" too. Episode rows get programImage, and
+# programTitle/programId only when the episode path is under the program path
+# ('<program path>/...'); otherwise O1 fills them at play time.
 #
 # Episode menu (_episodeMenu; O4 extends it): synopsis (textarea) · "Play episode" (type audio,
 # favourites keep the abclisten:// URL) · "Broadcast <date> · <duration>". The textarea must stay
@@ -305,7 +307,15 @@ sub _programMenuItems {
 	my $done = sub {
 		return if --$pending;
 
-		_respond( $client, $cb, sub { [ @header, @$extras, @$episodes ] } );
+		_respond( $client, $cb, sub {
+			my @items = ( @header, @$extras, @$episodes );
+
+			# never an empty menu: a restricted program with no header rows, no provider extras
+			# (none registered, or they failed or timed out) and no episode list says so
+			@items = ( _textItem( $client, 'PLUGIN_ABCLISTEN_NO_EPISODES' ) ) unless @items;
+
+			return \@items;
+		} );
 	};
 
 	_runProviders( $client, \%merged, sub {
