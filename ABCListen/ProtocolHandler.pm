@@ -37,6 +37,9 @@ package Plugins::ABCListen::ProtocolHandler;
 #     hls => 1: LMS can't play HLS, so only the PlayHLS path (L5) may flag one. No candidate
 #     left: failToken. Each candidate is scanned by the core remote scanner (SUPER::scanUrl) in
 #     turn; the first that scans plays.
+#     Candidates must be direct audio streams, never .pls/.m3u (or other) playlists: LMS plays
+#     a scanned playlist's entries as tracks of their own, with their own protocol handler, so
+#     the per-kind dispatch (metadata, onStream, onStop) stops working for that play.
 #     Misbehaving resolvers are contained: if resolve dies before calling back, or doesn't call
 #     back within RESOLVE_TIMEOUT (20) seconds, the play fails with
 #     PLUGIN_ABCLISTEN_STREAM_FAILED; a second or late call of $cb is ignored, and a die after
@@ -49,11 +52,15 @@ package Plugins::ABCListen::ProtocolHandler;
 #     Returns any of { title, artist, album, cover, duration }. Only non-empty scalar values
 #     are used; a non-hash result, or an exception, counts as no metadata. An exception is
 #     logged at WARN at most once a minute per URL (METADATA_WARN_INTERVAL), at DEBUG otherwise.
+#     This hook is how a kind delivers Now Playing metadata: getMetadataFor here replaces the
+#     HTTP handler's, and ignores in-stream metadata (the song's pluginData(wmaMeta)).
 #
 #   onStream($client, $song, $id)    onStop($song, $id)           (optional)
 #     LMS's onStream/onStop for a song whose current track is a URL of this kind, plus the
 #     parsed id: when it starts streaming (also after a seek) and when it stops. Exceptions are
-#     logged and contained.
+#     logged and contained. LMS (Slim::Player::StreamingController) calls onStream once per
+#     player in a sync group, with that player as $client, so a kind whose hook must act once
+#     per play filters to the master player ($client == $song->master).
 #
 # What the handler does
 # =====================
