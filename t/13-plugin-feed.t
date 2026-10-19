@@ -244,13 +244,14 @@ subtest 'a hook module that fails to load (compile error): logged, and its slot 
 	is_deeply( items_of($c), [ $A, $B, $ERROR_ITEM, $D, $E ], 'the broken hook is one error item in its slot; the others keep their order' );
 };
 
-subtest 'default feed: one "Radio" link; the other hooks add nothing yet' => sub {
+subtest 'default feed: "Radio" and "Programs" links; the other hooks add nothing yet' => sub {
 	resetStubs();
 	my $c = feed();
 
 	is( $c->count, 1, 'callback called once' );
 	my $items = items_of($c);
-	is( scalar @$items, 1, 'exactly one top-level item' );
+	is( scalar @$items, 2, 'exactly two top-level items' );
+	is( $items->[1]->{name}, 'Programs', 'then "Programs" (O2; exact keys in t/33)' );
 
 	my $live = $items->[0];
 	is( $live->{name}, 'Radio', 'named "Radio"' );
@@ -296,7 +297,7 @@ subtest 'default feed: one "Radio" link; the other hooks add nothing yet' => sub
 };
 
 subtest 'the empty hooks: init is harmless and menuItems answers [] once' => sub {
-	for my $name (qw(OnDemand Discover Search MyABC)) {
+	for my $name (qw(Discover Search MyABC)) {
 		resetStubs();
 		my $class = "Plugins::ABCListen::$name";
 		ok( eval { $class->init(); 1 }, "$class->init does not die" ) or diag $@;
@@ -315,7 +316,9 @@ subtest 'the empty hooks: init is harmless and menuItems answers [] once' => sub
 	is( scalar @$liveItems, 1, 'Live->menuItems answers one item' );
 	is( $liveItems->[0]->{weight}, Plugins::ABCListen::Util::topWeight('radio'), 'the Radio item carries the "radio" weight (20)' );
 	is_deeply( [ Plugins::ABCListen::Live->menuWeights ], [20], 'Live declares the "radio" weight (for its error item)' );
-	ok( !$_->can('menuWeights'), "$_ declares no weights yet" ) for map {"Plugins::ABCListen::$_"} qw(OnDemand Discover Search MyABC);
+	ok( eval { Plugins::ABCListen::OnDemand->init(); 1 }, 'OnDemand->init does not die' ) or diag $@;
+	is_deeply( [ Plugins::ABCListen::OnDemand->menuWeights ], [75], 'OnDemand declares the "programs" weight (O2; its menus are tested in t/33)' );
+	ok( !$_->can('menuWeights'), "$_ declares no weights yet" ) for map {"Plugins::ABCListen::$_"} qw(Discover Search MyABC);
 	is( scalar errors_logged(), 0, 'no errors logged' );
 };
 
@@ -400,7 +403,9 @@ subtest 'a dying hook becomes one error item in its position; the feed still ret
 		my @expected = ( $A, $B, $C, $D, $E );
 		$expected[$i] = $ERROR_ITEM;
 
-		my $c = feed(%impl);
+		# no declared weights: the error item keeps its hook-order slot (weighted error items: see
+		# 'weights: the error item for a failing hook keeps that hook's position' below)
+		my $c = feed( %impl, declare => { map { $_ => undef } @NAMES } );
 		is( $c->count, 1, "$dying dies: callback once" );
 		is_deeply( items_of($c), \@expected, "$dying dies: error item in its position, the others in order" );
 		ok( ( grep { $_->{message} =~ /Plugins::ABCListen::$dying->menuItems failed: $dying broke/ } errors_logged() ), "$dying dies: error logged" );
@@ -684,7 +689,7 @@ subtest 'top-level menu names are pre-seeded for every canonical weight' => sub 
 		sport      => [ PLUGIN_ABCLISTEN_SPORT       => 'Sport' ],
 		kids       => [ PLUGIN_ABCLISTEN_KIDS        => 'Kids listen' ],
 		audiobooks => [ PLUGIN_ABCLISTEN_AUDIOBOOKS  => 'Audiobooks' ],
-		programs   => [ PLUGIN_ABCLISTEN_PROGRAMS_AZ => 'Programs (A–Z)' ],
+		programs   => [ PLUGIN_ABCLISTEN_PROGRAMS_AZ => 'Programs' ],    # orchestrator decision (O2 #16)
 		search     => [ PLUGIN_ABCLISTEN_SEARCH      => 'Search' ],
 		myabc      => [ PLUGIN_ABCLISTEN_MY_ABC      => 'My ABC listen' ],
 	);

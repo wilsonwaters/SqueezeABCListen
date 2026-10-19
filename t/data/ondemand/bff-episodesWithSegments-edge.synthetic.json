@@ -1,0 +1,88 @@
+{
+  "collection": {
+    "id": "90000020",
+    "items": [
+      {
+        "articleLink": "/listen/programs/edgecases/q-and-a/90000021/",
+        "cardAttributionPrepared": { "publishedDate": "2026-10-12T21:30:00+00:00" },
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/fedcba9876543210fedcba9876543210?impolicy=wcms_crop_resize&cropH=500&cropW=500&xPos=0&yPos=0&width=862&height=862",
+          "ratio": "1x1"
+        },
+        "cardMediaIndicatorPrepared": { "icon": "audio", "duration": 4500 },
+        "contentUri": "coremedia://audioepisode/90000021",
+        "description": "Questions &amp; answers&nbsp;about &#8216;everything&#8217;.",
+        "cardId": "90000021",
+        "cardTitle": "Q&amp;A &#8211; the edge cases",
+        "presentersPrepared": [ { "names": { "full": "Ann Example" } }, { "names": { "full": "" } } ],
+        "docType": "audioepisode",
+        "segments": [
+          {
+            "articleLink": "/listen/programs/edgecases/part-one/90000022",
+            "cardAttributionPrepared": { "publishedDate": "2026-10-12T21:31:00+00:00" },
+            "cardMediaIndicatorPrepared": { "icon": "audio", "duration": 600 },
+            "contentLabelPrepared": { "labelText": "1 of 2" },
+            "contentUri": "coremedia://audiosegment/90000022",
+            "cardId": "90000022",
+            "cardTitle": "Part one",
+            "presentersPrepared": []
+          },
+          {
+            "articleLink": "/listen/programs/edgecases/part-two/90000023",
+            "contentLabelPrepared": null,
+            "contentUri": "coremedia://audiosegment/90000023",
+            "cardId": "90000023",
+            "cardTitle": "Part two",
+            "docType": null
+          },
+          {
+            "articleLink": "/listen/programs/edgecases/not-audio/90000024",
+            "contentUri": "coremedia://article/90000024",
+            "cardId": "90000024",
+            "cardTitle": "An article, not a segment"
+          }
+        ]
+      },
+      {
+        "articleLink": "/listen/programs/edgecases/no-date/90000025",
+        "cardMediaIndicatorPrepared": { "icon": "audio", "duration": 1800 },
+        "contentUri": "coremedia://audioepisode/90000025",
+        "cardId": "90000025",
+        "cardTitle": "No date",
+        "docType": "audioepisode",
+        "segments": null
+      },
+      {
+        "articleLink": "/listen/programs/edgecases/no-duration/90000026",
+        "cardAttributionPrepared": { "publishedDate": "2026-10-10T01:00:00+00:00" },
+        "cardMediaIndicatorPrepared": { "icon": "audio" },
+        "contentUri": "coremedia://audioepisode/90000026",
+        "cardId": "90000026",
+        "cardTitle": "No duration",
+        "docType": "audioepisode"
+      },
+      {
+        "articleLink": "/listen/programs/edgecases/nothing/90000027",
+        "contentUri": "coremedia://audio/90000027",
+        "cardId": "90000027",
+        "cardTitle": "No date or duration",
+        "docType": null
+      },
+      {
+        "articleLink": "/listen/programs/edgecases/bad-uri/90000028",
+        "contentUri": "coremedia://audioepisode/not-a-number",
+        "cardId": "x90000028",
+        "cardTitle": "Unparseable contentUri"
+      },
+      {
+        "articleLink": "/listen/programs/edgecases/video/90000029",
+        "contentUri": "coremedia://video/90000029",
+        "cardId": "90000029",
+        "cardTitle": "A video"
+      },
+      "not a card"
+    ],
+    "pagination": { "offset": 0, "size": 50, "total": 1529 }
+  }
+}

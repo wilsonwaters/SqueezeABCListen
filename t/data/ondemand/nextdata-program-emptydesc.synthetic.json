@@ -1,0 +1,22 @@
+{
+  "pageProps": {
+    "heroImageWithCTAPrepared": {
+      "heading": "Quiet Program",
+      "uri": "coremedia://teaser/90000009",
+      "attributionLinksPrepared": [ { "url": "https://www.abc.net.au/listen/radionational/", "title": "ABC Radio National" } ]
+    },
+    "heroDescriptionPrepared": {
+      "descriptionPrepared": {
+        "descriptor": { "type": "tagname", "key": "div", "props": {}, "children": [] }
+      }
+    },
+    "presentersPrepared": [ { "id": "1", "label": { "full": "Kim Quiet" } } ],
+    "programCollectionPrepared": {
+      "id": "90000010",
+      "items": [],
+      "pagination": { "offset": 0, "size": 10, "total": 0 }
+    },
+    "programTemplate": "audio",
+    "webDistributionRestricted": false
+  }
+}

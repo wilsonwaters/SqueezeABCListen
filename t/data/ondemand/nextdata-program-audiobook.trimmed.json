@@ -1,0 +1,275 @@
+{
+  "pageProps": {
+    "programTemplate": "audiobook",
+    "webDistributionRestricted": true,
+    "programCollectionPrepared": null,
+    "latestEpisodePrepared": null,
+    "heroImageWithCTAPrepared": {
+      "heading": "The Dictionary of Lost Words",
+      "heroImagePrepared": {
+        "alt": "",
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/d69f290a96e32fb4674bad70b4211043?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+        "ratio": "1x1",
+        "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/d69f290a96e32fb4674bad70b4211043?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w"
+        ],
+        "width": "862",
+        "height": "862"
+      },
+      "uri": "coremedia://program/106353766",
+      "attributionLinksPrepared": [],
+      "canonicalURI": "/listen/audiobooks/the-dictionary-of-lost-words-page",
+      "shareUtilityProps": {
+        "utilityBarShareLinks": [
+          {
+            "shareBy": "facebook"
+          },
+          {
+            "shareBy": "twitter"
+          }
+        ],
+        "hasPopover": true,
+        "title": "The Dictionary of Lost Words",
+        "shareLink": "https://www.abc.net.au/listen/audiobooks/the-dictionary-of-lost-words-page/",
+        "shareOn": {
+          "title": "Share this on",
+          "items": [
+            {
+              "shareBy": "facebook"
+            },
+            {
+              "shareBy": "linked-in"
+            },
+            {
+              "shareBy": "twitter",
+              "via": "ABCaustralia"
+            }
+          ]
+        },
+        "sendBy": {
+          "title": "Send this by",
+          "items": [
+            {
+              "shareBy": "mail"
+            },
+            {
+              "shareBy": "messenger",
+              "mobileOnly": true
+            },
+            {
+              "shareBy": "link"
+            }
+          ]
+        },
+        "synopsis": ""
+      }
+    },
+    "heroDescriptionPrepared": {
+      "descriptionPrepared": {
+        "descriptor": {
+          "type": "tagname",
+          "key": "div",
+          "props": {},
+          "children": [
+            {
+              "type": "tagname",
+              "key": "@@standfirst",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "In 1901, the word 'bondmaid' was discovered missing from the Oxford English Dictionary. This is the story of the girl who stole it."
+                }
+              ]
+            },
+            {
+              "type": "tagname",
+              "key": "p",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "Motherless and irrepressibly curious, Esme spends her childhood in the Scriptorium, a garden shed in Oxford where her father and a team of lexicographers are gathering words for the very first Oxford English Dictionary. Esme's place is beneath the sorting table, unseen and unheard. One day, she sees a slip containing the word bondmaid flutter to the floor unclaimed. Esme begins to collect other words from the Scriptorium that are misplaced, discarded or have been neglected by the dictionary men."
+                }
+              ]
+            },
+            {
+              "type": "tagname",
+              "key": "p",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "Over time, Esme realises that some words are considered more important than others — that words and meanings relating to women's experiences often go unrecorded. She begins to collect words for another dictionary: The Dictionary of Lost Words."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "uri": "coremedia://program/106353766"
+    },
+    "presentersPrepared": [
+      {
+        "canonicalURI": "/listen/pip-williams/105507772",
+        "canonicalURL": "https://www.abc.net.au/listen/pip-williams/105507772",
+        "id": "105507772",
+        "label": {
+          "full": "Pip Williams"
+        },
+        "contentImagePrepared": null
+      }
+    ],
+    "additionalCollectionPrepared": [
+      {
+        "bentoCardType": "ContentCard",
+        "id": "101377138",
+        "title": "Audiobooks",
+        "productName": "listen",
+        "heading": "Audiobooks",
+        "items": [
+          {
+            "articleLink": "/listen/audiobooks/the-dictionary-of-lost-words-page/",
+            "cardAttributionPrepared": null,
+            "cardImagePrepared": {
+              "alt": "Book cover of The Dictionary of Lost Words by Pip Williams",
+              "imgSrc": "https://live-production.wcms.abc-cdn.net.au/d69f290a96e32fb4674bad70b4211043?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+              "ratio": "1x1",
+              "srcSet": [
+                "https://live-production.wcms.abc-cdn.net.au/d69f290a96e32fb4674bad70b4211043?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w"
+              ],
+              "hideImageBorders": false,
+              "width": "862",
+              "height": "862"
+            },
+            "cardMediaIndicatorPrepared": null,
+            "contentLabelPrepared": null,
+            "contentUri": "coremedia://program/106678214",
+            "description": "In 1901, the word ‘Bondmaid’ was discovered missing from the Oxford English Dictionary. This is the story of the girl who stole it.",
+            "cardId": "106353766",
+            "cardTitle": "The Dictionary of Lost Words",
+            "noBorders": true,
+            "presentersPrepared": [
+              {
+                "canonicalURI": "/listen/pip-williams/105507772",
+                "canonicalURL": "https://www.abc.net.au/listen/pip-williams/105507772",
+                "id": "105507772",
+                "names": {
+                  "full": "Pip Williams"
+                },
+                "role": "Author"
+              }
+            ],
+            "imagePositionPrepared": {
+              "mobile": "top"
+            },
+            "cardContentPositionPrepared": {},
+            "hasMobileFeatured": "all",
+            "hideImageBorders": false,
+            "featuredSettings": {
+              "mobile": true,
+              "tablet": false,
+              "desktop": false
+            }
+          },
+          {
+            "articleLink": "/listen/audiobooks/the-13-storey-treehouse-page/",
+            "cardAttributionPrepared": null,
+            "cardImagePrepared": {
+              "alt": "The 13-Storey Treehouse ",
+              "imgSrc": "https://live-production.wcms.abc-cdn.net.au/9779b4fdea8a0d41a60fbfc44b242e1a?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+              "ratio": "1x1",
+              "srcSet": [
+                "https://live-production.wcms.abc-cdn.net.au/9779b4fdea8a0d41a60fbfc44b242e1a?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w"
+              ],
+              "hideImageBorders": false,
+              "width": "862",
+              "height": "862"
+            },
+            "cardMediaIndicatorPrepared": null,
+            "contentLabelPrepared": null,
+            "contentUri": "coremedia://program/106679636",
+            "description": "Andy and Terry live in a 13-storey treehouse. They've also got a new book to write, but there's a problem. A BIG problem. Well, quite a few big problems actually...",
+            "cardId": "106329802",
+            "cardTitle": "The 13-Storey Treehouse",
+            "noBorders": true,
+            "presentersPrepared": [
+              {
+                "canonicalURI": "/listen/andy-griffiths-and-terry-denton/106330066",
+                "canonicalURL": "https://www.abc.net.au/listen/andy-griffiths-and-terry-denton/106330066",
+                "id": "106330066",
+                "names": {
+                  "full": "Andy Griffiths and Terry Denton"
+                },
+                "role": "Author"
+              }
+            ],
+            "imagePositionPrepared": {
+              "mobile": "top"
+            },
+            "cardContentPositionPrepared": {},
+            "hasMobileFeatured": "all",
+            "hideImageBorders": false,
+            "featuredSettings": {
+              "mobile": true,
+              "tablet": false,
+              "desktop": false
+            }
+          },
+          {
+            "articleLink": "/listen/audiobooks/my-brilliant-career-page/",
+            "cardAttributionPrepared": null,
+            "cardImagePrepared": {
+              "alt": "My Brilliant Career - Miles Franklin. Narrated by Gemma Chua-Tran",
+              "imgSrc": "https://live-production.wcms.abc-cdn.net.au/096224720d23db565ee531d3ec1fd084?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+              "ratio": "1x1",
+              "srcSet": [
+                "https://live-production.wcms.abc-cdn.net.au/096224720d23db565ee531d3ec1fd084?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w"
+              ],
+              "hideImageBorders": false,
+              "width": "862",
+              "height": "862"
+            },
+            "cardMediaIndicatorPrepared": null,
+            "contentLabelPrepared": null,
+            "contentUri": "coremedia://program/106678880",
+            "description": "My Brilliant Career is a classic Australian novel about creativity, ambition, and finding your own path. First published in 1901, it shocked readers with its honesty and boldness.",
+            "cardId": "105915076",
+            "cardTitle": "My Brilliant Career",
+            "noBorders": true,
+            "presentersPrepared": [
+              {
+                "canonicalURI": "/listen/miles-franklin/105915046",
+                "canonicalURL": "https://www.abc.net.au/listen/miles-franklin/105915046",
+                "id": "105915046",
+                "names": {
+                  "full": "Miles Franklin"
+                },
+                "role": "Author"
+              }
+            ],
+            "imagePositionPrepared": {
+              "mobile": "top"
+            },
+            "cardContentPositionPrepared": {},
+            "hasMobileFeatured": "all",
+            "hideImageBorders": false,
+            "featuredSettings": {
+              "mobile": true,
+              "tablet": false,
+              "desktop": false
+            }
+          }
+        ],
+        "contentUri": "coremedia://collection/101377138",
+        "borders": false,
+        "linkUrl": "https://www.abc.net.au/radio/all-audio-books/13337614",
+        "linkTitle": "",
+        "showTitleVisually": true,
+        "canonicalURI": "/listen/listenapp/books-test-collection/101377138",
+        "robots": null,
+        "ratio": "1x1"
+      }
+    ]
+  }
+}

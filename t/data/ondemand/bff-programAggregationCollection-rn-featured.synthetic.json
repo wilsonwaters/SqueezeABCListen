@@ -1,0 +1,50 @@
+{
+  "collection": {
+    "heading": "Featured Programs",
+    "loadMoreUrl": "/listen/radionational/programs",
+    "items": [
+      {
+        "articleLink": "https://www.abc.net.au/listen/programs/godforbid",
+        "cardImagePrepared": {
+          "alt": "ABC God Forbid logo featuring hands reaching through clouds against a blue background, with bold white text.",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/9b022a1c24f404a4755241bb86365781?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+          "ratio": "1x1"
+        },
+        "contentUri": "coremedia://program/8132136",
+        "description": "Featured copy of God Forbid: a duplicate of the main list's card (absolute link, no trailing slash).",
+        "cardId": "8132136",
+        "cardTitle": "God Forbid"
+      },
+      {
+        "articleLink": "/listen/programs/emigre-stories/",
+        "contentUri": "coremedia://program/90000001",
+        "cardId": "90000001",
+        "cardTitle": "Émigré Stories"
+      },
+      {
+        "articleLink": "/listen/programs/no-title/",
+        "contentUri": "coremedia://program/90000003",
+        "cardId": "90000003",
+        "cardTitle": "  "
+      },
+      {
+        "articleLink": "https://example.com/listen/programs/elsewhere/",
+        "contentUri": "coremedia://program/90000004",
+        "cardId": "90000004",
+        "cardTitle": "Off-site Program"
+      },
+      {
+        "articleLink": "/listen/programs/broken-uri/",
+        "contentUri": "not-a-coremedia-uri",
+        "cardId": "90000005",
+        "cardTitle": "Broken Uri"
+      }
+    ],
+    "contentUri": "coremedia://collection/13910480",
+    "pagination": {
+      "offset": 0,
+      "size": 50,
+      "total": 5
+    }
+  }
+}

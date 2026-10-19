@@ -1,0 +1,13 @@
+{
+  "pageProps": {
+    "heroImageWithCTAPrepared": {
+      "heading": "Minimal Program",
+      "uri": "coremedia://program/90000002",
+      "attributionLinksPrepared": []
+    },
+    "presentersPrepared": [],
+    "programCollectionPrepared": null,
+    "programTemplate": "default",
+    "webDistributionRestricted": false
+  }
+}

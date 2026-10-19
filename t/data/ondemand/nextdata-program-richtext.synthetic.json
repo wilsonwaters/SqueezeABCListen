@@ -1,0 +1,68 @@
+{
+  "pageProps": {
+    "heroImageWithCTAPrepared": {
+      "heading": "Fish &amp; Facts",
+      "uri": "coremedia://program/90000006",
+      "heroImagePrepared": {
+        "alt": "",
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/0123456789abcdef0123456789abcdef?impolicy=wcms_crop_resize&cropH=1000&cropW=1000&xPos=0&yPos=0&width=862&height=862",
+        "ratio": "1x1"
+      },
+      "attributionLinksPrepared": [
+        { "url": "https://www.abc.net.au/listen/classic/", "title": "ABC Classic &amp; Jazz" },
+        { "url": "https://www.abc.net.au/listen/jazz/", "title": "ignored second link" }
+      ]
+    },
+    "heroDescriptionPrepared": {
+      "descriptionPrepared": {
+        "descriptor": {
+          "type": "tagname",
+          "key": "div",
+          "props": {},
+          "children": [
+            {
+              "type": "tagname",
+              "key": "@@standfirst",
+              "props": {},
+              "children": [ { "type": "text", "content": "Fish &amp; chips on   Fridays." } ]
+            },
+            {
+              "type": "tagname",
+              "key": "p",
+              "props": {},
+              "children": [
+                { "type": "text", "content": "Two " },
+                { "type": "tagname", "key": "strong", "props": {}, "children": [ { "type": "text", "content": "nested " } ] },
+                { "type": "tagname", "key": "em", "props": {}, "children": [
+                  { "type": "tagname", "key": "strong", "props": {}, "children": [ { "type": "text", "content": "nodes" } ] }
+                ] },
+                { "type": "text", "content": " &#8211; done." }
+              ]
+            },
+            { "type": "tagname", "key": "p", "props": {}, "children": [] }
+          ]
+        }
+      }
+    },
+    "presentersPrepared": [
+      { "id": "1", "label": { "full": "Dr Jo O&#8217;Neil" } },
+      { "id": "2", "label": { "full": "" } },
+      { "id": "3", "label": { "full": "Sam  Lee" } }
+    ],
+    "programCollectionPrepared": {
+      "id": "90000007",
+      "items": [
+        {
+          "articleLink": "/listen/programs/fish-and-facts/first-fish/90000008",
+          "contentUri": "coremedia://audioepisode/90000008",
+          "cardId": "90000008",
+          "cardTitle": "First fish",
+          "docType": "audioepisode",
+          "segments": null
+        }
+      ]
+    },
+    "programTemplate": "audio",
+    "webDistributionRestricted": false
+  }
+}
