@@ -6,7 +6,7 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 ## Issue map (task ID → GitHub issue)
 - foundation: F1 #1 · F2 #3 · F3 #7 · F4 #34 (bug) · F5 #37 (cardRef names)
 - live: L1 #2 · L2 #4 · L3 #8 · L4 #10 · L5 #14
-- ondemand: O1 #12 · O2 #16 · O3 #18 · O4 #19 · O6 #30
+- ondemand: O1 #12 · O2 #16 · O3 #18 · O4 #19 · O6 #30 · O7 #40
 - discovery: D1 #5 · D2 #6 · D3 #13 · D4 #22 · D5 #23
 - myabc: M1 #11 · M2 #20
 - release: R1 #9 · R2 #15 · R3 #17
@@ -15,7 +15,6 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - #6 D2 top-level Podcasts + Popular now — implementation dispatched (stakeholder priority)
 - #20 M2 → PR #35: stale Follow id could unfollow — fix agent applying orchestrator design (Follow row becomes
   "✓ Following" text; Unfollow on its own row)
-- #18 O3 → PR #36: review + runtime spot check running
 - #13 D3 search — implementation in progress
 - #34 F4 non-ASCII paths + 308/307 nextData redirects — implementation in progress
 
@@ -25,6 +24,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   in-flight agents (L1, O3, D1, D3, M2, O6 review, IC-1) resumed from their saved state. Lesson: ≤5 concurrent agents.
 
 ## Last completions
+- #18 O3 merged (PR #36, squash e427302): A–Z (708 programs) + By type + public programsByType. Orchestrator
+  resolved the t/10 module-list conflict. Follow-up O7 (#40, Hottest 100 redirect paths).
 - #2 L1 merged (PR #32, squash 5d262e2): all live stations (101 services, generated StationData.pm with committed
   generator `scripts/gen-station-data.py`), Radio menus, live resolver with bitrate. 85/85 playable swept.
 - #5 D1 merged (PR #33, squash 4d9b90d): collection engine + top-level Home. Review APPROVE; runtime PASS.

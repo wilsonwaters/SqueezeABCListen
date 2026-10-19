@@ -1,0 +1,64 @@
+{
+  "hits": [
+    {
+      "objectID": "coremedia://program/800001",
+      "contentType": "program",
+      "title": "Edge Show",
+      "canonicalURL": "https://www.abc.net.au/listen/programs/edgeshow/",
+      "description": "The long description, used when there is no short teaser.",
+      "infoSource": ""
+    },
+    {
+      "objectID": "coremedia://program/800002",
+      "contentType": "program",
+      "title": "No canonical URL",
+      "shortTeaserText": "Skipped: there is no page to open."
+    },
+    {
+      "objectID": "coremedia://program/",
+      "contentType": "program",
+      "title": "Malformed objectID",
+      "canonicalURL": "https://www.abc.net.au/listen/programs/malformed/"
+    },
+    {
+      "objectID": "coremedia://program/800001",
+      "contentType": "program",
+      "title": "Edge Show (duplicate hit)",
+      "canonicalURL": "https://www.abc.net.au/listen/programs/edgeshow/"
+    },
+    {
+      "objectID": "coremedia://program/800005",
+      "contentType": "program",
+      "title": "Off-site program",
+      "canonicalURL": "https://iview.abc.net.au/show/off-site"
+    },
+    {
+      "objectID": "coremedia://program/800006",
+      "contentType": "program",
+      "title": "Science Friction",
+      "canonicalURL": "https://www.abc.net.au/listen/programs/sciencefriction",
+      "shortTeaserText": "Science that challenges.",
+      "infoSource": "ABC Radio National",
+      "defaultThumbnail": {
+        "1x1": "https://live-production.wcms.abc-cdn.net.au/friction1x1?impolicy=wcms_crop_resize&cropH=1400&cropW=1400&xPos=0&yPos=0&width=862&height=862"
+      },
+      "_highlightResult": {
+        "title": { "value": "<em>Science</em> Friction", "matchLevel": "full", "matchedWords": ["science"] }
+      }
+    },
+    {
+      "objectID": "coremedia://audioepisode/800007",
+      "contentType": "audioepisode",
+      "title": "An episode in the program results",
+      "canonicalURL": "https://www.abc.net.au/listen/programs/edgeshow/episode/800007"
+    }
+  ],
+  "nbHits": 7,
+  "page": 0,
+  "nbPages": 1,
+  "hitsPerPage": 20,
+  "exhaustiveNbHits": true,
+  "query": "edge",
+  "params": "query=edge&hitsPerPage=20",
+  "processingTimeMS": 1
+}

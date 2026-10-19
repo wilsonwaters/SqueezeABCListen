@@ -7,11 +7,20 @@ package Plugins::ABCListen::OnDemand;
 # Episode.pm and never edits this file.
 #
 # Menus: top level "Programs" (weight Util::topWeight('programs'), declared in menuWeights)
-#   -> _programsRoot: "By network" (O3 adds A-Z and By type and owns _programsRoot from then on)
-#   -> the networks (Programs::networks order) -> the network's programs (programItem rows)
+#   -> _programsRoot (O3): "By network" · "All programs A–Z" · "By type"
+#   By network -> the networks (Programs::networks order) -> the network's programs (programItem rows)
 #   -> _programMenu -> episodes (episodeItem rows) -> _episodeMenu.
+#   All programs A–Z (O3) -> "<L> (<n>)" for A..Z, then "0–9 (<n>)", letters without programs
+#   omitted -> that letter's programs (rows as in programsByType). A program's letter is the first
+#   [a-z0-9] character of its Programs::sortKey (a leading "The " ignored, accents folded); a digit,
+#   or no such character, files it under 0–9. In fallback mode (ProgramIndex: network lists) the
+#   first item is the PLUGIN_ABCLISTEN_INDEX_FALLBACK text.
+#   By type (O3) -> "<type label> (<n>)" in programsByType's type order, empty types omitted ->
+#   programsByType($client, $cb, <type key>). In fallback mode: only the INDEX_FALLBACK text.
+#   Program data: Plugins::ABCListen::ProgramIndex->programs (one Algolia query a day).
 # Every feed (a coderef url, called as ($client, $cb, $args, @passthrough)) calls
-# $cb->({ items => [...] }) exactly once: on success, when empty, on error (one readable text item:
+# $cb->({ items => [...] }) exactly once (By type -> <type> answers programsByType's array ref):
+# on success, when empty, on error (one readable text item:
 # PLUGIN_ABCLISTEN_LOAD_FAILED or the API's token) and if building the items dies. $client may be
 # undef everywhere (web UI without a player, CLI '-').
 #
@@ -58,6 +67,30 @@ package Plugins::ABCListen::OnDemand;
 #   not called back within 5 s is skipped (and logged); a second or late call back is ignored.
 #   Non-hash entries in @items are dropped. Returns 1, or 0 (logged) for a non-coderef.
 #
+# Plugins::ABCListen::OnDemand->programsByType($client, $cb, $typeKey)            (O3; used by D2, D4)
+#   The A–Z list of one type of program. Class method; $client may be undef. $typeKey is one of
+#   the six type keys (Plugins::ABCListen::ProgramIndex::typeKey of the program's programType),
+#   in By type's order:
+#     podcast   (Podcasts)        programType podcast
+#     catchup   (Catch-up radio)  catch-up
+#     music     (Music)           music, Music Playlists
+#     news      (News briefings)  news-briefing
+#     audiobook (Audiobooks)      audiobook
+#     other     (Other)           none, empty or any other value
+#   Calls $cb->(\@items) EXACTLY ONCE, with an array ref (LMS feeds accept it, so a feed can be
+#   url => sub { my ($client, $cb, $args) = @_; Plugins::ABCListen::OnDemand->programsByType($client, $cb, 'podcast') }):
+#     - the type's programs: programItem rows in Programs::sortKey order (title, case-insensitive,
+#       accents folded, a leading "The " ignored); when titles repeat in the list, name and line1
+#       become "<title> (<network>)" (unless the network is missing or also repeats; the
+#       passthrough program is unchanged). Exactly the items By type -> <type> shows;
+#     - fallback mode (the index is the network lists, so types are unknown): one
+#       { name => PLUGIN_ABCLISTEN_INDEX_FALLBACK text, type => 'text' } item;
+#     - no programs of that type: one PLUGIN_ABCLISTEN_NO_PROGRAMS text item;
+#     - an unknown $typeKey (undef, a label, ...; logged at WARN) or an index error: one
+#       PLUGIN_ABCLISTEN_LOAD_FAILED text item.
+#   Never dies ($cb dying is logged; it is not called again). Public from O3 on: change only
+#   additively.
+#
 # Program menu (_programMenu) order: description (textarea) · "Presented by A, B" · network
 # (Programs->program attribution title) · provider extras · the newest 50 episodes · "More
 # episodes…" (the next 50, to ABC's 250). No episodes: "No episodes available", except for a
@@ -85,6 +118,7 @@ use Slim::Utils::Strings qw(cstring);
 use Slim::Utils::Timers;
 
 use Plugins::ABCListen::API;
+use Plugins::ABCListen::ProgramIndex;
 use Plugins::ABCListen::Programs;
 use Plugins::ABCListen::Util;
 
@@ -128,17 +162,23 @@ sub menuItems {
 	} ] );
 }
 
-# Programs: "By network" (O3 adds A-Z and By type here).
+# Programs: "By network", "All programs A–Z", "By type" (O3 owns _programsRoot).
 sub _programsRoot {
 	my ( $client, $cb, $args ) = @_;
 
 	_respond( $client, $cb, sub {
-		return [ {
-			name  => cstring( $client, 'PLUGIN_ABCLISTEN_BY_NETWORK' ),
-			type  => 'link',
-			url   => \&_networksFeed,
-			image => Plugins::ABCListen::Util::ICON,
-		} ];
+		return [ map {
+			+{
+				name  => cstring( $client, $_->[0] ),
+				type  => 'link',
+				url   => $_->[1],
+				image => Plugins::ABCListen::Util::ICON,
+			}
+		} (
+			[ 'PLUGIN_ABCLISTEN_BY_NETWORK', \&_networksFeed ],
+			[ 'PLUGIN_ABCLISTEN_AZ',         \&_azFeed ],
+			[ 'PLUGIN_ABCLISTEN_BY_TYPE',    \&_typesFeed ],
+		) ];
 	} );
 }
 
@@ -176,6 +216,199 @@ sub _networkFeed {
 		} );
 	} );
 }
+
+# ---------------------------------------------------------------------------
+# === O3 === All programs A–Z, By type and programsByType (see the header)
+# ---------------------------------------------------------------------------
+
+use constant INDEX_FALLBACK => 'PLUGIN_ABCLISTEN_INDEX_FALLBACK';
+use constant NO_PROGRAMS    => 'PLUGIN_ABCLISTEN_NO_PROGRAMS';
+use constant DIGITS         => '0-9';    # the A–Z bucket of programs not starting with a letter
+
+# By type: the type keys (ProgramIndex::typeKey) in menu order, with their label tokens
+my @TYPES = (
+	[ podcast   => 'PLUGIN_ABCLISTEN_TYPE_PODCAST' ],
+	[ catchup   => 'PLUGIN_ABCLISTEN_TYPE_CATCHUP' ],
+	[ music     => 'PLUGIN_ABCLISTEN_TYPE_MUSIC' ],
+	[ news      => 'PLUGIN_ABCLISTEN_TYPE_NEWS' ],
+	[ audiobook => 'PLUGIN_ABCLISTEN_TYPE_AUDIOBOOK' ],
+	[ other     => 'PLUGIN_ABCLISTEN_TYPE_OTHER' ],
+);
+my %TYPE_LABEL = map { $_->[0] => $_->[1] } @TYPES;
+
+sub programsByType {
+	my ( $class, $client, $cb, $typeKey ) = @_;
+	my $once = _once($cb);
+
+	eval {
+		if ( !( defined $typeKey && !ref $typeKey && $TYPE_LABEL{$typeKey} ) ) {
+			$log->warn( 'programsByType: unknown program type ' . ( defined $typeKey ? "'$typeKey'" : 'undef' ) );
+			$once->( [ _textItem( $client, LOAD_FAILED ) ] );
+			return 1;
+		}
+
+		Plugins::ABCListen::ProgramIndex::programs( sub {
+			my $index = shift;
+
+			my $items = eval {
+				return [ _textItem( $client, LOAD_FAILED ) ]    if $index->{error};
+				return [ _textItem( $client, INDEX_FALLBACK ) ] if $index->{fallback};    # types are unknown
+
+				my @refs = grep { Plugins::ABCListen::ProgramIndex::typeKey( $_->{programType} ) eq $typeKey } @{ $index->{items} };
+				return @refs ? _programRows( $client, \@refs ) : [ _textItem( $client, NO_PROGRAMS ) ];
+			};
+
+			if ( ref $items ne 'ARRAY' ) {
+				$log->error( 'Building the ABC listen programs menu failed: ' . ( $@ || 'unknown error' ) );
+				$items = [ _textItem( $client, LOAD_FAILED ) ];
+			}
+
+			$once->($items);
+		} );
+
+		1;
+	} or do {
+		$log->error( 'programsByType failed: ' . ( $@ || 'unknown error' ) );
+		eval { $once->( [ _textItem( $client, LOAD_FAILED ) ] ); 1 } or $log->error( 'programsByType callback failed: ' . ( $@ || 'unknown error' ) );
+	};
+
+	return;
+}
+
+# All programs A–Z: the letters with their counts (fallback: the note first).
+sub _azFeed {
+	my ( $client, $cb, $args ) = @_;
+	my $once = _once($cb);
+
+	_try( $client, $once, sub {
+		Plugins::ABCListen::ProgramIndex::programs( sub {
+			my $index = shift;
+
+			return _textFeed( $client, $once, LOAD_FAILED ) if $index->{error};
+
+			_respond( $client, $once, sub {
+				my %count;
+				$count{ _bucket($_) }++ for @{ $index->{items} };
+
+				my @items;
+				push @items, _textItem( $client, INDEX_FALLBACK ) if $index->{fallback};
+
+				for my $bucket ( grep { $count{$_} } 'a' .. 'z', DIGITS ) {
+					push @items, {
+						name        => ( $bucket eq DIGITS ? '0' . ENDASH . '9' : uc $bucket ) . " ($count{$bucket})",
+						type        => 'link',
+						url         => \&_letterFeed,
+						passthrough => [$bucket],
+						image       => Plugins::ABCListen::Util::ICON,
+					};
+				}
+
+				return \@items;
+			} );
+		} );
+	} );
+}
+
+# One letter's programs.
+sub _letterFeed {
+	my ( $client, $cb, $args, $bucket ) = @_;
+	my $once = _once($cb);
+
+	_try( $client, $once, sub {
+		Plugins::ABCListen::ProgramIndex::programs( sub {
+			my $index = shift;
+
+			return _textFeed( $client, $once, LOAD_FAILED ) if $index->{error};
+
+			_respond( $client, $once, sub {
+				my @refs = grep { defined $bucket && _bucket($_) eq $bucket } @{ $index->{items} };
+				return @refs ? _programRows( $client, \@refs ) : [ _textItem( $client, NO_PROGRAMS ) ];
+			} );
+		} );
+	} );
+}
+
+# By type: the types with their counts, in @TYPES order (fallback: only the note).
+sub _typesFeed {
+	my ( $client, $cb, $args ) = @_;
+	my $once = _once($cb);
+
+	_try( $client, $once, sub {
+		Plugins::ABCListen::ProgramIndex::programs( sub {
+			my $index = shift;
+
+			return _textFeed( $client, $once, LOAD_FAILED )    if $index->{error};
+			return _textFeed( $client, $once, INDEX_FALLBACK ) if $index->{fallback};    # types are unknown
+
+			_respond( $client, $once, sub {
+				my %count;
+				$count{ Plugins::ABCListen::ProgramIndex::typeKey( $_->{programType} ) }++ for @{ $index->{items} };
+
+				return [ map {
+					my ( $key, $token ) = @$_;
+					$count{$key}
+						? +{
+							name        => cstring( $client, $token ) . " ($count{$key})",
+							type        => 'link',
+							url         => \&_typeFeed,
+							passthrough => [$key],
+							image       => Plugins::ABCListen::Util::ICON,
+						}
+						: ();
+				} @TYPES ];
+			} );
+		} );
+	} );
+}
+
+# By type -> <type>: exactly programsByType (one code path with D2/D4).
+sub _typeFeed {
+	my ( $client, $cb, $args, $typeKey ) = @_;
+	__PACKAGE__->programsByType( $client, $cb, $typeKey );
+}
+
+# Program rows (programItem) in sortKey order. Titles that repeat in the list are named
+# "<title> (<network>)" (name/line1), unless the network is missing or repeats too.
+sub _programRows {
+	my ( $client, $refs ) = @_;
+
+	my @sorted = map { $_->[1] }
+		sort { $a->[0] cmp $b->[0] || $a->[2] cmp $b->[2] || $a->[1]->{path} cmp $b->[1]->{path} }
+		map { my $title = _indexTitle($_); [ Plugins::ABCListen::Programs::sortKey($title), $_, $title ] } @$refs;
+
+	my @items = grep {defined} map { __PACKAGE__->programItem( $client, $_ ) } @sorted;
+
+	my ( %titles, %networks );
+	for my $item (@items) {
+		my $title = lc $item->{name};
+		$titles{$title}++;
+		$networks{$title}{ lc $item->{line2} }++ if _hasText( $item->{line2} );
+	}
+
+	for my $item (@items) {
+		my $title   = lc $item->{name};
+		my $network = $item->{line2};
+		next unless $titles{$title} > 1 && _hasText($network) && $networks{$title}{ lc $network } == 1;
+		$item->{name} = $item->{line1} = "$item->{name} ($network)";
+	}
+
+	return \@items;
+}
+
+# The title a program row shows (programItem: the title, else the path).
+sub _indexTitle {
+	my $ref = shift;
+	return _hasText( $ref->{title} ) ? $ref->{title} : defined $ref->{path} ? $ref->{path} : '';
+}
+
+# A program's A–Z bucket: the first [a-z0-9] character of its sort key; digits and titles
+# without one -> DIGITS.
+sub _bucket {
+	my ($char) = Plugins::ABCListen::Programs::sortKey( _indexTitle(shift) ) =~ /([a-z0-9])/;
+	return defined $char && $char =~ /[a-z]/ ? $char : DIGITS;
+}
+
+# === end O3 ===
 
 # ---------------------------------------------------------------------------
 # Builders (contract 6)
