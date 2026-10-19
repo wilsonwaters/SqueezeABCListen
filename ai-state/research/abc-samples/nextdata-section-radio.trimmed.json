@@ -1,0 +1,442 @@
+{
+ "_fixture_note": "GET https://www.abc.net.au/_next/data/build-3afcd04f/listen/radio.json (2026-10-19) -> pageProps.data (componentsContent only; card arrays trimmed to 3, srcSet to 1, analytics dropped; MetaCollection sub-collection lists kept whole). Two MetaCollections (national 14139428 -> 12872264; local 14123276 -> 8 states); no program collections.",
+ "pageProps": {
+  "data": {
+   "title": "Stream Your Favourite Local & National Radio Stations",
+   "description": "Stream your favourite local & national radio stations on ABC – instant access to news, music, and more is just a click away!",
+   "componentsContent": [
+    {
+     "key": "14139428",
+     "component": "MetaCollection",
+     "componentProps": {
+      "heading": "Find your national network",
+      "items": [
+       {
+        "id": "12872264",
+        "title": "National Networks",
+        "collectionType": "StandardCollection",
+        "metaCollectionConfig": {
+         "useFilter": false,
+         "filterLabelUnit": ""
+        },
+        "standardCollectionConfig": {
+         "bentoLayout": {
+          "xs": "1col",
+          "sm": "4col",
+          "lg": "6col"
+         },
+         "renderAsList": true,
+         "limit": 20,
+         "collectionId": "12872264",
+         "moduleUri": "app://module/subaggregationstationsnational-national networks",
+         "collectionPreparerParams": {
+          "showTitleVisually": false,
+          "ratio": "1x1",
+          "hideImageBorders": true,
+          "disablePagination": true,
+          "mobileCardSettings": {
+           "hasFeatured": false,
+           "imagePosition": "left-centre"
+          },
+          "tabletCardSettings": {
+           "contentPosition": "center"
+          },
+          "desktopCardSettings": {
+           "contentPosition": "center"
+          }
+         }
+        },
+        "itemsCount": 19
+       }
+      ],
+      "pagination": {
+       "offset": 0,
+       "size": 1,
+       "total": 1
+      },
+      "contentUri": "coremedia://collection/14139428",
+      "loadMoreUrl": "/listen/radio",
+      "rootMetaCollectionId": "14139428",
+      "type": "accordion",
+      "initialOpenTab": 0
+     },
+     "subcollection": {
+      "standard": {
+       "componentProps": {
+        "bentoLayout": {
+         "xs": "1col",
+         "sm": "4col",
+         "lg": "6col"
+        },
+        "renderAsList": true
+       },
+       "loaderParams": {
+        "limit": 20
+       },
+       "collectionPreparerParams": {
+        "showTitleVisually": false,
+        "ratio": "1x1",
+        "hideImageBorders": true,
+        "disablePagination": true,
+        "mobileCardSettings": {
+         "hasFeatured": false,
+         "imagePosition": "left-centre"
+        },
+        "tabletCardSettings": {
+         "contentPosition": "center"
+        },
+        "desktopCardSettings": {
+         "contentPosition": "center"
+        }
+       }
+      }
+     }
+    },
+    {
+     "key": "14123276",
+     "component": "MetaCollection",
+     "componentProps": {
+      "heading": "Find your local station",
+      "items": [
+       {
+        "id": "14126370",
+        "title": "New South Wales",
+        "collectionType": "StandardCollection",
+        "metaCollectionConfig": {
+         "useFilter": false,
+         "filterLabelUnit": ""
+        },
+        "standardCollectionConfig": {
+         "bentoLayout": {
+          "xs": "1col",
+          "sm": "4col",
+          "lg": "6col"
+         },
+         "renderAsList": true,
+         "collectionId": "14126370",
+         "moduleUri": "app://module/subaggregationstationslocal-new south wales",
+         "collectionPreparerParams": {
+          "showTitleVisually": false,
+          "ratio": "1x1",
+          "hideImageBorders": true,
+          "disablePagination": true,
+          "mobileCardSettings": {
+           "hasFeatured": false,
+           "imagePosition": "left-centre"
+          },
+          "tabletCardSettings": {
+           "contentPosition": "center"
+          },
+          "desktopCardSettings": {
+           "contentPosition": "center"
+          }
+         }
+        },
+        "itemsCount": 14
+       },
+       {
+        "id": "14126436",
+        "title": "ACT",
+        "collectionType": "StandardCollection",
+        "metaCollectionConfig": {
+         "useFilter": false,
+         "filterLabelUnit": ""
+        },
+        "standardCollectionConfig": {
+         "bentoLayout": {
+          "xs": "1col",
+          "sm": "4col",
+          "lg": "6col"
+         },
+         "renderAsList": true,
+         "collectionId": "14126436",
+         "moduleUri": "app://module/subaggregationstationslocal-act",
+         "collectionPreparerParams": {
+          "showTitleVisually": false,
+          "ratio": "1x1",
+          "hideImageBorders": true,
+          "disablePagination": true,
+          "mobileCardSettings": {
+           "hasFeatured": false,
+           "imagePosition": "left-centre"
+          },
+          "tabletCardSettings": {
+           "contentPosition": "center"
+          },
+          "desktopCardSettings": {
+           "contentPosition": "center"
+          }
+         }
+        },
+        "itemsCount": 1
+       },
+       {
+        "id": "14128062",
+        "title": "Northern Territory",
+        "collectionType": "StandardCollection",
+        "metaCollectionConfig": {
+         "useFilter": false,
+         "filterLabelUnit": ""
+        },
+        "standardCollectionConfig": {
+         "bentoLayout": {
+          "xs": "1col",
+          "sm": "4col",
+          "lg": "6col"
+         },
+         "renderAsList": true,
+         "collectionId": "14128062",
+         "moduleUri": "app://module/subaggregationstationslocal-northern territory",
+         "collectionPreparerParams": {
+          "showTitleVisually": false,
+          "ratio": "1x1",
+          "hideImageBorders": true,
+          "disablePagination": true,
+          "mobileCardSettings": {
+           "hasFeatured": false,
+           "imagePosition": "left-centre"
+          },
+          "tabletCardSettings": {
+           "contentPosition": "center"
+          },
+          "desktopCardSettings": {
+           "contentPosition": "center"
+          }
+         }
+        },
+        "itemsCount": 3
+       },
+       {
+        "id": "14128070",
+        "title": "Victoria",
+        "collectionType": "StandardCollection",
+        "metaCollectionConfig": {
+         "useFilter": false,
+         "filterLabelUnit": ""
+        },
+        "standardCollectionConfig": {
+         "bentoLayout": {
+          "xs": "1col",
+          "sm": "4col",
+          "lg": "6col"
+         },
+         "renderAsList": true,
+         "collectionId": "14128070",
+         "moduleUri": "app://module/subaggregationstationslocal-victoria",
+         "collectionPreparerParams": {
+          "showTitleVisually": false,
+          "ratio": "1x1",
+          "hideImageBorders": true,
+          "disablePagination": true,
+          "mobileCardSettings": {
+           "hasFeatured": false,
+           "imagePosition": "left-centre"
+          },
+          "tabletCardSettings": {
+           "contentPosition": "center"
+          },
+          "desktopCardSettings": {
+           "contentPosition": "center"
+          }
+         }
+        },
+        "itemsCount": 9
+       },
+       {
+        "id": "14128508",
+        "title": "South Australia",
+        "collectionType": "StandardCollection",
+        "metaCollectionConfig": {
+         "useFilter": false,
+         "filterLabelUnit": ""
+        },
+        "standardCollectionConfig": {
+         "bentoLayout": {
+          "xs": "1col",
+          "sm": "4col",
+          "lg": "6col"
+         },
+         "renderAsList": true,
+         "collectionId": "14128508",
+         "moduleUri": "app://module/subaggregationstationslocal-south australia",
+         "collectionPreparerParams": {
+          "showTitleVisually": false,
+          "ratio": "1x1",
+          "hideImageBorders": true,
+          "disablePagination": true,
+          "mobileCardSettings": {
+           "hasFeatured": false,
+           "imagePosition": "left-centre"
+          },
+          "tabletCardSettings": {
+           "contentPosition": "center"
+          },
+          "desktopCardSettings": {
+           "contentPosition": "center"
+          }
+         }
+        },
+        "itemsCount": 5
+       },
+       {
+        "id": "14128536",
+        "title": "Tasmania",
+        "collectionType": "StandardCollection",
+        "metaCollectionConfig": {
+         "useFilter": false,
+         "filterLabelUnit": ""
+        },
+        "standardCollectionConfig": {
+         "bentoLayout": {
+          "xs": "1col",
+          "sm": "4col",
+          "lg": "6col"
+         },
+         "renderAsList": true,
+         "collectionId": "14128536",
+         "moduleUri": "app://module/subaggregationstationslocal-tasmania",
+         "collectionPreparerParams": {
+          "showTitleVisually": false,
+          "ratio": "1x1",
+          "hideImageBorders": true,
+          "disablePagination": true,
+          "mobileCardSettings": {
+           "hasFeatured": false,
+           "imagePosition": "left-centre"
+          },
+          "tabletCardSettings": {
+           "contentPosition": "center"
+          },
+          "desktopCardSettings": {
+           "contentPosition": "center"
+          }
+         }
+        },
+        "itemsCount": 2
+       },
+       {
+        "id": "14128542",
+        "title": "Queensland",
+        "collectionType": "StandardCollection",
+        "metaCollectionConfig": {
+         "useFilter": false,
+         "filterLabelUnit": ""
+        },
+        "standardCollectionConfig": {
+         "bentoLayout": {
+          "xs": "1col",
+          "sm": "4col",
+          "lg": "6col"
+         },
+         "renderAsList": true,
+         "collectionId": "14128542",
+         "moduleUri": "app://module/subaggregationstationslocal-queensland",
+         "collectionPreparerParams": {
+          "showTitleVisually": false,
+          "ratio": "1x1",
+          "hideImageBorders": true,
+          "disablePagination": true,
+          "mobileCardSettings": {
+           "hasFeatured": false,
+           "imagePosition": "left-centre"
+          },
+          "tabletCardSettings": {
+           "contentPosition": "center"
+          },
+          "desktopCardSettings": {
+           "contentPosition": "center"
+          }
+         }
+        },
+        "itemsCount": 11
+       },
+       {
+        "id": "14128996",
+        "title": "Western Australia",
+        "collectionType": "StandardCollection",
+        "metaCollectionConfig": {
+         "useFilter": false,
+         "filterLabelUnit": ""
+        },
+        "standardCollectionConfig": {
+         "bentoLayout": {
+          "xs": "1col",
+          "sm": "4col",
+          "lg": "6col"
+         },
+         "renderAsList": true,
+         "collectionId": "14128996",
+         "moduleUri": "app://module/subaggregationstationslocal-western australia",
+         "collectionPreparerParams": {
+          "showTitleVisually": false,
+          "ratio": "1x1",
+          "hideImageBorders": true,
+          "disablePagination": true,
+          "mobileCardSettings": {
+           "hasFeatured": false,
+           "imagePosition": "left-centre"
+          },
+          "tabletCardSettings": {
+           "contentPosition": "center"
+          },
+          "desktopCardSettings": {
+           "contentPosition": "center"
+          }
+         }
+        },
+        "itemsCount": 8
+       }
+      ],
+      "pagination": {
+       "offset": 0,
+       "size": 8,
+       "total": 8
+      },
+      "contentUri": "coremedia://collection/14123276",
+      "loadMoreUrl": "/listen/radio",
+      "rootMetaCollectionId": "14123276",
+      "type": "accordion"
+     },
+     "subcollection": {
+      "standard": {
+       "componentProps": {
+        "bentoLayout": {
+         "xs": "1col",
+         "sm": "4col",
+         "lg": "6col"
+        },
+        "renderAsList": true
+       },
+       "collectionPreparerParams": {
+        "showTitleVisually": false,
+        "ratio": "1x1",
+        "hideImageBorders": true,
+        "disablePagination": true,
+        "mobileCardSettings": {
+         "hasFeatured": false,
+         "imagePosition": "left-centre"
+        },
+        "tabletCardSettings": {
+         "contentPosition": "center"
+        },
+        "desktopCardSettings": {
+         "contentPosition": "center"
+        }
+       }
+      }
+     }
+    },
+    {
+     "key": "14129034",
+     "component": "AppOnwardJourney",
+     "componentProps": {
+      "variant": "listen",
+      "label": "ABC listen",
+      "description": "Download ABC listen today for free and hear the world differently.",
+      "url": ""
+     }
+    }
+   ]
+  }
+ }
+}

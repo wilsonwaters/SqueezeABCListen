@@ -1,0 +1,357 @@
+{
+ "_fixture_note": "GET https://www.abc.net.au/_next/data/build-3afcd04f/kidslisten.json (2026-10-19; /listen/kidslisten is 404) -> pageProps.data (trimmed as nextdata-section-radio). Untitled hero StandardCollection 9317798 (audioepisode + article cards) and 'Latest Programs' 9317620. Masthead (not included): nav Home, Programs (/kidslisten/programs), News Time, Tracklist; CTA 'Play Live Radio' papiServiceId KIDSLISTEN.",
+ "pageProps": {
+  "data": {
+   "title": "ABC Kids listen",
+   "description": "ABC Kids listen provides Australian families and early educators with a safe, trusted space for children to access entertaining and educational audio content",
+   "componentsContent": [
+    {
+     "key": "9317798",
+     "component": "StandardCollection",
+     "componentProps": {
+      "bentoCardType": "ContentCard",
+      "id": "9317798",
+      "title": "",
+      "productName": "kidslisten",
+      "heading": "",
+      "items": [
+       {
+        "articleLink": "/kidslisten/programs/best-bits/mr-luke-wants-your-teacher-shout-outs/105885432",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+         "alt": "Program Image",
+         "imgSrc": "https://live-production.wcms.abc-cdn.net.au/57d20113b44f1d8459aa775ffce912eb?impolicy=wcms_crop_resize&cropH=1125&cropW=2000&xPos=0&yPos=0&width=862&height=485",
+         "ratio": "16x9",
+         "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/57d20113b44f1d8459aa775ffce912eb?impolicy=wcms_crop_resize&cropH=1125&cropW=2000&xPos=0&yPos=0&width=160&height=90 160w"
+         ],
+         "hideImageBorders": false,
+         "width": "862",
+         "height": "485"
+        },
+        "cardMediaIndicatorPrepared": {
+         "icon": "kids-audio",
+         "duration": 60
+        },
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://audioepisode/105885432",
+        "description": "Want to give your favourite teacher a shout-out for World Teachers’ Day?\n",
+        "cardId": "105885432",
+        "cardTitle": "Mr. Luke wants to hear your teacher shout-outs! ",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+         "mobile": "top"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": "all",
+        "hideImageBorders": false,
+        "featuredSettings": {
+         "mobile": true,
+         "tablet": false,
+         "desktop": false
+        }
+       },
+       {
+        "articleLink": "/kidslisten/programs/news-time/tell-us-about-your-town-/106910188",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+         "alt": "cartoon image of news time host emily. text reads 'talk of the town'",
+         "imgSrc": "https://live-production.wcms.abc-cdn.net.au/fe7764e10da9c9066cff367d066f892f?impolicy=wcms_crop_resize&cropH=900&cropW=1600&xPos=0&yPos=0&width=862&height=485",
+         "ratio": "16x9",
+         "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/fe7764e10da9c9066cff367d066f892f?impolicy=wcms_crop_resize&cropH=900&cropW=1600&xPos=0&yPos=0&width=160&height=90 160w"
+         ],
+         "hideImageBorders": false,
+         "width": "862",
+         "height": "485"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://article/106910188",
+        "description": "We're taking an audio tour around regional Australia, and we need your help!",
+        "cardId": "106910188",
+        "cardTitle": "We want to hear from your kids!",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+         "mobile": "top"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": "all",
+        "hideImageBorders": false,
+        "featuredSettings": {
+         "mobile": true,
+         "tablet": false,
+         "desktop": false
+        }
+       },
+       {
+        "articleLink": "/kidslisten/programs/imagine-this/how-deep-is-the-ocean-/107131984",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+         "alt": "",
+         "imgSrc": "https://live-production.wcms.abc-cdn.net.au/148255ce17587e35185f985de5db0a10?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+         "ratio": "16x9",
+         "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/148255ce17587e35185f985de5db0a10?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=160&height=90 160w"
+         ],
+         "hideImageBorders": false,
+         "width": "862",
+         "height": "485"
+        },
+        "cardMediaIndicatorPrepared": {
+         "icon": "kids-audio",
+         "duration": 1047
+        },
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://audioepisode/107131984",
+        "description": "Zaki and Micha want to know, how deep is the ocean? Fraser asks, why doesn’t the sun light up the bottom of the ocean? And Hudson and Reuben are wondering, why does the ocean look blue?\n",
+        "cardId": "107131984",
+        "cardTitle": "How deep is the ocean?",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+         "mobile": "top"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": "all",
+        "hideImageBorders": false,
+        "featuredSettings": {
+         "mobile": true,
+         "tablet": false,
+         "desktop": false
+        }
+       }
+      ],
+      "contentUri": "coremedia://collection/9317798",
+      "borders": false,
+      "linkUrl": "",
+      "linkTitle": "",
+      "showTitleVisually": true,
+      "canonicalURI": "/kidslisten/station-showcase-collection/9317798",
+      "robots": null,
+      "ratio": "16x9",
+      "bentoLayout": {
+       "xs": "1col",
+       "sm": "2col-with-featured",
+       "lg": "4col-with-featured"
+      }
+     },
+     "collectionPreparerParams": {
+      "mobileCardSettings": {
+       "hasFeatured": "all"
+      },
+      "showSubAggregationMoreLink": true
+     }
+    },
+    {
+     "key": "14014158",
+     "component": "AppOnwardJourney",
+     "componentProps": {
+      "variant": "listen",
+      "label": "ABC Listen",
+      "description": "Music to move, podcasts to play and stories & soundtracks for sleep",
+      "url": "https://www.abc.net.au/listen/listenapp"
+     }
+    },
+    {
+     "key": "9317620",
+     "component": "StandardCollection",
+     "componentProps": {
+      "bentoCardType": "ContentCard",
+      "id": "9317620",
+      "title": "Latest Programs",
+      "productName": "kidslisten",
+      "heading": "Latest Programs",
+      "items": [
+       {
+        "articleLink": "/kidslisten/programs/home-time/home-time/107236676",
+        "cardAttributionPrepared": {
+         "publishedDate": "2026-10-19T06:00:00+00:00",
+         "publishedDateFormat": false
+        },
+        "cardImagePrepared": {
+         "alt": "",
+         "imgSrc": "https://live-production.wcms.abc-cdn.net.au/6792c461f9c940cedcec99ad07ee7e03?impolicy=wcms_crop_resize&cropH=1125&cropW=2000&xPos=0&yPos=0&width=862&height=485",
+         "ratio": "16x9",
+         "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/6792c461f9c940cedcec99ad07ee7e03?impolicy=wcms_crop_resize&cropH=1125&cropW=2000&xPos=0&yPos=0&width=160&height=90 160w"
+         ],
+         "hideImageBorders": false,
+         "width": "862",
+         "height": "485"
+        },
+        "cardMediaIndicatorPrepared": {
+         "icon": "kids-audio",
+         "duration": 7201
+        },
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://audioepisode/107236676",
+        "description": "Whether it's tidying up or having dinner, Matt is here to help with your family’s home time routine.",
+        "cardId": "107236676",
+        "cardTitle": "Home Time",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+         "mobile": "top"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": "all",
+        "hideImageBorders": false,
+        "featuredSettings": {
+         "mobile": true,
+         "tablet": false,
+         "desktop": false
+        }
+       },
+       {
+        "articleLink": "/kidslisten/programs/shake-and-move/shake-and-move/107236678",
+        "cardAttributionPrepared": {
+         "publishedDate": "2026-10-19T04:00:00+00:00",
+         "publishedDateFormat": false
+        },
+        "cardImagePrepared": {
+         "alt": "",
+         "imgSrc": "https://live-production.wcms.abc-cdn.net.au/6d020c1d91f004e429afbf204431c5ba?impolicy=wcms_crop_resize&cropH=1125&cropW=2000&xPos=0&yPos=0&width=862&height=485",
+         "ratio": "16x9",
+         "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/6d020c1d91f004e429afbf204431c5ba?impolicy=wcms_crop_resize&cropH=1125&cropW=2000&xPos=0&yPos=0&width=160&height=90 160w"
+         ],
+         "hideImageBorders": false,
+         "width": "862",
+         "height": "485"
+        },
+        "cardMediaIndicatorPrepared": {
+         "icon": "kids-audio",
+         "duration": 3599
+        },
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://audioepisode/107236678",
+        "description": "Wiggle and jiggle, twist and shout! Fun, energetic music for dancing and free play.",
+        "cardId": "107236678",
+        "cardTitle": "Shake and Move",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+         "mobile": "top"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": "all",
+        "hideImageBorders": false,
+        "featuredSettings": {
+         "mobile": true,
+         "tablet": false,
+         "desktop": false
+        }
+       },
+       {
+        "articleLink": "/kidslisten/programs/quiet-time/quiet-time/107236666",
+        "cardAttributionPrepared": {
+         "publishedDate": "2026-10-19T01:30:00+00:00",
+         "publishedDateFormat": false
+        },
+        "cardImagePrepared": {
+         "alt": "",
+         "imgSrc": "https://live-production.wcms.abc-cdn.net.au/a64c2496f751b1b48a2bee22ee590bbf?impolicy=wcms_crop_resize&cropH=1125&cropW=2000&xPos=0&yPos=0&width=862&height=485",
+         "ratio": "16x9",
+         "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/a64c2496f751b1b48a2bee22ee590bbf?impolicy=wcms_crop_resize&cropH=1125&cropW=2000&xPos=0&yPos=0&width=160&height=90 160w"
+         ],
+         "hideImageBorders": false,
+         "width": "862",
+         "height": "485"
+        },
+        "cardMediaIndicatorPrepared": {
+         "icon": "kids-audio",
+         "duration": 7199
+        },
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://audioepisode/107236666",
+        "description": "Tranquil music to help with the daily nap time routine.",
+        "cardId": "107236666",
+        "cardTitle": "Quiet Time",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+         "mobile": "top"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": "all",
+        "hideImageBorders": false,
+        "featuredSettings": {
+         "mobile": true,
+         "tablet": false,
+         "desktop": false
+        }
+       },
+       {
+        "articleLink": "/kidslisten/programs/story-time/story-time:-featuring-my-nonno-loves-and-more/107236594",
+        "cardAttributionPrepared": {
+         "publishedDate": "2026-10-19T01:00:00+00:00",
+         "publishedDateFormat": false
+        },
+        "cardImagePrepared": {
+         "alt": "Child reading book on grass with flowers",
+         "imgSrc": "https://live-production.wcms.abc-cdn.net.au/f7a0fd08b4e065115983b0efc8c57299?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+         "ratio": "16x9",
+         "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/f7a0fd08b4e065115983b0efc8c57299?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=160&height=90 160w"
+         ],
+         "hideImageBorders": false,
+         "width": "862",
+         "height": "485"
+        },
+        "cardMediaIndicatorPrepared": {
+         "icon": "kids-audio",
+         "duration": 1799
+        },
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://audioepisode/107236594",
+        "description": "Stories from your favourites, including Kindergarten of the Air Stories, Giggle and Hoot",
+        "cardId": "107236594",
+        "cardTitle": "Story Time: featuring 'My Nonno Loves' and more",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+         "mobile": "top"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": "all",
+        "hideImageBorders": false,
+        "featuredSettings": {
+         "mobile": true,
+         "tablet": false,
+         "desktop": false
+        }
+       }
+      ],
+      "contentUri": "coremedia://collection/9317620",
+      "borders": false,
+      "linkUrl": "",
+      "linkTitle": "",
+      "showTitleVisually": true,
+      "canonicalURI": "/kidslisten/landing-page-collection/9317620",
+      "robots": null,
+      "ratio": "16x9",
+      "bentoLayout": {
+       "sm": "2col",
+       "lg": "4col"
+      }
+     },
+     "collectionPreparerParams": {
+      "showDescription": true,
+      "showDate": true,
+      "dateToDisplay": "publicationDate",
+      "showSubject": true,
+      "subjectAsLink": true,
+      "mobileCardSettings": {
+       "hasFeatured": "all"
+      },
+      "showSubAggregationMoreLink": true
+     }
+    }
+   ]
+  }
+ }
+}
