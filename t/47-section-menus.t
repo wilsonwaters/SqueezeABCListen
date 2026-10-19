@@ -392,6 +392,31 @@ subtest 'Kids listen: state versions listed when stationItem defines them; extra
 	is( scalar( grep { ( $_->{passthrough}->[0]->{id} // '' ) eq '104141842' } @{ section('kids') } ), 1, 'a collection the page lists itself is not repeated as an extra' );
 };
 
+subtest 'live stations: a service named by the MiniEPG, the static list and an inline station collection is listed once' => sub {
+	fresh();
+	route_page_json(
+		'kids',
+		{ component => 'MiniEPG', componentProps => { papiServiceId => 'kidslisten', title => 'Now on ABC KIDS listen' } },
+		{ component => 'StandardCollection', componentProps => { id => '1', title => 'Radio Stations', items => [ { contentUri => 'coremedia://externallink/2', cardTitle => 'ABC KIDS listen', articleLink => 'https://www.abc.net.au/listen/live/kidslisten' } ] } },
+	);
+	route_kids_extras();
+	my $items = section('kids');
+
+	is( scalar( grep { $_ eq 'KIDSLISTEN' } @STATION_ITEM ), 3, 'stationItem built KIDSLISTEN three times: MiniEPG, the static list, the inline collection' );
+	is( scalar( grep { ( $_->{url} // '' ) eq 'abclisten://live/KIDSLISTEN' } @$items ), 1, 'one KIDSLISTEN row' );
+	is_deeply( names($items), [ 'ABC KIDS listen', @KIDS_NAMES[ 3 .. $#KIDS_NAMES ] ], 'ABC KIDS listen once, then the extras (no "Radio Stations" link)' );
+
+	fresh();
+	%FORCE_STATION = ( KIDSLISTEN_NT => 'Kids Listen NT' );
+	route_page_json(
+		'kids',
+		{ component => 'MiniEPG', componentProps => { papiServiceId => 'KIDSLISTEN_NT' } },
+		{ component => 'StandardCollection', componentProps => { id => '1', title => 'Radio Stations', items => [ { contentUri => 'coremedia://externallink/2', cardTitle => 'Kids', articleLink => 'https://www.abc.net.au/listen/live/kidslisten' } ] } },
+	);
+	route_kids_extras();
+	is_deeply( [ @{ names( section('kids') ) }[ 0, 1 ] ], [ 'Kids Listen NT', 'ABC KIDS listen' ], 'each once, in first-seen order (MiniEPG, then the static list)' );
+};
+
 subtest 'Kids listen: the extras\' first pages are waited for at most 3 s; late ones fall back (and warm the cache)' => sub {
 	my $images = sub { my %by = map { $_->{name} => $_ } @{ $_[0] }; return [ map { $by{$_}->{image} } 'All Kids listen programs', 'Kids & Families podcasts', $_[1] // 'Books for Kids' ] };
 	my $AGG_ART = qr/f145fc77c718224c5ec9a81b4122ba23/;
