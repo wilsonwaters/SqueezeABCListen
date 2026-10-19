@@ -1,0 +1,12 @@
+{
+  "name": "squeezeabclisten-dev-browser",
+  "private": true,
+  "description": "Headless Chromium helpers for checking the local LMS web UI (dev only).",
+  "type": "module",
+  "scripts": {
+    "screenshot": "node screenshot.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.56.1"
+  }
+}
