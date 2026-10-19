@@ -12,10 +12,12 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - release: R1 #9 · R2 #15 · R3 #17
 
 ## Currently in flight
-- #7 F3 → PR #27 (API.pm data client) — review + live drift probe running
-- Attribution scrub of issue/PR text (stakeholder rule)
+- Wave 2 implementation agents (worktrees, parallel): #2 L1 all live stations, #12 O1 episode playback,
+  #16 O2 programs → episodes + public builders
 
 ## Last completions
+- #7 F3 merged (PR #27, squash a8d2488): API.pm data client + drift probe (10/10 live). Review fix: cardRef
+  naming no longer uses image alt text when the card title matches the article slug. **Wave 1 complete.**
 - **v0.1.0 released** (Release workflow; asset sha1 cacbeb99…; repo.xml commit ad751ff by Wilson Waters). Install
   from the GitHub repo.xml URL verified on the testbed (InstalledPlugins, 5 stations, play, settings, uninstall).
   #9 closed.
@@ -51,7 +53,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - Streams + master plans committed (6 streams, 20 v1 tasks + 3 stretch). Material Skin 6.4.14 added to testbed.
 
 ## Next
-- Wave 2 in parallel once F3 merges: L1 (#2), O1 (#12), O2 (#16).
+- As wave 2 PRs land: review + runtime-verify + merge. Then wave 3: L2, L5, O3, D1, D3, M2 (deps per streams.md).
+- Integration checkpoint IC-1 after L1/O1/O2 (cluster integration agent); system verification after ~10 merges.
 
 ## Plan revisions
 - 2026-10-19 — Stakeholder: podcasts prominent → D2 makes "Podcasts" top-level (#6 comment).
