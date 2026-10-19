@@ -1,0 +1,1014 @@
+{
+ "total": 108,
+ "offset": 0,
+ "limit": 100,
+ "count": 100,
+ "items": [
+  {
+   "service_id": "doublej",
+   "title": "Double J",
+   "mini_synopsis": "A mix of your favourite music, new tunes and the stories behind the music.",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": [
+    {
+     "service_id": "doublej_brisbane",
+     "type": "child"
+    },
+    {
+     "service_id": "doublej_adelaide",
+     "type": "child"
+    },
+    {
+     "service_id": "doublej_darwin",
+     "type": "child"
+    },
+    {
+     "service_id": "doublej_perth",
+     "type": "child"
+    }
+   ]
+  },
+  {
+   "service_id": "classic2",
+   "title": "Classic 2",
+   "mini_synopsis": "The best in classical music performed by Australian musicians. Just music, 24 hours a day.",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "triplej",
+   "title": "triple j",
+   "mini_synopsis": "Live music, your favourite bands and the best new music.",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": [
+    {
+     "service_id": "triplej_adelaide",
+     "type": "child"
+    },
+    {
+     "service_id": "triplej_brisbane",
+     "type": "child"
+    },
+    {
+     "service_id": "triplej_perth",
+     "type": "child"
+    },
+    {
+     "service_id": "triplej_darwin",
+     "type": "child"
+    }
+   ]
+  },
+  {
+   "service_id": "news",
+   "title": "NewsRadio",
+   "mini_synopsis": "Continuous news updates and breaking Australian news stories",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "RN",
+   "title": "Radio National",
+   "mini_synopsis": "Ideas and conversation on contemporary culture, issues and current affairs.",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": [
+    {
+     "service_id": "RN_sa",
+     "type": "child"
+    },
+    {
+     "service_id": "RN_qld",
+     "type": "child"
+    },
+    {
+     "service_id": "RN_wa",
+     "type": "child"
+    },
+    {
+     "service_id": "RN_nt",
+     "type": "child"
+    }
+   ]
+  },
+  {
+   "service_id": "classic",
+   "title": "ABC Classic",
+   "mini_synopsis": "The world's most beautiful classical music.",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": [
+    {
+     "service_id": "classic_adelaide",
+     "type": "child"
+    },
+    {
+     "service_id": "classic_brisbane",
+     "type": "child"
+    },
+    {
+     "service_id": "classic_darwin",
+     "type": "child"
+    },
+    {
+     "service_id": "classic_perth",
+     "type": "child"
+    }
+   ]
+  },
+  {
+   "service_id": "unearthed",
+   "title": "triple j Unearthed",
+   "mini_synopsis": "Independent and unsigned all-Australian music, artists and bands.",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "jazz",
+   "title": "ABC Jazz",
+   "mini_synopsis": "The very best jazz from Australia and around the world.",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "country",
+   "title": "ABC Country",
+   "mini_synopsis": "Australia's home of country music.",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "grandstand",
+   "title": "ABC SPORT",
+   "mini_synopsis": "Live Sport coverage including the Summer of Cricket",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": [
+    {
+     "service_id": "abcsportsync",
+     "type": "child"
+    }
+   ]
+  },
+  {
+   "service_id": "local_adelaide",
+   "title": "891 ABC Adelaide",
+   "mini_synopsis": "Adelaide, Murray Bridge, Victor Harbor",
+   "service_timezone": "Australia/Adelaide",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_brisbane",
+   "title": "612 ABC Brisbane",
+   "mini_synopsis": "Brisbane, Ipswich, Logan",
+   "service_timezone": "Australia/Brisbane",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_canberra",
+   "title": "666 ABC Canberra",
+   "mini_synopsis": "Canberra, Queanbeyan, Yass",
+   "service_timezone": "Australia/Canberra",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_goldcoast",
+   "title": "ABC Gold Coast",
+   "mini_synopsis": "Coolangatta, Robina, Surfers Paradise",
+   "service_timezone": "Australia/Brisbane",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_darwin",
+   "title": "105.7 ABC Darwin",
+   "mini_synopsis": "Darwin, Katherine, Palmerston",
+   "service_timezone": "Australia/Darwin",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_hobart",
+   "title": "936 ABC Hobart",
+   "mini_synopsis": "Hobart, Huonville, New Norfolk",
+   "service_timezone": "Australia/Hobart",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_melbourne",
+   "title": "774 ABC Melbourne",
+   "mini_synopsis": "Frankston, Geelong, Melbourne",
+   "service_timezone": "Australia/Melbourne",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_newcastle",
+   "title": "ABC Newcastle",
+   "mini_synopsis": "Lake Macquarie, Port Stephens, Lower Hunter",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_perth",
+   "title": "102.5 ABC Perth",
+   "mini_synopsis": "Fremantle, Joondalup, Perth",
+   "service_timezone": "Australia/Perth",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_sydney",
+   "title": "702 ABC Sydney",
+   "mini_synopsis": "Sydney, Blue Mountains, Central Coast",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_brokenhill",
+   "title": "ABC Broken Hill",
+   "mini_synopsis": "Broken Hill, Menindee, Wilcannia",
+   "service_timezone": "Australia/Broken_Hill",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_centralcoast",
+   "title": "ABC Central Coast",
+   "mini_synopsis": "Gosford, Peats Ridge, Wyong",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_centralwest",
+   "title": "ABC Central West",
+   "mini_synopsis": "Bathurst, Cowra, Orange",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_coffscoast",
+   "title": "ABC Coffs Coast",
+   "mini_synopsis": "Bellingen, Coffs Harbour, Dorrigo",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_illawarra",
+   "title": "ABC Illawarra",
+   "mini_synopsis": "Bowral, Nowra, Wollongong",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_midnorthcoast",
+   "title": "ABC Mid North Coast",
+   "mini_synopsis": "Forster, Port Macquarie, Taree",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_newengland",
+   "title": "ABC New England North West",
+   "mini_synopsis": "Armidale, Moree, Tamworth",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_northcoast",
+   "title": "ABC North Coast",
+   "mini_synopsis": "Byron Bay, Casino, Lismore",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_riverina",
+   "title": "ABC Riverina",
+   "mini_synopsis": "Wagga Wagga, Griffith",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_southeastnsw",
+   "title": "ABC South East NSW ",
+   "mini_synopsis": "Batemans Bay, Bega, Cooma",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_upperhunter",
+   "title": "ABC Upper Hunter",
+   "mini_synopsis": "Merriwa, Muswellbrook, Scone",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_westernplains",
+   "title": "ABC Western Plains",
+   "mini_synopsis": "Bourke, Dubbo, Mudgee",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_ballarat",
+   "title": "ABC Ballarat",
+   "mini_synopsis": "Ararat, Colac, Daylesford",
+   "service_timezone": "Australia/Melbourne",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_centralvic",
+   "title": "ABC Central Victoria",
+   "mini_synopsis": "Bendigo, Castlemaine, Maryborough",
+   "service_timezone": "Australia/Melbourne",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_gippsland",
+   "title": "ABC Gippsland",
+   "mini_synopsis": "Bairnsdale, Latrobe Valley, Omeo",
+   "service_timezone": "Australia/Melbourne",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_goulburnmurray",
+   "title": "ABC Goulburn Murray",
+   "mini_synopsis": "Albury Wodonga, Corowa, Wangaratta",
+   "service_timezone": "Australia/Melbourne",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_milduraswanhill",
+   "title": "ABC Mildura-Swan Hill",
+   "mini_synopsis": "Kerang, Ouyen, Robinvale",
+   "service_timezone": "Australia/Melbourne",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_shepparton",
+   "title": "ABC Shepparton",
+   "mini_synopsis": "Benalla, Cobram, Echuca",
+   "service_timezone": "Australia/Melbourne",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_southwestvic",
+   "title": "ABC South West Victoria",
+   "mini_synopsis": "Hamilton, Portland, Warrnambool",
+   "service_timezone": "Australia/Melbourne",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_westernvic",
+   "title": "ABC Wimmera",
+   "mini_synopsis": "Horsham, Stawell, Warracknabeal",
+   "service_timezone": "Australia/Melbourne",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_northtas",
+   "title": "ABC Northern Tasmania",
+   "mini_synopsis": "Burnie, Devonport, Launceston",
+   "service_timezone": "Australia/Hobart",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_capricornia",
+   "title": "ABC Capricornia",
+   "mini_synopsis": "Emerald, Gladstone, Rockhampton",
+   "service_timezone": "Australia/Brisbane",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_farnorth",
+   "title": "ABC Far North",
+   "mini_synopsis": "Cairns, Dunk Island, Weipa",
+   "service_timezone": "Australia/Brisbane",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_northqld",
+   "title": "ABC North Queensland",
+   "mini_synopsis": "Charters Towers, Ingham, Townsville",
+   "service_timezone": "Australia/Brisbane",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_northwest",
+   "title": "ABC North West Queensland",
+   "mini_synopsis": "Hughenden, Karumba, Mount Isa",
+   "service_timezone": "Australia/Brisbane",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_southqld",
+   "title": "ABC Southern Queensland",
+   "mini_synopsis": "Roma, Stanthorpe, Toowoomba",
+   "service_timezone": "Australia/Brisbane",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_sunshine",
+   "title": "ABC Sunshine Coast",
+   "mini_synopsis": "Maleny, Maroochydore, Noosa",
+   "service_timezone": "Australia/Brisbane",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_tropic",
+   "title": "ABC Tropical North",
+   "mini_synopsis": "Mackay, Moranbah, Whitsunday",
+   "service_timezone": "Australia/Brisbane",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_westqld",
+   "title": "ABC Western Queensland",
+   "mini_synopsis": "Barcaldine, Charleville, Longreach",
+   "service_timezone": "Australia/Brisbane",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_widebay",
+   "title": "ABC Wide Bay",
+   "mini_synopsis": "Bundaberg, Hervey Bay, Maryborough",
+   "service_timezone": "Australia/Brisbane",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_northandwest",
+   "title": "ABC North and West SA",
+   "mini_synopsis": "Port Augusta, Port Pirie, Whyalla",
+   "service_timezone": "Australia/Adelaide",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_riverland",
+   "title": "ABC Riverland",
+   "mini_synopsis": "Berri, Loxton, Renmark",
+   "service_timezone": "Australia/Adelaide",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_southeastsa",
+   "title": "ABC South East SA",
+   "mini_synopsis": "Millicent, Mount Gambier, Naracoorte",
+   "service_timezone": "Australia/Adelaide",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_eyre",
+   "title": "ABC Eyre Peninsula",
+   "mini_synopsis": "Ceduna, Port Lincoln, Wudinna",
+   "service_timezone": "Australia/Adelaide",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_alicesprings",
+   "title": "ABC Alice Springs",
+   "mini_synopsis": "Alice Springs, Tennant Creek, Yulara",
+   "service_timezone": "Australia/Darwin",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_katherine",
+   "title": "ABC Katherine",
+   "mini_synopsis": "Katherine, Pine Creek, Tindal",
+   "service_timezone": "Australia/Darwin",
+   "exclude_from_display": true,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_esperance",
+   "title": "ABC Esperance",
+   "mini_synopsis": "Condingup, Esperance, Salmon Gums",
+   "service_timezone": "Australia/Perth",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_goldfields",
+   "title": "ABC Goldfields",
+   "mini_synopsis": "Esperance, Kalgoorlie-Boulder, Leonora",
+   "service_timezone": "Australia/Perth",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_greatsouthern",
+   "title": "ABC Great Southern",
+   "mini_synopsis": "Albany, Denmark, Mt Barker, Katanning, Narrogin, Wagin",
+   "service_timezone": "Australia/Perth",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_kimberley",
+   "title": "ABC Kimberley",
+   "mini_synopsis": "Broome, Derby, Kununurra",
+   "service_timezone": "Australia/Perth",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_wheatbelt",
+   "title": "ABC Midwest & Wheatbelt",
+   "mini_synopsis": "Dalwallinu, Geraldton, Northam",
+   "service_timezone": "Australia/Perth",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_northwestwa",
+   "title": "ABC Pilbara",
+   "mini_synopsis": "Carnarvon, Karratha, Port Hedland",
+   "service_timezone": "Australia/Perth",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_southcoast",
+   "title": "ABC South Coast",
+   "mini_synopsis": "Batemans Bay, Bega, Cooma",
+   "service_timezone": null,
+   "exclude_from_display": true,
+   "linked_services": []
+  },
+  {
+   "service_id": "local_southwestwa",
+   "title": "ABC South West WA",
+   "mini_synopsis": "Bunbury, Manjimup, Margaret River",
+   "service_timezone": "Australia/Perth",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "kidslisten",
+   "title": "ABC KIDS listen",
+   "mini_synopsis": "Radio for children and families - Learn, play and sing along",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": [
+    {
+     "service_id": "kidslisten_sa",
+     "type": "child"
+    },
+    {
+     "service_id": "kidslisten_nt",
+     "type": "child"
+    },
+    {
+     "service_id": "kidslisten_wa",
+     "type": "child"
+    },
+    {
+     "service_id": "kidslisten_qld",
+     "type": "child"
+    }
+   ]
+  },
+  {
+   "service_id": "triplej_adelaide",
+   "title": "triple j Adelaide",
+   "mini_synopsis": "Live music, your favourite bands and the best new music.",
+   "service_timezone": "Australia/Adelaide",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "triplej",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "triplej_brisbane",
+   "title": "triple j Brisbane",
+   "mini_synopsis": "Live music, your favourite bands and the best new music.",
+   "service_timezone": "Australia/Brisbane",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "triplej",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "triplej_perth",
+   "title": "triple j Perth",
+   "mini_synopsis": "Live music, your favourite bands and the best new music.",
+   "service_timezone": "Australia/Perth",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "triplej",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "triplej_darwin",
+   "title": "triple j Darwin",
+   "mini_synopsis": "Live music, your favourite bands and the best new music.",
+   "service_timezone": "Australia/Darwin",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "triplej",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "RN_sa",
+   "title": "Radio National SA",
+   "mini_synopsis": "Ideas and conversation on contemporary culture, issues and current affairs.",
+   "service_timezone": "Australia/Adelaide",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "RN",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "RN_qld",
+   "title": "Radio National Qld",
+   "mini_synopsis": "Ideas and conversation on contemporary culture, issues and current affairs.",
+   "service_timezone": "Australia/Brisbane",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "RN",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "RN_vic",
+   "title": "Radio National Vic",
+   "mini_synopsis": "Ideas and conversation on contemporary culture, issues and current affairs.",
+   "service_timezone": null,
+   "exclude_from_display": true,
+   "linked_services": []
+  },
+  {
+   "service_id": "RN_wa",
+   "title": "Radio National WA",
+   "mini_synopsis": "Ideas and conversation on contemporary culture, issues and current affairs.",
+   "service_timezone": "Australia/Perth",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "RN",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "RN_tas",
+   "title": "Radio National Tas",
+   "mini_synopsis": "Ideas and conversation on contemporary culture, issues and current affairs.",
+   "service_timezone": null,
+   "exclude_from_display": true,
+   "linked_services": []
+  },
+  {
+   "service_id": "RN_nt",
+   "title": "Radio National NT",
+   "mini_synopsis": "Ideas and conversation on contemporary culture, issues and current affairs.",
+   "service_timezone": "Australia/Darwin",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "RN",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "dig",
+   "title": "Double J",
+   "mini_synopsis": "A mix of your favourite music, new tunes and the stories behind the music.",
+   "service_timezone": null,
+   "exclude_from_display": null,
+   "linked_services": []
+  },
+  {
+   "service_id": "ra",
+   "title": "Radio Australia",
+   "mini_synopsis": "Pacific stories, music, news, sport and culture",
+   "service_timezone": "Australia/Brisbane",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "itinerant_one",
+   "title": "ABC Rugby League World Cup",
+   "mini_synopsis": "ABC Sport's coverage of the 2026 Rugby League World Cup",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": [
+    {
+     "service_id": "abc_afl_rapid",
+     "type": "child"
+    }
+   ]
+  },
+  {
+   "service_id": "itinerant_two",
+   "title": "ABC AFLW",
+   "mini_synopsis": "ABC Sport’s coverage of the 2026 AFLW season",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "itinerant_three",
+   "title": "ABC SPORT EXTRA",
+   "mini_synopsis": "Bonus live sporting coverage from ABC Sport",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "firstrun",
+   "title": "First Run",
+   "mini_synopsis": null,
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": true,
+   "linked_services": []
+  },
+  {
+   "service_id": "ra_ml",
+   "title": "Radio Australia",
+   "mini_synopsis": "Pacific stories, music, news, sport and culture",
+   "service_timezone": "Australia/Brisbane",
+   "exclude_from_display": true,
+   "linked_services": []
+  },
+  {
+   "service_id": "doublej_brisbane",
+   "title": "Double J Brisbane",
+   "mini_synopsis": "A mix of your favourite music, new tunes and the stories behind the music.",
+   "service_timezone": "Australia/Brisbane",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "doublej",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "doublej_adelaide",
+   "title": "Double J Adelaide",
+   "mini_synopsis": "A mix of your favourite music, new tunes and the stories behind the music.",
+   "service_timezone": "Australia/Adelaide",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "doublej",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "doublej_darwin",
+   "title": "Double J Darwin",
+   "mini_synopsis": "A mix of your favourite music, new tunes and the stories behind the music.",
+   "service_timezone": "Australia/Darwin",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "doublej",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "doublej_perth",
+   "title": "Double J Perth",
+   "mini_synopsis": "A mix of your favourite music, new tunes and the stories behind the music.",
+   "service_timezone": "Australia/Perth",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "doublej",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "classic_adelaide",
+   "title": "ABC Classic Adelaide",
+   "mini_synopsis": "The world's most beautiful music, from familiar classics to new discoveries",
+   "service_timezone": "Australia/Adelaide",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "classic",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "classic_brisbane",
+   "title": "ABC Classic Brisbane",
+   "mini_synopsis": "The world's most beautiful music, from familiar classics to new discoveries",
+   "service_timezone": "Australia/Brisbane",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "classic",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "classic_darwin",
+   "title": "ABC Classic Darwin",
+   "mini_synopsis": "The world's most beautiful music, from familiar classics to new discoveries",
+   "service_timezone": "Australia/Darwin",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "classic",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "classic_perth",
+   "title": "ABC Classic Perth",
+   "mini_synopsis": "The world's most beautiful music, from familiar classics to new discoveries",
+   "service_timezone": "Australia/Perth",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "classic",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "h100",
+   "title": "triple j Hottest",
+   "mini_synopsis": "The music that soundtracked your years, from festivals to breakups, late nights, and firsts.",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "itinerant_four",
+   "title": "ABC CRICKET",
+   "mini_synopsis": "ABC Sport's coverage of Australia's Test Tour of South Africa",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "news_bulletin",
+   "title": "News Bulletin",
+   "mini_synopsis": null,
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": true,
+   "linked_services": []
+  },
+  {
+   "service_id": "abcsportsync",
+   "title": "ABC SPORT RAPID",
+   "mini_synopsis": "Less delay for live sport",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": [
+    {
+     "service_id": "grandstand",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "abc_afl_rapid",
+   "title": "ABC RLWC RAPID",
+   "mini_synopsis": "Less delay for live RLWC",
+   "service_timezone": "Australia/Melbourne",
+   "exclude_from_display": false,
+   "linked_services": [
+    {
+     "service_id": "itinerant_one",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "kidslisten_sa",
+   "title": "Kids Listen South Australia",
+   "mini_synopsis": null,
+   "service_timezone": "Australia/Adelaide",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "kidslisten",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "kidslisten_nt",
+   "title": "Kids Listen Northern Territory",
+   "mini_synopsis": null,
+   "service_timezone": "Australia/Darwin",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "kidslisten",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "kidslisten_wa",
+   "title": "Kids Listen Western Australia",
+   "mini_synopsis": null,
+   "service_timezone": "Australia/Perth",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "kidslisten",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "kidslisten_qld",
+   "title": "Kids Listen Queensland",
+   "mini_synopsis": null,
+   "service_timezone": "Australia/Brisbane",
+   "exclude_from_display": true,
+   "linked_services": [
+    {
+     "service_id": "kidslisten",
+     "type": "parent"
+    }
+   ]
+  },
+  {
+   "service_id": "sport_aflw",
+   "title": "ABC AFLW",
+   "mini_synopsis": "ABC Sport's coverage of the 2026 AFLW season",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": true,
+   "linked_services": []
+  }
+ ],
+ "last_updated": "2026-10-19T06:00:17+0000"
+}
