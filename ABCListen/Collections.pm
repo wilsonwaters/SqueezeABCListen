@@ -8,7 +8,7 @@ package Plugins::ABCListen::Collections;
 # behave the same everywhere. All I/O goes through Plugins::ABCListen::API (async).
 #
 # ---- Callbacks ------------------------------------------------------------------------------------
-#   page, home, items, aggregationItems, itemsFor and checkOnAir call $cb EXACTLY ONCE, on every
+#   page, home, items, aggregationItems, menuPage, itemsFor and checkOnAir call $cb EXACTLY ONCE, on every
 #   path. Failures are { error => TOKEN }, the API token passed through
 #   ('PLUGIN_ABCLISTEN_LOAD_FAILED' or 'PLUGIN_ABCLISTEN_RATE_LIMITED'). Cache hits call back
 #   synchronously, other calls later: code must work either way. A callback that dies is logged and
@@ -126,12 +126,17 @@ package Plugins::ABCListen::Collections;
 #       A link listed at level $depth (0 at a page root) to the collection's menu at $depth + 1;
 #       undef when that passes MAX_DEPTH or without a numeric id. name = title, else
 #       PLUGIN_ABCLISTEN_FEATURED (never blank); image = imageUrl(image, 300), else the plugin icon.
-#       The menu: PAGE_SIZE items per page (items + itemsFor), then "More…" (PLUGIN_ABCLISTEN_MORE)
+#       The menu: one page per menu (menuPage + itemsFor), then "More…" (PLUGIN_ABCLISTEN_MORE)
 #       while the page had cards and offset + count < total. Nothing to list: one
 #       PLUGIN_ABCLISTEN_EMPTY_COLLECTION text item; fetch error: the error token's text item.
-#       Every feed answers exactly once. The collection hash travels in the passthrough; its kind
-#       picks the paging fetcher from %FETCHERS (aggregation => aggregationItems; no or an unknown
-#       kind => items), so a new kind of collection needs a %FETCHERS entry, not a _collectionMenu edit.
+#       Every feed answers exactly once. The collection hash travels in the passthrough.
+#
+#   menuPage(\%collection, $offset, $cb)                                                         (D4)
+#       One page of a collection's menu: the fetcher and page size of its kind in %FETCHERS
+#       (kind aggregation: aggregationItems, 50 per page, so All Kids listen programs (34) is one
+#       A–Z list; no or an unknown kind: items, PAGE_SIZE (20)). A new kind of collection needs a
+#       %FETCHERS entry, not a _collectionMenu edit. Callers that want a menu's first page ahead of
+#       time (D4's Sections) use this, so they share its request and cache.
 #
 # Owned by the discovery stream (D1 creates; D2 and D4 extend additively).
 
@@ -154,6 +159,7 @@ use constant ITEMS_TTL        => 1800;    # items() BFF collections
 use constant AGGREGATION_TTL  => 6 * 3600;    # aggregationItems() (D4)
 use constant API_TIMEOUT      => 8;       # seconds per request (menu paths; HTTP.pm's default is 15)
 use constant PAGE_SIZE        => 20;
+use constant AGGREGATION_PAGE_SIZE => 50;    # D4: program aggregations (All Kids listen programs: 34)
 use constant MAX_DEPTH        => 3;
 use constant NAME_CONCURRENCY => 4;
 use constant NAME_DEADLINE    => 3;       # seconds per page
@@ -184,10 +190,11 @@ my %COMPONENTS = (
 	LiveRadioCarousel            => \&_liveStations,
 );
 
-# ---- D4: paging fetchers by collection kind (collectionItem's passthrough hash); default items() ----
+# ---- D4: paging by collection kind (collectionItem's passthrough hash): fetcher and page size ----
 my %FETCHERS = (
-	aggregation => \&aggregationItems,
+	aggregation => { fetch => \&aggregationItems, size => AGGREGATION_PAGE_SIZE },    # one A–Z list
 );
+my $DEFAULT_FETCHER = { fetch => \&items, size => PAGE_SIZE };
 
 my %loggedComponent;    # component name => 1 once logged (unknown at DEBUG, failing at WARN)
 my %warnedType;         # card type => 1 once a dying builder was logged
@@ -466,7 +473,7 @@ sub _collectionMenu {
 	$depth      = _level( $depth, 1 );
 
 	_try( $client, $once, sub {
-		_fetcher($collection)->( $collection->{id}, $offset, PAGE_SIZE, sub {
+		menuPage( $collection, $offset, sub {
 			my $result = shift;
 
 			return _textFeed( $client, $once, $result->{error} ) if $result->{error};
@@ -500,10 +507,16 @@ sub _collectionMenu {
 	return;
 }
 
-# D4: the paging fetcher for a collection hash (%FETCHERS by kind; items() by default).
-sub _fetcher {
-	my $kind = shift->{kind};
-	return ( _isText($kind) && $FETCHERS{$kind} ) || \&items;
+# D4: one page of a collection's menu, from $offset: its kind's fetcher and page size.
+sub menuPage {
+	shift if _isClass( $_[0] );
+	my ( $collection, $offset, $cb ) = @_;
+	$collection = _hash($collection);
+
+	my $kind    = $collection->{kind};
+	my $fetcher = ( _isText($kind) && $FETCHERS{$kind} ) || $DEFAULT_FETCHER;
+
+	return $fetcher->{fetch}->( $collection->{id}, $offset, $fetcher->{size}, $cb );
 }
 
 # ---------------------------------------------------------------------------

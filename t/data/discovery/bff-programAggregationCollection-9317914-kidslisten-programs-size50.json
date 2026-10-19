@@ -402,13 +402,293 @@
         "imagePositionPrepared": {
           "mobile": "left"
         }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/kidslisten/programs/news-time/",
+        "cardImagePrepared": {
+          "alt": "Cartoon image of a young journalist reporting from a distant planet",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/316aa1eb12b66a0ef24d30f6455c86ad?impolicy=wcms_crop_resize&cropH=2812&cropW=2812&xPos=1094&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/316aa1eb12b66a0ef24d30f6455c86ad?impolicy=wcms_crop_resize&cropH=2812&cropW=2812&xPos=1094&yPos=0&width=160&height=160 160w"
+          ]
+        },
+        "contentUri": "coremedia://program/9989694",
+        "description": "From amazing animals to sensational sport, interesting insects to dino discoveries, mars missions and beyond.\n",
+        "cardId": "9989694",
+        "cardTitle": "News Time",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left"
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/kidslisten/programs/noisy-by-nature/",
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/edd83dd4aa02c562b2390b4d2322dd16?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=462&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/edd83dd4aa02c562b2390b4d2322dd16?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=160&height=160 160w"
+          ]
+        },
+        "contentUri": "coremedia://program/11453770",
+        "description": "Discover the weird and wonderful sounds that nature makes.",
+        "cardId": "11453770",
+        "cardTitle": "Noisy by Nature",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left"
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/kidslisten/programs/play-date/",
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/6b581e29ea5bc984d4ed0f0e56fa3369?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/6b581e29ea5bc984d4ed0f0e56fa3369?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=160&height=160 160w"
+          ]
+        },
+        "contentUri": "coremedia://program/14035826",
+        "description": "You're invited to a Play Date with your favourite singers. ",
+        "cardId": "14035826",
+        "cardTitle": "Play Date",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left"
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/kidslisten/programs/play-school-ears-on/",
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/6fe3d06cdd9acacd5637de87c05c2125?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/6fe3d06cdd9acacd5637de87c05c2125?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w"
+          ]
+        },
+        "contentUri": "coremedia://program/102063542",
+        "description": "Put your Ears On, and join your Play School favourites on an audio adventure, made for our littlest listeners.",
+        "cardId": "102063542",
+        "cardTitle": "Play School: Ears On",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left"
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/kidslisten/programs/quiet-time/",
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/a64c2496f751b1b48a2bee22ee590bbf?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/a64c2496f751b1b48a2bee22ee590bbf?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=160&height=160 160w"
+          ]
+        },
+        "contentUri": "coremedia://program/9317616",
+        "description": "Tranquil music to help with the daily nap time routine.",
+        "cardId": "9317616",
+        "cardTitle": "Quiet Time",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left"
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/kidslisten/programs/road-trip-playlist/",
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/63d4794f85f7fd3f0d5a290001287e36?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/63d4794f85f7fd3f0d5a290001287e36?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=160&height=160 160w"
+          ]
+        },
+        "contentUri": "coremedia://program/13827520",
+        "description": "Games, podcasts and songs to make car time fun for everyone.",
+        "cardId": "13827520",
+        "cardTitle": "Road Trip",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left"
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/kidslisten/programs/shake-and-move/",
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/6d020c1d91f004e429afbf204431c5ba?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/6d020c1d91f004e429afbf204431c5ba?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=160&height=160 160w"
+          ]
+        },
+        "contentUri": "coremedia://program/9317632",
+        "description": "Wiggle and jiggle, twist and shout! Fun, energetic music for dancing and free play.",
+        "cardId": "9317632",
+        "cardTitle": "Shake and Move",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left"
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/kidslisten/programs/sing-along/",
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/1e81f78763203b648542efa1e63c21cd?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/1e81f78763203b648542efa1e63c21cd?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=160&height=160 160w"
+          ]
+        },
+        "contentUri": "coremedia://program/9317586",
+        "description": "Get you big voices ready for a sing along with Abi!",
+        "cardId": "9317586",
+        "cardTitle": "Sing Along",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left"
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/kidslisten/programs/sleep-through/",
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/d653c118c68f0908c0a3caaf6263aefd?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/d653c118c68f0908c0a3caaf6263aefd?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=160&height=160 160w"
+          ]
+        },
+        "contentUri": "coremedia://program/9316952",
+        "description": "The peaceful sounds of nature keep children asleep through the night.",
+        "cardId": "9316952",
+        "cardTitle": "Sleep Through",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left"
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/kidslisten/programs/soundwalks/",
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/3f4f7218446eec666f084024db10a64a?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/3f4f7218446eec666f084024db10a64a?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=160&height=160 160w"
+          ]
+        },
+        "contentUri": "coremedia://program/10478702",
+        "description": "Soundwalks is a kids' meditation podcast that turns the sounds of the Australian bush, beach, and rainforest into guided relaxations for children.\n",
+        "cardId": "10478702",
+        "cardTitle": "Soundwalks",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left"
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/kidslisten/programs/soundwalks-mandarin/",
+        "cardImagePrepared": {
+          "alt": "Program Image",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/145788d2e9fd213c1a09d5b6cb01c18d?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/145788d2e9fd213c1a09d5b6cb01c18d?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=160&height=160 160w"
+          ]
+        },
+        "contentUri": "coremedia://program/105337392",
+        "description": "声音之旅（Soundwalks）用声音为孩子们描绘出丰富多彩的自然风光，带来引导式的放松体验。无论是面对复杂情绪、释放压力、寻找快乐、或是学会向他人寻求帮助，声音之旅都能通过大自然中的各种疗愈声响帮助孩子们感受当下，感受自身。 \n\n声音之旅（普通话）是原版声音之旅播客系列的普通话翻译版本。",
+        "cardId": "105337392",
+        "cardTitle": "声音之旅",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left"
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/kidslisten/programs/story-salad/",
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/6545945c7f65fb002efc96a5518e69b1?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/6545945c7f65fb002efc96a5518e69b1?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w"
+          ]
+        },
+        "contentUri": "coremedia://program/11742550",
+        "description": "Three words, three minutes, one story salad!",
+        "cardId": "11742550",
+        "cardTitle": "Story Salad",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left"
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/kidslisten/programs/story-salad-quest-mode/",
+        "cardImagePrepared": {
+          "alt": "Program Image",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/aa1f77050fa0b454e116dc170cd426ac?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/aa1f77050fa0b454e116dc170cd426ac?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=160&height=160 160w"
+          ]
+        },
+        "contentUri": "coremedia://program/104788018",
+        "description": "Listen to our family-friendly adventure podcasts packed with quirky characters, epic quests and imagination-boosting fun. Available now on ABC Listen.",
+        "cardId": "104788018",
+        "cardTitle": "Story Salad: Quest Mode",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left"
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/kidslisten/programs/story-time/",
+        "cardImagePrepared": {
+          "alt": "Child reading book on grass with flowers",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/f7a0fd08b4e065115983b0efc8c57299?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/f7a0fd08b4e065115983b0efc8c57299?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w"
+          ]
+        },
+        "contentUri": "coremedia://program/9317610",
+        "description": "Stories for resting and relaxing after a play-filled morning.",
+        "cardId": "9317610",
+        "cardTitle": "Story Time",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left"
+        }
       }
     ],
     "contentUri": "coremedia://collection/9317914",
     "borders": false,
     "pagination": {
       "offset": 0,
-      "size": 20,
+      "size": 34,
       "total": 34
     }
   }

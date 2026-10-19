@@ -11,7 +11,7 @@
 #
 # Fixtures: t/data/discovery/nextdata-section-{news,sport,kidslisten,kidslisten-programs,audiobooks}
 # .trimmed.json (/_next/data/build-3afcd04f/... captured 2026-10-19 for research §6.1, research
-# note dropped), bff-programAggregationCollection-9317914-kidslisten-programs-o0.json (fresh capture,
+# note dropped), bff-programAggregationCollection-9317914-kidslisten-programs-size50.json (fresh capture,
 # srcSet cut to 1, analytics dropped), nextdata-listen-home.trimmed.json (D1); t/data/live/ event
 # status fixtures (L1).
 
@@ -296,57 +296,67 @@ subtest 'synthetic: unknown components, empty / count-less MetaCollections, papi
 # aggregationItems and %FETCHERS
 # ---------------------------------------------------------------------------
 
-my $AGG_URL = "${BFF}programAggregationCollection/x?collectionId=9317914&offset=0&size=20";
+my $AGG_URL = "${BFF}programAggregationCollection/x?collectionId=9317914&offset=0&size=50";
 
 subtest 'aggregationItems: request shape, items() result shape, 6 h cache, errors' => sub {
 	fresh();
-	route( $AGG_URL, file => 'discovery/bff-programAggregationCollection-9317914-kidslisten-programs-o0.json', headers => $JSON_TYPE );
+	route( $AGG_URL, file => 'discovery/bff-programAggregationCollection-9317914-kidslisten-programs-size50.json', headers => $JSON_TYPE );
 
-	my $c = run( 'aggregationItems', 9317914, 0, 20 );
+	my $c = run( 'aggregationItems', 9317914, 0, 50 );
 	is( $c->count, 1, 'one callback' );
 	my ($result) = $c->args(0);
-	is_deeply( [ map { $_->{url} } requests() ], [$AGG_URL], 'GET core-next/api/programAggregationCollection/x?collectionId=9317914&offset=0&size=20' );
-	is_deeply( [ @$result{qw(title total count)} ], [ 'Programs', 34, 20 ], 'title from heading, total 34, 20 cards' );
+	is_deeply( [ map { $_->{url} } requests() ], [$AGG_URL], 'GET core-next/api/programAggregationCollection/x?collectionId=9317914&offset=0&size=50' );
+	is_deeply( [ @$result{qw(title total count)} ], [ 'Programs', 34, 34 ], 'title from heading, total 34, 34 cards' );
 	is_deeply( [ map { $_->{title} } @{ $result->{cards} }[ 0 .. 2 ] ], [ 'Bangers & Mash-Ups', 'Bedtime Stories', 'Bedtime Stories with R.A. Spratt' ], 'program cards, A–Z as ABC orders them' );
 	is( $result->{cards}->[0]->{type}, 'program', 'program refs' );
 
 	advanceTime( 6 * 3600 - 1 );
-	run( 'aggregationItems', 9317914, 0, 20 );
+	run( 'aggregationItems', 9317914, 0, 50 );
 	is( scalar requests(), 1, 'cached for 6 h' );
 	advanceTime(2);
-	run( 'aggregationItems', 9317914, 0, 20 );
+	run( 'aggregationItems', 9317914, 0, 50 );
 	is( scalar requests(), 2, 'then fetched again' );
 
 	fresh();
 	route( $AGG_URL, code => 500, content => 'oops' );
-	is_deeply( [ run( 'aggregationItems', 9317914, 0, 20 )->args(0) ], [ { error => 'PLUGIN_ABCLISTEN_LOAD_FAILED' } ], 'error -> LOAD_FAILED, once' );
-	is_deeply( [ run( 'aggregationItems', 'abc', 0, 20 )->args(0) ], [ { error => 'PLUGIN_ABCLISTEN_LOAD_FAILED' } ], 'a bad id -> LOAD_FAILED without a request' );
+	is_deeply( [ run( 'aggregationItems', 9317914, 0, 50 )->args(0) ], [ { error => 'PLUGIN_ABCLISTEN_LOAD_FAILED' } ], 'error -> LOAD_FAILED, once' );
+	is_deeply( [ run( 'aggregationItems', 'abc', 0, 50 )->args(0) ], [ { error => 'PLUGIN_ABCLISTEN_LOAD_FAILED' } ], 'a bad id -> LOAD_FAILED without a request' );
 	is( scalar( grep { $_->{url} =~ /collectionId=abc/ } requests() ), 0, 'no request for it' );
 };
 
-subtest '%FETCHERS: a kind => aggregation collection pages with programAggregationCollection/x; other kinds with collection/x' => sub {
+subtest '%FETCHERS / menuPage: kind => aggregation pages 50 at a time with programAggregationCollection/x; other kinds 20 with collection/x' => sub {
 	fresh();
-	route( $AGG_URL, file => 'discovery/bff-programAggregationCollection-9317914-kidslisten-programs-o0.json', headers => $JSON_TYPE );
-	route_json( "${BFF}programAggregationCollection/x?collectionId=9317914&offset=20&size=20", { collection => { heading => 'Programs', pagination => { total => 21 }, items => [ card( 'coremedia://program/9', articleLink => '/kidslisten/programs/nine/' ) ] } } );
+	route( $AGG_URL, file => 'discovery/bff-programAggregationCollection-9317914-kidslisten-programs-size50.json', headers => $JSON_TYPE );
 
 	my $link = $COL->collectionItem( $CLIENT, { id => '9317914', title => 'All Kids listen programs', kind => 'aggregation' }, 0 );
 	is( $link->{passthrough}->[0]->{kind}, 'aggregation', 'the kind travels in the passthrough' );
 
 	my $items = items_of( feed( $link->{url}, @{ $link->{passthrough} } ) );
-	is( scalar @$items, 21, '20 programs + More…' );
-	is( $items->[-1]->{name}, $MORE, 'More…' );
+	is( scalar @$items, 34, 'All Kids listen programs: the 34 programs in one A–Z list (no More…)' );
 	is( $items->[0]->{passthrough}->[0]->{path}, '/kidslisten/programs/bangers-and-mash-ups', 'program rows (O2 programItem)' );
-	my $more = items_of( feed( $items->[-1]->{url}, @{ $items->[-1]->{passthrough} } ) );
-	is( scalar @$more, 1, 'the next page (offset 20) through the same fetcher; last page: no More…' );
 	is( scalar( grep { $_->{url} =~ m{/collection/x} } requests() ), 0, 'never collection/x' );
 
 	fresh();
-	route_json( "${BFF}collection/x?collectionId=5&offset=0&size=20", { collection => { title => 'Five', pagination => { total => 1 }, items => [ card( 'coremedia://program/9', articleLink => '/listen/programs/nine/' ) ] } } );
+	my @fifty = map { card( "coremedia://program/$_", articleLink => "/kidslisten/programs/p$_/" ) } 1 .. 50;
+	route_json( "${BFF}programAggregationCollection/x?collectionId=8&offset=0&size=50",  { collection => { heading => 'Big', pagination => { total => 51 }, items => \@fifty } } );
+	route_json( "${BFF}programAggregationCollection/x?collectionId=8&offset=50&size=50", { collection => { heading => 'Big', pagination => { total => 51 }, items => [ card( 'coremedia://program/51', articleLink => '/kidslisten/programs/p51/' ) ] } } );
+	$link  = $COL->collectionItem( $CLIENT, { id => '8', title => 'Big', kind => 'aggregation' }, 0 );
+	$items = items_of( feed( $link->{url}, @{ $link->{passthrough} } ) );
+	is_deeply( [ scalar @$items, $items->[-1]->{name} ], [ 51, $MORE ], 'more than 50: 50 + More…' );
+	my $more = items_of( feed( $items->[-1]->{url}, @{ $items->[-1]->{passthrough} } ) );
+	is( scalar @$more, 1, 'the next page (offset 50) through the same fetcher; last page: no More…' );
+
+	my $c = collector();
+	$COL->menuPage( { id => '8', kind => 'aggregation' }, 0, $c->cb );
+	is( ( $c->args(0) )[0]->{count}, 50, 'menuPage(\%collection, $offset, $cb): the menu\'s page (served from the same cache)' );
+	is( scalar( grep { $_->{url} =~ /collectionId=8&offset=0/ } requests() ), 1, '... no second request' );
+
+	fresh();
 	for my $kind ( undef, 'unknown-kind' ) {
 		Slim::Networking::SimpleAsyncHTTP->reset;
 		route_json( "${BFF}collection/x?collectionId=5&offset=0&size=20", { collection => { title => 'Five', pagination => { total => 1 }, items => [ card( 'coremedia://program/9', articleLink => '/listen/programs/nine/' ) ] } } );
 		my $plain = $COL->collectionItem( $CLIENT, { id => 5, title => 'Five', ( defined $kind ? ( kind => $kind ) : () ) }, 0 );
-		is( scalar @{ items_of( feed( $plain->{url}, @{ $plain->{passthrough} } ) ) }, 1, 'kind ' . ( $kind // 'none' ) . ': items() (collection/x)' );
+		is( scalar @{ items_of( feed( $plain->{url}, @{ $plain->{passthrough} } ) ) }, 1, 'kind ' . ( $kind // 'none' ) . ': items() (collection/x, 20 per page)' );
 	}
 };
 

@@ -11,7 +11,7 @@
 # one callback on every path; dying callbacks; menu shapes and readable names; $client undef.
 #
 # Fixtures: t/data/discovery/nextdata-section-*.trimmed.json (see t/46-sections.t),
-# bff-programAggregationCollection-9317914-kidslisten-programs-o0.json,
+# bff-programAggregationCollection-9317914-kidslisten-programs-size50.json,
 # bff-collection-104141842-kids-families.trimmed.json (Kids & Families podcasts, items cut to 3,
 # total 52), bff-collection-106510880-books-for-kids.json (all 7) - fresh captures 2026-10-19,
 # srcSet cut to 1, analytics dropped; t/data/live/ event status fixtures (L1).
@@ -74,7 +74,7 @@ my @NEWS_TITLES = ( 'Latest News', 'Daily Programs', 'Beyond The Headlines', 'AB
 my @AUDIOBOOK_TITLES = ( 'Most Popular', 'Top 100 Australian Books', 'Crime & Thriller', 'Audio Dramas', 'Popular Fiction', 'Timeless Audiobooks', 'Books for Kids', 'Beyond The Book', 'Programs For Book Lovers' );
 my @KIDS_NAMES = ( 'ABC KIDS listen', 'Featured', 'Latest Programs', 'All Kids listen programs', 'Kids & Families podcasts', 'Books for Kids', 'News Time' );
 
-my $AGG_URL   = "${BFF}programAggregationCollection/x?collectionId=9317914&offset=0&size=20";
+my $AGG_URL   = "${BFF}programAggregationCollection/x?collectionId=9317914&offset=0&size=50";
 my $KIDS_POD  = "${BFF}collection/x?collectionId=104141842&offset=0&size=20";
 my $KIDS_BOOK = "${BFF}collection/x?collectionId=106510880&offset=0&size=20";
 
@@ -128,7 +128,7 @@ sub route_section {
 
 sub route_kids_extras {
 	my %opt = @_;
-	route( $AGG_URL,   file => 'discovery/bff-programAggregationCollection-9317914-kidslisten-programs-o0.json', headers => $JSON_TYPE, %opt );
+	route( $AGG_URL,   file => 'discovery/bff-programAggregationCollection-9317914-kidslisten-programs-size50.json', headers => $JSON_TYPE, %opt );
 	route( $KIDS_POD,  file => 'discovery/bff-collection-104141842-kids-families.trimmed.json',                    headers => $JSON_TYPE, %opt );
 	route( $KIDS_BOOK, file => 'discovery/bff-collection-106510880-books-for-kids.json',                           headers => $JSON_TYPE, %opt );
 }
@@ -348,8 +348,8 @@ subtest 'Kids listen (full section): live station, Featured, Latest Programs, Al
 	# the extras' menus come from the cache the root warmed
 	my $before = scalar requests();
 	my $programs = items_of( open_item( $by{'All Kids listen programs'}, $CLIENT ) );
-	is( scalar @$programs, 21, 'All Kids listen programs: 20 programs + More… (34 in all)' );
-	is( $programs->[-1]->{name}, $MORE, 'More…' );
+	is( scalar @$programs, 34, 'All Kids listen programs: all 34 programs, one A–Z list in ABC\'s order (aggregations page 50 at a time)' );
+	is( scalar( grep { $_->{name} eq $MORE } @$programs ), 0, 'no More…' );
 	is( $programs->[1]->{passthrough}->[0]->{path}, '/kidslisten/programs/bedtime-stories', 'e.g. Bedtime Stories -> its program menu (episodes)' );
 	my $podcasts = items_of( open_item( $by{'Kids & Families podcasts'}, $CLIENT ) );
 	is( $podcasts->[-1]->{name}, $MORE, 'Kids & Families podcasts: a first page + More… (52 in all)' );
@@ -373,6 +373,13 @@ subtest 'Kids listen: state versions listed when stationItem defines them; extra
 	my %by = map { $_->{name} => $_ } @$items;
 	is( $by{'Books for Kids'}->{name}, string('PLUGIN_ABCLISTEN_BOOKS_FOR_KIDS'), 'Books for Kids named by its token' );
 	is_deeply( [ map { $by{$_}->{image} } 'All Kids listen programs', 'Kids & Families podcasts', 'Books for Kids' ], [ ($ICON) x 3 ], 'plugin icon' );
+
+	fresh();
+	route_section('kids');
+	route( $AGG_URL,  file => 'discovery/bff-programAggregationCollection-9317914-kidslisten-programs-size50.json', headers => $JSON_TYPE );
+	route( $KIDS_POD, file => 'discovery/bff-collection-104141842-kids-families.trimmed.json',                    headers => $JSON_TYPE );
+	route( $KIDS_BOOK, code => 200, headers => $JSON_TYPE, content => to_json( { collection => { title => 'Books for Kids & Teens', pagination => { total => 0 }, items => [] } } ) );
+	is( section('kids')->[5]->{name}, 'Books for Kids & Teens', 'ABC renames Books for Kids: its new title is used (only that extra takes ABC\'s title)' );
 
 	fresh();
 	route_page_json( 'kids', { component => 'StandardCollection', componentProps => { id => '104141842', title => 'Kids & Families on the page', items => [ { contentUri => 'coremedia://program/1', cardTitle => 'P', articleLink => '/listen/programs/p/' } ] } } );

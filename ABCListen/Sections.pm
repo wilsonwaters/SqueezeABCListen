@@ -35,7 +35,7 @@ package Plugins::ABCListen::Sections;
 #                       Kids & Families podcasts (collection 104141842), Books for Kids (collection
 #                       106510880, named with ABC's title), News Time (OnDemand->programItem,
 #                       /kidslisten/programs/news-time). The three collections' first pages are
-#                       fetched together with the page (the same request, and cache, their menus use)
+#                       fetched together with the page (Collections->menuPage: the request and cache their menus use)
 #                       for their first card's image and ABC's title; when that fails: the plugin
 #                       icon and the PLUGIN_ABCLISTEN_KIDS_PROGRAMS / _KIDS_PODCASTS / _BOOKS_FOR_KIDS
 #                       names. A collection the page lists itself is not repeated.
@@ -158,8 +158,7 @@ sub _sectionMenu {
 		$COLLECTIONS->page( $section->{path}, sub { $page = shift; $fetched->() } );
 
 		for my $extra (@extras) {
-			my $fetch = ( $extra->{kind} || '' ) eq 'aggregation' ? 'aggregationItems' : 'items';
-			$COLLECTIONS->$fetch( $extra->{id}, 0, Plugins::ABCListen::Collections::PAGE_SIZE, sub { $extras{ $extra->{id} } = shift; $fetched->() } );
+			$COLLECTIONS->menuPage( _extraHash($extra), 0, sub { $extras{ $extra->{id} } = shift; $fetched->() } );
 		}
 	} );
 
@@ -254,12 +253,13 @@ sub _extraCollection {
 	my ($image) = grep {defined} map { $_->{image} } grep { ref $_ eq 'HASH' } _list( $first->{cards} );
 	my $title = $extra->{abcTitle} && _hasText( $first->{title} ) ? $first->{title} : cstring( $client, $extra->{token} );
 
-	return $COLLECTIONS->collectionItem( $client, {
-		id    => $extra->{id},
-		title => $title,
-		image => $image,
-		( $extra->{kind} ? ( kind => $extra->{kind} ) : () ),
-	}, 0 );
+	return $COLLECTIONS->collectionItem( $client, _extraHash( $extra, title => $title, image => $image ), 0 );
+}
+
+# The collection hash of an extra (what collectionItem passes to its menu, and menuPage reads).
+sub _extraHash {
+	my ( $extra, %more ) = @_;
+	return { id => $extra->{id}, ( $extra->{kind} ? ( kind => $extra->{kind} ) : () ), %more };
 }
 
 # One link per carousel heading, listing its playable event stations (each service once).
