@@ -159,7 +159,7 @@ books without chapters; they play only in Australia anyway), then L4, then M2 (M
    store these URLs, never CDN URLs.
 3. **Episode metadata cache (F1 `Util.pm`).** `setEpisodeMeta($id, \%m)` / `getEpisodeMeta($id)`, cache namespace
    `abclisten`. Shape `{id, docType, title, programTitle, programId, path (canonical site path), image, description,
-   date (epoch), duration (s)}` plus optional `{renditions => [{url, mime, bitrate}], availableTo, downloadAvailableTo,
+   date (epoch), duration (s)}` plus optional `{renditions => [{url, mime, bitrate, fileSize (O6: needed for AAC seek — seeders must include it when known)}], availableTo, downloadAvailableTo,
    seenAt}`. Written by O2, O3, D1, D2, D3, M2; read by O1 (resolver), O4, M2.
 4. **Protocol-handler kind registry (F2, `ProtocolHandler.pm` frozen after F2).**
    `Plugins::ABCListen::ProtocolHandler->registerKind($kind, {resolve, metadata, onStream?, onStop?})`:
