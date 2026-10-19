@@ -10,7 +10,7 @@
       <category>radio</category>
       <icon>https://raw.githubusercontent.com/wilsonwaters/SqueezeABCListen/main/ABCListen/HTML/EN/plugins/ABCListen/html/images/icon.png</icon>
       <url>https://github.com/wilsonwaters/SqueezeABCListen/releases/download/v0.1.0/ABCListen-0.1.0.zip</url>
-      <sha>0000000000000000000000000000000000000000</sha>
+      <sha>cacbeb99b7273d215fc6bae2189dc63ec394b3a1</sha>
       <link>https://github.com/wilsonwaters/SqueezeABCListen</link>
       <creator>Wilson Waters</creator>
     </plugin>
