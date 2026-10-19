@@ -1,0 +1,139 @@
+{
+  "hits": [
+    {
+      "canonicalURL": "https://www.abc.net.au/listen/programs/classic-drive/classic-drive/107174638",
+      "dates": {
+        "firstUpdated": "2026-09-20T14:07:00+00:00",
+        "freshnessDate": "2026-10-19T04:00:00+00:00",
+        "freshnessHour": "2026-10-19T04:00:00+00:00",
+        "lastUpdated": "2026-10-19T07:07:34+00:00",
+        "liveDate": "2026-10-19T04:00:00+00:00",
+        "mediaDownloadAvailableFrom": "2026-10-19T04:00:00+00:00",
+        "mediaDownloadAvailableTo": "2200-01-01T00:00:00+00:00",
+        "mediaStreamingAvailableFrom": "2026-10-19T04:00:00+00:00",
+        "mediaStreamingAvailableTo": "2026-11-16T04:00:00+00:00",
+        "publicationDate": "2026-10-19T04:00:00+00:00",
+        "validFrom": null,
+        "validTo": null
+      },
+      "defaultThumbnail": {
+        "16x9": "https://live-production.wcms.abc-cdn.net.au/1a5e40456cd704992f3f4fd7252a97b6?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=0&width=862&height=485",
+        "1x1": "https://live-production.wcms.abc-cdn.net.au/1a5e40456cd704992f3f4fd7252a97b6?impolicy=wcms_crop_resize&cropH=1688&cropW=1688&xPos=656&yPos=0&width=862&height=862",
+        "3x2": "https://live-production.wcms.abc-cdn.net.au/1a5e40456cd704992f3f4fd7252a97b6?impolicy=wcms_crop_resize&cropH=1688&cropW=2532&xPos=234&yPos=0&width=862&height=575",
+        "3x4": "https://live-production.wcms.abc-cdn.net.au/1a5e40456cd704992f3f4fd7252a97b6?impolicy=wcms_crop_resize&cropH=1688&cropW=1266&xPos=867&yPos=0&width=862&height=1149",
+        "4x3": "https://live-production.wcms.abc-cdn.net.au/1a5e40456cd704992f3f4fd7252a97b6?impolicy=wcms_crop_resize&cropH=1688&cropW=2251&xPos=375&yPos=0&width=862&height=647",
+        "9x16": "https://live-production.wcms.abc-cdn.net.au/1a5e40456cd704992f3f4fd7252a97b6?impolicy=wcms_crop_resize&cropH=1688&cropW=950&xPos=1025&yPos=0&width=862&height=1533"
+      },
+      "duration": 10799,
+      "mediaRenditions": [
+        {
+          "audioBitrate": null,
+          "audioChannels": 2,
+          "audioCodec": "",
+          "audioProfileLevel": "",
+          "audioSampleRate": 48000,
+          "bitrate": 0,
+          "codec": "AAC",
+          "contentType": "audio/aac",
+          "fileExtension": "aac",
+          "fileName": "drv-2026-10-19.aac",
+          "fileSize": 353025904,
+          "height": null,
+          "physicalLocation": "",
+          "pixelAspectRatio": "",
+          "url": "https://mediacore-live-production.akamaized.net/audio/02/pj/Z/2j.aac",
+          "videoEncodeMode": "",
+          "videoFrameRate": null,
+          "videoMultiplexing": "AAC",
+          "videoProfileLevel": "",
+          "width": null
+        },
+        {
+          "audioBitrate": null,
+          "audioChannels": 2,
+          "audioCodec": "",
+          "audioProfileLevel": "",
+          "audioSampleRate": 48000,
+          "bitrate": 0,
+          "codec": "AAC",
+          "contentType": "application/vnd.apple.mpegurl",
+          "fileExtension": "aac",
+          "fileName": "drv-2026-10-19.aac",
+          "fileSize": 353025904,
+          "height": null,
+          "physicalLocation": "",
+          "pixelAspectRatio": "",
+          "url": "https://mediacore-live-production.akamaized.net/audio/02/pj/Z/2j.aac",
+          "videoEncodeMode": "",
+          "videoFrameRate": null,
+          "videoMultiplexing": "AAC",
+          "videoProfileLevel": "",
+          "width": null
+        }
+      ],
+      "programID": 8812254,
+      "programTitle": "Classic Drive",
+      "title": "Classic Drive",
+      "objectID": "coremedia://audioepisode/107174638",
+      "_highlightResult": {
+        "synopsis": {
+          "value": "Your ultimate drive time companion with punchy classical music to engage, entertain, and energise.",
+          "matchLevel": "none",
+          "matchedWords": []
+        },
+        "title": {
+          "value": "Classic Drive",
+          "matchLevel": "none",
+          "matchedWords": []
+        }
+      }
+    }
+  ],
+  "nbHits": 1,
+  "page": 0,
+  "nbPages": 1,
+  "hitsPerPage": 1,
+  "exhaustiveNbHits": true,
+  "exhaustiveTypo": true,
+  "exhaustive": {
+    "nbHits": true,
+    "typo": true
+  },
+  "query": "",
+  "params": "filters=objectID%3A%22coremedia%3A%2F%2Faudioepisode%2F107174638%22+OR+objectID%3A%22coremedia%3A%2F%2Faudio%2F107174638%22+OR+objectID%3A%22coremedia%3A%2F%2Faudiosegment%2F107174638%22&hitsPerPage=1&attributesToRetrieve=%5B%22objectID%22%2C%22canonicalURL%22%2C%22title%22%2C%22programTitle%22%2C%22programID%22%2C%22duration%22%2C%22dates%22%2C%22mediaRenditions%22%2C%22defaultThumbnail%22%5D&optionalFilters=%5B%5B%22contentType%3A+article%22%2C%22contentType%3A+channel%22%2C%22contentType%3A+program%22%2C%22contentType%3A+recipe%22%2C%22contentSource%3A+iview%22%2C%22mediaStreamingStatus%3A+AVAILABLE%22%2C%22mediaDownloadStatus%3A++AVAILABLE%22%5D%5D&optionalFilters=%5B%5B%22contentType%3A+article%22%2C%22contentType%3A+channel%22%2C%22contentType%3A+program%22%2C%22contentType%3A+recipe%22%2C%22contentSource%3A+iview%22%2C%22mediaStreamingStatus%3A+AVAILABLE%22%2C%22mediaDownloadStatus%3A+AVAILABLE%22%5D%5D&optionalFilters=%5B%22contentType%3Aprogram%3Cscore%3D1%3E%22%5D",
+  "renderingContent": {
+    "facetOrdering": {
+      "facets": {
+        "order": []
+      }
+    }
+  },
+  "processingTimeMS": 10,
+  "processingTimingsMS": {
+    "_request": {
+      "roundTrip": 201
+    },
+    "afterFetch": {
+      "merge": {
+        "total": 1
+      },
+      "total": 1
+    },
+    "fetch": {
+      "scanning": 1,
+      "total": 5
+    },
+    "getIdx": {
+      "load": {
+        "gens": 1,
+        "total": 2
+      },
+      "total": 2
+    },
+    "rulesProcessing": {
+      "total": 1
+    },
+    "total": 10
+  },
+  "serverTimeMS": 11
+}
