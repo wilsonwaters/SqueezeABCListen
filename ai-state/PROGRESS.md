@@ -6,16 +6,16 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 ## Issue map (task ID → GitHub issue)
 - foundation: F1 #1 · F2 #3 · F3 #7 · F4 #34 (bug) · F5 #37 (cardRef names) · F6 #41 (F4 follow-ups)
 - live: L1 #2 · L2 #4 · L3 #8 · L4 #10 · L5 #14
-- ondemand: O1 #12 · O2 #16 · O3 #18 · O4 #19 · O6 #30 · O7 #40
+- ondemand: O1 #12 · O2 #16 · O3 #18 · O4 #19 · O6 #30 · O7 #40 · O8 #48 (O7 follow-ups)
 - discovery: D1 #5 · D2 #6 · D3 #13 · D4 #22 · D5 #23 · D6 #44 (podcast A–Z groups)
 - myabc: M1 #11 · M2 #20
 - release: R1 #9 · R2 #15 · R3 #17
 
 ## Currently in flight
 - #4 L2 program on air — PR #47 in review + runtime check
-- #40 O7 Hottest 100 in A–Z — PR #46 in review
 - #14 L5 higher-quality live — implementation (resumed after F5 merged)
-- Queued (cap 3): #44 D6 podcasts A–Z letter groups (implementer paused), then L3, L4, O4, D5, F6, R2, R3
+- #44 D6 podcasts A–Z letter groups — implementation (resumed after O7 merged)
+- Queued (cap 3): L3, L4, O4, D5, F6, O8, R2, R3
 
 ## Interruptions
 - 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
@@ -26,6 +26,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   F5, O7; L5 and D6 held until those finish. New cap: ≤3 concurrent agents.
 
 ## Last completions
+- #40 O7 merged (PR #46, squash 7004fc0): network-relative program paths (Hottest 100) kept in A–Z / By type after a
+  page check. Review APPROVE; follow-ups filed as O8 (#48: Follow row for Hottest 100 episodes, outage resilience).
 - #37 F5 merged (PR #45, squash 1adab5b): cardRef uses image alt text as a name only when it spells the card's slug
   (430 fixture cards diffed in review: only the intended 16 names change). check.sh passes on main.
 - #22 D4 merged (PR #43, squash 990f709): News, Sport, Kids listen (full section), Audiobooks. Integrated with D2/M2
