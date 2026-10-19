@@ -12,9 +12,13 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - release: R1 #9 · R2 #15 · R3 #17
 
 ## Currently in flight
-- Wave 1 implementation agents (worktrees, in parallel): #3 F2 protocol handler (`feat/F2-protocol-handler`),
-  #7 F3 API client (`feat/F3-api-client`), #9 R1 packaging/release (`feat/R1-packaging-release`), #11 M1 settings (`feat/M1-settings`)
-- Plan-revision + backlog-reconciliation agent: app-style navigation, new D4 section menus, contract 1 update
+- #9 R1 → PR #24 (packaging, repo.xml, release.yml) — under review; v0.1.0 to be cut post-merge
+- #3 F2 → PR #25 (abclisten:// protocol handler) — under review + runtime verification
+- #11 M1 → PR #26 (settings page, homeState) — under review + runtime verification. Re-committed by the
+  orchestrator as one clean commit on `feat/M1-settings-page` (the implementer's local branch had an
+  old-author commit it was not permitted to rewrite).
+- #7 F3 (API.pm) — implementation in progress
+- Attribution scrub of issue/PR text in progress (stakeholder rule)
 
 ## Last completions
 - #1 F1 merged (PR #21, squash 161ae6a): installable slice — ABC listen → Radio → 5 national stations play; weighted
