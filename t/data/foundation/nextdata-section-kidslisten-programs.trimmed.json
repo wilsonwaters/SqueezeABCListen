@@ -1,0 +1,240 @@
+{
+  "pageProps": {
+    "data": {
+      "title": "Programs",
+      "description": "ABC Kids listen provides Australian families and early educators with a safe, trusted space for children to access entertaining and educational audio content",
+      "componentsContent": [
+        {
+          "key": "9317914",
+          "component": "ProgramAggregationCollection",
+          "componentProps": {
+            "heading": "Programs",
+            "loadMoreUrl": "/kidslisten/programs",
+            "items": [
+              {
+                "articleLink": "/kidslisten/programs/bangers-and-mash-ups/",
+                "cardImagePrepared": {
+                  "alt": "",
+                  "imgSrc": "https://live-production.wcms.abc-cdn.net.au/f145fc77c718224c5ec9a81b4122ba23?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862",
+                  "ratio": "1x1",
+                  "srcSet": [
+                    "https://live-production.wcms.abc-cdn.net.au/f145fc77c718224c5ec9a81b4122ba23?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=160&height=160 160w"
+                  ]
+                },
+                "contentUri": "coremedia://program/103541394",
+                "description": null,
+                "cardId": "103541394",
+                "cardTitle": "Bangers & Mash-Ups",
+                "noBorders": true,
+                "presentersPrepared": [],
+                "imagePositionPrepared": {
+                  "mobile": "left"
+                }
+              },
+              {
+                "articleLink": "/kidslisten/programs/bedtime-stories/",
+                "cardImagePrepared": {
+                  "alt": "child sleeping on crescent moon with book",
+                  "imgSrc": "https://live-production.wcms.abc-cdn.net.au/6b60282789e49539ea9e47699a4d13a6?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862",
+                  "ratio": "1x1",
+                  "srcSet": [
+                    "https://live-production.wcms.abc-cdn.net.au/6b60282789e49539ea9e47699a4d13a6?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=160&height=160 160w"
+                  ]
+                },
+                "contentUri": "coremedia://program/13078228",
+                "description": null,
+                "cardId": "13078228",
+                "cardTitle": "Bedtime Stories",
+                "noBorders": true,
+                "presentersPrepared": [],
+                "imagePositionPrepared": {
+                  "mobile": "left"
+                }
+              },
+              {
+                "articleLink": "https://www.abc.net.au/listen/programs/bedtime-stories-with-ra-spratt/",
+                "cardImagePrepared": {
+                  "alt": "Drawing of a pig in a green frock and aviator's goggles, holding a sword. Text says Bedtime Stories with RA Spratt",
+                  "imgSrc": "https://live-production.wcms.abc-cdn.net.au/bee444386b047d9ca0c5b6236ddbfbdb?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+                  "ratio": "1x1",
+                  "srcSet": [
+                    "https://live-production.wcms.abc-cdn.net.au/bee444386b047d9ca0c5b6236ddbfbdb?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w"
+                  ]
+                },
+                "contentUri": "coremedia://program/106961186",
+                "description": null,
+                "cardId": "106961186",
+                "cardTitle": "Bedtime Stories with R.A. Spratt",
+                "noBorders": true,
+                "presentersPrepared": [
+                  {
+                    "canonicalURI": "/listen/ra-spratt/106961272",
+                    "canonicalURL": "https://www.abc.net.au/listen/ra-spratt/106961272",
+                    "id": "106961272",
+                    "names": {
+                      "full": "R.A. Spratt"
+                    },
+                    "role": "Presenter"
+                  }
+                ],
+                "imagePositionPrepared": {
+                  "mobile": "left"
+                }
+              }
+            ],
+            "contentUri": "coremedia://collection/9317914",
+            "borders": false,
+            "pagination": {
+              "offset": 0,
+              "size": 15,
+              "total": 34
+            },
+            "bentoLayout": {
+              "sm": "3col",
+              "lg": "5col"
+            },
+            "sectionHeaderLink": {
+              "linkText": "See full schedule",
+              "linkUrl": "/kidslisten/schedule"
+            }
+          },
+          "collectionPreparerParams": {
+            "showDescription": false,
+            "showPresenters": true
+          }
+        },
+        {
+          "key": "14014158",
+          "component": "AppOnwardJourney",
+          "componentProps": {
+            "variant": "listen",
+            "label": "ABC Listen",
+            "description": "Music to move, podcasts to play and stories & soundtracks for sleep",
+            "url": "https://www.abc.net.au/listen/listenapp"
+          }
+        },
+        {
+          "key": "9454390",
+          "component": "StandardCollection",
+          "componentProps": {
+            "bentoCardType": "ContentCard",
+            "id": "9454390",
+            "title": "People",
+            "productName": "kidslisten",
+            "heading": "People",
+            "loadMoreUrl": "/kidslisten/programs",
+            "pagination": {
+              "offset": 0,
+              "size": 16,
+              "total": 20
+            },
+            "items": [
+              {
+                "articleLink": "https://www.abc.net.au/listen/emily-anderson/106144304",
+                "cardAttributionPrepared": null,
+                "cardImagePrepared": {
+                  "alt": "",
+                  "imgSrc": "https://live-production.wcms.abc-cdn.net.au/311597683dc091a0a4a0741967016d47?impolicy=wcms_crop_resize&cropH=2385&cropW=4240&xPos=0&yPos=223&width=862&height=485",
+                  "ratio": "16x9",
+                  "srcSet": [
+                    "https://live-production.wcms.abc-cdn.net.au/311597683dc091a0a4a0741967016d47?impolicy=wcms_crop_resize&cropH=2385&cropW=4240&xPos=0&yPos=223&width=160&height=90 160w"
+                  ],
+                  "hideImageBorders": false,
+                  "width": "862",
+                  "height": "485"
+                },
+                "cardMediaIndicatorPrepared": null,
+                "contentLabelPrepared": null,
+                "contentUri": "coremedia://person/106144304",
+                "cardId": "106144304",
+                "cardTitle": "Emily Anderson",
+                "noBorders": true,
+                "presentersPrepared": null,
+                "imagePositionPrepared": {
+                  "mobile": "right"
+                },
+                "cardContentPositionPrepared": {},
+                "hasMobileFeatured": false,
+                "hideImageBorders": false
+              },
+              {
+                "articleLink": "https://www.abc.net.au/listen/matthew-backer/11120842",
+                "cardAttributionPrepared": null,
+                "cardImagePrepared": {
+                  "alt": "",
+                  "imgSrc": "https://live-production.wcms.abc-cdn.net.au/1b902f57c1818d7fc1cb5214720dfc99?impolicy=wcms_crop_resize&cropH=1125&cropW=1998&xPos=1&yPos=0&width=862&height=485",
+                  "ratio": "16x9",
+                  "srcSet": [
+                    "https://live-production.wcms.abc-cdn.net.au/1b902f57c1818d7fc1cb5214720dfc99?impolicy=wcms_crop_resize&cropH=1125&cropW=2000&xPos=0&yPos=0&width=160&height=90 160w"
+                  ],
+                  "hideImageBorders": false,
+                  "width": "862",
+                  "height": "485"
+                },
+                "cardMediaIndicatorPrepared": null,
+                "contentLabelPrepared": null,
+                "contentUri": "coremedia://person/11120842",
+                "cardId": "11120842",
+                "cardTitle": "Matthew Backer",
+                "noBorders": true,
+                "presentersPrepared": null,
+                "imagePositionPrepared": {
+                  "mobile": "right"
+                },
+                "cardContentPositionPrepared": {},
+                "hasMobileFeatured": false,
+                "hideImageBorders": false
+              },
+              {
+                "articleLink": "https://www.abc.net.au/radio/rudi-bremer/11106694",
+                "cardAttributionPrepared": null,
+                "cardImagePrepared": {
+                  "alt": "A smiling woman with dark hair and purple lipstick, wearing a black top with orange patterns and large gold earrings.",
+                  "imgSrc": "https://live-production.wcms.abc-cdn.net.au/cbf47cebb1b060434b6a8e7c7d6a488a?impolicy=wcms_crop_resize&cropH=1125&cropW=2000&xPos=0&yPos=0&width=862&height=485",
+                  "ratio": "16x9",
+                  "srcSet": [
+                    "https://live-production.wcms.abc-cdn.net.au/cbf47cebb1b060434b6a8e7c7d6a488a?impolicy=wcms_crop_resize&cropH=1125&cropW=2000&xPos=0&yPos=0&width=160&height=90 160w"
+                  ],
+                  "hideImageBorders": false,
+                  "width": "862",
+                  "height": "485"
+                },
+                "cardMediaIndicatorPrepared": null,
+                "contentLabelPrepared": null,
+                "contentUri": "coremedia://person/11106694",
+                "cardId": "11106694",
+                "cardTitle": "Rudi Bremer",
+                "noBorders": true,
+                "presentersPrepared": null,
+                "imagePositionPrepared": {
+                  "mobile": "right"
+                },
+                "cardContentPositionPrepared": {},
+                "hasMobileFeatured": false,
+                "hideImageBorders": false
+              }
+            ],
+            "contentUri": "coremedia://collection/9454390",
+            "borders": false,
+            "linkUrl": "",
+            "linkTitle": "",
+            "showTitleVisually": true,
+            "canonicalURI": "/kidslisten/person-collection/9454390",
+            "robots": null,
+            "ratio": "16x9",
+            "bentoLayout": {
+              "sm": "2col",
+              "lg": "4col"
+            }
+          },
+          "collectionPreparerParams": {
+            "showDescription": false,
+            "mobileCardSettings": {
+              "hasFeatured": false
+            }
+          }
+        }
+      ]
+    }
+  }
+}

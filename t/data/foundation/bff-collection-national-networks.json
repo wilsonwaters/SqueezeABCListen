@@ -1,0 +1,171 @@
+{
+  "collection": {
+    "bentoCardType": "ContentCard",
+    "id": "12872264",
+    "title": "National Networks",
+    "productName": "core-next",
+    "analytics": {
+      "uri": "coremedia://collection/12872264",
+      "moduleUri": "coremedia://collection/12872264",
+      "contentSource": "coremedia",
+      "contentType": "collection",
+      "id": "12872264",
+      "title": {
+        "title": "National Networks"
+      },
+      "items": [
+        {
+          "uri": "coremedia://externallink/13325024"
+        },
+        {
+          "uri": "coremedia://channel/12872318"
+        },
+        {
+          "uri": "coremedia://externallink/12872304"
+        },
+        {
+          "uri": "coremedia://externallink/102767176"
+        }
+      ]
+    },
+    "heading": "National Networks",
+    "items": [
+      {
+        "articleLink": "https://www.abc.net.au/listen/radio#find-your-local-station",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "Red circular ABC Radio logo",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/94fd4544070cf8410aed9d4942f448d9?impolicy=wcms_crop_resize&cropH=512&cropW=512&xPos=0&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/94fd4544070cf8410aed9d4942f448d9?impolicy=wcms_crop_resize&cropH=512&cropW=512&xPos=0&yPos=0&width=160&height=160 160w"
+          ],
+          "hideImageBorders": true,
+          "width": "862",
+          "height": "862"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://externallink/13325024",
+        "description": "",
+        "cardId": "13325044",
+        "cardTitle": "ABC local radio stations",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left-centre"
+        },
+        "cardContentPositionPrepared": {
+          "tablet": "center",
+          "desktop": "center"
+        },
+        "hasMobileFeatured": false,
+        "hideImageBorders": true
+      },
+      {
+        "articleLink": "https://www.abc.net.au/listen/radionational/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "ABC Radio National",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/556166359443f9aaa26ce7b905c4a29f?impolicy=wcms_crop_resize&cropH=500&cropW=500&xPos=0&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/556166359443f9aaa26ce7b905c4a29f?impolicy=wcms_crop_resize&cropH=500&cropW=500&xPos=0&yPos=0&width=160&height=160 160w"
+          ],
+          "hideImageBorders": true,
+          "width": "862",
+          "height": "862"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://channel/12872318",
+        "description": "",
+        "cardId": "2875892",
+        "cardTitle": "ABC Radio National",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left-centre"
+        },
+        "cardContentPositionPrepared": {
+          "tablet": "center",
+          "desktop": "center"
+        },
+        "hasMobileFeatured": false,
+        "hideImageBorders": true
+      },
+      {
+        "articleLink": "https://www.abc.net.au/listen/news",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "ABC News Radio",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/21b0d1767efbf09b96ab726650be17f3?impolicy=wcms_crop_resize&cropH=3001&cropW=3001&xPos=0&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/21b0d1767efbf09b96ab726650be17f3?impolicy=wcms_crop_resize&cropH=3001&cropW=3001&xPos=0&yPos=0&width=160&height=160 160w"
+          ],
+          "hideImageBorders": true,
+          "width": "862",
+          "height": "862"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://externallink/12872304",
+        "description": "",
+        "cardId": "103460386",
+        "cardTitle": "ABC NewsRadio",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left-centre"
+        },
+        "cardContentPositionPrepared": {
+          "tablet": "center",
+          "desktop": "center"
+        },
+        "hasMobileFeatured": false,
+        "hideImageBorders": true
+      },
+      {
+        "articleLink": "https://www.abc.net.au/listen/live/sport",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "ABC Sport",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/0e4716af37e3f3b3195240a06d4a1409?impolicy=wcms_crop_resize&cropH=1500&cropW=1500&xPos=0&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/0e4716af37e3f3b3195240a06d4a1409?impolicy=wcms_crop_resize&cropH=1500&cropW=1500&xPos=0&yPos=0&width=160&height=160 160w"
+          ],
+          "hideImageBorders": true,
+          "width": "862",
+          "height": "862"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://externallink/102767176",
+        "description": "Live Sport coverage including the Summer of Cricket",
+        "cardId": "102767186",
+        "cardTitle": "ABC SPORT",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left-centre"
+        },
+        "cardContentPositionPrepared": {
+          "tablet": "center",
+          "desktop": "center"
+        },
+        "hasMobileFeatured": false,
+        "hideImageBorders": true
+      }
+    ],
+    "contentUri": "coremedia://collection/12872264",
+    "borders": false,
+    "linkUrl": "",
+    "linkTitle": "",
+    "showTitleVisually": false,
+    "canonicalURI": "/radio/national-networks/12872264",
+    "robots": null,
+    "ratio": "1x1"
+  }
+}

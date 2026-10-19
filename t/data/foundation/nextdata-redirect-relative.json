@@ -1,0 +1,23 @@
+{
+  "pageProps": {
+    "gtm": true,
+    "headTagsGTMPrepared": {
+      "gtmContainerId": "GTM-NZ6NQM6F",
+      "application": {
+        "environment": "production",
+        "generatorName": "PL CORE NEXT",
+        "generatorVersion": "0.0.0",
+        "product": "PL CORE"
+      }
+    },
+    "snowplowPrepared": {
+      "snowplowCollectorURL": "https://collector.abc.net.au",
+      "appVersionId": "corenext-0.59790",
+      "appId": "listen",
+      "environment": "production"
+    },
+    "__N_REDIRECT": "/listen/programs/scienceshow/trees-potatoes-brendan-may-step/107266790",
+    "__N_REDIRECT_STATUS": 308
+  },
+  "__N_SSP": true
+}

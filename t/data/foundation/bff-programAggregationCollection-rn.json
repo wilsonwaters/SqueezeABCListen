@@ -1,0 +1,144 @@
+{
+  "collection": {
+    "analytics": {
+      "uri": "coremedia://collection/11474038",
+      "moduleUri": "coremedia://collection/11474038",
+      "contentSource": "coremedia",
+      "contentType": "collection",
+      "id": "11474038",
+      "title": {
+        "title": "coremedia://collection/11474038"
+      },
+      "items": [
+        {
+          "uri": "coremedia://program/8132136"
+        },
+        {
+          "uri": "coremedia://program/2887264"
+        },
+        {
+          "uri": "coremedia://teaser/104919410"
+        }
+      ]
+    },
+    "heading": "All Programs",
+    "loadMoreUrl": "/listen/radionational/programs",
+    "items": [
+      {
+        "articleLink": "/listen/programs/godforbid/",
+        "cardImagePrepared": {
+          "alt": "ABC God Forbid logo featuring hands reaching through clouds against a blue background, with bold white text.",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/9b022a1c24f404a4755241bb86365781?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/9b022a1c24f404a4755241bb86365781?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w"
+          ]
+        },
+        "contentUri": "coremedia://program/8132136",
+        "description": "Religion is at the centre of world affairs, but profound questions remain: Why are you here? What happens when you die? Does God matter? God Forbid seeks the answers.",
+        "cardId": "8132136",
+        "cardTitle": "God Forbid",
+        "noBorders": true,
+        "presentersPrepared": [
+          {
+            "canonicalURI": "/listen/radionational/james-carleton/5351500",
+            "canonicalURL": "https://www.abc.net.au/listen/radionational/james-carleton/5351500",
+            "id": "5351500",
+            "names": {
+              "full": "James Carleton"
+            },
+            "role": "Presenter"
+          }
+        ],
+        "imagePositionPrepared": {
+          "mobile": "left"
+        }
+      },
+      {
+        "articleLink": "/listen/programs/healthreport/",
+        "cardImagePrepared": {
+          "alt": "Gloved hand with scalpel cutting between \"Health\" and \"Report\" text, with ABC branding above on a pink background.",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/48f242ba436a077586bb821d0cb469d2?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/48f242ba436a077586bb821d0cb469d2?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w"
+          ]
+        },
+        "contentUri": "coremedia://program/2887264",
+        "description": "Covering the health stories that make a difference. Dr Norman Swan and Dr Preeya Alexander dissect the latest and breaking news in the medical world. ",
+        "cardId": "2887264",
+        "cardTitle": "Health Report",
+        "noBorders": true,
+        "presentersPrepared": [
+          {
+            "canonicalURI": "/news/norman-swan/2849474",
+            "canonicalURL": "https://www.abc.net.au/news/norman-swan/2849474",
+            "id": "2849474",
+            "names": {
+              "full": "Norman Swan"
+            },
+            "role": "Presenter"
+          },
+          {
+            "canonicalURI": "/listen/radionational/preeya-alexander/104821406",
+            "canonicalURL": "https://www.abc.net.au/listen/radionational/preeya-alexander/104821406",
+            "id": "104821406",
+            "names": {
+              "full": "Dr Preeya Alexander"
+            },
+            "role": "Presenter"
+          }
+        ],
+        "imagePositionPrepared": {
+          "mobile": "left"
+        }
+      },
+      {
+        "articleLink": "/listen/programs/radio-national-showcase/",
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/062ea7ff44329312542b4af74fb5bf56?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/062ea7ff44329312542b4af74fb5bf56?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=160&height=160 160w"
+          ]
+        },
+        "contentUri": "coremedia://teaser/104919410",
+        "description": "A curated selection of the best history and true crime radio from around the world.",
+        "cardId": "104919410",
+        "cardTitle": "The History Showcase",
+        "noBorders": true,
+        "presentersPrepared": [
+          {
+            "canonicalURI": "/listen/radionational/hilary-harper/10703008",
+            "canonicalURL": "https://www.abc.net.au/listen/radionational/hilary-harper/10703008",
+            "id": "10703008",
+            "names": {
+              "full": "Hilary Harper"
+            },
+            "role": "Author"
+          },
+          {
+            "canonicalURI": "/listen/radionational/cassie-mccullagh/3586580",
+            "canonicalURL": "https://www.abc.net.au/listen/radionational/cassie-mccullagh/3586580",
+            "id": "3586580",
+            "names": {
+              "full": "Cassie McCullagh"
+            },
+            "role": "Author"
+          }
+        ],
+        "imagePositionPrepared": {
+          "mobile": "left"
+        }
+      }
+    ],
+    "contentUri": "coremedia://collection/11474038",
+    "borders": false,
+    "pagination": {
+      "offset": 20,
+      "size": 20,
+      "total": 56
+    }
+  }
+}
