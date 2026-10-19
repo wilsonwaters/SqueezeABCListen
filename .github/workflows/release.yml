@@ -1,0 +1,401 @@
+name: Release
+
+# Builds ABCListen-<version>.zip from ABCListen/install.xml's <version>, creates the tag and GitHub
+# Release v<version> with the zip attached, checks the uploaded asset, then points repo.xml on
+# main at it. The release always comes before the repo.xml commit, so repo.xml never names an
+# asset that doesn't exist; if a run stops in between, the next run repairs repo.xml from the
+# existing asset. The release notes are CHANGELOG.md's section for the version
+# (scripts/changelog-section.sh), or GitHub-generated notes when there is none. The repo.xml
+# commit is made as COMMIT_NAME/COMMIT_EMAIL (below) and pushed with GITHUB_TOKEN. A push to
+# main that touches install.xml without changing <version> does nothing, provided repo.xml on
+# main already has that version (otherwise it releases it). Dry runs (pull requests, or
+# dispatch with dry_run) build and show everything, including the notes, but create no
+# release, tag or commit. See RELEASING.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry run (build and show the repo.xml change; create no release, tag or commit)
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths: ['ABCListen/install.xml']
+  pull_request:
+    paths:
+      - '.github/workflows/release.yml'
+      - 'ABCListen/install.xml'
+      - 'repo.xml'
+      - 'CHANGELOG.md'
+      - 'scripts/build.sh'
+      - 'scripts/check-package.sh'
+      - 'scripts/update-repo-xml.pl'
+      - 'scripts/changelog-section.sh'
+
+# Read-only by default; only the release job, which creates the release and pushes repo.xml,
+# gets contents: write.
+permissions:
+  contents: read
+
+# Real releases share one group and a running one is never cancelled, so two runs for one
+# version are serialised and the second finds the release and does nothing. GitHub keeps only
+# the newest waiting run of a group and cancels an older waiting one, so a version bump's run
+# can be cancelled before it starts; the newer run that replaced it still releases that
+# version, because a push is a no-op only once repo.xml on main has its <version> (job
+# "version"). Dry runs, and runs on any branch but main (a real one fails at once), get a group
+# of their own, so they never wait for, hold up or cancel a real release.
+concurrency:
+  group: ${{ (github.event_name == 'pull_request' || inputs.dry_run || github.ref != 'refs/heads/main') && format('release-run-{0}', github.run_id) || 'release' }}
+  cancel-in-progress: false
+
+# Commit identity (author and committer) of the repo.xml commit the workflow pushes to main:
+# the repository owner (RQ1; OPEN-QUESTIONS, Resolved: commit authorship). This is the only
+# place it is set; change these two values to commit as someone else. The push itself always
+# uses GITHUB_TOKEN.
+env:
+  COMMIT_NAME: Wilson Waters
+  COMMIT_EMAIL: wilsonwaters@users.noreply.github.com
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # ---- 0. read the version; a push that didn't change it is a no-op once it is released ----
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+      release: ${{ steps.read.outputs.release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version
+        id: read
+        env:
+          DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run == true }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          V="$(sed -n 's|.*<version>\(.*\)</version>.*|\1|p' ABCListen/install.xml | head -n 1)"
+          if [[ ! "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error file=ABCListen/install.xml::<version> is '$V'; it must be X.Y.Z (digits only, no prefix or suffix)"
+            exit 1
+          fi
+          if [[ "$DRY_RUN" != true && "$GITHUB_REF" != refs/heads/main ]]; then
+            echo "::error::real releases run from main only (this run is on $GITHUB_REF); use dry_run to test other branches"
+            exit 1
+          fi
+
+          # A push that touches install.xml but leaves <version> alone (e.g. a new optionsURL)
+          # releases nothing, but only if repo.xml on the latest main already has that version.
+          # If it doesn't, the run for the bump never released it (cancelled while waiting, see
+          # concurrency above, or failed), and this run does. Dispatches and pull requests always
+          # go on. When in doubt, go on: the release job finds an existing release and stops.
+          release=true
+          if [[ "$GITHUB_EVENT_NAME" == push ]]; then
+            if [[ "$BEFORE" =~ ^0*$ ]] || ! before_xml="$(git show "$BEFORE:ABCListen/install.xml" 2>/dev/null)"; then
+              echo "install.xml before this push ($BEFORE) is not available; treating <version> as changed"
+            else
+              before_v="$(sed -n 's|.*<version>\(.*\)</version>.*|\1|p' <<<"$before_xml" | head -n 1)"
+              if [[ "$before_v" != "$V" ]]; then
+                echo "<version> changed in this push: $before_v -> $V"
+              else
+                git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main ||
+                  echo "::warning::could not fetch main; reading repo.xml from the checkout's origin/main"
+                main_v="$(git show origin/main:repo.xml 2>/dev/null |
+                  perl -0777 -ne '/(<plugin\s[^>]*?\bname\s*=\s*"ABCListen"[^>]*>)/ and $1 =~ /\sversion\s*=\s*"([^"]*)"/ and print $1' || true)"
+                if [[ "$main_v" == "$V" ]]; then
+                  echo "::notice::this push changed ABCListen/install.xml but not its <version> ($V), and repo.xml on main is already at $V: nothing to release"
+                  echo "### No-op: <version> is still $V and repo.xml on main is at $V, nothing to release" >> "$GITHUB_STEP_SUMMARY"
+                  release=false
+                else
+                  echo "::notice::<version> is still $V, but repo.xml on main is at ${main_v:-(none)}: $V was never released (its run was cancelled or failed), so this run releases it"
+                fi
+              fi
+            fi
+          fi
+
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+          echo "Version: $V"
+          echo "Zip: ABCListen-$V.zip"
+          echo "Release: $release (dry run: $DRY_RUN, event: $GITHUB_EVENT_NAME, ref: $GITHUB_REF, commit: $GITHUB_SHA)"
+
+  # ---- 1. the same checks as CI ----
+  checks:
+    name: CI checks
+    needs: version
+    if: needs.version.outputs.release == 'true'
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: Build and release
+    needs: [version, checks]
+    if: needs.version.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    # the only job that writes: it creates the tag and release and pushes repo.xml to main
+    permissions:
+      contents: write
+    timeout-minutes: 15
+    env:
+      DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run == true }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      V: ${{ needs.version.outputs.version }}
+      ZIP_NAME: ABCListen-${{ needs.version.outputs.version }}.zip
+      ASSET_URL: https://github.com/${{ github.repository }}/releases/download/v${{ needs.version.outputs.version }}/ABCListen-${{ needs.version.outputs.version }}.zip
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends zip unzip libxml2-utils
+
+      # ---- 2. guards: no downgrade; repo.xml has our entry; a tag without a release needs a human ----
+      - name: Guards
+        run: |
+          echo "Version: $V (dry run: $DRY_RUN)"
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          main_version="$(git show origin/main:repo.xml 2>/dev/null |
+            xmllint --xpath 'string(/extensions/plugins/plugin[@name="ABCListen"]/@version)' - 2>/dev/null || true)"
+          if [[ -z "$main_version" && "$DRY_RUN" != true ]]; then
+            echo "::error::repo.xml on main has no ABCListen plugin entry to update; fix repo.xml on main before releasing"
+            exit 1
+          elif [[ -z "$main_version" ]]; then
+            echo "repo.xml on main has no ABCListen entry yet (dry run); nothing to compare against"
+          elif [[ "$main_version" != "$V" && "$(printf '%s\n%s\n' "$V" "$main_version" | sort -V | head -n 1)" == "$V" ]]; then
+            echo "::error::version $V is lower than $main_version in repo.xml on main; releases never go backwards"
+            exit 1
+          else
+            echo "repo.xml on main is at $main_version; $V is not a downgrade"
+          fi
+
+          tags="$(git ls-remote --tags --refs origin 'refs/tags/v*')"
+          highest="$(sed -n 's|.*refs/tags/v\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\)$|\1|p' <<<"$tags" | sort -V | tail -n 1)"
+          if [[ -z "$highest" ]]; then
+            echo "no vX.Y.Z tags yet: $V is the first release"
+          elif [[ "$highest" != "$V" && "$(printf '%s\n%s\n' "$V" "$highest" | sort -V | head -n 1)" == "$V" ]]; then
+            echo "::error::version $V is lower than the highest release tag v$highest; releases never go backwards"
+            exit 1
+          else
+            echo "highest release tag is v$highest; $V is not a downgrade"
+          fi
+
+          if out="$(gh release view "v$V" --json tagName,url 2>&1)"; then
+            release_exists=true
+          elif [[ "$out" == *"release not found"* || "$out" == *"HTTP 404"* ]]; then
+            release_exists=false
+          else
+            echo "::error::could not look up release v$V: $out"
+            exit 1
+          fi
+
+          if git ls-remote --exit-code --tags origin "refs/tags/v$V" >/dev/null; then
+            tag_exists=true
+          else
+            rc=$?
+            if [[ $rc -ne 2 ]]; then echo "::error::git ls-remote failed ($rc)"; exit 1; fi
+            tag_exists=false
+          fi
+
+          echo "release v$V exists: $release_exists; tag v$V exists: $tag_exists"
+          if [[ "$tag_exists" == true && "$release_exists" == false ]]; then
+            echo "::error::tag v$V exists but has no GitHub Release. Resolve it by hand (delete the tag, or create the release from it), then re-run. See RELEASING.md, Troubleshooting."
+            exit 1
+          fi
+          echo "RELEASE_EXISTS=$release_exists" >> "$GITHUB_ENV"
+
+      # ---- 3. release exists: no-op, or repair repo.xml from the existing asset ----
+      - name: Existing release (no-op or repair)
+        if: env.RELEASE_EXISTS == 'true'
+        run: |
+          dir="$RUNNER_TEMP/existing"
+          mkdir -p "$dir"
+          if ! gh release download "v$V" --pattern "$ZIP_NAME" --dir "$dir"; then
+            echo "::error::release v$V exists but its asset $ZIP_NAME could not be downloaded; fix the release by hand (never replace an asset: bump the version instead)"
+            exit 1
+          fi
+          sha="$(sha1sum "$dir/$ZIP_NAME" | cut -d' ' -f1)"
+          echo "Release v$V already exists; its $ZIP_NAME has sha1 $sha. It is not rebuilt or re-uploaded."
+
+          xml="$(git show origin/main:repo.xml 2>/dev/null || true)"
+          xp() { xmllint --xpath "$1" - <<<"$xml" 2>/dev/null || true; }
+          main_version="$(xp 'string(/extensions/plugins/plugin[@name="ABCListen"]/@version)')"
+          main_url="$(xp 'normalize-space(/extensions/plugins/plugin[@name="ABCListen"]/url)')"
+          main_sha="$(xp 'normalize-space(/extensions/plugins/plugin[@name="ABCListen"]/sha)')"
+          echo "repo.xml on main: version $main_version, url $main_url, sha $main_sha"
+
+          if [[ "$main_version" == "$V" && "$main_url" == "$ASSET_URL" && "$main_sha" == "$sha" ]]; then
+            echo "nothing to do: release v$V exists and repo.xml on main already points at it"
+            echo "ACTION=none" >> "$GITHUB_ENV"
+          else
+            echo "repo.xml on main is stale; it will be updated from the existing asset (repair)"
+            { echo "ACTION=repair"; echo "SHA=$sha"; echo "ZIP=$dir/$ZIP_NAME"; } >> "$GITHUB_ENV"
+          fi
+
+      # ---- 4. build once; the sha1 is taken from that exact file and it is never re-zipped ----
+      - name: Build
+        if: env.RELEASE_EXISTS == 'false'
+        run: |
+          scripts/build.sh --out dist
+          zip="dist/$ZIP_NAME"
+          sha="$(cut -d' ' -f1 "$zip.sha1")"
+          if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then echo "::error::bad sha1 file for $zip"; exit 1; fi
+          { echo "ACTION=release"; echo "SHA=$sha"; echo "ZIP=$zip"; } >> "$GITHUB_ENV"
+
+      - name: Show package
+        if: env.ACTION != 'none'
+        run: |
+          echo "Version: $V"
+          echo "Zip:     $ZIP_NAME"
+          echo "SHA1:    $SHA"
+          echo "Action:  $ACTION (dry run: $DRY_RUN)"
+          unzip -l "$ZIP"
+
+      # ---- release notes: CHANGELOG.md's section for V, else GitHub-generated notes ----
+      # Runs on every path, so a dry run always shows the notes a release of V would get.
+      - name: Release notes
+        run: |
+          notes="$RUNNER_TEMP/release-notes.md"
+          if scripts/changelog-section.sh "$V" > "$notes"; then
+            echo "NOTES_FILE=$notes" >> "$GITHUB_ENV"
+            source="CHANGELOG.md section [$V]"
+          else
+            rm -f "$notes"
+            source="GitHub-generated (CHANGELOG.md has no section [$V])"
+          fi
+          used="$([[ "${ACTION:-}" == release ]] && echo "used for the release" || echo "not used: release v$V already exists")"
+          echo "Release notes for v$V: $source; $used"
+          [[ -f "$notes" ]] && { echo "---- release notes ----"; cat "$notes"; echo "-----------------------"; }
+          {
+            echo "### Release notes for v$V"
+            echo
+            echo "Source: $source ($used)"
+            echo
+            if [[ -f "$notes" ]]; then cat "$notes"; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ---- 5. tag + release, created server-side on the built commit (never a git tag push) ----
+      - name: Create release
+        if: env.ACTION == 'release' && env.DRY_RUN != 'true'
+        run: |
+          notes=(--generate-notes)
+          [[ -n "${NOTES_FILE:-}" ]] && notes=(--notes-file "$NOTES_FILE")
+          if ! gh release create "v$V" "$ZIP" --target "$GITHUB_SHA" --title "ABC listen $V" "${notes[@]}"; then
+            echo "::error::creating release v$V failed. A 403 means GITHUB_TOKEN is read-only: see RELEASING.md, Prerequisites (Settings > Actions > General > Workflow permissions > Read and write)."
+            exit 1
+          fi
+
+      # ---- 6. the asset GitHub serves must be the file that was hashed ----
+      - name: Verify uploaded asset
+        if: env.ACTION == 'release' && env.DRY_RUN != 'true'
+        run: |
+          dir="$RUNNER_TEMP/uploaded"
+          mkdir -p "$dir"
+          for attempt in 1 2 3; do
+            gh release download "v$V" --pattern "$ZIP_NAME" --dir "$dir" --clobber && break
+            [[ $attempt -eq 3 ]] && { echo "::error::could not download the uploaded $ZIP_NAME"; exit 1; }
+            sleep 5
+          done
+          got="$(sha1sum "$dir/$ZIP_NAME" | cut -d' ' -f1)"
+          if [[ "$got" != "$SHA" ]]; then
+            echo "::error::uploaded asset sha1 $got differs from the built zip's $SHA; repo.xml was not changed"
+            exit 1
+          fi
+          echo "uploaded asset sha1 $got matches the built zip"
+
+      # ---- 7. point repo.xml at the release, on top of the latest main ----
+      # minTarget/maxTarget come from the install.xml inside the released zip (built from the
+      # released commit, or the existing asset on the repair path), never from main's, which
+      # may have moved on since.
+      - name: Update repo.xml
+        if: env.ACTION != 'none'
+        run: |
+          INSTALL_XML="$RUNNER_TEMP/released-install.xml"
+          unzip -p "$ZIP" install.xml > "$INSTALL_XML"
+          if [[ ! -s "$INSTALL_XML" ]]; then echo "::error::$ZIP has no install.xml at its root"; exit 1; fi
+          echo "INSTALL_XML=$INSTALL_XML" >> "$GITHUB_ENV"
+          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
+            echo "pull request dry run: applying to the checked-out merge commit"
+          else
+            git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+            git checkout -B release-repo-xml origin/main
+            main_version="$(xmllint --xpath 'string(/extensions/plugins/plugin[@name="ABCListen"]/@version)' repo.xml 2>/dev/null || true)"
+            if [[ -n "$main_version" && "$main_version" != "$V" && "$(printf '%s\n%s\n' "$V" "$main_version" | sort -V | head -n 1)" == "$V" ]]; then
+              echo "::error::repo.xml on main moved to $main_version, newer than $V; not overwriting it"
+              exit 1
+            fi
+          fi
+          scripts/update-repo-xml.pl --version "$V" --sha "$SHA" --url "$ASSET_URL" --install-xml "$INSTALL_XML"
+          xmllint --noout repo.xml
+          echo "---- git diff repo.xml ----"
+          git --no-pager diff -- repo.xml
+          {
+            echo "### ABCListen $V ($([[ "$DRY_RUN" == true ]] && echo "dry run, nothing published" || echo "$ACTION"))"
+            echo
+            echo "- Zip: \`$ZIP_NAME\`"
+            echo "- SHA1: \`$SHA\`"
+            echo "- Asset URL: $ASSET_URL"
+            echo
+            echo '```diff'
+            git --no-pager diff -- repo.xml
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Only repo.xml is committed, authored and committed as COMMIT_NAME/COMMIT_EMAIL (workflow
+      # env above). It is pushed with GITHUB_TOKEN, so it doesn't start another workflow run;
+      # [skip ci] is an extra guard. A rejected (non-fast-forward) push is re-applied on the
+      # latest main and retried up to 3 times. A refusal is not retried: a read-only token (403,
+      # "Permission ... denied"), branch protection ("GH006: Protected branch update failed") or
+      # a ruleset ("GH013: Repository rule violations found"), matched case-insensitively.
+      - name: Commit and push repo.xml
+        if: env.ACTION != 'none' && env.DRY_RUN != 'true'
+        run: |
+          refused() { local o="${1,,}"; [[ "$o" == *403* || "$o" == *denied* || "$o" == *"protected branch"* || "$o" == *gh006* || "$o" == *gh013* ]]; }
+          git config user.name "$COMMIT_NAME"
+          git config user.email "$COMMIT_EMAIL"
+          for attempt in 1 2 3 4; do
+            if git diff --quiet -- repo.xml; then
+              echo "repo.xml on main already points at v$V; nothing to commit"
+              exit 0
+            fi
+            git add repo.xml
+            staged="$(git diff --cached --name-only)"
+            if [[ "$staged" != repo.xml ]]; then
+              echo "::error::refusing to commit: staged files are not just repo.xml: $staged"
+              exit 1
+            fi
+            git commit -m "Release v$V: update repo.xml [skip ci]"
+            if out="$(git push origin HEAD:refs/heads/main 2>&1)"; then
+              echo "$out"
+              echo "pushed repo.xml for v$V to main"
+              exit 0
+            fi
+            echo "$out"
+            if refused "$out"; then
+              echo "::error::push to main refused. See RELEASING.md, Prerequisites: GITHUB_TOKEN needs Read and write, and branch protection and rulesets must let GitHub Actions (github-actions[bot]) push repo.xml. Re-run the workflow afterwards; it repairs repo.xml from the existing release."
+              exit 1
+            fi
+            if [[ $attempt -eq 4 ]]; then break; fi
+            echo "push rejected (main moved?); re-applying on the latest main, retry $attempt of 3"
+            sleep $((attempt * 2))
+            git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+            git reset --hard origin/main
+            main_version="$(xmllint --xpath 'string(/extensions/plugins/plugin[@name="ABCListen"]/@version)' repo.xml 2>/dev/null || true)"
+            if [[ -n "$main_version" && "$main_version" != "$V" && "$(printf '%s\n%s\n' "$V" "$main_version" | sort -V | head -n 1)" == "$V" ]]; then
+              echo "::error::repo.xml on main moved to $main_version, newer than $V; not overwriting it"
+              exit 1
+            fi
+            scripts/update-repo-xml.pl --version "$V" --sha "$SHA" --url "$ASSET_URL" --install-xml "$INSTALL_XML"
+            xmllint --noout repo.xml
+          done
+          echo "::error::could not push repo.xml after 3 retries; re-run the workflow to repair it"
+          exit 1
