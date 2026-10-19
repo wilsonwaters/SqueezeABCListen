@@ -1,0 +1,14 @@
+{
+ "_note": "Written by scripts/gen-station-data.py --capture: the capture date and the logo (radioHeadingPrepared.logoPrepared.imgSrc) of each sport live page /listen/live/<slug>.",
+ "captured": "2026-10-19",
+ "pageLogos": {
+  "afl": "https://live-production.wcms.abc-cdn.net.au/4c4e09bb0cc9d691ef2e59d9e1bdde38?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+  "aflextra": "https://live-production.wcms.abc-cdn.net.au/756b4b7d447f895b66f54b79aadfa886?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+  "sportrapid": "https://live-production.wcms.abc-cdn.net.au/98d3de1db532de6eb57d117d569c1d57?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+  "bbl": "https://live-production.wcms.abc-cdn.net.au/f88602201cf877535996b6a8c4d06270?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+  "wbbl": "https://live-production.wcms.abc-cdn.net.au/22d4957f1c8d9aa4aefdc8e73adbd7e0?impolicy=wcms_crop_resize&cropH=1083&cropW=1083&xPos=0&yPos=0&width=862&height=862",
+  "tennis": "https://live-production.wcms.abc-cdn.net.au/faf8d6a8ae242af6ded0ff181e865ad9?impolicy=wcms_crop_resize&cropH=875&cropW=875&xPos=0&yPos=0&width=862&height=862",
+  "cricket": "https://live-production.wcms.abc-cdn.net.au/36344ff0468bfce4d5af6b50f5ebcedd?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+  "sportextra": "https://live-production.wcms.abc-cdn.net.au/92dddf7794317bb472cd2afc19a2ef25?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+ }
+}

@@ -1,0 +1,56 @@
+package Plugins::ABCListen::StationData;
+
+# The static ABC listen live station catalogue (data only; Plugins::ABCListen::Stations is the API).
+# One hash per PAPI/BFF service id, in catalogue order within each group:
+#
+#   id            upper-case PAPI/BFF service id (abclisten://live/<id>)
+#   name          station name: the PAPI services title (RA: "Radio Australia (English)", so it can be
+#                 told apart from RA_ML)
+#   group         network | sport | local | variant | hidden
+#   network       networks: their own id; variants and hidden Kids listen versions: the parent
+#                 network's id; LOCAL for local stations; SPORT for sport services
+#   state         local stations: the state whose BFF collection lists the station; variants: the
+#                 state whose time zone they follow (SA, QLD, NT, WA)
+#   city          variants: the city whose time they follow ("<City> time")
+#   capital       local stations: 1 for the capital-city station listed first in its state
+#   tz            PAPI service_timezone (never the derived station JSON's tz, which is wrong for locals)
+#   slug          the station's live page: /listen/live/<slug>, /triplej/live/<slug>, /listen/doublej/live
+#   hlsSlug       ABC's stream name: https://streaming.abc-cdn.net.au/audio/ice/<hlsSlug>.pls (and
+#                 .../audio/hls/<hlsSlug>.m3u8 unless hls says otherwise)
+#   mount         StreamGuys Icecast mount: https://abc.streamguys1.com/live/<mount>/icecast.audio
+#   hls           the HLS master URL where it isn't .../audio/hls/<hlsSlug>.m3u8 (for L5; never played here)
+#   mediahub      the live page's `aac` source when it is on *.mediahubaustralia.com, as ABC lists it
+#                 (Stations normalises it)
+#   logo          wcms logo URL with its crop params (a bare wcms hash with impolicy is a 1x1 image)
+#   musicStation  music API station name of music networks (L3)
+#   hlsOnly       1: no Icecast stream (listed only with a mediahub stream)
+#   eventOnly     1: on air only during events; ABC's epgNowPlaying decides at runtime
+#   dupOf         same stream as this listed service (the dedupe winner); still resolves
+#   synopsis      PAPI mini_synopsis
+#
+# Sources (captured @CAPTURED@): PAPI services.json (offset 0 and 100) for names, tz and synopses;
+# the BFF national collection (12872264) and the 8 state collections (root 14123276) for logos
+# (cardImagePrepared.imgSrc), states and the network order; ai-state/research/abc-samples/
+# derived-station-streams-{national,local}.json for slugs, HLS names, mounts and page sources; a fresh
+# probe of every .pls (Wide Bay has had an Icecast mount, localwidebay, since the research capture).
+# Sport services without a card in the national collection take the logo of their live page
+# (radioHeadingPrepared.logoPrepared): ABC SPORT RAPID, BBL, WBBL, Tennis; ABC AFL / AFL Extra /
+# Sport Extra / Cricket (event services) use the afl, aflextra, sportextra and cricket pages'. The dedupe
+# winners ITINERANT_ONE / ITINERANT_TWO use the logo of the card ABC lists for their stream (worldcup,
+# aflw). Variants and hidden Kids listen versions use their parent network's logo.
+#
+# Owned by the live stream (L1; L5 may add stream fields).
+
+use strict;
+use warnings;
+
+my @RECORDS = (
+@RECORDS@
+);
+
+# A fresh copy of every record (hash refs), in catalogue order.
+sub records {
+	return map { { %$_ } } @RECORDS;
+}
+
+1;
