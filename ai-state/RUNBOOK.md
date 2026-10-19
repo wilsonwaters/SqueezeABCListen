@@ -22,7 +22,8 @@ dev/logs.sh -n 50                 # last 50 lines of LMS server.log
 dev/stop.sh                       # stop everything
 ```
 
-Web UI: <http://localhost:9000/> · JSON-RPC: `http://localhost:9000/jsonrpc.js` · CLI port 9090.
+Web UI: <http://localhost:9000/> (Default skin) · <http://localhost:9000/material/> ([Material skin](#material-skin)) ·
+JSON-RPC: `http://localhost:9000/jsonrpc.js` · CLI port 9090.
 
 **Most important ABC findings (2026-10-19, details in [Playback results](#playback-results-by-stream-format)):**
 from this container, `live-radio0N.mediahubaustralia.com` (the MP3/AAC Icecast streams) is
@@ -41,7 +42,8 @@ and on-demand MP3s (`https://mediacore-live-production.akamaized.net/audio/...mp
 | proxychains config (generated on every start) | `/opt/lms-dev/proxychains.conf` |
 | Logs (git-ignored) | `<repo>/dev/logs/` (see [Logs](#logs-and-debugging)) |
 | Plugin dev link | `/opt/lms-dev/server/Plugins/ABCListen -> <repo>/ABCListen` (created by `dev/link-plugin.sh`) |
-| apt packages | `squeezelite` (1.9.9-1449), `proxychains4` (4.17), `pv`, `jq`, `libio-socket-ssl-perl`, `libnet-ssleay-perl` (LMS does not bundle the SSL modules) |
+| Material Skin 6.4.14 (third-party web UI plugin) | `/opt/lms-dev/server/Plugins/MaterialSkin` (real dir, from `/opt/lms-dev/dl/lms-material-6.4.14.zip`); see [Material skin](#material-skin) |
+| apt packages | `squeezelite` (1.9.9-1449), `proxychains4` (4.17), `pv`, `jq`, `unzip`, `libio-socket-ssl-perl`, `libnet-ssleay-perl` (LMS does not bundle the SSL modules) |
 | Perl / Node | system `/usr/bin/perl` 5.38; `/opt/node22/bin/node` (v22) for the egress helper and browser tool |
 | Headless browser helper | `<repo>/dev/browser/` (`playwright@1.56.1`, pinned to match `/opt/pw-browsers/chromium-1194`) |
 
@@ -58,7 +60,8 @@ LMS 9 needs no online account.
 
 | Script | Purpose |
 |---|---|
-| `setup.sh` | Installs apt packages, downloads, verifies and extracts LMS, creates dirs, runs `npm install` in `dev/browser`. Starts nothing. About 30 s on a fresh container. |
+| `setup.sh` | Installs apt packages, downloads, verifies and extracts LMS, creates dirs, installs Material Skin (`install-material.sh`; skip with `INSTALL_MATERIAL=0`), runs `npm install` in `dev/browser`. Starts nothing. About 30 s on a fresh container. |
+| `install-material.sh` | `[--force] [--uninstall]` installs the pinned Material Skin into `<LMS>/Plugins/MaterialSkin`; no-op if that version is already there. LMS loads it on its next (re)start. |
 | `start.sh` | Starts `egress-proxy.mjs`, then LMS (wrapped in proxychains4), then squeezelite. Waits for JSON-RPC and for DevPlayer to connect. Idempotent: anything already running is left alone (and it waits for an already-running DevPlayer to reconnect). About 4 s. |
 | `stop.sh` | Stops squeezelite, LMS and egress-proxy. Uses SIGTERM, then SIGKILL, then sweeps each process group. |
 | `restart-lms.sh` | Restarts LMS only, to reload plugin code. squeezelite reconnects by itself within a few seconds; the script waits for it. |
@@ -293,17 +296,52 @@ grep -a 'bytes_received ' dev/logs/server.log | tail -n 3
 
 ```bash
 node dev/browser/screenshot.mjs http://localhost:9000/ dev/logs/lms-webui.png [--full] [--wait-ms 3000] [--width 1280 --height 900]
-# prints {"url","status","title","out","pageErrors"}; works from any cwd
+node dev/browser/screenshot.mjs http://localhost:9000/material/ dev/logs/lms-material.png   # Material skin
+#   [--wait-until load|domcontentloaded|networkidle|commit] [--selector CSS] [--timeout MS]
+# prints {"url","status","title","out","waitUntil","selector","pageErrors"}; works from any cwd
 ```
 
 It uses the Chromium in `$PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`. **Never run
 `playwright install`.** If you bump playwright, it must match the installed `chromium-1194`
 (playwright 1.56.x). Save screenshots under `dev/logs/` (git-ignored) or the scratchpad; don't commit them.
 
-The Default skin is at `/`. Material skin is **not** installed (third-party plugin), so `/material/`
-returns 404. Plugin OPML menus appear under *My Apps* or *Radio* depending on `menu`/`is_app`. Deep
-links such as `http://localhost:9000/plugins/ABCListen/settings/basic.html` work once the plugin
-has a settings page.
+The Default skin is at `/` (default wait: `networkidle`). Material skin is at `/material/`; see
+[Material skin](#material-skin) for why it needs a different wait. Plugin OPML menus appear under *My Apps*
+or *Radio* depending on `menu`/`is_app`. Deep links such as
+`http://localhost:9000/plugins/ABCListen/settings/basic.html` work once the plugin has a settings page.
+
+## Material skin
+
+[Material Skin](https://github.com/CDrummond/lms-material) is the most popular LMS web UI. It's a
+third-party plugin, installed here so runtime checks can screenshot the plugin in both skins.
+
+- **Version 6.4.14**, pinned in `dev/common.sh` (`MATERIAL_VERSION`, `MATERIAL_ZIP_URL`, `MATERIAL_ZIP_SHA1`)
+  to the entry in the official repository's
+  [`extensions.xml`](https://github.com/LMS-Community/lms-plugin-repository/blob/master/extensions.xml):
+  `https://github.com/CDrummond/lms-material/releases/download/6.4.14/lms-material-6.4.14.zip`,
+  sha1 `e8981b27c955a8fd7f151c848be85aa14171ea36` (1.9 MB).
+- **How it's installed:** `dev/setup.sh` calls `dev/install-material.sh`. That script downloads the zip
+  once to `/opt/lms-dev/dl/`, checks the sha1, unzips it to `/opt/lms-dev/server/Plugins/MaterialSkin`
+  (a real dir, next to the ABCListen dev link) and does nothing if `install.xml` already has that version.
+  This is LMS's *manual install* location, so the Extension Manager never auto-updates or uninstalls it.
+  If it were in `cache/InstalledPlugins` without a matching `plugin.extensions` pref, LMS would flag it
+  for uninstall. `install.xml` has `defaultState: enabled`. Check that with
+  `dev/rpc.sh - '["pref","plugin.state:MaterialSkin","?"]'` (should print `enabled`).
+  After installing, or after changing `MATERIAL_VERSION` and running `install-material.sh`, restart LMS
+  under the test-bed lock (`dev/restart-lms.sh`). `install-material.sh --uninstall` removes it.
+- **URLs:** <http://localhost:9000/material/> (layout picked from the window width). Forced layouts:
+  `/material/desktop`, `/material/mobile`, `/material/now-playing`, `/material/mini`. (Root-level
+  `/desktop` etc. return an empty 200, so keep the `/material/` prefix.) Material's JS also reads a `?player=` query
+  parameter, but DevPlayer is auto-selected anyway as the only player. Material's settings page
+  is at `/plugins/MaterialSkin/settings/basic.html`.
+- **Screenshot tip:** Material is a Vue/Vuetify app that keeps a cometd long-poll open, so
+  Playwright's `networkidle` **never fires** (`goto` timed out at 30 s). For `/material…` URLs,
+  `screenshot.mjs` therefore defaults to `--wait-until load --selector '#main-toolbar'`, then the
+  usual `--wait-ms` settle. The UI renders within about 1 s, and a screenshot takes about 3 s.
+  Use `--selector '#browse-list'` to wait for list content after navigating. Other stable ids:
+  `#browse-view`, `#queue-view`, `#np-bar`. To drill into *Radio*/*Apps* to reach a plugin menu, write
+  a small Playwright script modelled on `screenshot.mjs` that clicks through. Material's JS also parses an
+  `expand=` query parameter, which isn't tried yet. Material uses a dark theme by default.
 
 ## Logs and debugging
 
@@ -369,6 +407,10 @@ or `player.source` (transcoding decisions), `network.asynchttp`, `plugin.abclist
 - Headless Chromium screenshot of `http://localhost:9000/` → 200, title "Lyrion Music Server", no page
   errors, DevPlayer selected and playing the StreamGuys AAC stream (`dev/logs/lms-webui.png`).
 - LMS + DevPlayer were left running with an empty playlist and no plugin linked.
+- Material Skin 6.4.14 added later the same day: `dev/setup.sh` installed it (sha1 OK), a re-run printed
+  `already installed`, `restart-lms.sh` → `plugin.state:MaterialSkin` = `enabled`, `/material/` → 200,
+  no errors in `server.log`. Screenshot `dev/logs/lms-material.png`: Home view (My Music, Radio,
+  Favorites, Apps, Extras) with DevPlayer selected, no page errors. LMS + DevPlayer were left running.
 
 ## Sharing the test bed between agents
 

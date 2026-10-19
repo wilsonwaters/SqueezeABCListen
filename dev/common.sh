@@ -33,6 +33,14 @@ PLUGIN_NAME="${PLUGIN_NAME:-ABCListen}"
 PLUGIN_SRC="${PLUGIN_SRC:-$REPO_DIR/ABCListen}"
 LMS_PLUGIN_DIR="$LMS_HOME/Plugins"                    # scanned by LMS on Unix ($Bin/Plugins)
 
+# Material Skin (third-party web UI, https://github.com/CDrummond/lms-material), installed by
+# install-material.sh. Version + sha1 as listed in the official plugin repository:
+# https://github.com/LMS-Community/lms-plugin-repository/blob/master/extensions.xml
+MATERIAL_VERSION="${MATERIAL_VERSION:-6.4.14}"
+MATERIAL_ZIP_URL="${MATERIAL_ZIP_URL:-https://github.com/CDrummond/lms-material/releases/download/${MATERIAL_VERSION}/lms-material-${MATERIAL_VERSION}.zip}"
+if [[ -z "${MATERIAL_ZIP_SHA1:-}" && "$MATERIAL_VERSION" == "6.4.14" ]]; then MATERIAL_ZIP_SHA1=e8981b27c955a8fd7f151c848be85aa14171ea36; fi
+MATERIAL_DIR="$LMS_PLUGIN_DIR/MaterialSkin"           # manual-install location: Extension Manager leaves it alone
+
 LMS_PIDFILE="$LMS_RUN/lms.pid"
 EGRESS_PIDFILE="$LMS_RUN/egress-proxy.pid"
 SQZ_PIDFILE="$LMS_RUN/squeezelite.pid"

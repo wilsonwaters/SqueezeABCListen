@@ -3,6 +3,8 @@
 #   * apt: squeezelite, proxychains4, pv, jq, perl SSL modules (LMS doesn't bundle them)
 #   * Lyrion Music Server (full tarball, bundled CPAN) -> /opt/lms-dev/lyrionmusicserver-<ver>,
 #     symlinked as /opt/lms-dev/server; prefs/cache/run dirs under /opt/lms-dev
+#   * Material Skin plugin (pinned, sha1-checked) -> <LMS>/Plugins/MaterialSkin via install-material.sh
+#     (skip with INSTALL_MATERIAL=0)
 #   * dev/browser npm deps (playwright pinned to the pre-installed chromium; no browser download)
 # Starts nothing - run dev/start.sh afterwards. Must run as root.
 set -euo pipefail
@@ -10,7 +12,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 [[ $EUID -eq 0 ]] || die "run as root"
 
 # --- OS packages ---
-pkgs=(squeezelite proxychains4 pv jq curl ca-certificates libio-socket-ssl-perl libnet-ssleay-perl)
+pkgs=(squeezelite proxychains4 pv jq curl unzip ca-certificates libio-socket-ssl-perl libnet-ssleay-perl)
 missing=()
 for p in "${pkgs[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || missing+=("$p"); done
 if [[ ${#missing[@]} -gt 0 ]]; then
@@ -47,6 +49,9 @@ ln -sfn "$lms_dir" "$LMS_HOME"
 mkdir -p "$LMS_PREFS" "$LMS_CACHE" "$LMS_RUN" "$LMS_PLUGIN_DIR" "$LOG_DIR"
 perl -MIO::Socket::SSL -MNet::SSLeay -e1 || die "perl SSL modules not loadable"
 write_proxychains_conf
+
+# --- Material Skin (third-party web UI plugin, served at /material/) ---
+if [[ "${INSTALL_MATERIAL:-1}" == 1 ]]; then "$DEV_DIR/install-material.sh"; fi
 
 # --- headless browser helper deps ---
 if [[ -f "$DEV_DIR/browser/package.json" && ! -d "$DEV_DIR/browser/node_modules/playwright" ]]; then
