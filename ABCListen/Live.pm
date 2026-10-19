@@ -19,17 +19,32 @@ package Plugins::ABCListen::Live;
 # only read from cache (Stations->enrich applies cached collections at once and fetches the others
 # for next time) and event status comes from cache or the deadline.
 #
+# On air (L2): station lists (Radio's networks, a state, Time-zone versions, Sport) first fetch the
+# program on air of every station they list (NowPlaying->programNow: cached until the program ends,
+# at most 6 requests at a time), then answer when all are known or at MENU_DEADLINE, with whatever
+# is cached or last-good. A station row with a known program gets
+#   line2        "On air: <program> · <presenters>" (Material, Jive, menu:1; no " · " without presenters)
+#   description  "<program> (6:00am–9:00am) — <presenters>" (Default skin detail view), then the
+#                L1 description ("<City> time - <synopsis>") on a new line
+# Rows without program data keep the L1 text. stationItem uses cached/last-good data only.
+#
 # Public builder (ai-state/streams.md contract 7):
 #   Live->stationItem($client, $serviceId) -> a playable station item, or undef for unknown, hidden,
-#   HLS-only and off-air (or not yet known) event services.
+#   HLS-only and off-air (or not yet known) event services. Never fetches; consumers that override
+#   line2/description do so on their copy (every call builds a new hash).
 #
 # live kind
 #   resolve   Stations->streamCandidates: { url => first, alternates => [rest], failToken =>
 #             PLUGIN_ABCLISTEN_LIVE_FAILED }, or { error => LIVE_HLS_ONLY | LIVE_OFF_AIR |
 #             UNAVAILABLE (unknown id) }; exactly one callback.
-#   metadata  { title => station name, artist => "ABC listen", cover => logo (~600 px),
-#             bitrate => "56kbps CBR" } (no bitrate when the stream playing isn't StreamGuys
-#             Icecast); synchronous, no network, never dies. L2 replaces it with program data.
+#   metadata, onStream, onStop
+#             Plugins::ABCListen::LiveMetadata (L2): the program on air, polled per master player and
+#             pushed to Now Playing. Its station fallback is _metadata here: { title => station
+#             name, artist => "ABC listen", cover => logo (~600 px), bitrate => "56kbps CBR" } (no
+#             bitrate when the stream playing isn't StreamGuys Icecast); synchronous, no network,
+#             never dies.
+# Song info: LiveMetadata->trackInfo ("Program info"), registered as a Slim::Menu::TrackInfo
+# provider.
 #
 # Owned by the live stream: L1 creates; L2 owns _stationItem text (line2/description), L4 its type and
 # the station submenu.
@@ -39,12 +54,15 @@ use warnings;
 
 use Time::HiRes ();
 
+use Slim::Menu::TrackInfo;
 use Slim::Utils::Log;
 use Slim::Utils::Prefs;
 use Slim::Utils::Strings qw(cstring);
 use Slim::Utils::Timers;
 
 use Plugins::ABCListen::API;
+use Plugins::ABCListen::LiveMetadata;
+use Plugins::ABCListen::NowPlaying;
 use Plugins::ABCListen::ProtocolHandler;
 use Plugins::ABCListen::Stations;
 use Plugins::ABCListen::Util;
@@ -56,10 +74,15 @@ use constant ICECAST_BITRATE => '56kbps CBR';    # StreamGuys Icecast HE-AAC
 
 use constant LIVE_FAILED => 'PLUGIN_ABCLISTEN_LIVE_FAILED';
 
+use constant MIDDOT  => " \x{B7} ";
+use constant EM_DASH => " \x{2014} ";
+
 my $log   = logger('plugin.abclisten');
 my $prefs = preferences('plugin.abclisten');
 
-my $STATIONS = 'Plugins::ABCListen::Stations';
+my $STATIONS    = 'Plugins::ABCListen::Stations';
+my $NOW_PLAYING = 'Plugins::ABCListen::NowPlaying';
+my $METADATA    = 'Plugins::ABCListen::LiveMetadata';
 
 my @STATES = qw(ACT NSW NT QLD SA TAS VIC WA);
 my %STATES = map { $_ => 1 } @STATES;
@@ -68,12 +91,21 @@ my %STATES = map { $_ => 1 } @STATES;
 my @HOME_VARIANT_NETWORKS = qw(RN TRIPLEJ DOUBLEJ CLASSIC);
 
 sub init {
+	$METADATA->init( stationMeta => \&_metadata );
+
 	Plugins::ABCListen::ProtocolHandler->registerKind(
 		live => {
 			resolve  => \&_resolve,
-			metadata => \&_metadata,
+			metadata => \&Plugins::ABCListen::LiveMetadata::metadata,
+			onStream => \&Plugins::ABCListen::LiveMetadata::onStream,
+			onStop   => \&Plugins::ABCListen::LiveMetadata::onStop,
 		}
 	);
+
+	Slim::Menu::TrackInfo->registerInfoProvider( abclistenProgramInfo => (
+		after => 'top',
+		func  => \&Plugins::ABCListen::LiveMetadata::trackInfo,
+	) );
 
 	return;
 }
@@ -111,7 +143,7 @@ sub stationItem {
 sub _radioMenu {
 	my ( $client, $cb, $args ) = @_;
 
-	_answer( $client, $cb, 'Radio', sub {
+	_answerStations( $client, $cb, 'Radio', sub {
 		eval { $STATIONS->enrich(); 1 } or $log->error( 'Could not start the station enrichment: ' . ( $@ || 'unknown error' ) );
 
 		my $home = _homeState();
@@ -153,34 +185,16 @@ sub _sportMenu {
 	my $listError = eval { @recs = $STATIONS->list('sport'); 1 } ? undef : ( $@ || 'unknown error' );
 	my @events    = map { $_->{id} } grep { $_->{eventOnly} } @recs;
 
-	my ( $answered, $timer ) = (0);
-
-	my $answer = sub {
-		return if $answered++;
-
-		if ($timer) {
-			Slim::Utils::Timers::killSpecific($timer);
-			undef $timer;
-		}
-
-		_answer( $client, $cb, 'Sport', sub {
+	# the event checks come first (they decide which event services are listed); unknown at the
+	# deadline = hidden
+	_answerStations(
+		$client, $cb, 'Sport',
+		sub {
 			die $listError if defined $listError;
 			[ map { _stationItem( $client, $_ ) } grep { $STATIONS->playable( $_->{id} ) } @recs ];
-		} );
-	};
-
-	eval { $STATIONS->checkOnAir( \@events, $answer ); 1 } or do {
-		$log->error( 'Could not check the event services: ' . ( $@ || 'unknown error' ) );
-		$answer->();
-	};
-
-	return if $answered;
-
-	$timer = Slim::Utils::Timers::setTimer( undef, Time::HiRes::time() + MENU_DEADLINE, sub {
-		undef $timer;
-		main::DEBUGLOG && $log->is_debug && $log->debug( 'Event services not all known within ' . MENU_DEADLINE . ' s; answering Sport without them' );
-		$answer->();
-	} );
+		},
+		sub { $STATIONS->checkOnAir( \@events, shift ) },
+	);
 
 	return;
 }
@@ -212,7 +226,7 @@ sub _localMenu {
 sub _stateMenu {
 	my ( $client, $cb, $args, $state ) = @_;
 
-	_answer( $client, $cb, 'Local radio state', sub {
+	_answerStations( $client, $cb, 'Local radio state', sub {
 		[ map { _stationItem( $client, $_ ) } grep { $STATIONS->playable( $_->{id} ) } $STATIONS->list( 'local', $state // '' ) ];
 	} );
 }
@@ -220,7 +234,7 @@ sub _stateMenu {
 sub _variantMenu {
 	my ( $client, $cb, $args ) = @_;
 
-	_answer( $client, $cb, 'Time-zone versions', sub {
+	_answerStations( $client, $cb, 'Time-zone versions', sub {
 		[ map { _stationItem( $client, $_ ) } grep { $STATIONS->playable( $_->{id} ) } $STATIONS->list('variant') ];
 	} );
 }
@@ -241,6 +255,86 @@ sub _answer {
 	return;
 }
 
+# Answer a station list once, within MENU_DEADLINE (L2): the program on air is fetched for every
+# station $build lists, then the list is built again with their on-air text (_answer). Optional
+# $prepare->($done) runs first and calls $done once (Sport: the event checks); the stations listed
+# after it are fetched too. At the deadline the list is built with whatever is cached or last-good;
+# late answers only fill NowPlaying's cache.
+sub _answerStations {
+	my ( $client, $cb, $what, $build, $prepare ) = @_;
+
+	my ( $answered, $timer, $pending, %requested ) = ( 0, undef, 1 );
+
+	my $answer = sub {
+		return if $answered++;
+
+		if ($timer) {
+			Slim::Utils::Timers::killSpecific($timer);
+			undef $timer;
+		}
+
+		_answer( $client, $cb, $what, $build );
+	};
+
+	my $doneOne = sub { $answer->() unless --$pending > 0 };
+
+	# fetch the programs of the listed stations not asked for yet
+	my $fetch = sub {
+		return if $answered;
+
+		my $items = eval { $build->() };
+
+		for my $id ( grep { !$requested{$_}++ } _liveIds($items) ) {
+			$pending++;
+			my $once = 0;
+			eval { $NOW_PLAYING->programNow( $id, sub { $doneOne->() unless $once++ } ); 1 } or do {
+				$log->error( "Could not get the program on air for $id: " . ( $@ || 'unknown error' ) );
+				$doneOne->() unless $once++;
+			};
+		}
+	};
+
+	$fetch->();
+
+	if ($prepare) {
+		$pending++;
+		my $once = 0;
+		my $prepared = sub {
+			return if $once++;
+			$fetch->();
+			$doneOne->();
+		};
+
+		eval { $prepare->($prepared); 1 } or do {
+			$log->error( "Could not prepare the $what menu: " . ( $@ || 'unknown error' ) );
+			$prepared->();
+		};
+	}
+
+	$doneOne->();    # everything is started
+	return if $answered;
+
+	$timer = Slim::Utils::Timers::setTimer( undef, Time::HiRes::time() + MENU_DEADLINE, sub {
+		undef $timer;
+		main::DEBUGLOG && $log->is_debug && $log->debug( "$what: not everything known within " . MENU_DEADLINE . ' s; answering with what is cached' );
+		$answer->();
+	} );
+
+	return;
+}
+
+# The distinct live service ids of a list of items (from their abclisten://live/ URLs).
+sub _liveIds {
+	my $items = shift;
+	return () unless ref $items eq 'ARRAY';
+
+	my %seen;
+	return grep { !$seen{$_}++ } map {
+		my $parsed = ref $_ eq 'HASH' ? Plugins::ABCListen::Util::parseUrl( $_->{url} ) : undef;
+		$parsed && $parsed->{kind} eq 'live' ? $parsed->{id} : ();
+	} @$items;
+}
+
 sub _link {
 	my ( $client, $token, $url ) = @_;
 
@@ -253,7 +347,9 @@ sub _link {
 }
 
 # A playable station row. Favourites keep the abclisten://live/<ID> URL, the station's own title and
-# its logo. %opts: name (shown instead of the station's), prefix (starts the description).
+# its logo. %opts: name (shown instead of the station's), prefix (starts the L1 description). With a
+# cached or last-good program on air (never fetched here), line2 and the description's first line
+# say what is on air.
 sub _stationItem {
 	my ( $client, $rec, %opts ) = @_;
 
@@ -262,10 +358,15 @@ sub _stationItem {
 	my $image = Plugins::ABCListen::API::imageUrl( $rec->{logo}, ITEM_IMAGE_PX ) || Plugins::ABCListen::Util::ICON;
 
 	my @description = grep { defined && length } $opts{prefix}, $rec->{synopsis};
+	my $description = @description ? join( ' - ', @description ) : undef;
+
+	my ( $line2, $onAir ) = _onAirText( $client, $rec->{id} );
+	$description = join( "\n", grep { defined } $onAir, $description ) if defined $onAir;
 
 	return {
 		name            => $name,
 		line1           => $name,
+		( defined $line2 ? ( line2 => $line2 ) : () ),
 		favorites_title => $rec->{name},
 		type            => 'audio',
 		on_select       => 'play',
@@ -273,8 +374,26 @@ sub _stationItem {
 		favorites_url   => $url,
 		image           => $image,
 		favorites_icon  => $image,
-		( @description ? ( description => join( ' - ', @description ) ) : () ),
+		( defined $description ? ( description => $description ) : () ),
 	};
+}
+
+# (line2, description line) for a station's cached or last-good program on air, or () without one:
+#   "On air: <program> · <presenters>"   "<program> (<time slot>) — <presenters>"
+sub _onAirText {
+	my ( $client, $id ) = @_;
+
+	my $program = eval { $NOW_PLAYING->cached($id) || $NOW_PLAYING->lastGood($id) };
+	$log->error( "Could not read the program on air for $id: $@" ) if $@;
+	return () unless ref $program eq 'HASH' && defined $program->{title} && length $program->{title};
+
+	my $presenters = defined $program->{presenters} && length $program->{presenters} ? $program->{presenters} : undef;
+	my $slot       = $NOW_PLAYING->timeSlot($program);
+
+	my $line2 = cstring( $client, 'PLUGIN_ABCLISTEN_ON_AIR', join( MIDDOT, grep { defined } $program->{title}, $presenters ) );
+	my $text  = $program->{title} . ( defined $slot ? " ($slot)" : '' ) . ( defined $presenters ? EM_DASH . $presenters : '' );
+
+	return ( $line2, $text );
 }
 
 # homeState pref: one of the 8 state codes, else '' (undef, '' or an invalid hand-edited value).
