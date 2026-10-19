@@ -1,0 +1,73 @@
+{
+ "total": 108,
+ "offset": 100,
+ "limit": 100,
+ "count": 8,
+ "items": [
+  {
+   "service_id": "sport_bbl",
+   "title": "ABC BBL",
+   "mini_synopsis": "Stream the Big Bash League, live on ABC Listen",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": true,
+   "linked_services": []
+  },
+  {
+   "service_id": "sport_wbbl",
+   "title": "ABC WBBL",
+   "mini_synopsis": "Stream the WBBL, live on ABC Listen",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": true,
+   "linked_services": []
+  },
+  {
+   "service_id": "sport_tennis",
+   "title": "ABC Tennis",
+   "mini_synopsis": "Stream live tennis on ABC Listen",
+   "service_timezone": "Australia/Melbourne",
+   "exclude_from_display": true,
+   "linked_services": []
+  },
+  {
+   "service_id": "sport_worldcup",
+   "title": "ABC Rugby League World Cup",
+   "mini_synopsis": "Stream the World Cup, live on ABC Listen",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": false,
+   "linked_services": []
+  },
+  {
+   "service_id": "grandstand_extra",
+   "title": "ABC Sport Extra",
+   "mini_synopsis": "Bonus sporting coverage from ABC Sport.",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": true,
+   "linked_services": []
+  },
+  {
+   "service_id": "sport_afl",
+   "title": "ABC AFL",
+   "mini_synopsis": "More live AFL coverage on ABC Listen",
+   "service_timezone": "Australia/Melbourne",
+   "exclude_from_display": true,
+   "linked_services": []
+  },
+  {
+   "service_id": "sport_afl_extra",
+   "title": "ABC AFL Extra",
+   "mini_synopsis": "More live AFL coverage on ABC Listen",
+   "service_timezone": "Australia/Melbourne",
+   "exclude_from_display": true,
+   "linked_services": []
+  },
+  {
+   "service_id": "sport_cricket",
+   "title": "ABC Cricket",
+   "mini_synopsis": "ABC Sport's coverage of Australia's Test Tour of South Africa",
+   "service_timezone": "Australia/Sydney",
+   "exclude_from_display": true,
+   "linked_services": []
+  }
+ ],
+ "last_updated": "2026-10-19T04:52:30+0000"
+}

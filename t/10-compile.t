@@ -11,14 +11,14 @@ use Test::More;
 
 use File::Find;
 
-my @EXPECTED = qw(API Discover Episode HTTP Live MyABC OnDemand Plugin ProgramIndex Programs ProtocolHandler Search Settings Util);
+my @EXPECTED = qw(API Collections Discover Episode HTTP Live MyABC OnDemand Plugin ProgramIndex Programs ProtocolHandler Search Settings StationData Stations Util);
 
 my @modules;
 find( { no_chdir => 1, wanted => sub { push @modules, $File::Find::name if /\.pm$/ } }, 'ABCListen' );
 @modules = sort @modules;
 
 my @topLevel = sort map { m{^ABCListen/(\w+)\.pm$} ? $1 : () } @modules;
-is_deeply( \@topLevel, \@EXPECTED, 'ABCListen/*.pm is exactly the expected modules (F1 + M1 Settings + F3 API + O2 Programs + O3 ProgramIndex)' ) or diag "found: @topLevel";
+is_deeply( \@topLevel, \@EXPECTED, 'ABCListen/*.pm is exactly the expected modules' ) or diag "found: @topLevel";
 
 for my $file (@modules) {
 	# ABCListen/Foo.pm is loaded as Plugins/ABCListen/Foo.pm through the t/lib/Plugins/ABCListen symlink
