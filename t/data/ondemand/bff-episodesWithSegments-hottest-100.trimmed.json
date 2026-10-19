@@ -1,0 +1,95 @@
+{
+ "collection": {
+  "headingPrepared": "More from Listen",
+  "id": "12158996",
+  "items": [
+   {
+    "articleLink": "https://www.abc.net.au/triplej/hottest-100/hottest-100-25---1/106246016",
+    "cardAttributionPrepared": {
+     "publishedDate": "2026-01-24T07:00:00+00:00",
+     "publishedDateFormat": false
+    },
+    "cardContentPositionPrepared": {},
+    "cardId": "106246016",
+    "cardImagePrepared": {
+     "alt": "",
+     "height": "485",
+     "imgSrc": "https://live-production.wcms.abc-cdn.net.au/1c3555c094b02f8034fbe8645e27c8d5?impolicy=wcms_crop_resize&cropH=2499&cropW=4443&xPos=5&yPos=0&width=862&height=485",
+     "ratio": "16x9",
+     "srcSet": [
+      "https://live-production.wcms.abc-cdn.net.au/1c3555c094b02f8034fbe8645e27c8d5?impolicy=wcms_crop_resize&cropH=2499&cropW=4443&xPos=5&yPos=0&width=160&height=90 160w",
+      "https://live-production.wcms.abc-cdn.net.au/1c3555c094b02f8034fbe8645e27c8d5?impolicy=wcms_crop_resize&cropH=2499&cropW=4443&xPos=5&yPos=0&width=862&height=485 862w"
+     ],
+     "width": "862"
+    },
+    "cardMediaIndicatorPrepared": {
+     "duration": 7200,
+     "icon": "audio"
+    },
+    "cardTitle": "Hottest 100 #25 - 1",
+    "contentLabelPrepared": null,
+    "contentUri": "coremedia://audioepisode/106246016",
+    "description": "Concetta & Luka are here as we power towards your favourite song of 2025.",
+    "docType": "audioepisode",
+    "expanded": true,
+    "hasMobileFeatured": true,
+    "imagePositionPrepared": {
+     "desktop": "left",
+     "mobile": "left",
+     "tablet": "left"
+    },
+    "noBorders": true,
+    "presentersPrepared": [],
+    "programTemplate": "audio",
+    "segments": null
+   },
+   {
+    "articleLink": "https://www.abc.net.au/triplej/hottest-100/hottest-100-50---26/106246024",
+    "cardAttributionPrepared": {
+     "publishedDate": "2026-01-24T05:00:00+00:00",
+     "publishedDateFormat": false
+    },
+    "cardContentPositionPrepared": {},
+    "cardId": "106246024",
+    "cardImagePrepared": {
+     "alt": "",
+     "height": "485",
+     "imgSrc": "https://live-production.wcms.abc-cdn.net.au/1c3555c094b02f8034fbe8645e27c8d5?impolicy=wcms_crop_resize&cropH=2499&cropW=4443&xPos=5&yPos=0&width=862&height=485",
+     "ratio": "16x9",
+     "srcSet": [
+      "https://live-production.wcms.abc-cdn.net.au/1c3555c094b02f8034fbe8645e27c8d5?impolicy=wcms_crop_resize&cropH=2499&cropW=4443&xPos=5&yPos=0&width=160&height=90 160w",
+      "https://live-production.wcms.abc-cdn.net.au/1c3555c094b02f8034fbe8645e27c8d5?impolicy=wcms_crop_resize&cropH=2499&cropW=4443&xPos=5&yPos=0&width=862&height=485 862w"
+     ],
+     "width": "862"
+    },
+    "cardMediaIndicatorPrepared": {
+     "duration": 7200,
+     "icon": "audio"
+    },
+    "cardTitle": "Hottest 100 #50 - 26",
+    "contentLabelPrepared": null,
+    "contentUri": "coremedia://audioepisode/106246024",
+    "description": "Abby & Tyrone are in the driver's seat, as we get close to the pointy end of the countdown.",
+    "docType": "audioepisode",
+    "expanded": false,
+    "hasMobileFeatured": true,
+    "imagePositionPrepared": {
+     "desktop": "left",
+     "mobile": "left",
+     "tablet": "left"
+    },
+    "noBorders": true,
+    "presentersPrepared": [],
+    "programTemplate": "audio",
+    "segments": null
+   }
+  ],
+  "pagination": {
+   "collectionLoaderLimit": "50",
+   "offset": 0,
+   "size": 2,
+   "total": 2
+  },
+  "programId": null
+ }
+}

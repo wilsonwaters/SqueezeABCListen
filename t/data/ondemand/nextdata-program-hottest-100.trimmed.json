@@ -1,0 +1,181 @@
+{
+ "__N_SSP": true,
+ "pageProps": {
+  "heroDescriptionPrepared": {
+   "descriptionPrepared": {
+    "descriptor": {
+     "children": [
+      {
+       "children": [
+        {
+         "content": "We’re counting down the 100 best songs of 2025, as voted by you!",
+         "type": "text"
+        }
+       ],
+       "key": "@@standfirst",
+       "props": {},
+       "type": "tagname"
+      }
+     ],
+     "key": "div",
+     "props": {},
+     "type": "tagname"
+    }
+   },
+   "uri": "coremedia://program/8199386"
+  },
+  "heroImageWithCTAPrepared": {
+   "attributionLinksPrepared": [],
+   "canonicalURI": "/triplej/hottest-100",
+   "heading": "Hottest 100",
+   "heroImagePrepared": {
+    "alt": "",
+    "imgSrc": "https://live-production.wcms.abc-cdn.net.au/ee052c80149731832697f66d7b9d1d6e?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "shareUtilityProps": {
+    "hasPopover": true,
+    "sendBy": {
+     "items": [
+      {
+       "shareBy": "mail"
+      },
+      {
+       "mobileOnly": true,
+       "shareBy": "messenger"
+      },
+      {
+       "shareBy": "link"
+      },
+      {
+       "shareBy": "whatsapp"
+      }
+     ],
+     "title": "Send this by"
+    },
+    "shareLink": "https://www.abc.net.au/triplej/hottest-100/",
+    "shareOn": {
+     "items": [
+      {
+       "shareBy": "facebook"
+      },
+      {
+       "shareBy": "linked-in"
+      },
+      {
+       "shareBy": "twitter",
+       "via": "ABCaustralia"
+      }
+     ],
+     "title": "Share this on"
+    },
+    "synopsis": "",
+    "title": "Hottest 100",
+    "utilityBarShareLinks": [
+     {
+      "shareBy": "facebook"
+     },
+     {
+      "shareBy": "twitter"
+     }
+    ]
+   },
+   "uri": "coremedia://program/8199386"
+  },
+  "presentersPrepared": [],
+  "programCollectionPrepared": {
+   "headingPrepared": "More from Hottest 100",
+   "id": "12158996",
+   "items": [
+    {
+     "articleLink": "/triplej/hottest-100/hottest-100-25---1/106246016",
+     "cardAttributionPrepared": {
+      "publishedDate": "2026-01-24T07:00:00+00:00",
+      "publishedDateFormat": false
+     },
+     "cardContentPositionPrepared": {},
+     "cardId": "106246016",
+     "cardImagePrepared": {
+      "alt": "",
+      "height": "862",
+      "imgSrc": "https://live-production.wcms.abc-cdn.net.au/1c3555c094b02f8034fbe8645e27c8d5?impolicy=wcms_crop_resize&cropH=2499&cropW=2499&xPos=977&yPos=0&width=862&height=862",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://live-production.wcms.abc-cdn.net.au/1c3555c094b02f8034fbe8645e27c8d5?impolicy=wcms_crop_resize&cropH=2499&cropW=2499&xPos=977&yPos=0&width=160&height=160 160w",
+       "https://live-production.wcms.abc-cdn.net.au/1c3555c094b02f8034fbe8645e27c8d5?impolicy=wcms_crop_resize&cropH=2499&cropW=2499&xPos=977&yPos=0&width=862&height=862 862w"
+      ],
+      "width": "862"
+     },
+     "cardMediaIndicatorPrepared": {
+      "duration": 7200,
+      "icon": "audio"
+     },
+     "cardTitle": "Hottest 100 #25 - 1",
+     "contentLabelPrepared": null,
+     "contentUri": "coremedia://audioepisode/106246016",
+     "description": "Concetta & Luka are here as we power towards your favourite song of 2025.",
+     "docType": "audioepisode",
+     "expanded": true,
+     "hasMobileFeatured": true,
+     "imagePositionPrepared": {
+      "desktop": "left",
+      "mobile": "left",
+      "tablet": "left"
+     },
+     "noBorders": true,
+     "presentersPrepared": [],
+     "programTemplate": "audio"
+    },
+    {
+     "articleLink": "/triplej/hottest-100/hottest-100-50---26/106246024",
+     "cardAttributionPrepared": {
+      "publishedDate": "2026-01-24T05:00:00+00:00",
+      "publishedDateFormat": false
+     },
+     "cardContentPositionPrepared": {},
+     "cardId": "106246024",
+     "cardImagePrepared": {
+      "alt": "",
+      "height": "862",
+      "imgSrc": "https://live-production.wcms.abc-cdn.net.au/1c3555c094b02f8034fbe8645e27c8d5?impolicy=wcms_crop_resize&cropH=2499&cropW=2499&xPos=977&yPos=0&width=862&height=862",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://live-production.wcms.abc-cdn.net.au/1c3555c094b02f8034fbe8645e27c8d5?impolicy=wcms_crop_resize&cropH=2499&cropW=2499&xPos=977&yPos=0&width=160&height=160 160w",
+       "https://live-production.wcms.abc-cdn.net.au/1c3555c094b02f8034fbe8645e27c8d5?impolicy=wcms_crop_resize&cropH=2499&cropW=2499&xPos=977&yPos=0&width=862&height=862 862w"
+      ],
+      "width": "862"
+     },
+     "cardMediaIndicatorPrepared": {
+      "duration": 7200,
+      "icon": "audio"
+     },
+     "cardTitle": "Hottest 100 #50 - 26",
+     "contentLabelPrepared": null,
+     "contentUri": "coremedia://audioepisode/106246024",
+     "description": "Abby & Tyrone are in the driver's seat, as we get close to the pointy end of the countdown.",
+     "docType": "audioepisode",
+     "expanded": false,
+     "hasMobileFeatured": true,
+     "imagePositionPrepared": {
+      "desktop": "left",
+      "mobile": "left",
+      "tablet": "left"
+     },
+     "noBorders": true,
+     "presentersPrepared": [],
+     "programTemplate": "audio"
+    }
+   ],
+   "loadMoreUrl": "/triplej/programs/hottest-100",
+   "pagination": {
+    "collectionLoaderLimit": 10,
+    "offset": 0,
+    "size": 2,
+    "total": 2
+   },
+   "programId": "8199386",
+   "programTemplate": "audio"
+  },
+  "programTemplate": "default",
+  "webDistributionRestricted": false
+ }
+}

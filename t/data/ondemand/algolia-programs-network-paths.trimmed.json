@@ -1,0 +1,155 @@
+{
+ "hits": [
+  {
+   "canonicalURL": "https://www.abc.net.au/triplej/bars-of-steel-page/",
+   "defaultThumbnail": {},
+   "description": "The best established and emerging rappers show us what they’ve got.",
+   "infoSource": "",
+   "objectID": "coremedia://program/105269482",
+   "programType": "music",
+   "shortTeaserText": "The best established and emerging rappers show us what they’ve got.",
+   "title": "Bars of Steel"
+  },
+  {
+   "canonicalURL": "https://www.abc.net.au/listen/doublej/summer-mornings/",
+   "defaultThumbnail": {
+    "16x9": "https://live-production.wcms.abc-cdn.net.au/6c81dd428db51ff33cfb11d4ad923724?impolicy=wcms_crop_resize&cropH=1125&cropW=1998&xPos=1&yPos=0&width=862&height=485",
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/6c81dd428db51ff33cfb11d4ad923724?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=437&yPos=0&width=862&height=862"
+   },
+   "description": "With no rulebook in sight, Dylan Lewis is bringing controlled chaos to Double J for a very special summer edition of Mornings.\n\nWhile the rest of the Double J team takes a break, Dylan brings you killer tunes, unpredictable chats, and catch-ups with famous friends.Fresh from celebrating legendary ABC music show Recovery, Dylan’s fizzing for the best summer ever.\n\nHe’s here for a good time, not a long time. Spend your summer Mornings with Dylan Lewis from 9am AEDT Monday 6 January.",
+   "infoSource": "Double J",
+   "objectID": "coremedia://program/11817362",
+   "programType": null,
+   "shortTeaserText": "Weekdays 9am-12pm",
+   "title": "Summer Mornings"
+  },
+  {
+   "canonicalURL": "https://www.abc.net.au/triplej/like-a-version/",
+   "defaultThumbnail": {
+    "16x9": "https://live-production.wcms.abc-cdn.net.au/7b53567849522b9ba8505ea96b51a736?impolicy=wcms_crop_resize&cropH=1125&cropW=2000&xPos=0&yPos=0&width=862&height=485",
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/7b53567849522b9ba8505ea96b51a736?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862"
+   },
+   "description": "triple j's Like A Version is the best acts from Australia and around the world playing a song of their own and a song they love, every week in our iconic studios.\n\nYou can also check out our Like A Version playlists on Spotify and Apple Music and YouTube",
+   "infoSource": "triple j",
+   "objectID": "coremedia://program/11478318",
+   "programType": null,
+   "shortTeaserText": "triple j's Like A Version is the best acts from Australia and around the world playing a song of their own and a song they love, every week in our iconic studios.",
+   "title": "Like A Version"
+  },
+  {
+   "canonicalURL": "https://www.abc.net.au/listen/classic/special-features/",
+   "defaultThumbnail": {
+    "16x9": "https://live-production.wcms.abc-cdn.net.au/c89b010ac53d2fda08f520b9a5ee2461?impolicy=wcms_crop_resize&cropH=1125&cropW=1998&xPos=1&yPos=0&width=862&height=485",
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/c89b010ac53d2fda08f520b9a5ee2461?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=437&yPos=0&width=862&height=862"
+   },
+   "description": null,
+   "infoSource": "ABC Classic",
+   "objectID": "coremedia://program/10264730",
+   "programType": null,
+   "shortTeaserText": null,
+   "title": "Special Features"
+  },
+  {
+   "canonicalURL": "https://www.abc.net.au/listen/classic/music-in-time/",
+   "defaultThumbnail": {
+    "16x9": "https://live-production.wcms.abc-cdn.net.au/3d6ebb4ba05732540a8aeb0440386f18?impolicy=wcms_crop_resize&cropH=1125&cropW=1998&xPos=1&yPos=0&width=862&height=485",
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/3d6ebb4ba05732540a8aeb0440386f18?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=437&yPos=0&width=862&height=862"
+   },
+   "description": "Witness a moment from history, with music and stories from another era.",
+   "infoSource": "ABC Classic",
+   "objectID": "coremedia://program/9341030",
+   "programType": null,
+   "shortTeaserText": "Witness a moment from history, with music and stories from another era.",
+   "title": "Music In Time"
+  },
+  {
+   "canonicalURL": "https://www.abc.net.au/triplej/hottest-100/",
+   "defaultThumbnail": {
+    "16x9": "https://live-production.wcms.abc-cdn.net.au/1c3555c094b02f8034fbe8645e27c8d5?impolicy=wcms_crop_resize&cropH=2499&cropW=4443&xPos=5&yPos=0&width=862&height=485",
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/1c3555c094b02f8034fbe8645e27c8d5?impolicy=wcms_crop_resize&cropH=2499&cropW=2499&xPos=977&yPos=0&width=862&height=862"
+   },
+   "description": "We’re counting down the 100 best songs of 2025, as voted by you!",
+   "infoSource": "triple j",
+   "objectID": "coremedia://program/8199386",
+   "programType": "music",
+   "shortTeaserText": "We’re counting down the 100 best songs of 2025, as voted by you!",
+   "title": "Hottest 100"
+  },
+  {
+   "canonicalURL": "http://www.abc.net.au/news/qld/",
+   "defaultThumbnail": {
+    "16x9": "https://live-production.wcms.abc-cdn.net.au/b1472b4c0730aebe4e83c935a288b239?impolicy=wcms_crop_resize&cropH=394&cropW=700&xPos=0&yPos=0&width=862&height=485",
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/b1472b4c0730aebe4e83c935a288b239?impolicy=wcms_crop_resize&cropH=394&cropW=394&xPos=153&yPos=0&width=862&height=862"
+   },
+   "description": "Authoritative radio news each morning from journalists across the state.",
+   "infoSource": "612 ABC Brisbane",
+   "objectID": "coremedia://program/8177792",
+   "programType": null,
+   "shortTeaserText": "Authoritative radio news each morning from journalists across the state.",
+   "title": "Queensland News"
+  },
+  {
+   "canonicalURL": "http://www.abc.net.au/news/perth",
+   "defaultThumbnail": {
+    "16x9": "https://live-production.wcms.abc-cdn.net.au/b1472b4c0730aebe4e83c935a288b239?impolicy=wcms_crop_resize&cropH=394&cropW=700&xPos=0&yPos=0&width=862&height=485",
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/b1472b4c0730aebe4e83c935a288b239?impolicy=wcms_crop_resize&cropH=394&cropW=394&xPos=153&yPos=0&width=862&height=862"
+   },
+   "description": "Authoritative morning radio news from journalists across the state.",
+   "infoSource": "102.5 ABC Perth",
+   "objectID": "coremedia://program/8134718",
+   "programType": null,
+   "shortTeaserText": "Authoritative morning radio news from journalists across the state.",
+   "title": "WA News"
+  },
+  {
+   "canonicalURL": "https://radio.abc.net.au/",
+   "defaultThumbnail": {},
+   "description": "Tune into an Australian summer.",
+   "infoSource": "",
+   "objectID": "coremedia://program/8114338",
+   "programType": null,
+   "shortTeaserText": "Tune into an Australian summer.",
+   "title": "Summer"
+  },
+  {
+   "canonicalURL": "http://www.abc.net.au/news/act/",
+   "defaultThumbnail": {
+    "16x9": "https://live-production.wcms.abc-cdn.net.au/b1472b4c0730aebe4e83c935a288b239?impolicy=wcms_crop_resize&cropH=394&cropW=700&xPos=0&yPos=0&width=862&height=485",
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/b1472b4c0730aebe4e83c935a288b239?impolicy=wcms_crop_resize&cropH=394&cropW=394&xPos=153&yPos=0&width=862&height=862"
+   },
+   "description": "Authoritative radio news from journalists across the ACT.",
+   "infoSource": "666 ABC Canberra",
+   "objectID": "coremedia://program/7816666",
+   "programType": null,
+   "shortTeaserText": "Authoritative radio news from journalists across the ACT.",
+   "title": "ACT News"
+  },
+  {
+   "canonicalURL": "http://www.abc.net.au/news/melbourne",
+   "defaultThumbnail": {
+    "16x9": "https://live-production.wcms.abc-cdn.net.au/76d201d8b309239322473f9b65445768?impolicy=wcms_crop_resize&cropH=394&cropW=700&xPos=0&yPos=0&width=862&height=485",
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/76d201d8b309239322473f9b65445768?impolicy=wcms_crop_resize&cropH=394&cropW=394&xPos=153&yPos=0&width=862&height=862"
+   },
+   "description": "Authoritative morning radio news from journalists across the state.",
+   "infoSource": "774 ABC Melbourne",
+   "objectID": "coremedia://program/7347334",
+   "programType": null,
+   "shortTeaserText": "Authoritative morning radio news from journalists across the state.",
+   "title": "Victorian News"
+  },
+  {
+   "canonicalURL": "https://www.abc.net.au/listen/radionational/",
+   "defaultThumbnail": {},
+   "description": null,
+   "infoSource": "ABC Radio National",
+   "objectID": "coremedia://program/4483880",
+   "programType": null,
+   "shortTeaserText": "The List unpacks new ideas, trends and obsessions with a smart, discursive and sometimes cheeky look at the zeitgeist.",
+   "title": "The List"
+  }
+ ],
+ "hitsPerPage": 1000,
+ "nbHits": 12,
+ "nbPages": 1,
+ "page": 0
+}

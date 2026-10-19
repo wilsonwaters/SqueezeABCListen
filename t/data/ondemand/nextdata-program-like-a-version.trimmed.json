@@ -1,0 +1,227 @@
+{
+ "__N_SSP": true,
+ "pageProps": {
+  "heroDescriptionPrepared": {
+   "descriptionPrepared": {
+    "descriptor": {
+     "children": [
+      {
+       "children": [
+        {
+         "content": "triple j's Like A Version is the best acts from Australia and around the world playing a song of their own and a song they love, every week in our iconic studios.",
+         "type": "text"
+        }
+       ],
+       "key": "@@standfirst",
+       "props": {},
+       "type": "tagname"
+      },
+      {
+       "children": [
+        {
+         "children": [
+          {
+           "content": "You can also check out our Like A Version playlists on ",
+           "type": "text"
+          }
+         ],
+         "key": "strong",
+         "props": {},
+         "type": "tagname"
+        },
+        {
+         "children": [
+          {
+           "children": [
+            {
+             "content": "Spotify",
+             "type": "text"
+            }
+           ],
+           "key": "strong",
+           "props": {},
+           "type": "tagname"
+          }
+         ],
+         "key": "a",
+         "props": {
+          "href": "https://open.spotify.com/user/triple.j.abc/playlist/28oY1vSsipRE5VOyLDQqed"
+         },
+         "type": "tagname"
+        },
+        {
+         "children": [
+          {
+           "content": " and ",
+           "type": "text"
+          }
+         ],
+         "key": "strong",
+         "props": {},
+         "type": "tagname"
+        },
+        {
+         "children": [
+          {
+           "children": [
+            {
+             "content": "Apple Music",
+             "type": "text"
+            }
+           ],
+           "key": "strong",
+           "props": {},
+           "type": "tagname"
+          }
+         ],
+         "key": "a",
+         "props": {
+          "href": "https://itunes.apple.com/au/playlist/triple-js-like-a-version/pl.555b154263a04147b903d9a62a8a7188",
+          "rel": "noopener noreferrer",
+          "target": "_blank"
+         },
+         "type": "tagname"
+        },
+        {
+         "children": [
+          {
+           "content": " and ",
+           "type": "text"
+          }
+         ],
+         "key": "strong",
+         "props": {},
+         "type": "tagname"
+        },
+        {
+         "children": [
+          {
+           "children": [
+            {
+             "content": "YouTube",
+             "type": "text"
+            }
+           ],
+           "key": "strong",
+           "props": {},
+           "type": "tagname"
+          }
+         ],
+         "key": "a",
+         "props": {
+          "href": "https://www.youtube.com/playlist?list=PLCC51BF0C94BE62E8"
+         },
+         "type": "tagname"
+        }
+       ],
+       "key": "p",
+       "props": {},
+       "type": "tagname"
+      }
+     ],
+     "key": "div",
+     "props": {},
+     "type": "tagname"
+    }
+   },
+   "uri": "coremedia://program/11478318"
+  },
+  "heroImageWithCTAPrepared": null,
+  "presentersPrepared": [],
+  "programCollectionPrepared": {
+   "headingPrepared": "More from Like A Version",
+   "id": "11940604",
+   "items": [
+    {
+     "articleLink": "/triplej/like-a-version/conan-gray-covers-adela-aint-in-la-for-like-a-version/107243262",
+     "cardAttributionPrepared": {
+      "publishedDate": "2026-10-15T21:30:00+00:00",
+      "publishedDateFormat": false
+     },
+     "cardContentPositionPrepared": {},
+     "cardId": "107243262",
+     "cardImagePrepared": {
+      "alt": "Conan Gray wears a white t shirt and sings into a microphone with his eyes closed.",
+      "height": "485",
+      "imgSrc": "https://live-production.wcms.abc-cdn.net.au/34d88e646b20c481788eabfbbfee3b77?impolicy=wcms_crop_resize&cropH=2160&cropW=3840&xPos=0&yPos=0&width=862&height=485",
+      "ratio": "16x9",
+      "srcSet": [
+       "https://live-production.wcms.abc-cdn.net.au/34d88e646b20c481788eabfbbfee3b77?impolicy=wcms_crop_resize&cropH=2160&cropW=3840&xPos=0&yPos=0&width=160&height=90 160w",
+       "https://live-production.wcms.abc-cdn.net.au/34d88e646b20c481788eabfbbfee3b77?impolicy=wcms_crop_resize&cropH=2160&cropW=3840&xPos=0&yPos=0&width=862&height=485 862w"
+      ],
+      "width": "862"
+     },
+     "cardMediaIndicatorPrepared": {
+      "duration": 180,
+      "icon": "play"
+     },
+     "cardTitle": "Conan Gray covers ADÉLA's 'Ain't In LA' for Like A Version",
+     "contentLabelPrepared": null,
+     "contentUri": "coremedia://video/107243262",
+     "description": "Conan Gray makes his Like A Version debut by covering ADÉLA’s breakout hit.",
+     "docType": "video",
+     "expanded": true,
+     "hasMobileFeatured": true,
+     "imagePositionPrepared": {
+      "desktop": "left",
+      "mobile": "left",
+      "tablet": "left"
+     },
+     "noBorders": true,
+     "presentersPrepared": [],
+     "programTemplate": "video"
+    },
+    {
+     "articleLink": "/triplej/like-a-version/ashnikko-covers-gwen-stefani-for-like-a-version/107233554",
+     "cardAttributionPrepared": {
+      "publishedDate": "2026-10-08T21:30:00+00:00",
+      "publishedDateFormat": false
+     },
+     "cardContentPositionPrepared": {},
+     "cardId": "107233554",
+     "cardImagePrepared": {
+      "alt": "A close-up of Ashnikko, wearing pink false eyelashes and wearing a brown and purple wig, singing into a mic.",
+      "height": "485",
+      "imgSrc": "https://live-production.wcms.abc-cdn.net.au/35d84b3f548db80b364077fdbf661e5d?impolicy=wcms_crop_resize&cropH=2160&cropW=3840&xPos=0&yPos=0&width=862&height=485",
+      "ratio": "16x9",
+      "srcSet": [
+       "https://live-production.wcms.abc-cdn.net.au/35d84b3f548db80b364077fdbf661e5d?impolicy=wcms_crop_resize&cropH=2160&cropW=3840&xPos=0&yPos=0&width=160&height=90 160w",
+       "https://live-production.wcms.abc-cdn.net.au/35d84b3f548db80b364077fdbf661e5d?impolicy=wcms_crop_resize&cropH=2160&cropW=3840&xPos=0&yPos=0&width=862&height=485 862w"
+      ],
+      "width": "862"
+     },
+     "cardMediaIndicatorPrepared": {
+      "duration": 200,
+      "icon": "play"
+     },
+     "cardTitle": "Ashnikko covers Gwen Stefani's 'What You Waiting For?' for Like A Version",
+     "contentLabelPrepared": null,
+     "contentUri": "coremedia://video/107233554",
+     "description": "Ashnikko takes a chance and makes her Like A Version debut with a full band in tow.",
+     "docType": "video",
+     "expanded": false,
+     "hasMobileFeatured": true,
+     "imagePositionPrepared": {
+      "desktop": "left",
+      "mobile": "left",
+      "tablet": "left"
+     },
+     "noBorders": true,
+     "presentersPrepared": [],
+     "programTemplate": "video"
+    }
+   ],
+   "loadMoreUrl": "/triplej/programs/like-a-version",
+   "pagination": {
+    "collectionLoaderLimit": 10,
+    "offset": 0,
+    "size": 2,
+    "total": 2
+   },
+   "programId": "11478318",
+   "programTemplate": "video"
+  },
+  "programTemplate": "video",
+  "webDistributionRestricted": false
+ }
+}
