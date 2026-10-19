@@ -12,8 +12,14 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - release: R1 #9 · R2 #15 · R3 #17
 
 ## Currently in flight
-- #1 [F1] vertical slice — implementation agent dispatched (worktree, branch `feat/F1-vertical-slice`)
-- Plan-revision + backlog-reconciliation agent: app-style navigation (Home/Radio/Podcasts/News/Sport/Kids listen/Audiobooks), new D4 section menus
+- Wave 1 implementation agents (worktrees, in parallel): #3 F2 protocol handler (`feat/F2-protocol-handler`),
+  #7 F3 API client (`feat/F3-api-client`), #9 R1 packaging/release (`feat/R1-packaging-release`), #11 M1 settings (`feat/M1-settings`)
+- Plan-revision + backlog-reconciliation agent: app-style navigation, new D4 section menus, contract 1 update
+
+## Last completions
+- #1 F1 merged (PR #21, squash 161ae6a): installable slice — ABC listen → Radio → 5 national stations play; weighted
+  top-level hook API (`Util::topWeight`, optional `menuWeights()`); HTTP/Util; harness (833 assertions); check.sh; CI.
+  Review APPROVE (10 deliberate breakages all caught); runtime verification PASS in Default + Material skins.
 
 ## Process notes (deviations from the orchestrator manual, adapted to this session)
 - Plan approval for M tasks is folded into PR review: implementers put their plan at the top of the PR body.
@@ -36,7 +42,7 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - Streams + master plans committed (6 streams, 20 v1 tasks + 3 stretch). Material Skin 6.4.14 added to testbed.
 
 ## Next
-- After F1 merges: wave 1 = F2, F3, R1, M1 in parallel.
+- Review + runtime-verify each wave-1 PR as it lands; merge; then wave 2 = L1, O1, O2 (after F2+F3); cut v0.1.0 after R1.
 
 ## Plan revisions
 - 2026-10-19 — Stakeholder: podcasts prominent → D2 makes "Podcasts" top-level (#6 comment).
