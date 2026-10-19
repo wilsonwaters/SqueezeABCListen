@@ -4,11 +4,16 @@
 Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 
 ## Issue map (task ID → GitHub issue)
-- F1 → #1
+- foundation: F1 #1 · F2 #3 · F3 #7
+- live: L1 #2 · L2 #4 · L3 #8 · L4 #10 · L5 #14
+- ondemand: O1 #12 · O2 #16 · O3 #18 · O4 #19
+- discovery: D1 #5 · D2 #6 · D3 #13 (D4 section menus: pending)
+- myabc: M1 #11 · M2 #20
+- release: R1 #9 · R2 #15 · R3 #17
 
 ## Currently in flight
 - #1 [F1] vertical slice — implementation agent dispatched (worktree, branch `feat/F1-vertical-slice`)
-- Spec agents filing issues: F2/F3/R1/M1, L1–L5, O1–O4 + M2, D1–D3 + R2/R3
+- Plan-revision + backlog-reconciliation agent: app-style navigation (Home/Radio/Podcasts/News/Sport/Kids listen/Audiobooks), new D4 section menus
 
 ## Process notes (deviations from the orchestrator manual, adapted to this session)
 - Plan approval for M tasks is folded into PR review: implementers put their plan at the top of the PR body.
