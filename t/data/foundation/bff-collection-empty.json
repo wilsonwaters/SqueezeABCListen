@@ -1,0 +1,35 @@
+{
+  "collection": {
+    "bentoCardType": "ContentCard",
+    "id": "103194120",
+    "title": "Most Popular Podcasts",
+    "productName": "core-next",
+    "analytics": {
+      "uri": "coremedia://dynamiccollection/103194120",
+      "moduleUri": "app://module/promo4",
+      "contentSource": "coremedia",
+      "contentType": "collection",
+      "id": "103194120",
+      "title": {
+        "title": "Most Popular Podcasts"
+      },
+      "items": []
+    },
+    "heading": "Most Popular Podcasts",
+    "loadMoreUrl": "/core-next/api/collection/listen",
+    "pagination": {
+      "offset": 0,
+      "size": 10,
+      "total": 0
+    },
+    "items": [],
+    "contentUri": "coremedia://collection/103194120",
+    "borders": false,
+    "linkUrl": "/listen/promo-4/103194120",
+    "linkTitle": "More Most Popular Podcasts",
+    "showTitleVisually": true,
+    "canonicalURI": "/listen/promo-4/103194120",
+    "robots": null,
+    "ratio": "1x1"
+  }
+}

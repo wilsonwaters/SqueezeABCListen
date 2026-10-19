@@ -1,0 +1,127 @@
+{
+  "collection": {
+    "bentoCardType": "ContentCard",
+    "id": "105672994",
+    "title": "Most Popular",
+    "productName": "core-next",
+    "heading": "Most Popular",
+    "loadMoreUrl": "/core-next/api/collection/x",
+    "pagination": {
+      "offset": 0,
+      "size": 9,
+      "total": 9
+    },
+    "items": [
+      {
+        "articleLink": "https://www.abc.net.au/listen/audiobooks/the-dictionary-of-lost-words-page/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/d69f290a96e32fb4674bad70b4211043?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+          "ratio": "16x9",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/d69f290a96e32fb4674bad70b4211043?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=160&height=90 160w"
+          ],
+          "hideImageBorders": false,
+          "width": "862",
+          "height": "485"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://program/106353766",
+        "description": "In 1901, the word ‘Bondmaid’ was discovered missing from the Oxford English Dictionary. This is the story of the girl who stole it.",
+        "cardId": "106353766",
+        "cardTitle": "The Dictionary of Lost Words",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "right"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": true,
+        "hideImageBorders": false,
+        "featuredSettings": {
+          "mobile": true,
+          "tablet": false,
+          "desktop": false
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/listen/audiobooks/my-brilliant-career-page/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "My Brilliant Career - Miles Franklin. Narrated by Gemma Chua-Tran",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/096224720d23db565ee531d3ec1fd084?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+          "ratio": "16x9",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/096224720d23db565ee531d3ec1fd084?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=160&height=90 160w"
+          ],
+          "hideImageBorders": false,
+          "width": "862",
+          "height": "485"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://program/106678880",
+        "description": "My Brilliant Career is a classic Australian novel about creativity, ambition, and finding your own path. First published in 1901, it shocked readers with its honesty and boldness.",
+        "cardId": "105915076",
+        "cardTitle": "My Brilliant Career",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "right"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": true,
+        "hideImageBorders": false,
+        "featuredSettings": {
+          "mobile": true,
+          "tablet": false,
+          "desktop": false
+        }
+      },
+      {
+        "articleLink": "https://www.abc.net.au/listen/audiobooks/the-13-storey-treehouse-page/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "The 13-Storey Treehouse ",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/9779b4fdea8a0d41a60fbfc44b242e1a?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=862&height=485",
+          "ratio": "16x9",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/9779b4fdea8a0d41a60fbfc44b242e1a?impolicy=wcms_crop_resize&cropH=1688&cropW=3000&xPos=0&yPos=656&width=160&height=90 160w"
+          ],
+          "hideImageBorders": false,
+          "width": "862",
+          "height": "485"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://program/106679636",
+        "description": "Andy and Terry live in a 13-storey treehouse. They've also got a new book to write, but there's a problem. A BIG problem. Well, quite a few big problems actually...",
+        "cardId": "106329802",
+        "cardTitle": "The 13-Storey Treehouse",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "right"
+        },
+        "cardContentPositionPrepared": {},
+        "hasMobileFeatured": true,
+        "hideImageBorders": false,
+        "featuredSettings": {
+          "mobile": true,
+          "tablet": false,
+          "desktop": false
+        }
+      }
+    ],
+    "contentUri": "coremedia://collection/105672994",
+    "borders": false,
+    "linkUrl": "",
+    "linkTitle": "",
+    "showTitleVisually": true,
+    "canonicalURI": "/listen/listenapp/most-popular/105672994",
+    "robots": null,
+    "ratio": "16x9"
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "collection": {
+    "bentoCardType": "ContentCard",
+    "id": "14126370",
+    "title": "New South Wales",
+    "productName": "core-next",
+    "analytics": {
+      "uri": "coremedia://collection/14126370",
+      "moduleUri": "coremedia://collection/14126370",
+      "contentSource": "coremedia",
+      "contentType": "collection",
+      "id": "14126370",
+      "title": {
+        "title": "New South Wales"
+      },
+      "items": [
+        {
+          "uri": "coremedia://channel/14126406"
+        },
+        {
+          "uri": "coremedia://channel/14126408"
+        },
+        {
+          "uri": "coremedia://channel/14126410"
+        }
+      ]
+    },
+    "heading": "New South Wales",
+    "items": [
+      {
+        "articleLink": "https://www.abc.net.au/listen/live/sydney/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "red circle with abc logo and 702 sydney text",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/c6e5221766a21780b205abe8c3dbedda?impolicy=wcms_crop_resize&cropH=1632&cropW=1632&xPos=0&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/c6e5221766a21780b205abe8c3dbedda?impolicy=wcms_crop_resize&cropH=1632&cropW=1632&xPos=0&yPos=0&width=160&height=160 160w"
+          ],
+          "hideImageBorders": true,
+          "width": "862",
+          "height": "862"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://channel/14126406",
+        "description": "Blue Mountains, Sydney",
+        "cardId": "7893592",
+        "cardTitle": "702 ABC Sydney",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left-centre"
+        },
+        "cardContentPositionPrepared": {
+          "tablet": "center",
+          "desktop": "center"
+        },
+        "hasMobileFeatured": false,
+        "hideImageBorders": true
+      },
+      {
+        "articleLink": "https://www.abc.net.au/listen/live/brokenhill/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/e0d65b41f1984d4789cd784ad2e1b77c?impolicy=wcms_crop_resize&cropH=1180&cropW=1180&xPos=0&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/e0d65b41f1984d4789cd784ad2e1b77c?impolicy=wcms_crop_resize&cropH=1180&cropW=1180&xPos=0&yPos=0&width=160&height=160 160w"
+          ],
+          "hideImageBorders": true,
+          "width": "862",
+          "height": "862"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://channel/14126408",
+        "description": "Broken Hill, Menindee, Wilcannia",
+        "cardId": "10585318",
+        "cardTitle": "Broken Hill",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left-centre"
+        },
+        "cardContentPositionPrepared": {
+          "tablet": "center",
+          "desktop": "center"
+        },
+        "hasMobileFeatured": false,
+        "hideImageBorders": true
+      },
+      {
+        "articleLink": "https://www.abc.net.au/listen/live/centralcoast/",
+        "cardAttributionPrepared": null,
+        "cardImagePrepared": {
+          "alt": "",
+          "imgSrc": "https://live-production.wcms.abc-cdn.net.au/74ba651b321bdca8f4c0d7f58daa6e3b?impolicy=wcms_crop_resize&cropH=1180&cropW=1180&xPos=0&yPos=0&width=862&height=862",
+          "ratio": "1x1",
+          "srcSet": [
+            "https://live-production.wcms.abc-cdn.net.au/74ba651b321bdca8f4c0d7f58daa6e3b?impolicy=wcms_crop_resize&cropH=1180&cropW=1180&xPos=0&yPos=0&width=160&height=160 160w"
+          ],
+          "hideImageBorders": true,
+          "width": "862",
+          "height": "862"
+        },
+        "cardMediaIndicatorPrepared": null,
+        "contentLabelPrepared": null,
+        "contentUri": "coremedia://channel/14126410",
+        "description": "Gosford, Peats Ridge, Wyong",
+        "cardId": "7984810",
+        "cardTitle": "Central Coast",
+        "noBorders": true,
+        "presentersPrepared": null,
+        "imagePositionPrepared": {
+          "mobile": "left-centre"
+        },
+        "cardContentPositionPrepared": {
+          "tablet": "center",
+          "desktop": "center"
+        },
+        "hasMobileFeatured": false,
+        "hideImageBorders": true
+      }
+    ],
+    "contentUri": "coremedia://collection/14126370",
+    "borders": false,
+    "linkUrl": "",
+    "linkTitle": "",
+    "showTitleVisually": false,
+    "canonicalURI": "/radio/new-south-wales/14126370",
+    "robots": null,
+    "ratio": "1x1"
+  }
+}
