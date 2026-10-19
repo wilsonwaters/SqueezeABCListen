@@ -269,6 +269,27 @@ subtest 'state lists: capital-city station first, then A-Z' => sub {
 	is_deeply( [ $c->args(0) ], [ { items => [] } ], 'an unknown state: an empty list, once' );
 };
 
+subtest 'state lists: the capital comes first even when A-Z would put it later' => sub {
+	reset_all();
+
+	# Every real capital's name starts with its frequency ("702 ABC Sydney"), so A-Z alone puts it first.
+	# Here Sydney is renamed to sort between the other stations.
+	my %rec = map { $_->{id} => $_ } Plugins::ABCListen::StationData::records();
+	$S->_setRecords( $rec{LOCAL_UPPERHUNTER}, { %{ $rec{LOCAL_SYDNEY} }, name => 'ABC Sydney' }, $rec{LOCAL_NEWCASTLE}, $rec{LOCAL_ILLAWARRA} );
+
+	my $c = collector();
+	Plugins::ABCListen::Live::_stateMenu( undef, $c->cb, {}, 'NSW' );
+	my ($result) = $c->args(0);
+	is_deeply(
+		[ map { $_->{name} } @{ $result->{items} } ],
+		[ 'ABC Sydney', 'ABC Illawarra', 'ABC Newcastle', 'ABC Upper Hunter' ],
+		'NSW: "ABC Sydney" (the capital) first, then the rest A-Z'
+	);
+	is( $c->count, 1, 'answered once' );
+
+	reset_all();
+};
+
 # ---- home-state time-zone versions ----
 
 subtest 'home-state variants: SA/QLD/NT/WA substitute RN, triple j, Double J, ABC Classic' => sub {
