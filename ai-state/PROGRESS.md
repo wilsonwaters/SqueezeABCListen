@@ -4,7 +4,7 @@
 Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 
 ## Issue map (task ID → GitHub issue)
-- foundation: F1 #1 · F2 #3 · F3 #7
+- foundation: F1 #1 · F2 #3 · F3 #7 · F4 #34 (bug)
 - live: L1 #2 · L2 #4 · L3 #8 · L4 #10 · L5 #14
 - ondemand: O1 #12 · O2 #16 · O3 #18 · O4 #19 · O6 #30
 - discovery: D1 #5 · D2 #6 · D3 #13 · D4 #22 · D5 #23
@@ -22,6 +22,10 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   in-flight agents (L1, O3, D1, D3, M2, O6 review, IC-1) resumed from their saved state. Lesson: ≤5 concurrent agents.
 
 ## Last completions
+- IC-2 (O1+O2 browse→play, run as "IC-1"): journeys pass in JSON-RPC, Default and Material (play, seek, add,
+  favourite after restart, regression). DEFECT: non-ASCII episode paths fail (ABC 307 with only x-nextjs-redirect;
+  resolver has no fallback from a cached path) → F4 #34 (bug, dispatched).
+- #30 O6 merged (PR #31, squash 9207314): AAC catch-up seek (fill-only bitrate/duration via onStream).
 - #16 O2 merged (PR #29, squash fd465d0): Programs → network → program → episodes, public builders, program-menu
   registry. Review APPROVE + fixes; runtime PASS (5 networks/5 programs, both skins). LMS menu rules recorded.
 - #12 O1 merged (PR #28, squash 95690b7): episode playback (MP3/AAC renditions, expired/not-found/geo messages,

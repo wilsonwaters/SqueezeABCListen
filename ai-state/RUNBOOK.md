@@ -441,4 +441,7 @@ Stale locks (> 60 min) are broken automatically. Keep lock hold times short.
   (M1 held it ~80 min) stall every other agent; acquire waits up to 30 min and breaks locks older than 60 min.
 - **OPML items: no `description` on browse items; synopsis first on detail pages** — see `ai-state/streams.md`
   "LMS menu rules learned on the testbed".
+- **Material grid click quirk (headless).** In a one-tile grid (e.g. Programs → "By network"), clicking the caption
+  opens Material's item menu (Copy details / Show image) instead of navigating; click the tile artwork or use list view.
+  Not a plugin defect (IC-2).
 
