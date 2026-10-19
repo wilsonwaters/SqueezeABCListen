@@ -1,0 +1,142 @@
+{
+ "collection": {
+  "id": "2885458",
+  "headingPrepared": {
+   "title": "Episodes"
+  },
+  "items": [
+   {
+    "articleLink": "/listen/programs/scienceshow/trees-potatoes-brendan-may-step/107266790",
+    "cardImagePrepared": {
+     "alt": "",
+     "imgSrc": "https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=1000&cropW=1000&xPos=0&yPos=0&width=862&height=862",
+     "ratio": "1x1",
+     "srcSet": [
+      "https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=1000&cropW=1000&xPos=0&yPos=0&width=160&height=160 160w"
+     ],
+     "width": "862",
+     "height": "862"
+    },
+    "cardMediaIndicatorPrepared": {
+     "icon": "audio",
+     "duration": 3300
+    },
+    "contentLabelPrepared": null,
+    "contentUri": "coremedia://audioepisode/107266790",
+    "description": "Synopsis of Trees, potatoes and a step",
+    "cardId": "107266790",
+    "cardTitle": "Trees, potatoes and a step",
+    "noBorders": true,
+    "presentersPrepared": [],
+    "docType": "audioepisode",
+    "segments": null,
+    "programTemplate": "audio",
+    "cardAttributionPrepared": {
+     "publishedDate": "2026-10-17T01:00:00+00:00",
+     "publishedDateFormat": false
+    }
+   },
+   {
+    "articleLink": "/listen/programs/lab-notes/lab-notes-when-astronomers-make-mistakes/107232984",
+    "cardImagePrepared": {
+     "alt": "",
+     "imgSrc": "https://live-production.wcms.abc-cdn.net.au/6d28416a630b86cc332eb7aa3cf680ba?impolicy=wcms_crop_resize&cropH=1000&cropW=1000&xPos=0&yPos=0&width=862&height=862",
+     "ratio": "1x1",
+     "srcSet": [
+      "https://live-production.wcms.abc-cdn.net.au/6d28416a630b86cc332eb7aa3cf680ba?impolicy=wcms_crop_resize&cropH=1000&cropW=1000&xPos=0&yPos=0&width=160&height=160 160w"
+     ],
+     "width": "862",
+     "height": "862"
+    },
+    "cardMediaIndicatorPrepared": {
+     "icon": "audio",
+     "duration": 646
+    },
+    "contentLabelPrepared": null,
+    "contentUri": "coremedia://audioepisode/107232984",
+    "description": "Synopsis of Lab Notes: When astronomers make mistakes",
+    "cardId": "107232984",
+    "cardTitle": "Lab Notes: When astronomers make mistakes",
+    "noBorders": true,
+    "presentersPrepared": [],
+    "docType": "audioepisode",
+    "segments": null,
+    "programTemplate": "audio",
+    "cardAttributionPrepared": {
+     "publishedDate": "2026-10-14T03:00:00+00:00",
+     "publishedDateFormat": false
+    }
+   },
+   {
+    "articleLink": "/listen/programs/scienceshow/the-science-show-10-october/107100003",
+    "cardImagePrepared": null,
+    "cardMediaIndicatorPrepared": {
+     "icon": "audio",
+     "duration": 3240
+    },
+    "contentLabelPrepared": null,
+    "contentUri": "coremedia://audioepisode/107100003",
+    "description": "Synopsis of Science on the move",
+    "cardId": "107100003",
+    "cardTitle": "Science on the move",
+    "noBorders": true,
+    "presentersPrepared": [],
+    "docType": "audioepisode",
+    "segments": null,
+    "programTemplate": "audio",
+    "cardAttributionPrepared": {
+     "publishedDate": "2026-10-10T01:00:00+00:00",
+     "publishedDateFormat": false
+    }
+   },
+   {
+    "articleLink": "/listen/programs/scienceshow/science-extra/107100004",
+    "cardImagePrepared": null,
+    "cardMediaIndicatorPrepared": {
+     "icon": "audio",
+     "duration": 1500
+    },
+    "contentLabelPrepared": null,
+    "contentUri": "coremedia://audioepisode/107100004",
+    "description": "Synopsis of Science extra (undated)",
+    "cardId": "107100004",
+    "cardTitle": "Science extra (undated)",
+    "noBorders": true,
+    "presentersPrepared": [],
+    "docType": "audioepisode",
+    "segments": null,
+    "programTemplate": "audio"
+   },
+   {
+    "articleLink": "/listen/programs/scienceshow/the-science-show-3-october/107100005",
+    "cardImagePrepared": null,
+    "cardMediaIndicatorPrepared": {
+     "icon": "audio",
+     "duration": 3180
+    },
+    "contentLabelPrepared": null,
+    "contentUri": "coremedia://audioepisode/107100005",
+    "description": "Synopsis of Fossils and physics",
+    "cardId": "107100005",
+    "cardTitle": "Fossils and physics",
+    "noBorders": true,
+    "presentersPrepared": [],
+    "docType": "audioepisode",
+    "segments": null,
+    "programTemplate": "audio",
+    "cardAttributionPrepared": {
+     "publishedDate": "2026-10-03T01:00:00+00:00",
+     "publishedDateFormat": false
+    }
+   }
+  ],
+  "pagination": {
+   "collectionLoaderLimit": "10",
+   "offset": 0,
+   "size": 5,
+   "total": 250
+  },
+  "programId": "2885500",
+  "programTemplate": "audio"
+ }
+}

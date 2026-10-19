@@ -1,0 +1,113 @@
+{
+ "pageProps": {
+  "heroImageWithCTAPrepared": {
+   "heading": "Classic Drive",
+   "heroImagePrepared": {
+    "alt": "",
+    "imgSrc": "https://live-production.wcms.abc-cdn.net.au/c1a55dc0000000000000000000000000?impolicy=wcms_crop_resize&cropH=1000&cropW=1000&xPos=0&yPos=0&width=862&height=862",
+    "ratio": "1x1",
+    "srcSet": [
+     "https://live-production.wcms.abc-cdn.net.au/c1a55dc0000000000000000000000000?impolicy=wcms_crop_resize&cropH=1000&cropW=1000&xPos=0&yPos=0&width=160&height=160 160w"
+    ],
+    "width": "862",
+    "height": "862"
+   },
+   "uri": "coremedia://program/90000101",
+   "attributionLinksPrepared": [
+    {
+     "url": "https://www.abc.net.au/listen/classic/",
+     "title": "ABC Classic",
+     "screenReaderText": "Source:"
+    }
+   ]
+  },
+  "heroDescriptionPrepared": {
+   "descriptionPrepared": {
+    "descriptor": {
+     "type": "tagname",
+     "key": "div",
+     "props": {},
+     "children": [
+      {
+       "type": "tagname",
+       "key": "p",
+       "props": {},
+       "children": [
+        {
+         "type": "text",
+         "content": "About Classic Drive."
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "presentersPrepared": [],
+  "programCollectionPrepared": {
+   "id": "90000102",
+   "items": [
+    {
+     "articleLink": "/listen/programs/classic-drive/classic-drive-16-october/107300001",
+     "cardImagePrepared": {
+      "alt": "",
+      "imgSrc": "https://live-production.wcms.abc-cdn.net.au/c1a55dc0000000000000000000000001?impolicy=wcms_crop_resize&cropH=1000&cropW=1000&xPos=0&yPos=0&width=862&height=862",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://live-production.wcms.abc-cdn.net.au/c1a55dc0000000000000000000000001?impolicy=wcms_crop_resize&cropH=1000&cropW=1000&xPos=0&yPos=0&width=160&height=160 160w"
+      ],
+      "width": "862",
+      "height": "862"
+     },
+     "cardMediaIndicatorPrepared": {
+      "icon": "audio",
+      "duration": 10800
+     },
+     "contentLabelPrepared": null,
+     "contentUri": "coremedia://audioepisode/107300001",
+     "description": "Synopsis of Classic Drive: Thursday",
+     "cardId": "107300001",
+     "cardTitle": "Classic Drive: Thursday",
+     "noBorders": true,
+     "presentersPrepared": [],
+     "docType": "audioepisode",
+     "segments": null,
+     "programTemplate": "audio",
+     "cardAttributionPrepared": {
+      "publishedDate": "2026-10-16T06:00:00+00:00",
+      "publishedDateFormat": false
+     }
+    },
+    {
+     "articleLink": "/listen/programs/classic-drive/classic-drive-15-october/107300002",
+     "cardImagePrepared": null,
+     "cardMediaIndicatorPrepared": {
+      "icon": "audio",
+      "duration": 10800
+     },
+     "contentLabelPrepared": null,
+     "contentUri": "coremedia://audioepisode/107300002",
+     "description": "Synopsis of Classic Drive: Wednesday",
+     "cardId": "107300002",
+     "cardTitle": "Classic Drive: Wednesday",
+     "noBorders": true,
+     "presentersPrepared": [],
+     "docType": "audioepisode",
+     "segments": null,
+     "programTemplate": "audio",
+     "cardAttributionPrepared": {
+      "publishedDate": "2026-10-15T06:00:00+00:00",
+      "publishedDateFormat": false
+     }
+    }
+   ],
+   "pagination": {
+    "offset": 0,
+    "size": 10,
+    "total": 120
+   }
+  },
+  "programTemplate": "audio",
+  "webDistributionRestricted": false
+ }
+}

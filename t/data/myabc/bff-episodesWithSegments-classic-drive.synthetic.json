@@ -1,0 +1,137 @@
+{
+ "collection": {
+  "id": "90000102",
+  "headingPrepared": {
+   "title": "Episodes"
+  },
+  "items": [
+   {
+    "articleLink": "/listen/programs/classic-drive/classic-drive-16-october/107300001",
+    "cardImagePrepared": {
+     "alt": "",
+     "imgSrc": "https://live-production.wcms.abc-cdn.net.au/c1a55dc0000000000000000000000001?impolicy=wcms_crop_resize&cropH=1000&cropW=1000&xPos=0&yPos=0&width=862&height=862",
+     "ratio": "1x1",
+     "srcSet": [
+      "https://live-production.wcms.abc-cdn.net.au/c1a55dc0000000000000000000000001?impolicy=wcms_crop_resize&cropH=1000&cropW=1000&xPos=0&yPos=0&width=160&height=160 160w"
+     ],
+     "width": "862",
+     "height": "862"
+    },
+    "cardMediaIndicatorPrepared": {
+     "icon": "audio",
+     "duration": 10800
+    },
+    "contentLabelPrepared": null,
+    "contentUri": "coremedia://audioepisode/107300001",
+    "description": "Synopsis of Classic Drive: Thursday",
+    "cardId": "107300001",
+    "cardTitle": "Classic Drive: Thursday",
+    "noBorders": true,
+    "presentersPrepared": [],
+    "docType": "audioepisode",
+    "segments": null,
+    "programTemplate": "audio",
+    "cardAttributionPrepared": {
+     "publishedDate": "2026-10-16T06:00:00+00:00",
+     "publishedDateFormat": false
+    }
+   },
+   {
+    "articleLink": "/listen/programs/classic-drive/classic-drive-15-october/107300002",
+    "cardImagePrepared": null,
+    "cardMediaIndicatorPrepared": {
+     "icon": "audio",
+     "duration": 10800
+    },
+    "contentLabelPrepared": null,
+    "contentUri": "coremedia://audioepisode/107300002",
+    "description": "Synopsis of Classic Drive: Wednesday",
+    "cardId": "107300002",
+    "cardTitle": "Classic Drive: Wednesday",
+    "noBorders": true,
+    "presentersPrepared": [],
+    "docType": "audioepisode",
+    "segments": null,
+    "programTemplate": "audio",
+    "cardAttributionPrepared": {
+     "publishedDate": "2026-10-15T06:00:00+00:00",
+     "publishedDateFormat": false
+    }
+   },
+   {
+    "articleLink": "/listen/programs/classic-drive/classic-drive-14-october/107300003",
+    "cardImagePrepared": null,
+    "cardMediaIndicatorPrepared": {
+     "icon": "audio",
+     "duration": 10800
+    },
+    "contentLabelPrepared": null,
+    "contentUri": "coremedia://audioepisode/107300003",
+    "description": "Synopsis of Classic Drive: Tuesday",
+    "cardId": "107300003",
+    "cardTitle": "Classic Drive: Tuesday",
+    "noBorders": true,
+    "presentersPrepared": [],
+    "docType": "audioepisode",
+    "segments": null,
+    "programTemplate": "audio",
+    "cardAttributionPrepared": {
+     "publishedDate": "2026-10-14T03:00:00+00:00",
+     "publishedDateFormat": false
+    }
+   },
+   {
+    "articleLink": "/listen/programs/classic-drive/classic-drive-13-october/107300004",
+    "cardImagePrepared": null,
+    "cardMediaIndicatorPrepared": {
+     "icon": "audio",
+     "duration": 10800
+    },
+    "contentLabelPrepared": null,
+    "contentUri": "coremedia://audioepisode/107300004",
+    "description": "Synopsis of Classic Drive: Monday",
+    "cardId": "107300004",
+    "cardTitle": "Classic Drive: Monday",
+    "noBorders": true,
+    "presentersPrepared": [],
+    "docType": "audioepisode",
+    "segments": null,
+    "programTemplate": "audio",
+    "cardAttributionPrepared": {
+     "publishedDate": "2026-10-13T06:00:00+00:00",
+     "publishedDateFormat": false
+    }
+   },
+   {
+    "articleLink": "/listen/programs/classic-drive/classic-drive-12-october/107300005",
+    "cardImagePrepared": null,
+    "cardMediaIndicatorPrepared": {
+     "icon": "audio",
+     "duration": 10800
+    },
+    "contentLabelPrepared": null,
+    "contentUri": "coremedia://audioepisode/107300005",
+    "description": "Synopsis of Classic Drive: Friday",
+    "cardId": "107300005",
+    "cardTitle": "Classic Drive: Friday",
+    "noBorders": true,
+    "presentersPrepared": [],
+    "docType": "audioepisode",
+    "segments": null,
+    "programTemplate": "audio",
+    "cardAttributionPrepared": {
+     "publishedDate": "2026-10-12T06:00:00+00:00",
+     "publishedDateFormat": false
+    }
+   }
+  ],
+  "pagination": {
+   "collectionLoaderLimit": "10",
+   "offset": 0,
+   "size": 5,
+   "total": 120
+  },
+  "programId": "90000101",
+  "programTemplate": "audio"
+ }
+}
