@@ -231,10 +231,11 @@ subtest '_programsRoot: By network; the network list' => sub {
 	my $c = feed( \&Plugins::ABCListen::OnDemand::_programsRoot );
 	is( $c->count, 1, 'one callback' );
 	is_deeply(
-		items_of($c),
-		[ { name => 'By network', type => 'link', url => \&Plugins::ABCListen::OnDemand::_networksFeed, image => $ICON } ],
-		'one "By network" link (exact keys)'
+		items_of($c)->[0],
+		{ name => 'By network', type => 'link', url => \&Plugins::ABCListen::OnDemand::_networksFeed, image => $ICON },
+		'"By network" link first (exact keys)'
 	);
+	is_deeply( names( items_of($c) ), [ 'By network', "All programs A\x{2013}Z", 'By type' ], 'then O3\'s A–Z and By type (t/34)' );
 
 	$c = open_item( items_of($c)->[0] );
 	is( $c->count, 1, 'networks: one callback' );
