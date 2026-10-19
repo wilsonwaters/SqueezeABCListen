@@ -22,7 +22,8 @@ package Plugins::ABCListen::Stations;
 #                                    NewsRadio.
 #   Stations->playable($id)          1 if the station can be listed and played: known; not HLS-only
 #                                    unless it has a mediahub stream; event-only services only while
-#                                    the cached event status says on air (unknown = 0). L5 extends it.
+#                                    the cached event status says on air (unknown = 0). The same in
+#                                    every liveQuality (HLS-only services wait for L6).
 #   Stations->streamCandidates($id, $cb)
 #                                    calls $cb exactly once with \@urls (ordered, direct audio streams,
 #                                    never .pls/.m3u8/.f4m) or { error => TOKEN }:
@@ -34,6 +35,17 @@ package Plugins::ABCListen::Stations;
 #                                    PLUGIN_ABCLISTEN_LIVE_HLS_ONLY; event-only off air ->
 #                                    PLUGIN_ABCLISTEN_LIVE_OFF_AIR (on air: its epg aac sources, a .pls
 #                                    resolved to Icecast first); unknown id -> PLUGIN_ABCLISTEN_UNAVAILABLE.
+#                                    L5: with liveQuality 'mediahub' the mediahub streams come first and
+#                                    Icecast is the alternate (no mediahub stream: Icecast only).
+#   Stations->liveQuality            L5: the effective live quality, read at play time: 'mediahub' when
+#                                    the pref liveQuality is 'mediahub', else 'standard' (undef or any
+#                                    other stored value).
+#   validateLiveQuality($pref, $new) L5: the liveQuality validator, true for exactly 'standard' or
+#                                    'mediahub'. There is no HLS option until L6 (#14).
+#   Stations->noteStream($client, $song, $id)
+#                                    L5, the live kind's onStream: once per play (per song), logs at INFO
+#                                    "using <family> instead of <family> for <ID>" when the stream that
+#                                    plays isn't the station's first candidate (F2 fell back to another).
 #   Stations->eventStatus($id, $cb)  $cb->({ onAir => 0|1, sources => [aac urls] }) exactly once. One
 #                                    epgNowPlaying/<ID>/now request per service per 5 min (errors,
 #                                    `null`, {} and HLS-only sources count as off air and are cached
@@ -55,8 +67,11 @@ package Plugins::ABCListen::Stations;
 use strict;
 use warnings;
 
+use Scalar::Util qw(refaddr weaken);
+
 use Slim::Utils::Cache;
 use Slim::Utils::Log;
+use Slim::Utils::Prefs;
 
 use Plugins::ABCListen::API;
 use Plugins::ABCListen::StationData;
@@ -107,7 +122,8 @@ my %LISTEN_HOME_SLUGS = ( news => 'NEWS' );
 # live-page slugs of other services' streams (listed once, under their own id)
 my %ALIAS_SLUGS = ( katherine => 'LOCAL_DARWIN' );
 
-my $log = logger('plugin.abclisten');
+my $log   = logger('plugin.abclisten');
+my $prefs = preferences('plugin.abclisten');
 
 my ( @RECORDS, %BY_ID, %LIVE_SLUGS );
 _setRecords();
@@ -121,6 +137,13 @@ my %EVENT;           # id => { at, onAir, sources }
 my %EVENT_WAITERS;   # id => [ callbacks ]
 my @EVENT_QUEUE;
 my $eventsRunning = 0;
+
+# === L5 ===
+my %LIVE_QUALITIES = map { $_ => 1 } qw(standard mediahub);
+my %PREFERRED;    # id => the first candidate of its last streamCandidates answer (noteStream)
+my %CHECKED;      # refaddr of a song noteStream has checked => that song (weak), so once per play
+                  # without writing to the song
+# === /L5 ===
 
 # ---------------------------------------------------------------------------
 # Catalogue
@@ -270,14 +293,21 @@ sub _slugLookup {
 sub streamCandidates {
 	my ( $class, $id, $cb ) = @_;
 
-	my $answer = _once($cb);
+	# L5: the effective quality at play time; the first candidate is kept for noteStream
+	my $quality = $class->liveQuality;
+	my $answer  = _once( sub {
+		my $result = shift;
+		$PREFERRED{$id} = $result->[0] if ref $result eq 'ARRAY' && @$result;
+		$cb->($result) if ref $cb eq 'CODE';
+	} );
+
 	my $rec = defined $id && !ref $id && $BY_ID{$id} or return $answer->( { error => UNAVAILABLE } );
 
 	if ( $rec->{eventOnly} ) {
 		return $class->eventStatus( $id, sub {
 			my $status = shift;
 			return $answer->( { error => OFF_AIR } ) unless $status && $status->{onAir};
-			_eventCandidates( $id, $status->{sources}, $answer );
+			_eventCandidates( $id, $status->{sources}, $quality, $answer );
 		} );
 	}
 
@@ -290,16 +320,16 @@ sub streamCandidates {
 	_icecast(
 		sprintf( PLS_URL, $rec->{hlsSlug} || $rec->{mount} ),
 		sprintf( ICECAST_URL, $rec->{mount} ),
-		sub { $answer->( [ grep { defined } $_[0], $mediahub ] ) },
+		sub { $answer->( [ _ordered( $quality, $_[0], $mediahub ) ] ) },
 	);
 
 	return;
 }
 
 # An on-air event service's candidates from its epg aac sources: the first .pls resolved to Icecast,
-# then the mediahub streams.
+# then the mediahub streams (L5: the mediahub streams first with liveQuality 'mediahub').
 sub _eventCandidates {
-	my ( $id, $sources, $answer ) = @_;
+	my ( $id, $sources, $quality, $answer ) = @_;
 
 	my ( @pls, @mediahub );
 	for my $source ( @{ $sources || [] } ) {
@@ -308,7 +338,7 @@ sub _eventCandidates {
 	}
 
 	my $done = sub {
-		my @candidates = grep { defined } @_, @mediahub;
+		my @candidates = _ordered( $quality, $_[0], @mediahub );
 		$answer->( @candidates ? \@candidates : { error => LIVE_FAILED } );
 	};
 
@@ -384,6 +414,66 @@ sub _isPlsUrl {
 }
 
 sub _isPlaylistUrl { $_[0] =~ /\.(?:m3u8|f4m|pls|m3u)(?:[?#]|\z)/i }
+
+# ---------------------------------------------------------------------------
+# === L5 === live quality (pref liveQuality) and the fallback log
+# ---------------------------------------------------------------------------
+
+sub validateLiveQuality {
+	my ( $pref, $new ) = @_;
+	return defined $new && !ref $new && $LIVE_QUALITIES{$new} ? 1 : 0;
+}
+
+# Any stored value other than 'mediahub' (undef, hand-edited) plays as 'standard'. There is no HLS
+# option until L6: PlayHLS (v1.01) hands ffmpeg the track's own URL ($FILE$), which F2's handler sets
+# back to abclisten:// after the scan (#14).
+sub liveQuality {
+	my $quality = eval { $prefs->get('liveQuality') };
+	return defined $quality && !ref $quality && $quality eq 'mediahub' ? 'mediahub' : 'standard';
+}
+
+# The candidates in $quality's order: Icecast first ('standard'), or the mediahub streams first.
+sub _ordered {
+	my ( $quality, $icecast, @mediahub ) = @_;
+	my @icecast = grep { defined } $icecast;
+	return grep { defined } ( $quality eq 'mediahub' ? ( @mediahub, @icecast ) : ( @icecast, @mediahub ) );
+}
+
+sub noteStream {
+	my ( $class, $client, $song, $id ) = @_;
+
+	return unless $song && ref $song && defined $id && !ref $id && $song->can('streamUrl');
+
+	# once per song (a play): songs LMS has dropped are forgotten first, so a reused address is new
+	delete @CHECKED{ grep { !defined $CHECKED{$_} } keys %CHECKED };
+	my $key = refaddr($song);
+	return if $CHECKED{$key};
+	weaken( $CHECKED{$key} = $song );
+
+	my $preferred = $PREFERRED{$id};
+	my $streamUrl = $song->streamUrl;
+	return unless defined $preferred && defined $streamUrl && !ref $streamUrl && $streamUrl =~ m{\Ahttps?://}i;
+
+	# the stream that plays, and (after a redirect) the candidate it came from
+	my $track = $song->can('currentTrack') ? $song->currentTrack : undef;
+	my $redir = $track && ref $track && $track->can('redir') ? $track->redir : undef;
+	return if grep { defined && !ref && $_ eq $preferred } $streamUrl, $redir;
+
+	my ( $from, $to ) = ( _family($preferred), _family($streamUrl) );
+	return if $from eq $to;
+
+	main::INFOLOG && $log->is_info && $log->info("Live stream fallback: using $to instead of $from for $id ($preferred could not be played; playing $streamUrl)");
+	return;
+}
+
+sub _family {
+	my $url = shift;
+	return 'Icecast'  if $url =~ m{\Ahttps?://abc\.streamguys1\.com/}i;
+	return 'mediahub' if $url =~ m{\Ahttps?://[A-Za-z0-9.-]+\.mediahubaustralia\.com/}i;
+	return 'another stream';
+}
+
+# === /L5 ===
 
 # ---------------------------------------------------------------------------
 # Event-only services
@@ -627,6 +717,8 @@ sub _reset {
 	%EVENT_WAITERS  = ();
 	@EVENT_QUEUE    = ();
 	$eventsRunning  = 0;
+	%PREFERRED      = ();
+	%CHECKED        = ();
 	return;
 }
 

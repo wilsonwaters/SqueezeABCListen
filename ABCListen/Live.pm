@@ -42,9 +42,12 @@ package Plugins::ABCListen::Live;
 #             pushed to Now Playing. Its station fallback is _metadata here: { title => station
 #             name, artist => "ABC listen", cover => logo (~600 px), bitrate => "56kbps CBR" } (no
 #             bitrate when the stream playing isn't StreamGuys Icecast); synchronous, no network,
-#             never dies.
+#             never dies. onStream (_onStream) also logs a fallback to another stream family once
+#             per play (L5: Stations->noteStream).
 # Song info: LiveMetadata->trackInfo ("Program info"), registered as a Slim::Menu::TrackInfo
 # provider.
+#
+# Pref liveQuality (L5): initialised and validated in init; Stations reads it at play time.
 #
 # Owned by the live stream: L1 creates; L2 owns _stationItem text (line2/description), L4 its type and
 # the station submenu.
@@ -93,11 +96,16 @@ my @HOME_VARIANT_NETWORKS = qw(RN TRIPLEJ DOUBLEJ CLASSIC);
 sub init {
 	$METADATA->init( stationMeta => \&_metadata );
 
+	# === L5 === the liveQuality pref ('standard' | 'mediahub'; validator in Stations.pm)
+	$prefs->init( { liveQuality => 'standard' } );
+	$prefs->setValidate( { validator => \&Plugins::ABCListen::Stations::validateLiveQuality }, 'liveQuality' );
+	# === /L5 ===
+
 	Plugins::ABCListen::ProtocolHandler->registerKind(
 		live => {
 			resolve  => \&_resolve,
 			metadata => \&Plugins::ABCListen::LiveMetadata::metadata,
-			onStream => \&Plugins::ABCListen::LiveMetadata::onStream,
+			onStream => \&_onStream,    # L2's LiveMetadata::onStream, then L5's fallback log
 			onStop   => \&Plugins::ABCListen::LiveMetadata::onStop,
 		}
 	);
@@ -426,6 +434,15 @@ sub _resolve {
 
 	return;
 }
+
+# === L5 === the live kind's onStream: L2's metadata poll (unchanged), then L5's fallback log (once
+# per play). Each part contains its own errors, so one never stops the other.
+sub _onStream {
+	Plugins::ABCListen::LiveMetadata::onStream(@_);
+	eval { $STATIONS->noteStream(@_); 1 } or $log->warn( 'Live stream fallback check failed: ' . ( $@ || 'unknown error' ) );
+	return;
+}
+# === /L5 ===
 
 sub _metadata {
 	my ( $client, $url, $id ) = @_;

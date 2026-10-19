@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 # M1: the plugin settings page and the homeState pref.
-#   * Plugins::ABCListen::Settings: name, page, prefs (namespace plugin.abclisten, homeState), server-wide;
+#   * Plugins::ABCListen::Settings: name, page, prefs (namespace plugin.abclisten, homeState, then L5's
+#     liveQuality: its section and pref are tested in t/28-stream-quality.t), server-wide;
 #     its handler HTML-escapes a rejected value before LMS's base handler echoes it in its warning;
 #   * MyABC->init: homeState default '' (an existing value is kept), the validator, the settings page
 #     created only under main::WEBUI, and a failing settings constructor logged once without dying;
@@ -66,7 +67,7 @@ subtest 'Settings: name, page, prefs, server-wide' => sub {
 	my ( $prefs, @names ) = Plugins::ABCListen::Settings->prefs;
 	is( $prefs, preferences('plugin.abclisten'), 'prefs namespace is plugin.abclisten' );
 	is( $prefs->namespace, 'plugin.abclisten', '... by name' );
-	is_deeply( \@names, ['homeState'], 'the page handles homeState' );
+	is_deeply( \@names, [qw(homeState liveQuality)], 'the page handles homeState, then liveQuality (appended by L5, t/28)' );
 	ok( !Plugins::ABCListen::Settings->needsClient, 'server-wide page (no needsClient)' );
 };
 
@@ -215,7 +216,7 @@ subtest 'template settings/basic.html' => sub {
 	like( $html, qr/\[% PROCESS settings\/footer\.html %\]\s*\z/, 'ends with the settings footer' );
 
 	my @select = $html =~ /(<select\b[^>]*>)/g;
-	is( scalar @select, 1, 'one select' );
+	is( scalar @select, 2, 'two selects: homeState, then L5\'s liveQuality (t/28)' );
 	my $select = $select[0] || '';
 	like( $select, qr/\bname="pref_homeState"/, 'select name="pref_homeState"' );
 	# id is the pref name, as in core templates: the settings footer binds its validator by that id
@@ -242,20 +243,22 @@ subtest 'template settings/basic.html' => sub {
 	like( $html, qr/\[% WRAPPER setting title="PLUGIN_ABCLISTEN_HOME_STATE" desc="PLUGIN_ABCLISTEN_HOME_STATE_DESC" %\]/, 'setting WRAPPER with title and description' );
 
 	my @markers = $html =~ /<!-- === (\/?\w+) === -->/g;
-	is_deeply( \@markers, [qw(M1 /M1 L5 /L5)], 'owner sections: M1 (with the select), then the reserved L5 section' );
+	is_deeply( \@markers, [qw(M1 /M1 L5 /L5)], 'owner sections: M1 (with the select), then L5' );
 	my ($m1) = $html =~ m{<!-- === M1 === -->(.*?)<!-- === /M1 === -->}s;
 	like( $m1 || '', qr/<select\b[^>]*name="pref_homeState"/, 'the select is inside the M1 section' );
 	my ($l5) = $html =~ m{<!-- === L5 === -->(.*?)<!-- === /L5 === -->}s;
-	like( $l5 // 'missing', qr/\A\s*\z/, 'the L5 section is empty' );
+	like( $l5 // 'missing', qr/<select\b[^>]*name="pref_liveQuality"/, 'the L5 section holds the liveQuality select (checked in t/28)' );
 
 	Slim::Utils::Strings->loadFile( File::Spec->catfile( $ROOT, 'ABCListen', 'strings.txt' ) );
-	my %tokens = map { $_ => 1 } $html =~ /\b(PLUGIN_ABCLISTEN\w*)/g;
+	( my $outsideL5 = $html ) =~ s{<!-- === L5 === -->.*?<!-- === /L5 === -->}{}s;
+	my %tokens = map { $_ => 1 } $outsideL5 =~ /\b(PLUGIN_ABCLISTEN\w*)/g;
 	is_deeply(
 		[ sort keys %tokens ],
 		[ sort( qw(PLUGIN_ABCLISTEN_HOME_STATE PLUGIN_ABCLISTEN_HOME_STATE_DESC PLUGIN_ABCLISTEN_HOME_STATE_NONE), map {"PLUGIN_ABCLISTEN_STATE_$_"} @STATES ) ],
-		'template uses the M1 tokens and (read-only) L1\'s state names'
+		'outside the L5 section, the template uses the M1 tokens and (read-only) L1\'s state names'
 	);
-	ok( defined Slim::Utils::Strings::string($_), "$_ is defined in strings.txt" ) for sort keys %tokens;
+	my %all = map { $_ => 1 } $html =~ /\b(PLUGIN_ABCLISTEN\w*)/g;
+	ok( defined Slim::Utils::Strings::string($_), "$_ is defined in strings.txt" ) for sort keys %all;
 };
 
 subtest 'install.xml optionsURL' => sub {

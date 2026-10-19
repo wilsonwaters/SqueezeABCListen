@@ -184,19 +184,13 @@ PLUGIN_ABCLISTEN_LIVE_QUALITY
 	EN	Live stream quality
 
 PLUGIN_ABCLISTEN_LIVE_QUALITY_DESC
-	EN	Standard plays ABC's Icecast streams, which work everywhere. The other options try a higher-quality stream first and fall back to the standard stream if it can't be played.
+	EN	Standard plays ABC's Icecast streams, which work everywhere. ABC mediahub AAC tries ABC's higher-quality stream first and falls back to the standard stream if it can't be played.
 
 PLUGIN_ABCLISTEN_LIVE_QUALITY_STANDARD
-	EN	Standard
+	EN	Standard: 56 kbps, works everywhere
 
 PLUGIN_ABCLISTEN_LIVE_QUALITY_MEDIAHUB
-	EN	Higher quality AAC (may not work outside Australia)
-
-PLUGIN_ABCLISTEN_LIVE_QUALITY_HLS
-	EN	Highest quality HLS (needs the PlayHLS plugin)
-
-PLUGIN_ABCLISTEN_LIVE_QUALITY_NO_PLAYHLS
-	EN	The PlayHLS plugin is not installed or not enabled, so the standard streams are used instead.
+	EN	ABC mediahub AAC: higher quality, may only work in Australia
 
 # === O3 === All programs A-Z and by type
 
