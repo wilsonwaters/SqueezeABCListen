@@ -1,0 +1,189 @@
+{
+  "hits": [
+    {
+      "objectID": "coremedia://audioepisode/900001",
+      "contentType": "audioepisode",
+      "title": "Expired everywhere",
+      "programTitle": "Edge Show",
+      "programID": 800001,
+      "canonicalURL": "https://www.abc.net.au/listen/programs/edgeshow/expired-everywhere/900001",
+      "duration": 1800,
+      "mediaDownloadStatus": "EXPIRED",
+      "mediaStreamingStatus": "EXPIRED",
+      "mediaRenditions": [
+        { "url": "https://mediacore-live-production.akamaized.net/audio/01/aa/Z/e1.mp3", "contentType": "audio/mpeg", "bitrate": 128 }
+      ],
+      "dates": { "publicationDate": "2024-01-10T01:00:00+00:00", "mediaDownloadAvailableTo": "2024-02-07T01:00:00+00:00", "mediaStreamingAvailableTo": "2024-02-07T01:00:00+00:00" }
+    },
+    {
+      "objectID": "coremedia://audioepisode/900002",
+      "contentType": "audioepisode",
+      "title": "No media at all",
+      "programTitle": "Edge Show",
+      "programID": 800001,
+      "canonicalURL": "https://www.abc.net.au/listen/programs/edgeshow/no-media/900002",
+      "mediaDownloadStatus": "NONE",
+      "mediaStreamingStatus": "NONE"
+    },
+    {
+      "objectID": "coremedia://audioepisode/900003",
+      "contentType": "audioepisode",
+      "title": "Download expired, no stream",
+      "programTitle": "Edge Show",
+      "programID": 800001,
+      "canonicalURL": "https://www.abc.net.au/listen/programs/edgeshow/download-expired/900003",
+      "mediaDownloadStatus": "EXPIRED",
+      "mediaStreamingStatus": "NONE"
+    },
+    {
+      "objectID": "coremedia://audioepisode/900004",
+      "contentType": "audioepisode",
+      "title": "Permanent MP3, expired AAC",
+      "programTitle": "Edge Show",
+      "programID": 800001,
+      "canonicalURL": "https://www.abc.net.au/listen/programs/edgeshow/permanent-mp3/900004/",
+      "teaserText": "",
+      "synopsis": "The synopsis, used when there is no teaser text.",
+      "duration": 3300,
+      "mediaDownloadStatus": "AVAILABLE",
+      "mediaStreamingStatus": "EXPIRED",
+      "programDefaultThumbnail": {
+        "16x9": "https://live-production.wcms.abc-cdn.net.au/edgeprogram16x9?impolicy=wcms_crop_resize&cropH=1125&cropW=2000&xPos=0&yPos=0&width=862&height=485",
+        "1x1": "https://live-production.wcms.abc-cdn.net.au/edgeprogram1x1?impolicy=wcms_crop_resize&cropH=2000&cropW=2000&xPos=0&yPos=0&width=862&height=862"
+      },
+      "mediaRenditions": [
+        { "url": "https://mediacore-live-production.akamaized.net/audio/01/aa/Z/e4.aac", "contentType": "audio/aac", "bitrate": 96, "fileSize": 39600000 },
+        { "url": "https://mediacore-live-production.akamaized.net/audio/01/aa/Z/e4.mp3", "contentType": "audio/mpeg", "bitrate": 128, "fileSize": null },
+        { "contentType": "audio/mpeg", "bitrate": 64 }
+      ],
+      "dates": {
+        "publicationDate": "2025-06-01T09:30:00+10:00",
+        "mediaDownloadAvailableFrom": "2025-06-01T09:30:00+10:00",
+        "mediaDownloadAvailableTo": "2200-01-01T00:00:00+00:00",
+        "mediaStreamingAvailableFrom": "2025-06-01T09:30:00+10:00",
+        "mediaStreamingAvailableTo": "2025-06-29T09:30:00+10:00"
+      }
+    },
+    {
+      "objectID": "coremedia://audiosegment/900005",
+      "contentType": "audiosegment",
+      "title": "Australia-only audio",
+      "programTitle": "Edge Show",
+      "programID": "800001",
+      "canonicalURL": "https://abc.net.au/listen/programs/edgeshow/australia-only/900005?utm=x#top",
+      "teaserText": "Only plays in Australia.",
+      "duration": 600,
+      "mediaDownloadStatus": "AVAILABLE",
+      "mediaStreamingStatus": "NONE",
+      "mediaRenditions": [
+        { "url": "https://mediacore-live-production.akamaized.net/geo-001/audio/01/aa/Z/e5.mp3", "contentType": "audio/mpeg", "bitrate": "192" }
+      ],
+      "dates": {
+        "publicationDate": "2026-10-10T20:00:00+00:00",
+        "mediaDownloadAvailableFrom": "2026-10-10T20:00:00+00:00",
+        "mediaDownloadAvailableTo": "2027-10-10T20:00:00+00:00",
+        "mediaStreamingAvailableFrom": "2026-10-10T20:00:00+00:00",
+        "mediaStreamingAvailableTo": "2027-10-10T20:00:00+00:00"
+      }
+    },
+    {
+      "objectID": "coremedia://audioepisode/900006",
+      "contentType": "audioepisode",
+      "title": "Not released yet",
+      "programTitle": "Edge Show",
+      "programID": 800001,
+      "canonicalURL": "https://www.abc.net.au/listen/programs/edgeshow/not-yet/900006",
+      "duration": 1200,
+      "mediaDownloadStatus": "PENDING",
+      "mediaStreamingStatus": "PENDING",
+      "defaultThumbnail": "https://live-production.wcms.abc-cdn.net.au/edgeepisode6?impolicy=wcms_crop_resize&cropH=1000&cropW=1000&xPos=0&yPos=0&width=862&height=862",
+      "mediaRenditions": [
+        { "url": "https://mediacore-live-production.akamaized.net/audio/01/aa/Z/e6.mp3", "contentType": "audio/mpeg", "bitrate": 128 }
+      ],
+      "dates": {
+        "publicationDate": "2026-10-25T20:00:00+00:00",
+        "mediaDownloadAvailableFrom": "2026-10-25T20:00:00+00:00",
+        "mediaDownloadAvailableTo": "2200-01-01T00:00:00+00:00",
+        "mediaStreamingAvailableFrom": "2026-10-25T20:00:00+00:00",
+        "mediaStreamingAvailableTo": "2026-11-22T20:00:00+00:00"
+      }
+    },
+    {
+      "objectID": "coremedia://audio/900007",
+      "contentType": "audio",
+      "title": "No statuses, renditions or dates",
+      "canonicalURL": "https://www.abc.net.au/news/audio/no-statuses/900007"
+    },
+    {
+      "objectID": "coremedia://audioepisode/abc",
+      "contentType": "audioepisode",
+      "title": "Malformed objectID (letters)",
+      "canonicalURL": "https://www.abc.net.au/listen/programs/edgeshow/malformed/1",
+      "mediaDownloadStatus": "AVAILABLE"
+    },
+    {
+      "objectID": "106353760",
+      "contentType": "audioepisode",
+      "title": "Malformed objectID (no scheme)",
+      "canonicalURL": "https://www.abc.net.au/listen/programs/edgeshow/malformed/106353760",
+      "mediaDownloadStatus": "AVAILABLE"
+    },
+    {
+      "objectID": "coremedia://article/900010",
+      "contentType": "article",
+      "title": "Not audio",
+      "canonicalURL": "https://www.abc.net.au/news/not-audio/900010"
+    },
+    {
+      "objectID": "coremedia://audioepisode/900004",
+      "contentType": "audioepisode",
+      "title": "Permanent MP3, expired AAC (duplicate hit)",
+      "canonicalURL": "https://www.abc.net.au/listen/programs/edgeshow/permanent-mp3/900004",
+      "mediaDownloadStatus": "AVAILABLE",
+      "mediaStreamingStatus": "EXPIRED"
+    },
+    {
+      "objectID": "coremedia://audioepisode/900012",
+      "contentType": "audioepisode",
+      "title": "Q&amp;A: science  ",
+      "programTitle": "Edge Show",
+      "programID": 800001,
+      "canonicalURL": "https://www.abc.net.au/listen/programs/edgeshow/q-and-a/900012",
+      "teaserText": "Questions &amp; answers.",
+      "duration": 0,
+      "mediaDownloadStatus": "AVAILABLE",
+      "mediaStreamingStatus": "AVAILABLE",
+      "mediaRenditions": [
+        { "url": "https://mediacore-live-production.akamaized.net/audio/01/aa/Z/e12.mp3", "contentType": "audio/mpeg", "bitrate": 128 }
+      ],
+      "dates": { "publicationDate": "not a date" },
+      "_highlightResult": {
+        "title": { "value": "Q&amp;A: <em>science</em>", "matchLevel": "full", "matchedWords": ["science"] }
+      }
+    },
+    {
+      "objectID": "coremedia://audioepisode/900013",
+      "contentType": "audioepisode",
+      "title": "No download, stream expired",
+      "canonicalURL": "https://www.abc.net.au/listen/programs/edgeshow/stream-expired/900013",
+      "mediaDownloadStatus": "NONE",
+      "mediaStreamingStatus": "EXPIRED"
+    },
+    {
+      "objectID": "coremedia://audioepisode/900014",
+      "contentType": "audioepisode",
+      "title": "Lower-case statuses",
+      "canonicalURL": "https://www.abc.net.au/listen/programs/edgeshow/lower-case/900014",
+      "mediaDownloadStatus": "expired",
+      "mediaStreamingStatus": "none"
+    }
+  ],
+  "nbHits": 14,
+  "page": 0,
+  "nbPages": 1,
+  "hitsPerPage": 40,
+  "exhaustiveNbHits": true,
+  "query": "edge",
+  "params": "query=edge&hitsPerPage=40",
+  "processingTimeMS": 1
+}

@@ -1,0 +1,13 @@
+{
+  "hits": [],
+  "nbHits": 0,
+  "page": 0,
+  "nbPages": 0,
+  "hitsPerPage": 40,
+  "exhaustiveNbHits": true,
+  "exhaustiveTypo": true,
+  "exhaustive": { "nbHits": true, "typo": true },
+  "query": "zzqxvbnm",
+  "params": "query=zzqxvbnm&hitsPerPage=40",
+  "processingTimeMS": 1
+}
