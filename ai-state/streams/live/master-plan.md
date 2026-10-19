@@ -94,8 +94,9 @@ container (stakeholder-verified on pi14).
   `{title => program, artist => presenters || station, album => station name, cover => program image || logo}`;
   `onStream` starts one poll per **master** player (sync groups) for the playing service, next poll at program `end` +
   30 s (clamp 60–900 s, 30 s after errors); `onStop` / URL change kills timers; push sequence
-  `setCurrentTitle($url,$title)` (no client) → `$song->pluginData(wmaMeta => …)` → `currentPlaylistUpdateTime` →
-  `notifyFromArray($master, ['newmetadata'])`; never polls services nobody plays; never sets `$song->duration`.
+  `setCurrentTitle($url,$title)` (no client) → update the `live` kind's metadata cache (F2's `getMetadataFor`
+  dispatches to the kind's `metadata` hook and **ignores `pluginData(wmaMeta)`** — revised after F2 review) →
+  `currentPlaylistUpdateTime` → `notifyFromArray($master, ['newmetadata'])`; never polls services nobody plays; never sets `$song->duration`.
 - **Song info**: `Slim::Menu::TrackInfo` provider (registered in `Live->init`) for `abclisten://live/` tracks: "On air"
   program title, time slot, presenters, synopsis (from `/next` too: "Next: <program> <time>").
 - **Tests** `t/22-nowplaying.t` (parse RN and TRIPLEJ_PERTH fixtures; empty/off-air; TTL clamp; coalescing; last-good),
@@ -211,3 +212,7 @@ container (stakeholder-verified on pi14).
   (`PLUGIN_ABCLISTEN_RADIO`, `topWeight('radio')`, F1's `menuWeights`); no Radio section extras (LQ9: `/listen/radio`
   holds only station collections). `byPageSlug` maps network homes + `abc.net.au` host variants for D1/D4;
   `stationItem` also feeds D4's News/Sport/Kids listen rows. Plan-revision sub-agent; #2, #4, #10, #14 amended.
+- 2026-10-19 — F2 review: Now Playing metadata must flow through the `live` kind's `metadata` hook (F2's
+  `getMetadataFor` ignores `wmaMeta`); `onStream` fires once per player in a sync group (filter to master); `resolve`
+  candidates must be direct audio streams (not .pls). L1 should also supply `bitrate` (e.g. "56kbps CBR") in the live
+  kind's metadata — first play after restart otherwise shows bitrate 0 (F2 runtime verification). #2, #4 amended.
