@@ -8,15 +8,15 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - live: L1 #2 · L2 #4 · L3 #8 · L4 #10 · L5 #14
 - ondemand: O1 #12 · O2 #16 · O3 #18 · O4 #19 · O6 #30 · O7 #40 · O8 #48 (O7 follow-ups)
 - discovery: D1 #5 · D2 #6 · D3 #13 · D4 #22 · D5 #23 · D6 #44 (podcast A–Z groups) · D7 #51 (all categories) · D8 #56 (D7 follow-ups)
-- myabc: M1 #11 · M2 #20 · M3 #52 (settings/L5 follow-ups)
+- myabc: M1 #11 · M2 #20 · M3 #52 (settings/L5 follow-ups) · M4 #59 (Latest stale-id unfollow)
 - release: R1 #9 · R2 #15 · R3 #17
 
 ## Currently in flight
 - #4 L2 program on air — PR #47 in review + runtime check
 - **v0.3.0 system verification** on ff1be94 (journeys J1–J12 incl. upgrade from v0.2.0). Hold O4/D5 merges until v0.3.0 is cut.
-- #19 O4 episode extras — PR #57 in review + runtime check (merge after v0.3.0 is cut)
+- #19 O4 episode extras — PR #57 APPROVED; implementer adding review fixes (stable rows on fetch failure, failure cache, tests); merge after v0.3.0
 - #23 D5 audiobook chapters — PR #58 in review + runtime check (merge after v0.3.0 is cut)
-- Queued (cap 3): F6, O8, M3, D8, then v0.3.0 (system verification → release), R2, R3
+- Queued (cap 3): M4 (Should, before v1.0), F6, O8, M3, D8, then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
 - 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
