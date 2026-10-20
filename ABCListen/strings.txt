@@ -332,6 +332,22 @@ PLUGIN_ABCLISTEN_NO_TRACKLIST
 PLUGIN_ABCLISTEN_MORE_FROM
 	EN	More from %s
 
+# Song info: the heading of the episode's synopsis while an episode plays (added by O4)
+PLUGIN_ABCLISTEN_EPISODE_NOTES
+	EN	Episode notes
+
+# Song info: the tracklist link before its rows are loaded, so without a count (added by O4)
+PLUGIN_ABCLISTEN_TRACKLIST_LINK
+	EN	Tracklist
+
+# Joins the last two presenters: "Robyn Williams, Belinda Smith and Natasha Mitchell" (added by O4)
+PLUGIN_ABCLISTEN_NAMES_AND
+	EN	%s and %s
+
+# A segment's position when ABC gives no label: "2 of 5" (added by O4)
+PLUGIN_ABCLISTEN_SEGMENT_OF
+	EN	%s of %s
+
 # === D2 === Popular now, categories and podcasts
 
 PLUGIN_ABCLISTEN_POPULAR_NOW

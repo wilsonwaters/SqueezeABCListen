@@ -1,0 +1,68 @@
+{
+  "pageProps": {
+    "data": {
+      "documentProps": {
+        "id": "90000101",
+        "docType": "audioepisode",
+        "title": "Tracklist edge cases",
+        "canonicalURL": "https://www.abc.net.au/listen/programs/edgecases/tracklist-edge-cases/90000101",
+        "duration": 3600,
+        "tracklistPrepared": {
+          "items": [
+            {
+              "id": "a1",
+              "title": "Air on the G String &#8211; arr. for strings",
+              "artist": "Bach, Johann Sebastian &amp; sons",
+              "timestampType": "relative",
+              "timestampRelative": "00:12"
+            },
+            {
+              "id": "a2",
+              "title": "  No   timestamp  ",
+              "artist": "  The   Whitespace  Band ",
+              "timestampType": "absolute",
+              "timestamp": "4:05pm"
+            },
+            {
+              "id": "a3",
+              "title": "No artist",
+              "artist": null,
+              "timestampRelative": "1:02:38"
+            },
+            {
+              "id": "a4",
+              "title": "",
+              "artist": "Missing Title",
+              "timestampRelative": "05:00"
+            },
+            {
+              "id": "a5",
+              "artist": "No title key",
+              "timestampRelative": "06:00"
+            },
+            {
+              "id": "a6",
+              "title": "A bogus timestamp",
+              "artist": "Clock Skew",
+              "timestampRelative": "soon"
+            },
+            "not a track",
+            null,
+            {
+              "id": "a7",
+              "title": { "nested": "not text" },
+              "artist": "Nested Title"
+            },
+            {
+              "id": "a8",
+              "title": "Caf&eacute; con le&#x00F1;a",
+              "artist": "Ni&ntilde;o &amp; Co&nbsp;Ltd",
+              "timestampRelative": "59:59"
+            }
+          ],
+          "pagination": { "offset": 0, "total": 12, "size": 200 }
+        }
+      }
+    }
+  }
+}
