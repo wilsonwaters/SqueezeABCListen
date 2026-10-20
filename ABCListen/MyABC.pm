@@ -22,11 +22,13 @@ package Plugins::ABCListen::MyABC;
 #   Followed programs: an OnDemand->programItem row per Follow::listWithUnfollowed entry, in follow
 #     order (oldest follow first), tombstones included: a program unfollowed in the last 30 min
 #     keeps its row (the same programItem row; its program menu then offers Follow).
-#   Latest episodes: for each followed program (Follow::list: follow order, no tombstones)
-#     Programs->program(path) -> its episodeCollectionId -> Programs->episodes(id, 0, 5); an
-#     unfollowed program's episodes drop out at once. At most 4 programs in flight; a program
-#     that fails is skipped (WARN). After 25 s (XMLBrowser gives a feed 35 s) the feed answers with
-#     what has arrived (WARN with the number of programs left out) and ignores later results.
+#   Latest episodes: for each Follow::listWithUnfollowed entry (follow order, tombstones included)
+#     Programs->program(path) -> its episodeCollectionId -> Programs->episodes(id, 0, 5): a program
+#     unfollowed in the last 30 min keeps its episodes, in their places, until its tombstone
+#     expires (M4; see "Follow / Unfollow"); no follows and no tombstones -> the help text. At
+#     most 4 programs in flight; a program that fails is skipped (WARN). After 25 s (XMLBrowser
+#     gives a feed 35 s) the feed answers with what has arrived (WARN with the number of programs
+#     left out) and ignores later results.
 #     Merge: one row per episode id (the program the episode belongs to wins, else the first A-Z),
 #     newest first, then by program (Programs::sortKey), then by id; undated episodes last; the newest
 #     50. Rows are OnDemand->episodeItem rows (programImage = the followed entry's image;
@@ -34,8 +36,10 @@ package Plugins::ABCListen::MyABC;
 #     "<program>: <episodeItem name>" and line1 "<program>: <episode title>" (the episode meta cache
 #     keeps the episode title). Every program failing (or none answering in time) -> LOAD_FAILED;
 #     no episodes -> NO_EPISODES. The merged episode refs (plain data) are cached 15 min under the
-#     sorted followed paths, so a follow or unfollow starts a new list. Partial lists are cached too:
-#     XMLBrowser re-runs this feed to open a row, and a row's index must not move meanwhile.
+#     sorted paths of the entries, tombstones included: an unfollow (and a re-follow within 30 min)
+#     keeps the key and so the list; a new follow, or a tombstone expiring, starts a new list.
+#     Partial lists are cached too: XMLBrowser re-runs this feed to open a row, and a row's index
+#     must not move meanwhile.
 #
 # ---- Follow / Unfollow ----------------------------------------------------------------------------
 #   The follow rows for a program are always two rows, so no row after them ever moves, and the two
@@ -56,10 +60,19 @@ package Plugins::ABCListen::MyABC;
 #     Followed programs (and on into a program menu) that is used across that moment - including a
 #     menu left open on screen - may open the next program's menu, follow rows included. That
 #     residual window is the accepted limit of the guarantee.
-#   * Latest episodes: a follow or unfollow starts a new list, so its rows do move. A stale id there
-#     opens or plays another episode; the episode menu has no follow rows, so the follows never
-#     change. (If the episode menu ever links to its program, e.g. O4's "More from", this route
-#     needs the same care as Followed programs.)
+#   * Latest episodes (M4): the episode menu links to the episode's program (O4's "More from"), so
+#     an id can run My ABC listen -> Latest episodes -> episode -> More from -> the program's follow
+#     rows. Latest is built from the follows and the tombstones, under a key of all their paths, so
+#     an unfollow (from there or anywhere) changes neither the key nor the cached list: every id
+#     into Latest opens the same episode, its More from the same program, and a repeated Unfollow
+#     id lands on that program's hint text row (a no-op), never on another program's Unfollow. A
+#     re-follow within 30 min restores the entry in place: the same key again. When the 15 min
+#     cache expires the list is fetched again from the same programs, tombstones included, so rows
+#     move only if ABC's newest episodes changed meanwhile. Rows also move when a tombstone expires
+#     (30 min after its unfollow, its episodes leave) or a program not in the list is followed (via
+#     Latest only from the More from of an episode a followed program lists from another program).
+#     Those windows are the same accepted limit as for Followed programs: an id used across one may
+#     open another episode and, through its More from, another program's follow rows.
 #   _programMenuExtras($client, $program, $cb) (OnDemand->registerProgramMenuProvider): $cb->(\@rows)
 #     once, the follow rows (after the program header); $cb->([]) without a program path.
 #   _trackInfo (Slim::Menu::TrackInfo provider 'abclistenfollow', after 'top'): synchronous, no
@@ -215,14 +228,15 @@ sub _latestEpisodes {
 	my $once = _once($cb);
 
 	_try( $client, $once, sub {
-		my @follows = Plugins::ABCListen::Follow::list();
-		return _textFeed( $client, $once, 'PLUGIN_ABCLISTEN_NO_FOLLOWED_HELP' ) unless @follows;
+		# M4: tombstones included, so an unfollow keeps the list (and its key) for 30 min (see the header)
+		my @programs = Plugins::ABCListen::Follow::listWithUnfollowed();
+		return _textFeed( $client, $once, 'PLUGIN_ABCLISTEN_NO_FOLLOWED_HELP' ) unless @programs;
 
-		my $key    = _latestKey( \@follows );
+		my $key    = _latestKey( \@programs );
 		my $cached = _cache()->get($key);
 		return _latestFeed( $client, $once, $cached ) if ref $cached eq 'ARRAY';
 
-		_collectLatest( \@follows, sub {
+		_collectLatest( \@programs, sub {
 			my ( $results, $stats ) = @_;
 
 			_try( $client, $once, sub {
@@ -262,9 +276,10 @@ sub _latestRow {
 	return $item;
 }
 
-# Fetch the newest episodes of every followed program, LATEST_IN_FLIGHT programs at a time, and call
-# $done->(\@results, { ok, failed, skipped }) once: when every program has answered, or at the
-# deadline (later answers are ignored). A result is { entry, detail, episodes }.
+# Fetch the newest episodes of every entry (a followed program or a tombstone), LATEST_IN_FLIGHT
+# programs at a time, and call $done->(\@results, { ok, failed, skipped }) once: when every program
+# has answered, or at the deadline (later answers are ignored). A result is { entry, detail,
+# episodes }.
 sub _collectLatest {
 	my ( $follows, $done ) = @_;
 
@@ -420,10 +435,11 @@ sub _mergeLatest {
 	return [ map { +{ program => $_->{program}, episode => $_->{episode} } } @sorted ];
 }
 
-# Cache key: the sorted followed paths.
+# Cache key: the sorted paths of the entries (Follow::listWithUnfollowed: followed programs and
+# tombstones alike, so an unfollow or a re-follow within 30 min keeps the key).
 sub _latestKey {
-	my $follows = shift;
-	my $paths = join( "\n", sort map { $_->{path} } @$follows );
+	my $entries = shift;
+	my $paths = join( "\n", sort map { $_->{path} } @$entries );
 	utf8::encode($paths) if utf8::is_utf8($paths);
 	return 'myabc-latest:' . Digest::MD5::md5_hex($paths);
 }
