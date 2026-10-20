@@ -348,7 +348,7 @@ sub sport_ids {
 	my $c = collector();
 	$sport->{url}->( undef, $c->cb, {} );
 	advanceTime(3);
-	return map { ( $_->{url} // '' ) =~ m{\Aabclisten://live/(\w+)\z} ? $1 : '?' } @{ ( $c->args(0) )[0]->{items} };
+	return map { ( $_->{play} // $_->{url} // '' ) =~ m{\Aabclisten://live/(\w+)\z} ? $1 : '?' } @{ ( $c->args(0) )[0]->{items} };
 }
 
 subtest 'listing: playable, Radio -> Sport and stationItem are the same in every quality' => sub {
@@ -367,7 +367,7 @@ subtest 'listing: playable, Radio -> Sport and stationItem are the same in every
 		}
 
 		my $item = Plugins::ABCListen::Live->stationItem( undef, 'TRIPLEJ' );
-		is( $item->{url},           'abclisten://live/TRIPLEJ', "$q: the row plays abclisten://live/TRIPLEJ" );
+		is( $item->{play},          'abclisten://live/TRIPLEJ', "$q: the row plays abclisten://live/TRIPLEJ" );
 		is( $item->{favorites_url}, 'abclisten://live/TRIPLEJ', "$q: favourites keep abclisten://live/TRIPLEJ" );
 		is( scalar( grep { !ref && /streamguys1|mediahubaustralia|streaming\.abc-cdn|\.m3u8|\.pls/ } values %$item ), 0, "$q: no stream URL in the row" );
 	}

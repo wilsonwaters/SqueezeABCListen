@@ -381,7 +381,7 @@ subtest 'amendment 1: station cards are looked up by path (L1 owns the rules); /
 	fresh();
 	my $url = sub {
 		my $item = $COL->itemFor( $CLIENT, Plugins::ABCListen::API::cardRef( card(@_) ), 1 );
-		return $item ? $item->{url} : undef;
+		return $item ? $item->{play} : undef;    # L4: station rows are links that play
 	};
 
 	is( $url->( 'coremedia://externallink/1', articleLink => 'https://www.abc.net.au/listen/news' ), 'abclisten://live/NEWS', '/listen/news (externallink, no /live/ segment) -> NEWS' );
@@ -400,13 +400,13 @@ subtest 'amendment 2: itemsFor checks event-only services on air (checkOnAir) be
 	epg_route( 'SPORT_BBL', 'epg-event-onair-pls.json' );
 	my $c = run( 'itemsFor', $CLIENT, \@refs, 1 );
 	is( $c->count, 1, 'one callback' );
-	is_deeply( [ map { $_->{url} } @{ ( $c->args(0) )[0] } ], [qw(abclisten://live/GRANDSTAND abclisten://live/SPORT_BBL)], 'BBL on air: listed (it would be dropped without the check)' );
+	is_deeply( [ map { $_->{play} } @{ ( $c->args(0) )[0] } ], [qw(abclisten://live/GRANDSTAND abclisten://live/SPORT_BBL)], 'BBL on air: listed (it would be dropped without the check)' );
 	is_deeply( \@CHECK_ON_AIR, [ ['SPORT_BBL'] ], 'Stations->checkOnAir with the event-only services only' );
 
 	fresh();
 	epg_route( 'SPORT_BBL', 'bff-epgNowPlaying-SPORT_BBL-now.json' );
 	$c = run( 'itemsFor', $CLIENT, \@refs, 1 );
-	is_deeply( [ map { $_->{url} } @{ ( $c->args(0) )[0] } ], ['abclisten://live/GRANDSTAND'], 'BBL off air (null): left out' );
+	is_deeply( [ map { $_->{play} } @{ ( $c->args(0) )[0] } ], ['abclisten://live/GRANDSTAND'], 'BBL off air (null): left out' );
 
 	fresh();
 	epg_route( 'SPORT_BBL', 'epg-event-onair-pls.json', defer => 1 );
@@ -416,11 +416,11 @@ subtest 'amendment 2: itemsFor checks event-only services on air (checkOnAir) be
 	is( $c->count, 0, 'still at 2.9 s' );
 	advanceTime(0.1);
 	is( $c->count, 1, 'answers at the 3 s deadline' );
-	is_deeply( [ map { $_->{url} } @{ ( $c->args(0) )[0] } ], ['abclisten://live/GRANDSTAND'], 'unknown status: left out' );
+	is_deeply( [ map { $_->{play} } @{ ( $c->args(0) )[0] } ], ['abclisten://live/GRANDSTAND'], 'unknown status: left out' );
 	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
 	is( $c->count, 1, 'a late status never calls back again' );
 	is( scalar Slim::Utils::Timers::pending(), 0, 'no timer left' );
-	is( scalar( grep { $_->{url} =~ /SPORT_BBL/ } @{ ( run( 'itemsFor', $CLIENT, \@refs, 1 )->args(0) )[0] } ), 1, 'next open: the late status (on air) is cached' );
+	is( scalar( grep { $_->{play} =~ /SPORT_BBL/ } @{ ( run( 'itemsFor', $CLIENT, \@refs, 1 )->args(0) )[0] } ), 1, 'next open: the late status (on air) is cached' );
 
 	fresh();
 	$c = run( 'itemsFor', $CLIENT, [ $refs[0] ], 1 );

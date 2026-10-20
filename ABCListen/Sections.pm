@@ -21,10 +21,11 @@ package Plugins::ABCListen::Sections;
 #        KIDSLISTEN_NT / _QLD / _SA / _WA), then the cards of the page's station-only collections
 #        (Collections page key stationCards: Sport's "Radio Stations"), inline instead of as a link
 #        (Collections->itemsFor). A service stationItem returns undef for (unknown, hidden, HLS-only,
-#        off-air event service) is left out; each station once (by url).
+#        off-air event service) is left out; each station once (by its play URL, else url; L4).
 #     2. One link per LiveRadioCarousel heading (Sport's "Live & Upcoming Events") listing copies of
-#        the stationItem rows of its events, each service once, with line2 = the event title and
-#        description = "<title> (<start>–<end>)" (Util::friendlyTime); no link when none is playable.
+#        the stationItem rows of its events, each service once, with line2 = the event title and,
+#        on an audio row only (L4: station rows are links, LMS menu rule 1), description =
+#        "<title> (<start>–<end>)" (Util::friendlyTime); no link when none is playable.
 #        Carousel entries without a heading are station rows (1.) with the same text.
 #        The event-only services among 1. and 2. are checked first (Collections->checkOnAir, ≤ 3 s).
 #     3. One link per page collection, in page order (Collections->collectionItem at level 0: ABC's
@@ -254,7 +255,8 @@ sub _sectionItems {
 	# 1. live stations
 	for my $item ( ( map { _stationRow( $client, $_->{serviceId}, $_->{event} ) } @{ $s->{live} } ), @{ $s->{inline} || [] } ) {
 		next unless ref $item eq 'HASH';
-		push @items, $item unless $seen{ defined $item->{url} ? $item->{url} : '' }++;
+		my $key = defined $item->{play} ? $item->{play} : $item->{url};    # L4: station rows are links + play
+		push @items, $item unless $seen{ defined $key ? $key : '' }++;
 	}
 
 	# 2. live & upcoming events
@@ -338,7 +340,8 @@ sub _eventLinks {
 	} } grep { @{ $rows{$_} } } @headings;
 }
 
-# Live->stationItem, or undef; with an event, a copy with its title as line2 and description.
+# Live->stationItem, or undef; with an event, a copy with its title as line2 and (audio rows only:
+# L4's station rows are links, LMS menu rule 1) description.
 sub _stationRow {
 	my ( $client, $serviceId, $event ) = @_;
 	return undef unless $LIVE->can('stationItem');
@@ -350,11 +353,11 @@ sub _stationRow {
 
 	my @times = grep {defined} map { defined $_ ? Plugins::ABCListen::Util::friendlyTime($_) : undef } $event->{start}, $event->{end};
 
-	return {
-		%$item,
-		line2       => $event->{title},
-		description => @times == 2 ? "$event->{title} ($times[0]" . ENDASH . "$times[1])" : $event->{title},
-	};
+	my %row = ( %$item, line2 => $event->{title} );
+	$row{description} = @times == 2 ? "$event->{title} ($times[0]" . ENDASH . "$times[1])" : $event->{title}
+		if ( $item->{type} || '' ) eq 'audio';
+
+	return \%row;
 }
 
 sub _audiobooksExtras {

@@ -1,0 +1,1119 @@
+{
+ "formattedScheduleArray": [
+  {
+   "timeBlockTitle": "Early",
+   "items": [
+    {
+     "id": "pead011138",
+     "rawStartTime": "2026-10-19T13:00:00+00:00",
+     "rawEndTime": "2026-10-19T14:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Radiolab",
+      "imgSrc": "https://resize.abcradio.net.au/ut-TuOIqEZ7hzN-y3VAfFs_AN_g=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FRadioNational-Generic-2025-2000x1125.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/ut-TuOIqEZ7hzN-y3VAfFs_AN_g=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FRadioNational-Generic-2025-2000x1125.jpg 100w",
+       "https://resize.abcradio.net.au/UgyyPrQZsw353iUc-hL_DcruU48=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FRadioNational-Generic-2025-2000x1125.jpg 340w"
+      ]
+     },
+     "presenters": [],
+     "synopsis": "Since 2002, WNYC's Radiolab has been devoted to investigating a strange world. ",
+     "title": "Radiolab",
+     "url": "https://www.wnycstudios.org/podcasts/radiolab/",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Early",
+     "onNow": false,
+     "start": "12:00am",
+     "end": "1:00am"
+    },
+    {
+     "id": "peaa4210f9",
+     "rawStartTime": "2026-10-19T14:00:00+00:00",
+     "rawEndTime": "2026-10-19T15:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Big Ideas",
+      "imgSrc": "https://resize.abcradio.net.au/_SjP1Xzj6A4_MrlTLwzt_I7XfkM=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FBigIdeas_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/_SjP1Xzj6A4_MrlTLwzt_I7XfkM=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FBigIdeas_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/HjAfx_YBr-bHoT8r_S12jNdy5Tw=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FBigIdeas_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "pr0ef00e65",
+       "displayName": "Natasha Mitchell"
+      }
+     ],
+     "synopsis": "Big Ideas brings you the best of talks, forums, debates, and festivals held in Australia and around the world, casting light on the major social, cultural, scientific and political issues.",
+     "title": "Big Ideas",
+     "url": "https://www.abc.net.au/radionational/programs/bigideas/",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Early",
+     "onNow": false,
+     "start": "1:00am",
+     "end": "2:00am"
+    },
+    {
+     "id": "pebead11a5",
+     "rawStartTime": "2026-10-19T15:00:00+00:00",
+     "rawEndTime": "2026-10-19T16:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Passenger",
+      "imgSrc": "https://resize.abcradio.net.au/QpXCBU1ii6tBmy9Kx4tNeOBXFTE=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fstephanie-kabanyana-kanyandekwe-2022.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/QpXCBU1ii6tBmy9Kx4tNeOBXFTE=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fstephanie-kabanyana-kanyandekwe-2022.jpg 100w",
+       "https://resize.abcradio.net.au/YWmyrg0-KJHjX4nCwkiL981HUqc=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fstephanie-kabanyana-kanyandekwe-2022.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "pr0a9f142c",
+       "displayName": "Stephanie Kabanyana Kanyandekwe"
+      }
+     ],
+     "synopsis": "Escape to the great destinations of the world, with evocative music and stories.",
+     "title": "Passenger",
+     "url": "https://www.abc.net.au/listen/programs/passenger",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Early",
+     "onNow": false,
+     "start": "2:00am",
+     "end": "3:00am"
+    },
+    {
+     "id": "peaab410de",
+     "rawStartTime": "2026-10-19T16:00:00+00:00",
+     "rawEndTime": "2026-10-19T17:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Conversations",
+      "imgSrc": "https://resize.abcradio.net.au/LvU4QAKNMspYuAaetBCTjiU0YAk=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FConversations_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/LvU4QAKNMspYuAaetBCTjiU0YAk=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FConversations_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/exmGiB4B7koL9FVbZ5OMCySMflM=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FConversations_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prce2412fc",
+       "displayName": "Richard Fidler and Sarah Kanowski"
+      }
+     ],
+     "synopsis": "Conversations draws you deep into the life story of someone you may have heard about, but never met.",
+     "title": "Conversations",
+     "url": "https://www.abc.net.au/listen/programs/conversations",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Early",
+     "onNow": false,
+     "start": "3:00am",
+     "end": "4:00am"
+    },
+    {
+     "id": "peb9801170",
+     "rawStartTime": "2026-10-19T17:00:00+00:00",
+     "rawEndTime": "2026-10-19T18:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "The Music Show",
+      "imgSrc": "https://resize.abcradio.net.au/8U2kCnF2z_eewN3PaKqddKD9dW8=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FTheMusicShow_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/8U2kCnF2z_eewN3PaKqddKD9dW8=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FTheMusicShow_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/MKFJrARaYfCCs7SZtbm4DHGqjBU=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FTheMusicShow_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "pr984b0ab4",
+       "displayName": "Andrew Ford"
+      }
+     ],
+     "synopsis": "All kinds of music and all kinds of musicians in conversation with Andrew Ford.",
+     "title": "The Music Show",
+     "url": "https://www.abc.net.au/radionational/programs/musicshow/",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Early",
+     "onNow": false,
+     "start": "4:00am",
+     "end": "5:00am"
+    },
+    {
+     "id": "pe9ec410ef",
+     "rawStartTime": "2026-10-19T18:00:00+00:00",
+     "rawEndTime": "2026-10-19T18:30:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Australia Wide",
+      "imgSrc": "https://resize.abcradio.net.au/j4DlIUKNIQkQjx7rf-wN-SXq4Is=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FAustraliaWide_3000x300.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/j4DlIUKNIQkQjx7rf-wN-SXq4Is=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FAustraliaWide_3000x300.jpg 100w",
+       "https://resize.abcradio.net.au/48XH-93ymzNSJNLAkbc-XW6ZCv4=/340x340/center/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FAustraliaWide_3000x300.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "pre21b0d19",
+       "displayName": "Sinéad Mangan"
+      }
+     ],
+     "synopsis": "Relevant and engaging coverage that provides news and analysis of national issues significant to regional Australians.",
+     "title": "Australia Wide",
+     "url": "https://www.abc.net.au/listen/programs/australia-wide",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Early",
+     "onNow": false,
+     "start": "5:00am",
+     "end": "5:30am"
+    }
+   ]
+  },
+  {
+   "timeBlockTitle": "Morning",
+   "items": [
+    {
+     "id": "peb5fb116b",
+     "rawStartTime": "2026-10-19T18:30:00+00:00",
+     "rawEndTime": "2026-10-19T19:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "ABC News Daily and Radio National Hour Highlights",
+      "imgSrc": "https://resize.abcradio.net.au/vUSRFwN3N5y1sABEh7HDmMyCIbE=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FABC-NEWS-DAILY-tile-2024.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/vUSRFwN3N5y1sABEh7HDmMyCIbE=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FABC-NEWS-DAILY-tile-2024.jpg 100w",
+       "https://resize.abcradio.net.au/_biVW6fngUVIvApQC3dQIFX8q3w=/340x340/center/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FABC-NEWS-DAILY-tile-2024.jpg 340w"
+      ]
+     },
+     "presenters": [],
+     "synopsis": "The podcast that explains the issues affecting your world. Also highlights from the Radio National Hour with Fran Kelly.",
+     "title": "ABC News Daily and Radio National Hour Highlights",
+     "url": "https://www.abc.net.au/listen/programs/abc-news-daily",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Morning",
+     "onNow": false,
+     "start": "5:30am",
+     "end": "6:00am"
+    },
+    {
+     "id": "pee20b6e2f",
+     "rawStartTime": "2026-10-19T19:00:00+00:00",
+     "rawEndTime": "2026-10-19T20:10:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Radio National Breakfast",
+      "imgSrc": "https://resize.abcradio.net.au/NO_5SB6mCjXPmrT5wuWnVYkfxDU=/100x100/left/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FRN-Breakfast-2025_2000x1125_lissajous.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/NO_5SB6mCjXPmrT5wuWnVYkfxDU=/100x100/left/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FRN-Breakfast-2025_2000x1125_lissajous.jpg 100w",
+       "https://resize.abcradio.net.au/NJd4eXAPiy8g-ma6UAKrwumRwdk=/340x340/left/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FRN-Breakfast-2025_2000x1125_lissajous.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prc48f0c1f",
+       "displayName": "Sally Sara"
+      }
+     ],
+     "synopsis": "Start each day with comprehensive coverage and analysis of national and international events, and hear interviews with the people who matter today",
+     "title": "Radio National Breakfast",
+     "url": "https://www.abc.net.au/radionational/programs/breakfast/",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Morning",
+     "onNow": false,
+     "start": "6:00am",
+     "end": "7:10am"
+    },
+    {
+     "id": "pef3d6c14a",
+     "rawStartTime": "2026-10-19T20:10:00+00:00",
+     "rawEndTime": "2026-10-19T20:30:00+00:00",
+     "cardImagePrepared": {
+      "alt": "AM",
+      "imgSrc": "https://resize.abcradio.net.au/z1HcGVbsq-XZociXKlzRbZamrhE=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fisabella_higgins_square.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/z1HcGVbsq-XZociXKlzRbZamrhE=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fisabella_higgins_square.jpg 100w",
+       "https://resize.abcradio.net.au/dh4ZzaWe43XjPGmY08bz72ufcN4=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fisabella_higgins_square.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prGE6R7B0m",
+       "displayName": "Isabella Higgins"
+      }
+     ],
+     "synopsis": "AM is Australia's most informative morning current affairs program. AM sets the agenda for the nation's daily news and current affairs coverage.",
+     "title": "AM",
+     "url": "https://www.abc.net.au/radio/programs/am/",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Morning",
+     "onNow": false,
+     "start": "7:10am",
+     "end": "7:30am"
+    },
+    {
+     "id": "pee20b6e2f",
+     "rawStartTime": "2026-10-19T20:30:00+00:00",
+     "rawEndTime": "2026-10-19T22:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Radio National Breakfast",
+      "imgSrc": "https://resize.abcradio.net.au/NO_5SB6mCjXPmrT5wuWnVYkfxDU=/100x100/left/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FRN-Breakfast-2025_2000x1125_lissajous.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/NO_5SB6mCjXPmrT5wuWnVYkfxDU=/100x100/left/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FRN-Breakfast-2025_2000x1125_lissajous.jpg 100w",
+       "https://resize.abcradio.net.au/NJd4eXAPiy8g-ma6UAKrwumRwdk=/340x340/left/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FRN-Breakfast-2025_2000x1125_lissajous.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prc48f0c1f",
+       "displayName": "Sally Sara"
+      }
+     ],
+     "synopsis": "Start each day with comprehensive coverage and analysis of national and international events, and hear interviews with the people who matter today",
+     "title": "Radio National Breakfast",
+     "url": "https://www.abc.net.au/radionational/programs/breakfast/",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Morning",
+     "onNow": false,
+     "start": "7:30am",
+     "end": "9:00am"
+    },
+    {
+     "id": "pe01ff6f5b",
+     "rawStartTime": "2026-10-19T22:00:00+00:00",
+     "rawEndTime": "2026-10-19T23:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Life Matters",
+      "imgSrc": "https://resize.abcradio.net.au/CND7oip8SHebR6Ntgvbtlj0rfEY=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FLifeMatters_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/CND7oip8SHebR6Ntgvbtlj0rfEY=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FLifeMatters_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/StxAij4MseeXhNTPF4GwHbw1-gA=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FLifeMatters_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "pre0310cfd",
+       "displayName": "Tegan Taylor"
+      }
+     ],
+     "synopsis": "Helping you figure out all the big stuff in life: relationships, health, money, work and the world. Let's talk! With trusted experts and your stories, Life Matters is all about what matters to you.",
+     "title": "Life Matters",
+     "url": "https://www.abc.net.au/radionational/programs/lifematters/",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Morning",
+     "onNow": false,
+     "start": "9:00am",
+     "end": "10:00am"
+    },
+    {
+     "id": "pebadb1147",
+     "rawStartTime": "2026-10-19T23:00:00+00:00",
+     "rawEndTime": "2026-10-19T23:45:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Anthony Burke's By Design",
+      "imgSrc": "https://resize.abcradio.net.au/TuU0fVpMEtNdZp1SH7ncASjVZkI=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FAnthony-Burke-By-Design_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/TuU0fVpMEtNdZp1SH7ncASjVZkI=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FAnthony-Burke-By-Design_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/0g6rhYAaDY2WDeyoqSjavEa1TcE=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FAnthony-Burke-By-Design_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [],
+     "synopsis": "Uncovering the ideas and stories behind spaces, systems and objects that shape our everyday lives.",
+     "title": "Anthony Burke's By Design",
+     "url": "https://www.abc.net.au/listen/programs/anthony-burke-by-design",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Morning",
+     "onNow": false,
+     "start": "10:00am",
+     "end": "10:45am"
+    },
+    {
+     "id": "peb9fa1147",
+     "rawStartTime": "2026-10-19T23:45:00+00:00",
+     "rawEndTime": "2026-10-20T00:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Critics Corner",
+      "imgSrc": "https://resize.abcradio.net.au/PmiUhi1PhwhuXqlafUMZQubaTrg=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FCriticsCorner_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/PmiUhi1PhwhuXqlafUMZQubaTrg=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FCriticsCorner_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/TpI89NDXFqRjEj0pJQ8Io25Au2k=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FCriticsCorner_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "pre59c0d3e",
+       "displayName": "Hilary Harper"
+      }
+     ],
+     "synopsis": "Fresh perspectives on film, music, literature, visual, performing and culinary arts. ",
+     "title": "Critics Corner",
+     "url": "https://www.abc.net.au/listen/programs/critics-corner",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Morning",
+     "onNow": true,
+     "start": "10:45am",
+     "end": "11:00am"
+    },
+    {
+     "id": "pe354e8bf7",
+     "rawStartTime": "2026-10-20T00:00:00+00:00",
+     "rawEndTime": "2026-10-20T00:30:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Global Roaming",
+      "imgSrc": "https://resize.abcradio.net.au/Eh_H9GNqwYl5ohNnma7udKy3sX4=/100x100/center/top/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FGlobal-Roaming_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/Eh_H9GNqwYl5ohNnma7udKy3sX4=/100x100/center/top/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FGlobal-Roaming_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/Wu2dg0eho5y92co5V7CxBoU-cno=/340x340/center/top/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FGlobal-Roaming_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prxgDZpLQ0",
+       "displayName": "Geraldine Doogue and Hamish Macdonald"
+      }
+     ],
+     "synopsis": "Challenging, thoughtful and fun — a user's guide to what the world is talking about.",
+     "title": "Global Roaming",
+     "url": "https://www.abc.net.au/listen/programs/global-roaming",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Morning",
+     "onNow": false,
+     "start": "11:00am",
+     "end": "11:30am"
+    },
+    {
+     "id": "peb9ed1169",
+     "rawStartTime": "2026-10-20T00:30:00+00:00",
+     "rawEndTime": "2026-10-20T01:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Radio National Breakfast Wrap",
+      "imgSrc": "https://resize.abcradio.net.au/VVyPuucvtw21KOC2kK8NGNaSI9Y=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FRadio_National_Breakfast_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/VVyPuucvtw21KOC2kK8NGNaSI9Y=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FRadio_National_Breakfast_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/puiaAZRv0VCjXZu0WaJ8J0OztJg=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FRadio_National_Breakfast_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "pr51601026",
+       "displayName": "Luke Siddham Dundon"
+      }
+     ],
+     "synopsis": "Recap the morning's news, politics and global affairs with the Breakfast Wrap.",
+     "title": "Radio National Breakfast Wrap",
+     "url": "https://www.abc.net.au/listen/programs/radionational-breakfast",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Morning",
+     "onNow": false,
+     "start": "11:30am",
+     "end": "12:00pm"
+    }
+   ]
+  },
+  {
+   "timeBlockTitle": "Afternoon",
+   "items": [
+    {
+     "id": "peaa4210f9",
+     "rawStartTime": "2026-10-20T01:00:00+00:00",
+     "rawEndTime": "2026-10-20T02:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Big Ideas",
+      "imgSrc": "https://resize.abcradio.net.au/_SjP1Xzj6A4_MrlTLwzt_I7XfkM=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FBigIdeas_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/_SjP1Xzj6A4_MrlTLwzt_I7XfkM=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FBigIdeas_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/HjAfx_YBr-bHoT8r_S12jNdy5Tw=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FBigIdeas_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "pr0ef00e65",
+       "displayName": "Natasha Mitchell"
+      }
+     ],
+     "synopsis": "Big Ideas brings you the best of talks, forums, debates, and festivals held in Australia and around the world, casting light on the major social, cultural, scientific and political issues.",
+     "title": "Big Ideas",
+     "url": "https://www.abc.net.au/radionational/programs/bigideas/",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Afternoon",
+     "onNow": false,
+     "start": "12:00pm",
+     "end": "1:00pm"
+    },
+    {
+     "id": "pec1fb11a4",
+     "rawStartTime": "2026-10-20T02:00:00+00:00",
+     "rawEndTime": "2026-10-20T02:30:00+00:00",
+     "cardImagePrepared": {
+      "alt": "The World Today",
+      "imgSrc": "https://resize.abcradio.net.au/VkqVMLvdY8y0XfVGqR2ACZenpyU=/100x100/center/bottom/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FTheWorldToday_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/VkqVMLvdY8y0XfVGqR2ACZenpyU=/100x100/center/bottom/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FTheWorldToday_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/KJnTkYRUWGvqQbwbSvCu1Df2uGc=/340x340/center/bottom/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FTheWorldToday_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [],
+     "synopsis": "The World Today examines the events and issues of interest and importance to all Australians.",
+     "title": "The World Today",
+     "url": "https://www.abc.net.au/listen/programs/worldtoday",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Afternoon",
+     "onNow": false,
+     "start": "1:00pm",
+     "end": "1:30pm"
+    },
+    {
+     "id": "pec26311b7",
+     "rawStartTime": "2026-10-20T02:30:00+00:00",
+     "rawEndTime": "2026-10-20T03:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "What The Duck?!",
+      "imgSrc": "https://resize.abcradio.net.au/mAXY69X-Gk-jXOj_y-YrRkUvz1I=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FWhatTheDuck_3000x3000_2026.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/mAXY69X-Gk-jXOj_y-YrRkUvz1I=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FWhatTheDuck_3000x3000_2026.jpg 100w",
+       "https://resize.abcradio.net.au/TLeyW2tfrnsVrRjCYVStK8BokLk=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FWhatTheDuck_3000x3000_2026.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prb0a40b8f",
+       "displayName": "Ann Jones"
+      }
+     ],
+     "synopsis": "The show with a mission to explore the mysteries of nature — especially the ones that make you go What the Duck?!",
+     "title": "What The Duck?!",
+     "url": "https://www.abc.net.au/radionational/programs/what-the-duck",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Afternoon",
+     "onNow": false,
+     "start": "1:30pm",
+     "end": "2:00pm"
+    },
+    {
+     "id": "pebe7c1173",
+     "rawStartTime": "2026-10-20T03:00:00+00:00",
+     "rawEndTime": "2026-10-20T04:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Background Briefing",
+      "imgSrc": "https://resize.abcradio.net.au/lmVHK-8RHDsfZUrY4wETcr2I8aQ=/100x100/center/bottom/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FBackgroundBriefing_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/lmVHK-8RHDsfZUrY4wETcr2I8aQ=/100x100/center/bottom/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FBackgroundBriefing_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/7kfMylmlkKRSqTAvvnb9jJDOtgM=/340x340/center/bottom/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FBackgroundBriefing_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [],
+     "synopsis": "Background Briefing is daring narrative journalism: Australian investigations with impact. Our award-winning reporters forensically uncover the hidden stories at the heart of the country’s biggest issues.",
+     "title": "Background Briefing",
+     "url": "https://www.abc.net.au/listen/programs/backgroundbriefing",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Afternoon",
+     "onNow": false,
+     "start": "2:00pm",
+     "end": "3:00pm"
+    },
+    {
+     "id": "pe25e3ef57",
+     "rawStartTime": "2026-10-20T04:00:00+00:00",
+     "rawEndTime": "2026-10-20T05:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Conversations",
+      "imgSrc": "https://resize.abcradio.net.au/LvU4QAKNMspYuAaetBCTjiU0YAk=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FConversations_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/LvU4QAKNMspYuAaetBCTjiU0YAk=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FConversations_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/exmGiB4B7koL9FVbZ5OMCySMflM=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FConversations_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prce2412fc",
+       "displayName": "Richard Fidler and Sarah Kanowski"
+      }
+     ],
+     "synopsis": "Conversations draws you deep into the life story of someone you may have heard about, but never met.",
+     "title": "Conversations",
+     "url": "https://www.abc.net.au/listen/programs/conversations",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Afternoon",
+     "onNow": false,
+     "start": "3:00pm",
+     "end": "4:00pm"
+    },
+    {
+     "id": "peabc11121",
+     "rawStartTime": "2026-10-20T05:00:00+00:00",
+     "rawEndTime": "2026-10-20T06:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Late Night Live",
+      "imgSrc": "https://resize.abcradio.net.au/oxeWViUt4X7-0T4aoxucZuwnVlI=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FLateNightLive_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/oxeWViUt4X7-0T4aoxucZuwnVlI=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FLateNightLive_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/vxDpnouK9mIgbKuZP1KyBRmNbEo=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FLateNightLive_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prbPdKYQ36",
+       "displayName": "David Marr"
+      }
+     ],
+     "synopsis": "From razor-sharp analysis of current events to the hottest debates in politics, science, philosophy and culture, Late Night Live puts you firmly in the big picture.",
+     "title": "Late Night Live",
+     "url": "https://www.abc.net.au/radionational/programs/latenightlive/",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Afternoon",
+     "onNow": false,
+     "start": "4:00pm",
+     "end": "5:00pm"
+    },
+    {
+     "id": "pe72eb3154",
+     "rawStartTime": "2026-10-20T06:00:00+00:00",
+     "rawEndTime": "2026-10-20T06:30:00+00:00",
+     "cardImagePrepared": {
+      "alt": "PM",
+      "imgSrc": "https://resize.abcradio.net.au/dCMBdsac1eHr36qudT_AkW_gZrQ=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fbarbara_miller_square.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/dCMBdsac1eHr36qudT_AkW_gZrQ=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fbarbara_miller_square.jpg 100w",
+       "https://resize.abcradio.net.au/nbfSAI4ZCfnQLZwQL5qMrLGyPLU=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fbarbara_miller_square.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "pref650d83",
+       "displayName": "Barbara Miller"
+      }
+     ],
+     "synopsis": "PM covers a broad spectrum of issues relevant to all sections of Australia's geographically and culturally diverse community.",
+     "title": "PM",
+     "url": "https://www.abc.net.au/radio/programs/pm/",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Afternoon",
+     "onNow": false,
+     "start": "5:00pm",
+     "end": "5:30pm"
+    },
+    {
+     "id": "pea09110a7",
+     "rawStartTime": "2026-10-20T06:30:00+00:00",
+     "rawEndTime": "2026-10-20T07:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Law Report",
+      "imgSrc": "https://resize.abcradio.net.au/tv2AhU8F3xBjEYDUWkjhhzLLIng=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FTheLawReport_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/tv2AhU8F3xBjEYDUWkjhhzLLIng=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FTheLawReport_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/VIBHLdGY3dTXRd7FF8T0hWGC6PA=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FTheLawReport_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "pref4a0d80",
+       "displayName": "Damien Carrick"
+      }
+     ],
+     "synopsis": "Informative, jargon-free stories about law reform, legal education, test cases, miscarriages of justice and legal culture. The Law Report makes the law accessible.",
+     "title": "Law Report ",
+     "url": "https://www.abc.net.au/radionational/programs/lawreport/",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Afternoon",
+     "onNow": false,
+     "start": "5:30pm",
+     "end": "6:00pm"
+    }
+   ]
+  },
+  {
+   "timeBlockTitle": "Evening",
+   "items": [
+    {
+     "id": "pebfe61159",
+     "rawStartTime": "2026-10-20T07:00:00+00:00",
+     "rawEndTime": "2026-10-20T08:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "The Radio National Hour",
+      "imgSrc": "https://resize.abcradio.net.au/sxF2gr_3zsy8XBwQPKVB5buoV78=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FTheRadioNationalHour_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/sxF2gr_3zsy8XBwQPKVB5buoV78=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FTheRadioNationalHour_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/EkoiPwYk_ZS0fBVJ4G8rTX8TnFU=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FTheRadioNationalHour_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prqP0eRwdJ",
+       "displayName": "Fran Kelly"
+      }
+     ],
+     "synopsis": "Fran Kelly brings you compelling conversations with some of the most interesting people from around the world, on the issues that challenge, entertain and inspire us. ",
+     "title": "The Radio National Hour",
+     "url": "https://www.abc.net.au/listen/programs/the-radio-national-hour",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Evening",
+     "onNow": false,
+     "start": "6:00pm",
+     "end": "7:00pm"
+    },
+    {
+     "id": "pe01ff6f5b",
+     "rawStartTime": "2026-10-20T08:00:00+00:00",
+     "rawEndTime": "2026-10-20T09:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Life Matters",
+      "imgSrc": "https://resize.abcradio.net.au/CND7oip8SHebR6Ntgvbtlj0rfEY=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FLifeMatters_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/CND7oip8SHebR6Ntgvbtlj0rfEY=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FLifeMatters_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/StxAij4MseeXhNTPF4GwHbw1-gA=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FLifeMatters_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "pre0310cfd",
+       "displayName": "Tegan Taylor"
+      }
+     ],
+     "synopsis": "Helping you figure out all the big stuff in life: relationships, health, money, work and the world. Let's talk! With trusted experts and your stories, Life Matters is all about what matters to you.",
+     "title": "Life Matters",
+     "url": "https://www.abc.net.au/radionational/programs/lifematters/",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Evening",
+     "onNow": false,
+     "start": "7:00pm",
+     "end": "8:00pm"
+    },
+    {
+     "id": "pe9d685169",
+     "rawStartTime": "2026-10-20T09:00:00+00:00",
+     "rawEndTime": "2026-10-20T09:50:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Big Ideas",
+      "imgSrc": "https://resize.abcradio.net.au/_SjP1Xzj6A4_MrlTLwzt_I7XfkM=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FBigIdeas_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/_SjP1Xzj6A4_MrlTLwzt_I7XfkM=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FBigIdeas_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/HjAfx_YBr-bHoT8r_S12jNdy5Tw=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FBigIdeas_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "pr0ef00e65",
+       "displayName": "Natasha Mitchell"
+      }
+     ],
+     "synopsis": "Big Ideas brings you the best of talks, forums, debates, and festivals held in Australia and around the world, casting light on the major social, cultural, scientific and political issues.",
+     "title": "Big Ideas",
+     "url": "https://www.abc.net.au/radionational/programs/bigideas/",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Evening",
+     "onNow": false,
+     "start": "8:00pm",
+     "end": "8:50pm"
+    },
+    {
+     "id": "pe354e8bf7",
+     "rawStartTime": "2026-10-20T10:00:00+00:00",
+     "rawEndTime": "2026-10-20T10:30:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Global Roaming",
+      "imgSrc": "https://resize.abcradio.net.au/Eh_H9GNqwYl5ohNnma7udKy3sX4=/100x100/center/top/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FGlobal-Roaming_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/Eh_H9GNqwYl5ohNnma7udKy3sX4=/100x100/center/top/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FGlobal-Roaming_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/Wu2dg0eho5y92co5V7CxBoU-cno=/340x340/center/top/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FGlobal-Roaming_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prxgDZpLQ0",
+       "displayName": "Geraldine Doogue and Hamish Macdonald"
+      }
+     ],
+     "synopsis": "Challenging, thoughtful and fun — a user's guide to what the world is talking about.",
+     "title": "Global Roaming",
+     "url": "https://www.abc.net.au/listen/programs/global-roaming",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Evening",
+     "onNow": false,
+     "start": "9:00pm",
+     "end": "9:30pm"
+    },
+    {
+     "id": "peb4d21136",
+     "rawStartTime": "2026-10-20T10:30:00+00:00",
+     "rawEndTime": "2026-10-20T11:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "The Science Show",
+      "imgSrc": "https://resize.abcradio.net.au/i9WTyA3IpLFmj_ul-F4RTs94_2U=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FScienceShow_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/i9WTyA3IpLFmj_ul-F4RTs94_2U=/100x100/center/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FScienceShow_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/KrCLKcrdhHUlvxSOY3dXNUwcAa8=/340x340/center/middle/https%3A%2F%2Fabc.net.au%2Fradio%2Fimages%2Fprogram%2FScienceShow_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prc13812b3",
+       "displayName": "Robyn Williams and Belinda Smith"
+      }
+     ],
+     "synopsis": "The Science Show gives Australians unique insights into the latest scientific research and debate, from the physics of cricket to prime ministerial biorhythms.",
+     "title": "The Science Show",
+     "url": "https://www.abc.net.au/listen/programs/scienceshow",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Evening",
+     "onNow": false,
+     "start": "9:30pm",
+     "end": "10:00pm"
+    },
+    {
+     "id": "pea05910ea",
+     "rawStartTime": "2026-10-20T11:00:00+00:00",
+     "rawEndTime": "2026-10-20T12:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Late Night Live",
+      "imgSrc": "https://resize.abcradio.net.au/oxeWViUt4X7-0T4aoxucZuwnVlI=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FLateNightLive_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/oxeWViUt4X7-0T4aoxucZuwnVlI=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FLateNightLive_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/vxDpnouK9mIgbKuZP1KyBRmNbEo=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprogram%2FLateNightLive_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prbPdKYQ36",
+       "displayName": "David Marr"
+      }
+     ],
+     "synopsis": "From razor-sharp analysis of current events to the hottest debates in politics, science, philosophy and culture, Late Night Live puts you firmly in the big picture.",
+     "title": "Late Night Live",
+     "url": "https://www.abc.net.au/radionational/programs/latenightlive/",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Evening",
+     "onNow": false,
+     "start": "10:00pm",
+     "end": "11:00pm"
+    },
+    {
+     "id": "peca6311d4",
+     "rawStartTime": "2026-10-20T12:00:00+00:00",
+     "rawEndTime": "2026-10-20T12:30:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Rear Vision",
+      "imgSrc": "https://resize.abcradio.net.au/f-DYdsnF6kTdiaF5Xle-2lVMZqs=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FRearVision_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/f-DYdsnF6kTdiaF5Xle-2lVMZqs=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FRearVision_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/Q-_khwwqvBX3Qr5fNSgJ3PYhcV4=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FRearVision_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "pr8dc811a4",
+       "displayName": "Antony Funnell and Ros Bluett"
+      }
+     ],
+     "synopsis": "Rear Vision — How History Shaped Today puts contemporary events in their historical context, answering the question, 'How did it come to this?'",
+     "title": "Rear Vision",
+     "url": "https://www.abc.net.au/radionational/programs/rearvision/",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Evening",
+     "onNow": false,
+     "start": "11:00pm",
+     "end": "11:30pm"
+    },
+    {
+     "id": "pea9fb1113",
+     "rawStartTime": "2026-10-20T12:30:00+00:00",
+     "rawEndTime": "2026-10-20T13:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "This Working Life",
+      "imgSrc": "https://resize.abcradio.net.au/xLM0jbTHc3nkf6lGnLFPS7c3Ws8=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FThisWorkingLife_3000x3000.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/xLM0jbTHc3nkf6lGnLFPS7c3Ws8=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FThisWorkingLife_3000x3000.jpg 100w",
+       "https://resize.abcradio.net.au/lez7xo4KV0k2Sz5oBjxp-4d0FzU=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fprograms-2026%2FThisWorkingLife_3000x3000.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "pr3w0aK5Dn",
+       "displayName": "Lisa Leong"
+      }
+     ],
+     "synopsis": "Helping you navigate your way through the tough times, looking for the sunshine and the humanity in the world of work.",
+     "title": "This Working Life",
+     "url": "https://www.abc.net.au/radionational/programs/this-working-life/",
+     "stationsInfo": [
+      {
+       "title": "Radio National",
+       "papiServiceId": "RN",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/rn-logo-2025.png"
+       }
+      }
+     ],
+     "timeBlock": "Evening",
+     "onNow": false,
+     "start": "11:30pm",
+     "end": "12:00am"
+    }
+   ]
+  }
+ ],
+ "papiServiceIds": [
+  "RN"
+ ],
+ "serviceTimezone": "Australia/Sydney"
+}

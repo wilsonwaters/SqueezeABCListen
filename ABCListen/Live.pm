@@ -12,8 +12,8 @@ package Plugins::ABCListen::Live;
 #                  lists its stations, capital-city station first, then A-Z
 #   Time-zone versions  all 17 time-zone versions, by network, cities A-Z
 # With homeState SA, QLD, NT or WA, the Radio National, triple j, Double J and ABC Classic rows play
-# that state's time-zone version: same name, description "<City> time ...", favorites_title the
-# version's own title.
+# that state's time-zone version: same name, favorites_title the version's own title (its station
+# menu's "Listen live" says "<City> time ...").
 #
 # Every menu answers exactly once, within MENU_DEADLINE: the catalogue is local, BFF enrichment is
 # only read from cache (Stations->enrich applies cached collections at once and fetches the others
@@ -24,14 +24,48 @@ package Plugins::ABCListen::Live;
 # at most 6 requests at a time), then answer when all are known or at MENU_DEADLINE, with whatever
 # is cached or last-good. A station row with a known program gets
 #   line2        "On air: <program> · <presenters>" (Material, Jive, menu:1; no " · " without presenters)
-#   description  "<program> (6:00am–9:00am) — <presenters>" (Default skin detail view), then the
-#                L1 description ("<City> time - <synopsis>") on a new line
-# Rows without program data keep the L1 text. stationItem uses cached/last-good data only.
+# and its station menu's "Listen live" the description "<program> (6:00am–9:00am) — <presenters>"
+# (Default skin detail view), then the L1 description ("<City> time - <synopsis>") on a new line.
+# stationItem uses cached/last-good data only.
+#
+# Station rows (L4) both open and play (ai-state/research/lms-plugin-guide.md section 4):
+#   { name, line1, line2?, type => 'link', url => \&_stationMenu, passthrough => [<ID>],
+#     play => 'abclisten://live/<ID>', favorites_url => the same URL, favorites_type => 'audio',
+#     favorites_title => the station's own title, favorites_icon, image }
+# No on_select (touch skins open the row; 'play' plays it and is what favourites store, so
+# favourites saved before L4, plain abclisten://live/<ID> audio entries, play as before) and no
+# description (LMS menu rule 1: a non-audio item with a description can't be opened over JSON-RPC).
+#
+# Station menu (_stationMenu, passthrough [<ID>]; answered like a station list, so the program on air
+# is fetched within MENU_DEADLINE when it isn't cached):
+#   Listen live           type audio, on_select play, the live URL and favourites, the station logo,
+#                         the description above
+#   On air: <program> · <presenters>   text, from NowPlaying's cache / last-good; left out when unknown
+#   Today, Yesterday, then the 5 dates before ("Sat 17 Oct"), station-local (Schedule->dayList): links
+#                         to the day list (passthrough [<ID>, 'YYYY-MM-DD'], so a menu built at
+#                         23:59 still shows the date it was built for)
+# Day list (_dayMenu): Schedule->day rows in start order, ABC's broadcast day as returned:
+#   name / line1  "6:00am · <program>" (station-local time; the Default skin shows only the name),
+#                 " (on air)" added to the row with start <= now < end (the latest such start)
+#   rows that have started and have a program path: OnDemand->programItem($client, { title, path,
+#                 image, description => synopsis }) (contract 6: O2's program menu, i.e. that
+#                 program's catch-up episodes), only name/line1 overridden; line2 = presenters when
+#                 O2 set none
+#   other rows (future, no program page, programItem undef): text, line2 = presenters, image,
+#                 description = synopsis
+#   image: the schedule's (~340 px), else the station logo
+#   no rows: one PLUGIN_ABCLISTEN_NO_SCHEDULE text item; an error: one LOAD_FAILED (or RATE_LIMITED)
+#   text item; answered exactly once, also when building dies or the schedule takes longer than
+#   DAY_DEADLINE.
+# LMS keeps no browse session for this plugin (code-ref feeds), so every item_id request rebuilds
+# the menus and opens the row at that index: the station menu's rows only move when the on-air
+# line appears or goes (an id taken while ABC's EPG had no program then opens the next day). Feeds
+# called with a stale or unknown station id or date answer one readable error item.
 #
 # Public builder (ai-state/streams.md contract 7):
-#   Live->stationItem($client, $serviceId) -> a playable station item, or undef for unknown, hidden,
-#   HLS-only and off-air (or not yet known) event services. Never fetches; consumers that override
-#   line2/description do so on their copy (every call builds a new hash).
+#   Live->stationItem($client, $serviceId) -> a station row (link + play, above), or undef for
+#   unknown, hidden, HLS-only and off-air (or not yet known) event services. Never fetches;
+#   consumers that override line2 do so on their copy (every call builds a new hash).
 #
 # live kind
 #   resolve   Stations->streamCandidates: { url => first, alternates => [rest], failToken =>
@@ -50,8 +84,8 @@ package Plugins::ABCListen::Live;
 #
 # Pref liveQuality (L5): initialised and validated in init; Stations reads it at play time.
 #
-# Owned by the live stream: L1 creates; L2 owns _stationItem text (line2/description), L4 its type and
-# the station submenu.
+# Owned by the live stream: L1 creates; L2 owns _stationItem text (line2), L4 its type, the station
+# menu and the day lists (data: Plugins::ABCListen::Schedule).
 
 use strict;
 use warnings;
@@ -67,16 +101,22 @@ use Slim::Utils::Timers;
 use Plugins::ABCListen::API;
 use Plugins::ABCListen::LiveMetadata;
 use Plugins::ABCListen::NowPlaying;
+use Plugins::ABCListen::OnDemand;
 use Plugins::ABCListen::ProtocolHandler;
+use Plugins::ABCListen::Schedule;
 use Plugins::ABCListen::Stations;
 use Plugins::ABCListen::Util;
 
 use constant MENU_DEADLINE   => 3;               # seconds
+use constant DAY_DEADLINE    => 15;              # seconds (the schedule request times out after 10)
 use constant ITEM_IMAGE_PX   => 300;
 use constant COVER_IMAGE_PX  => 600;
 use constant ICECAST_BITRATE => '56kbps CBR';    # StreamGuys Icecast HE-AAC
 
-use constant LIVE_FAILED => 'PLUGIN_ABCLISTEN_LIVE_FAILED';
+use constant LIVE_FAILED  => 'PLUGIN_ABCLISTEN_LIVE_FAILED';
+use constant LOAD_FAILED  => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
+use constant RATE_LIMITED => 'PLUGIN_ABCLISTEN_RATE_LIMITED';
+use constant NO_SCHEDULE  => 'PLUGIN_ABCLISTEN_NO_SCHEDULE';
 
 use constant MIDDOT  => " \x{B7} ";
 use constant EM_DASH => " \x{2014} ";
@@ -87,6 +127,8 @@ my $prefs = preferences('plugin.abclisten');
 my $STATIONS    = 'Plugins::ABCListen::Stations';
 my $NOW_PLAYING = 'Plugins::ABCListen::NowPlaying';
 my $METADATA    = 'Plugins::ABCListen::LiveMetadata';
+my $SCHEDULE    = 'Plugins::ABCListen::Schedule';
+my $ONDEMAND    = 'Plugins::ABCListen::OnDemand';
 
 my @STATES = qw(ACT NSW NT QLD SA TAS VIC WA);
 my %STATES = map { $_ => 1 } @STATES;
@@ -182,11 +224,7 @@ sub _networkItem {
 		my ($variant) = grep { ( $_->{state} || '' ) eq $home && $_->{network} eq $rec->{id} } $STATIONS->list('variant');
 
 		if ( $variant && $variant->{city} && $STATIONS->playable( $variant->{id} ) ) {
-			return _stationItem(
-				$client, $variant,
-				name   => $rec->{name},
-				prefix => cstring( $client, 'PLUGIN_ABCLISTEN_CITY_TIME', $variant->{city} ),
-			);
+			return _stationItem( $client, $variant, name => $rec->{name} );
 		}
 	}
 
@@ -338,14 +376,16 @@ sub _answerStations {
 	return;
 }
 
-# The distinct live service ids of a list of items (from their abclisten://live/ URLs).
+# The distinct live service ids of a list of items (from their abclisten://live/ URLs: a station
+# row's play, Listen live's url).
 sub _liveIds {
 	my $items = shift;
 	return () unless ref $items eq 'ARRAY';
 
 	my %seen;
 	return grep { !$seen{$_}++ } map {
-		my $parsed = ref $_ eq 'HASH' ? Plugins::ABCListen::Util::parseUrl( $_->{url} ) : undef;
+		my $url    = ref $_ eq 'HASH' ? ( defined $_->{play} ? $_->{play} : $_->{url} ) : undef;
+		my $parsed = defined $url && !ref $url ? Plugins::ABCListen::Util::parseUrl($url) : undef;
 		$parsed && $parsed->{kind} eq 'live' ? $parsed->{id} : ();
 	} @$items;
 }
@@ -361,37 +401,205 @@ sub _link {
 	};
 }
 
-# A playable station row. Favourites keep the abclisten://live/<ID> URL, the station's own title and
-# its logo. %opts: name (shown instead of the station's), prefix (starts the L1 description). With a
-# cached or last-good program on air (never fetched here), line2 and the description's first line
-# say what is on air.
+# A station row (L4): a link to the station menu that also plays the station (play). Favourites keep
+# the abclisten://live/<ID> URL, the station's own title and its logo. %opts: name (shown instead
+# of the station's). With a cached or last-good program on air (never fetched here), line2 says
+# what is on air. No description (LMS menu rule 1; the station menu's Listen live carries it).
 sub _stationItem {
 	my ( $client, $rec, %opts ) = @_;
 
 	my $url   = Plugins::ABCListen::Util::liveUrl( $rec->{id} );
 	my $name  = defined $opts{name} ? $opts{name} : $rec->{name};
-	my $image = Plugins::ABCListen::API::imageUrl( $rec->{logo}, ITEM_IMAGE_PX ) || Plugins::ABCListen::Util::ICON;
+	my $image = _logo($rec);
 
-	my @description = grep { defined && length } $opts{prefix}, $rec->{synopsis};
-	my $description = @description ? join( ' - ', @description ) : undef;
-
-	my ( $line2, $onAir ) = _onAirText( $client, $rec->{id} );
-	$description = join( "\n", grep { defined } $onAir, $description ) if defined $onAir;
+	my ($line2) = _onAirText( $client, $rec->{id} );
 
 	return {
 		name            => $name,
 		line1           => $name,
 		( defined $line2 ? ( line2 => $line2 ) : () ),
+		type            => 'link',
+		url             => \&_stationMenu,
+		passthrough     => [ $rec->{id} ],
+		play            => $url,
+		favorites_url   => $url,
+		favorites_type  => 'audio',
 		favorites_title => $rec->{name},
+		image           => $image,
+		favorites_icon  => $image,
+	};
+}
+
+sub _logo {
+	my $rec = shift;
+	return Plugins::ABCListen::API::imageUrl( $rec->{logo}, ITEM_IMAGE_PX ) || Plugins::ABCListen::Util::ICON;
+}
+
+# ---------------------------------------------------------------------------
+# Station menu and day lists (L4)
+# ---------------------------------------------------------------------------
+
+sub _stationMenu {
+	my ( $client, $cb, $args, $id ) = @_;
+
+	# answered like a station list: Listen live's URL makes _answerStations fetch the program on air
+	_answerStations( $client, $cb, 'station', sub { _stationMenuItems( $client, $id ) } );
+
+	return;
+}
+
+sub _stationMenuItems {
+	my ( $client, $id ) = @_;
+
+	my $rec = _isServiceId($id) ? $STATIONS->get($id) : undef;
+	return [ _textItem( $client, LOAD_FAILED ) ] unless ref $rec eq 'HASH';
+
+	my $url   = Plugins::ABCListen::Util::liveUrl( $rec->{id} );
+	my $image = _logo($rec);
+
+	my ( $line2, $onAir ) = _onAirText( $client, $rec->{id} );
+
+	my $prefix = ( $rec->{group} || '' ) eq 'variant' && _hasText( $rec->{city} )
+		? cstring( $client, 'PLUGIN_ABCLISTEN_CITY_TIME', $rec->{city} )
+		: undef;
+	my $about       = join( ' - ', grep { _hasText($_) } $prefix, $rec->{synopsis} );
+	my $description = join( "\n", grep { _hasText($_) } $onAir, $about );
+
+	my @items = ( {
+		name            => cstring( $client, 'PLUGIN_ABCLISTEN_LISTEN_LIVE' ),
 		type            => 'audio',
 		on_select       => 'play',
 		url             => $url,
 		favorites_url   => $url,
+		favorites_title => $rec->{name},
 		image           => $image,
 		favorites_icon  => $image,
-		( defined $description ? ( description => $description ) : () ),
-	};
+		( length $description ? ( description => $description ) : () ),
+	} );
+
+	push @items, { name => $line2, type => 'text' } if defined $line2;
+
+	for my $day ( @{ $SCHEDULE->dayList( $rec->{tz}, time() ) } ) {
+		push @items, {
+			name        => $day->{token} ? cstring( $client, $day->{token} ) : $day->{label},
+			type        => 'link',
+			url         => \&_dayMenu,
+			passthrough => [ $rec->{id}, $day->{date} ],
+		};
+	}
+
+	return \@items;
 }
+
+sub _dayMenu {
+	my ( $client, $cb, $args, $id, $date ) = @_;
+
+	my ( $answered, $timer ) = ( 0, undef );
+	my $what = 'schedule ' . ( defined $id ? $id : '?' ) . ' ' . ( defined $date ? $date : '?' );
+
+	my $answer = sub {
+		my $build = shift;
+		return if $answered++;
+
+		if ($timer) {
+			Slim::Utils::Timers::killSpecific($timer);
+			undef $timer;
+		}
+
+		_answer( $client, $cb, $what, $build );
+	};
+
+	eval {
+		$SCHEDULE->day( $id, $date, sub {
+			my ( $rows, $error ) = @_;
+			$answer->( sub { _dayItems( $client, $id, $rows, $error ) } );
+		} );
+		1;
+	} or do {
+		$log->error( "Could not get the $what: " . ( $@ || 'unknown error' ) );
+		$answer->( sub { [ _textItem( $client, LOAD_FAILED ) ] } );
+	};
+
+	return if $answered;
+
+	# Schedule->day always calls back (its request times out first); this only guards the menu
+	$timer = Slim::Utils::Timers::setTimer( undef, Time::HiRes::time() + DAY_DEADLINE, sub {
+		undef $timer;
+		$log->warn( "The $what took longer than " . DAY_DEADLINE . ' s' );
+		$answer->( sub { [ _textItem( $client, LOAD_FAILED ) ] } );
+	} );
+
+	return;
+}
+
+sub _dayItems {
+	my ( $client, $id, $rows, $error ) = @_;
+
+	return [ _textItem( $client, defined $error && $error eq RATE_LIMITED ? RATE_LIMITED : LOAD_FAILED ) ] unless ref $rows eq 'ARRAY';
+	return [ _textItem( $client, NO_SCHEDULE ) ] unless @$rows;
+
+	my $rec  = $STATIONS->get($id);
+	my $logo = ref $rec eq 'HASH' ? _logo($rec) : Plugins::ABCListen::Util::ICON;
+	my $now  = time();
+
+	# on air: start <= now < end; with overlaps, the latest start
+	my $onAir;
+	for my $i ( 0 .. $#$rows ) {
+		my $row = $rows->[$i];
+		next unless $row->{start} <= $now && defined $row->{end} && $now < $row->{end};
+		$onAir = $i if !defined $onAir || $row->{start} >= $rows->[$onAir]->{start};
+	}
+
+	my $mark = cstring( $client, 'PLUGIN_ABCLISTEN_ON_AIR_MARK' );
+	my @items;
+
+	for my $i ( 0 .. $#$rows ) {
+		my $row   = $rows->[$i];
+		my $name  = $row->{timeLabel} . MIDDOT . $row->{title};
+		my $image = $row->{image} || $logo;
+		$name .= " $mark" if defined $onAir && $i == $onAir;
+
+		# a program that has started: its catch-up episodes (O2's program menu)
+		if ( $row->{start} <= $now && defined $row->{programPath} ) {
+			my $item = eval {
+				$ONDEMAND->programItem( $client, {
+					title => $row->{title},
+					path  => $row->{programPath},
+					image => $image,
+					( defined $row->{synopsis} ? ( description => $row->{synopsis} ) : () ),
+				} );
+			};
+			$log->error("Could not build the program row for $row->{programPath}: $@") if $@;
+
+			if ( ref $item eq 'HASH' ) {
+				$item->{name}  = $item->{line1} = $name;
+				$item->{line2} = $row->{presenters} if defined $row->{presenters} && !defined $item->{line2};
+				push @items, $item;
+				next;
+			}
+		}
+
+		push @items, {
+			name  => $name,
+			line1 => $name,
+			type  => 'text',
+			image => $image,
+			( defined $row->{presenters} ? ( line2       => $row->{presenters} ) : () ),
+			( defined $row->{synopsis}   ? ( description => $row->{synopsis} )   : () ),
+		};
+	}
+
+	return \@items;
+}
+
+sub _textItem {
+	my ( $client, $token ) = @_;
+	return { name => cstring( $client, $token ), type => 'text' };
+}
+
+sub _hasText { defined $_[0] && !ref $_[0] && $_[0] =~ /\S/ }
+
+sub _isServiceId { defined $_[0] && !ref $_[0] && $_[0] =~ /\A[A-Z0-9_]+\z/ }
 
 # (line2, description line) for a station's cached or last-good program on air, or () without one:
 #   "On air: <program> · <presenters>"   "<program> (<time slot>) — <presenters>"
