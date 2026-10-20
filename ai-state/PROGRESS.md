@@ -14,8 +14,9 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 ## Currently in flight
 - #4 L2 program on air — PR #47 in review + runtime check
 - #8 L3 now-playing songs — PR #54 approved; implementer applying review fixes (covers, variant null, poll at song end, tests)
-- #10 L4 station menu: schedule + catch-up — implementation
-- Queued (cap 3): O4, D5, F6, O8, M3, D8, then v0.3.0 (system verification → release), R2, R3
+- #10 L4 station menu: schedule + catch-up — PR #55 in review + runtime check
+- #19 O4 episode extras (segments, tracklist, More from, song info) — implementation
+- Queued (cap 3): D5, F6, O8, M3, D8, then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
 - 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
