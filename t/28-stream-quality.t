@@ -12,7 +12,8 @@
 #   * the live kind: resolve order in 'mediahub'; onStream's fallback INFO line, once per play, through
 #     ProtocolHandler->onStream (none when the first candidate plays, after a redirect, or within a
 #     family; nothing written to the song); one onStream also starts L2's metadata poll, and onStop
-#     still stops it;
+#     still stops it; a LiveMetadata::onStream that dies is logged and doesn't skip the fallback
+#     check (L3);
 #   * the settings page: Settings->prefs (homeState, then liveQuality), saves and partial POSTs, rejected
 #     and HTML values; the template's L5 section (name/id, aria-label, 2 options, no HLS), every token
 #     defined;
@@ -488,6 +489,22 @@ subtest 'one onStream: L2\'s metadata poll starts AND the fallback is logged; on
 	is( scalar( fallback_lines() ), 1, '... and no further fallback line' );
 	is( scalar( logged('WARN') ) + scalar( logged('ERROR') ), 0, 'nothing at WARN or ERROR' );
 	delete $Slim::Player::Playlist::PLAYLISTS{ $player->id };
+};
+
+subtest 'onStream: a LiveMetadata::onStream that dies is logged and the fallback check still runs (L3)' => sub {
+	reset_all();
+	set_quality('mediahub');
+	candidates('RN');
+	my $player = ABCListenTest::FakeClient->new( '00:00:00:00:00:01', song => undef );
+
+	{
+		no warnings 'redefine';
+		local *Plugins::ABCListen::LiveMetadata::onStream = sub { die "metadata broke\n" };
+		ok( eval { $PH->onStream( $player, play_song( RN => ice('rnnsw') ) ); 1 }, 'onStream does not die' ) or diag $@;
+	}
+
+	is( scalar( fallback_lines() ), 1, 'L5: the fallback line is still logged' );
+	is( scalar( grep { $_->{message} =~ /Live metadata onStream failed: metadata broke/ } logged('WARN') ), 1, 'the die is logged at WARN' );
 };
 
 # ---- the settings page ----
