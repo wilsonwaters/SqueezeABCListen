@@ -1,0 +1,19 @@
+{
+  "pageProps": {
+    "heroImageWithCTAPrepared": {
+      "heading": "Octonauts",
+      "uri": "coremedia://program/90000200",
+      "heroImagePrepared": {
+        "alt": "",
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/0c7a1b2c3d4e5f60718293a4b5c6d7e8?impolicy=wcms_crop_resize&cropH=1000&cropW=1000&xPos=0&yPos=0&width=862&height=862",
+        "ratio": "1x1"
+      },
+      "attributionLinksPrepared": []
+    },
+    "presentersPrepared": [],
+    "programCollectionPrepared": null,
+    "latestEpisodePrepared": null,
+    "programTemplate": "default",
+    "webDistributionRestricted": true
+  }
+}

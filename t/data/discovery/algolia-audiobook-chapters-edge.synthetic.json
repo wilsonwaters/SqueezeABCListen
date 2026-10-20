@@ -1,0 +1,199 @@
+{
+  "hits": [
+    {
+      "objectID": "coremedia://audioepisode/900105",
+      "title": "Chapter Five",
+      "canonicalURL": "https://www.abc.net.au/listen/audiobooks/edge-book-page/chapter-five/900105",
+      "duration": 1500,
+      "programID": 900100,
+      "programTitle": "Edge Book",
+      "mediaDownloadStatus": "AVAILABLE",
+      "mediaStreamingStatus": "AVAILABLE",
+      "dates": {
+        "publicationDate": "2026-04-01T13:00:00+00:00",
+        "mediaDownloadAvailableFrom": "2026-04-01T13:00:00+00:00",
+        "mediaDownloadAvailableTo": "2027-04-01T13:00:00+00:00",
+        "mediaStreamingAvailableFrom": "2026-04-01T13:00:00+00:00",
+        "mediaStreamingAvailableTo": "2027-04-01T13:00:00+00:00"
+      },
+      "mediaRenditions": [
+        { "url": "https://mediacore-live-production.akamaized.net/geo-001/audio/90/01/Z/05.mp3", "contentType": "audio/mpeg", "bitrate": 192, "fileSize": 36000000 }
+      ]
+    },
+    "junk",
+    {
+      "objectID": "coremedia://audioepisode/900101",
+      "title": "Chapter One",
+      "canonicalURL": "https://www.abc.net.au/listen/audiobooks/edge-book-page/chapter-one/900101",
+      "duration": 1200,
+      "programID": 900100,
+      "programTitle": "Edge Book",
+      "mediaDownloadStatus": "AVAILABLE",
+      "mediaStreamingStatus": "AVAILABLE",
+      "dates": {
+        "publicationDate": "2026-04-01T13:00:00+00:00",
+        "mediaDownloadAvailableFrom": "2026-04-01T13:00:00+00:00",
+        "mediaDownloadAvailableTo": "2027-04-01T13:00:00+00:00",
+        "mediaStreamingAvailableFrom": "2026-04-01T13:00:00+00:00",
+        "mediaStreamingAvailableTo": "2027-04-01T13:00:00+00:00"
+      },
+      "mediaRenditions": [
+        { "url": "https://mediacore-live-production.akamaized.net/geo-001/audio/90/01/Z/01.mp3", "contentType": "audio/mpeg", "bitrate": 192, "fileSize": 28800000 }
+      ]
+    },
+    {
+      "objectID": "coremedia://audioepisode/900103",
+      "title": "  Chapter Three  ",
+      "canonicalURL": "https://www.abc.net.au/listen/audiobooks/edge-book-page/chapter-three/900103",
+      "duration": 1300,
+      "programID": 900100,
+      "programTitle": "Edge Book",
+      "mediaDownloadStatus": "AVAILABLE",
+      "mediaStreamingStatus": "AVAILABLE",
+      "dates": {
+        "publicationDate": "2026-04-01T13:00:00+00:00",
+        "mediaDownloadAvailableTo": "2027-04-01T13:00:00+00:00",
+        "mediaStreamingAvailableTo": "2027-04-01T13:00:00+00:00"
+      }
+    },
+    {
+      "objectID": "coremedia://audioepisode/900102",
+      "title": "Chapter Two (expired)",
+      "canonicalURL": "https://www.abc.net.au/listen/audiobooks/edge-book-page/chapter-two/900102",
+      "programID": 900100,
+      "mediaDownloadStatus": "EXPIRED",
+      "mediaStreamingStatus": "EXPIRED",
+      "mediaRenditions": [
+        { "url": "https://mediacore-live-production.akamaized.net/geo-001/audio/90/01/Z/02.mp3", "contentType": "audio/mpeg", "bitrate": 192 }
+      ]
+    },
+    {
+      "objectID": "coremedia://audioepisode/900104",
+      "title": "Chapter Four",
+      "canonicalURL": "https://www.abc.net.au/listen/audiobooks/edge-book-page/chapter-four/900104",
+      "duration": 1400,
+      "programID": 900100,
+      "programTitle": "Edge Book",
+      "mediaRenditions": [
+        { "url": "https://mediacore-live-production.akamaized.net/geo-001/audio/90/01/Z/04.mp3", "contentType": "audio/mpeg", "bitrate": 128 }
+      ]
+    },
+    {
+      "objectID": "coremedia://audioepisode/900101",
+      "title": "Chapter One (duplicate)",
+      "canonicalURL": "https://www.abc.net.au/listen/audiobooks/edge-book-page/chapter-one/900101",
+      "programID": 900100,
+      "mediaDownloadStatus": "AVAILABLE",
+      "mediaStreamingStatus": "AVAILABLE"
+    },
+    {
+      "objectID": "coremedia://audioepisode/12ab",
+      "title": "Malformed id",
+      "programID": 900100
+    },
+    {
+      "title": "No objectID",
+      "programID": 900100
+    },
+    {
+      "objectID": "coremedia://audioepisode/900106",
+      "title": "Chapter Six (none/expired)",
+      "programID": 900100,
+      "mediaDownloadStatus": "NONE",
+      "mediaStreamingStatus": "EXPIRED"
+    },
+    {
+      "objectID": "coremedia://audioepisode/900107",
+      "title": "Chapter Seven",
+      "canonicalURL": "https://www.abc.net.au/listen/audiobooks/edge-book-page/chapter-seven/900107",
+      "duration": 1700,
+      "programID": 900100,
+      "programTitle": "Edge Book",
+      "mediaDownloadStatus": "PENDING",
+      "mediaStreamingStatus": "PENDING",
+      "dates": {
+        "publicationDate": "2026-04-01T13:00:00+00:00",
+        "mediaDownloadAvailableTo": "2027-04-01T13:00:00+00:00",
+        "mediaStreamingAvailableTo": "2027-04-01T13:00:00+00:00"
+      },
+      "mediaRenditions": [
+        { "url": "https://mediacore-live-production.akamaized.net/geo-001/audio/90/01/Z/07.mp3", "contentType": "audio/mpeg", "bitrate": 192 }
+      ]
+    },
+    {
+      "objectID": "coremedia://audioepisode/900108",
+      "title": "Chapter Eight (lower-case statuses)",
+      "programID": 900100,
+      "mediaDownloadStatus": "expired",
+      "mediaStreamingStatus": "none"
+    },
+    {
+      "objectID": "coremedia://audioepisode/900109",
+      "title": "Chapter Nine",
+      "canonicalURL": "https://www.abc.net.au/listen/audiobooks/edge-book-page/chapter-nine/900109",
+      "duration": 1900,
+      "programID": 900100,
+      "programTitle": "Edge Book",
+      "mediaDownloadStatus": "PENDING",
+      "mediaStreamingStatus": "PENDING",
+      "dates": {
+        "publicationDate": "2026-12-01T13:00:00+00:00",
+        "mediaDownloadAvailableFrom": "2026-12-01T13:00:00+00:00",
+        "mediaDownloadAvailableTo": "2027-12-01T13:00:00+00:00",
+        "mediaStreamingAvailableFrom": "2026-12-01T13:00:00+00:00",
+        "mediaStreamingAvailableTo": "2027-12-01T13:00:00+00:00"
+      },
+      "mediaRenditions": [
+        { "url": "https://mediacore-live-production.akamaized.net/geo-001/audio/90/01/Z/09.mp3", "contentType": "audio/mpeg", "bitrate": 192 }
+      ]
+    },
+    {
+      "objectID": "coremedia://audioepisode/1000000001",
+      "title": "Epilogue &amp; Notes",
+      "canonicalURL": "https://abc.net.au/listen/audiobooks/edge-book-page/epilogue/1000000001/",
+      "duration": "600",
+      "programID": "900100",
+      "mediaDownloadStatus": "AVAILABLE",
+      "mediaStreamingStatus": "NONE",
+      "dates": {
+        "publicationDate": "2026-04-01T13:00:00+00:00",
+        "mediaDownloadAvailableTo": "2200-01-01T00:00:00+00:00"
+      },
+      "mediaRenditions": [
+        { "url": "ftp://mediacore-live-production.akamaized.net/geo-001/audio/90/01/Z/xx.mp3", "contentType": "audio/mpeg", "bitrate": 192 },
+        { "url": "https://mediacore-live-production.akamaized.net/geo-001/audio/90/01/Z/99.mp3", "contentType": "audio/mpeg", "bitrate": 0 }
+      ]
+    },
+    {
+      "objectID": "coremedia://audioepisode/900098",
+      "title": "Prologue",
+      "canonicalURL": "https://www.abc.net.au/listen/audiobooks/edge-book-page/prologue/900098",
+      "duration": 300,
+      "programID": 900100,
+      "programTitle": "Edge Book",
+      "mediaDownloadStatus": "AVAILABLE",
+      "mediaStreamingStatus": "AVAILABLE",
+      "dates": {
+        "publicationDate": "2026-05-01T13:00:00+00:00",
+        "mediaDownloadAvailableFrom": "2026-05-01T13:00:00+00:00",
+        "mediaDownloadAvailableTo": "2027-05-01T13:00:00+00:00",
+        "mediaStreamingAvailableFrom": "2026-05-01T13:00:00+00:00",
+        "mediaStreamingAvailableTo": "2027-05-01T13:00:00+00:00"
+      },
+      "mediaRenditions": [
+        { "url": "https://mediacore-live-production.akamaized.net/geo-001/audio/90/01/Z/00.mp3", "contentType": "audio/mpeg", "bitrate": 192, "fileSize": 7200000 }
+      ]
+    },
+    {
+      "objectID": "coremedia://program/900111",
+      "title": "A program hit",
+      "programID": 900100
+    }
+  ],
+  "nbHits": 15,
+  "page": 0,
+  "nbPages": 1,
+  "hitsPerPage": 1000,
+  "query": "",
+  "params": "query=&hitsPerPage=1000&filters=contentType%3Aaudioepisode%20AND%20programID%3D900100"
+}
