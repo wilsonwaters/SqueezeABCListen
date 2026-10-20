@@ -7,16 +7,15 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - foundation: F1 #1 · F2 #3 · F3 #7 · F4 #34 (bug) · F5 #37 (cardRef names) · F6 #41 (F4 follow-ups)
 - live: L1 #2 · L2 #4 · L3 #8 · L4 #10 · L5 #14
 - ondemand: O1 #12 · O2 #16 · O3 #18 · O4 #19 · O6 #30 · O7 #40 · O8 #48 (O7 follow-ups)
-- discovery: D1 #5 · D2 #6 · D3 #13 · D4 #22 · D5 #23 · D6 #44 (podcast A–Z groups) · D7 #51 (all categories)
+- discovery: D1 #5 · D2 #6 · D3 #13 · D4 #22 · D5 #23 · D6 #44 (podcast A–Z groups) · D7 #51 (all categories) · D8 #56 (D7 follow-ups)
 - myabc: M1 #11 · M2 #20 · M3 #52 (settings/L5 follow-ups)
 - release: R1 #9 · R2 #15 · R3 #17
 
 ## Currently in flight
 - #4 L2 program on air — PR #47 in review + runtime check
-- #8 L3 now-playing songs — PR #54 in review + runtime check
-- #51 D7 all 18 podcast categories + A–Z "Other" bucket — PR #53 in review + runtime check
+- #8 L3 now-playing songs — PR #54 approved; implementer applying review fixes (covers, variant null, poll at song end, tests)
 - #10 L4 station menu: schedule + catch-up — implementation
-- Queued (cap 3): O4, D5, F6, O8, M3, then v0.3.0 (system verification → release), R2, R3
+- Queued (cap 3): O4, D5, F6, O8, M3, D8, then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
 - 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
@@ -27,6 +26,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   F5, O7; L5 and D6 held until those finish. New cap: ≤3 concurrent agents.
 
 ## Last completions
+- #51 D7 merged (PR #53, squash 26b21cd): Browse by category lists all 18 categories (collection paged; fallbacks);
+  strict categories detection; A–Z "Other" row for non-Latin titles. Review APPROVE; follow-ups D8 (#56).
 - #14 L5 merged (PR #49, squash 5cb5289): live quality Standard / ABC mediahub with automatic Icecast fallback; no
   HLS (PlayHLS incompatible, deferred to L6). Review + runtime APPROVE. Follow-ups: M3 (#52); Live.pm onStream
   isolation folded into L3.
