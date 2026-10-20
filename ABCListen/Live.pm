@@ -50,10 +50,9 @@ package Plugins::ABCListen::Live;
 #   rows that have started and have a program path: OnDemand->programItem($client, { title, path,
 #                 image, description => synopsis }) (contract 6: O2's program menu, i.e. that
 #                 program's catch-up episodes), only name/line1 overridden; line2 = presenters when
-#                 O2 set none
-#   other rows (future, no program page, programItem undef): text, line2 = presenters, image,
-#                 description = synopsis
-#   image: the schedule's (~340 px), else the station logo
+#                 O2 set none; image: the schedule's (~340 px), else the station logo
+#   other rows (future, no program page, programItem undef): text, line2 = presenters,
+#                 description = synopsis, no image (Material shows the day as a list, not a grid)
 #   no rows: one PLUGIN_ABCLISTEN_NO_SCHEDULE text item; an error: one LOAD_FAILED (or RATE_LIMITED)
 #   text item; answered exactly once, also when building dies or the schedule takes longer than
 #   DAY_DEADLINE.
@@ -579,11 +578,13 @@ sub _dayItems {
 			}
 		}
 
+		# no image on a text row: Material turns a text item with an image into a grid tile (the whole
+		# day becomes a grid of truncated captions, line2 printed as a literal "<br/>"); without one
+		# it shows the day as a list
 		push @items, {
 			name  => $name,
 			line1 => $name,
 			type  => 'text',
-			image => $image,
 			( defined $row->{presenters} ? ( line2       => $row->{presenters} ) : () ),
 			( defined $row->{synopsis}   ? ( description => $row->{synopsis} )   : () ),
 		};

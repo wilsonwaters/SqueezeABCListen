@@ -12,8 +12,9 @@
 #     start wins; none in a gap), started rows with a program path built by OnDemand->programItem
 #     ($client, { title, path, image, description }) with only name/line1 overridden (line2 =
 #     presenters when O2 set none), programItem undef or dying -> text row, future rows and rows
-#     without a program path -> text rows (line2 presenters, image, description synopsis), the
-#     station logo when a row has no image; a full RN day (31 rows, one on air, rows after it text);
+#     without a program path -> text rows (line2 presenters, description synopsis, no image: Material
+#     lists the day), the station logo for a program row without an image; a full RN day (31 rows,
+#     one on air, rows after it text);
 #   * NO_SCHEDULE / LOAD_FAILED / RATE_LIMITED text items; stale or unknown ids and dates; exactly one
 #     callback on every path (errors, dying code, a schedule that never answers: 15 s deadline, a
 #     dying callback); no player ($client undef, passed on to programItem); no timers left.
@@ -270,11 +271,11 @@ subtest 'day list: names, (on air), program rows via OnDemand->programItem, text
 
 	is_deeply(
 		[ sort keys %{ $items->[3] } ],
-		[ sort qw(name line1 line2 type image description) ],
-		'a text row: name, line1, line2 (presenters), image, description (synopsis)'
+		[ sort qw(name line1 line2 type description) ],
+		'a text row: name, line1, line2 (presenters), description (synopsis); no image (Material then lists the day instead of a grid)'
 	);
 	is_deeply( [ @{ $items->[3] }{qw(line2 description)} ], [ 'Sally Sara', $raw->[3]->{synopsis} ], '... presenters and synopsis' );
-	like( $items->[3]->{image}, qr{resize\.abcradio\.net\.au}, '... the schedule\'s image' );
+	like( $items->[2]->{image}, qr{resize\.abcradio\.net\.au}, 'a program row: the schedule\'s image' );
 	ok( !exists $items->[1]->{line2}, 'a text row without presenters: no line2' );
 
 	reset_all( t('2026-10-19T08:00:00Z') );    # the whole day has started
@@ -302,14 +303,15 @@ subtest 'day list: a full RN day - 31 rows, one on air, rows after it are text' 
 
 subtest 'day list: (on air) with overlaps and gaps; the station logo without an image' => sub {
 	my $body = sub {
-		JSON::PP->new->encode( { formattedScheduleArray => [ { items => [ map { my ( $s, $e, $title ) = @$_; { rawStartTime => $s, ( $e ? ( rawEndTime => $e ) : () ), title => $title } } @_ ] } ] } );
+		JSON::PP->new->encode( { formattedScheduleArray => [ { items => [ map { my ( $s, $e, $title ) = @$_; { rawStartTime => $s, ( $e ? ( rawEndTime => $e ) : () ), title => $title, url => "https://www.abc.net.au/listen/programs/\L$title" } } @_ ] } ] } );
 	};
 
 	reset_all( t('2026-10-19T03:15:00Z') );
 	route_day( RN => { content => $body->( [ '2026-10-19T01:00:00Z', '2026-10-19T04:00:00Z', 'Long' ], [ '2026-10-19T03:00:00Z', '2026-10-19T03:30:00Z', 'Inside' ] ) } );
 	my $items = items_of( day_menu( undef, 'RN', '2026-10-19' ) );
 	is_deeply( names($items), [ "12:00pm${MIDDOT}Long", "2:00pm${MIDDOT}Inside$ON_AIR" ], 'two candidates: the latest start is on air' );
-	is( $items->[0]->{image}, Plugins::ABCListen::API::imageUrl( $S->get('RN')->{logo}, 300 ), 'no schedule image: the station logo' );
+	is( $PROGRAM_ITEM[0]->[1]->{image}, Plugins::ABCListen::API::imageUrl( $S->get('RN')->{logo}, 300 ), 'no schedule image: programItem gets the station logo' );
+	is( $items->[0]->{image}, Plugins::ABCListen::API::imageUrl( $S->get('RN')->{logo}, 300 ), '... and the row shows it' );
 	like( $items->[0]->{image}, qr/cropW=\d+.*width=300/, '... at 300 px' );
 
 	reset_all( t('2026-10-19T02:30:00Z') );
