@@ -461,14 +461,14 @@ sub _chapterRows {
 # Make sure the episode meta cache holds the chapter's seeded set (episodeItem stores it today).
 sub _seed {
 	my $ref = shift;
-	my @keys = grep { defined $ref->{$_} } @SEED_KEYS;
 	return unless ref $ref->{renditions} eq 'ARRAY' && @{ $ref->{renditions} };
 
 	my $cached = Plugins::ABCListen::Util::getEpisodeMeta( $ref->{id} );
 	my $stored = ref $cached eq 'HASH' && ref $cached->{renditions} eq 'ARRAY' && @{ $cached->{renditions} }
 		&& ( !defined $ref->{seenAt} || ( defined $cached->{seenAt} && $cached->{seenAt} == $ref->{seenAt} ) );
+	return if $stored;
 
-	Plugins::ABCListen::Util::setEpisodeMeta( $ref->{id}, { map { $_ => $ref->{$_} } @keys } ) unless $stored;
+	Plugins::ABCListen::Util::setEpisodeMeta( $ref->{id}, { map { $_ => $ref->{$_} } grep { defined $ref->{$_} } @SEED_KEYS } );
 	return;
 }
 
