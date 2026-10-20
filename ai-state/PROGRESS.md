@@ -13,10 +13,10 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 
 ## Currently in flight
 - #4 L2 program on air — PR #47 in review + runtime check
-- #8 L3 now-playing songs — PR #54 approved; implementer applying review fixes (covers, variant null, poll at song end, tests)
 - #10 L4 station menu: schedule + catch-up — PR #55 in review + runtime check
 - #19 O4 episode extras (segments, tracklist, More from, song info) — implementation
-- Queued (cap 3): D5, F6, O8, M3, D8, then v0.3.0 (system verification → release), R2, R3
+- #23 D5 audiobook chapters — implementation
+- Queued (cap 3): F6, O8, M3, D8, then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
 - 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
@@ -27,6 +27,9 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   F5, O7; L5 and D6 held until those finish. New cap: ≤3 concurrent agents.
 
 ## Last completions
+- #8 L3 merged (PR #54, squash f49749a): song, artist and cover in Now Playing for the 9 music stations; Recently
+  played; L2 follow-ups; Live onStream isolation. Review + runtime APPROVE; review fixes (cover originals, variant null
+  body, song-end poll, 4 test gaps) verified by orchestrator diff read + merged-tree check.sh (639 tests).
 - #51 D7 merged (PR #53, squash 26b21cd): Browse by category lists all 18 categories (collection paged; fallbacks);
   strict categories detection; A–Z "Other" row for non-Latin titles. Review APPROVE; follow-ups D8 (#56).
 - #14 L5 merged (PR #49, squash 5cb5289): live quality Standard / ABC mediahub with automatic Icecast fallback; no
