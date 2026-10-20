@@ -54,6 +54,18 @@
               "artist": "Nested Title"
             },
             {
+              "id": "a9",
+              "title": "No Time to Die",
+              "artist": "O'Connell, Finneas | O'Connell, Billie Eilish",
+              "timestampRelative": "41:45"
+            },
+            {
+              "id": "a10",
+              "title": "Only separators",
+              "artist": " | ",
+              "timestampRelative": "42:00"
+            },
+            {
               "id": "a8",
               "title": "Caf&eacute; con le&#x00F1;a",
               "artist": "Ni&ntilde;o &amp; Co&nbsp;Ltd",

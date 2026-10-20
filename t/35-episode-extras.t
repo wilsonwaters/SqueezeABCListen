@@ -242,9 +242,11 @@ subtest 'parse: edge cases (null, [], missing, no document, timestamps, entities
 			{ title => 'No timestamp', artist => 'The Whitespace Band' },
 			{ title => 'No artist', time => '1:02:38' },
 			{ title => 'A bogus timestamp', artist => 'Clock Skew' },
+			{ title => 'No Time to Die', artist => "O'Connell, Finneas & O'Connell, Billie Eilish", time => '41:45' },
+			{ title => 'Only separators', time => '42:00' },
 			{ title => "Caf\x{E9} con le\x{F1}a", artist => "Ni\x{F1}o & Co Ltd", time => '59:59' },
 		],
-		'entities decoded, whitespace collapsed; no timestampRelative (or a bogus one): no time; no artist: no key; empty, missing or non-text titles and non-hash items skipped'
+		'entities decoded, whitespace collapsed, ABC\'s " | " between artists -> " & "; no timestampRelative (or a bogus one): no time; no artist: no key; empty, missing or non-text titles and non-hash items skipped'
 	);
 	is_deeply(
 		[ map { $TL->formatRow($_) } @$edge ],
@@ -253,6 +255,8 @@ subtest 'parse: edge cases (null, [], missing, no document, timestamps, entities
 			"The Whitespace Band \x{2013} No timestamp",
 			"1:02:38 \x{B7} No artist",
 			"Clock Skew \x{2013} A bogus timestamp",
+			"41:45 \x{B7} O'Connell, Finneas & O'Connell, Billie Eilish \x{2013} No Time to Die",
+			"42:00 \x{B7} Only separators",
 			"59:59 \x{B7} Ni\x{F1}o & Co Ltd \x{2013} Caf\x{E9} con le\x{F1}a",
 		],
 		'formatRow: without a time "<artist> – <title>"; without an artist "<time> · <title>"'
@@ -877,9 +881,9 @@ subtest 'song info: order with M2\'s Follow rows; a stable row count' => sub {
 
 	is_deeply( names( $menu->() ), [ 'Episode notes', 'More from Classic Drive', 'Tracklist', 'Follow "Classic Drive"', 'Follow to see its new episodes in My ABC listen' ], 'Episode notes · More from · Tracklist · Follow · hint' );
 
-	Slim::Utils::Cache->new('abclisten')->set( "tracklist:$DRIVE_ID", [ { title => 'One' } ], 3600 );
+	Slim::Utils::Cache->new('abclisten')->set( "tracklist-rows:$DRIVE_ID", [ { title => 'One' } ], 3600 );
 	is( scalar @{ $menu->() }, 5, 'tracklist cached: the same number of rows (the Follow rows keep their index)' );
-	Slim::Utils::Cache->new('abclisten')->set( "tracklist:$DRIVE_ID", [], 3600 );
+	Slim::Utils::Cache->new('abclisten')->set( "tracklist-rows:$DRIVE_ID", [], 3600 );
 	is( scalar @{ $menu->() }, 5, 'empty tracklist cached: the same number of rows' );
 };
 

@@ -21,7 +21,7 @@ package Plugins::ABCListen::Tracklist;
 #       request coalescing are shared: an episode resolved for playback needs no second request,
 #       and concurrent opens of one episode make one request. F3's cache hits call back
 #       synchronously too.
-#       The parsed rows are cached under 'tracklist:<id>' (cache namespace abclisten) for
+#       The parsed rows are cached under 'tracklist-rows:<id>' (cache namespace abclisten) for
 #       ROWS_TTL (1 h); failures are never cached. A result arriving after the 8 s deadline
 #       answered is still cached (the next open is instant), never answered.
 #       A failure is logged at WARN once per episode (again only after a success), with
@@ -35,8 +35,9 @@ package Plugins::ABCListen::Tracklist;
 #       no tracklist). Rows in ABC's order: { title, artist?, time? } from
 #       tracklistPrepared.items[]: title, artist (ABC's composer for classical music), time =
 #       timestampRelative ('00:55', '1:02:38'; kept only in that m:ss / h:mm:ss shape). Text is
-#       entity-decoded, trimmed and whitespace-collapsed; an item without a title is skipped;
-#       absent values have no key. When pagination.total says ABC has more items than it sent
+#       entity-decoded, trimmed and whitespace-collapsed; ABC's " | " between several artists
+#       becomes " & " ('O'Connell, Finneas & O'Connell, Billie Eilish'); an item without a title
+#       is skipped; absent values have no key. When pagination.total says ABC has more items than it sent
 #       (e.g. 31 of which 3 arrived), the items present are kept and that is logged at DEBUG.
 #
 #   formatRow($row) -> "<time> · <artist> – <title>", e.g.
@@ -179,7 +180,7 @@ sub cached {
 	return ref $rows eq 'ARRAY' ? [ grep { ref $_ eq 'HASH' } @$rows ] : undef;
 }
 
-sub _cacheKey { 'tracklist:' . $_[0] }
+sub _cacheKey { 'tracklist-rows:' . $_[0] }
 
 sub _cache { Slim::Utils::Cache->new(CACHE_NAMESPACE) }
 
@@ -202,8 +203,11 @@ sub parse {
 
 		my %row = ( title => $title );
 
+		# ABC joins several artists with " | " ("O'Connell, Finneas | O'Connell, Billie Eilish"):
+		# " & " reads better, also to a screen reader
 		my $artist = _text( $item->{artist} );
-		$row{artist} = $artist if defined $artist;
+		$artist = join( ' & ', grep {length} split /\s*\|\s*/, $artist ) if defined $artist;
+		$row{artist} = $artist if defined $artist && length $artist;
 
 		my $time = _text( $item->{timestampRelative} );
 		$row{time} = $time if defined $time && $time =~ /\A[0-9]{1,3}:[0-5][0-9](?::[0-5][0-9])?\z/;
