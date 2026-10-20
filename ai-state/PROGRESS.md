@@ -14,8 +14,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 ## Currently in flight
 - #4 L2 program on air — PR #47 in review + runtime check
 - **v0.3.0 system verification** on ff1be94 (journeys J1–J12 incl. upgrade from v0.2.0). Hold O4/D5 merges until v0.3.0 is cut.
-- #19 O4 episode extras (segments, tracklist, More from, song info) — implementation
-- #23 D5 audiobook chapters — implementation
+- #19 O4 episode extras — PR #57 in review + runtime check (merge after v0.3.0 is cut)
+- #23 D5 audiobook chapters — PR #58 in review + runtime check (merge after v0.3.0 is cut)
 - Queued (cap 3): F6, O8, M3, D8, then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
