@@ -41,6 +41,12 @@ Unresolved product/technical decisions and what they block. Resolved items move 
    never play them (drop D5).
    _Blocks: nothing (D5 is Should; dropping it only removes chapter lists)._
 
+6. **Classical music: which artist does Now Playing show?** ABC's music API gives `summary.artist` = the composer in
+   "Last, First" form (e.g. "Liszt, Franz"); performers ("Yundi Li (piano)") are separate. **Default (L3, PR #54):**
+   composer only, as ABC's own summary does. Alternative: "Composer – Performer" (one-line change in
+   `Tracks::_artist`). Asked the stakeholder 2026-10-20.
+   _Blocks: nothing._
+
 ## Resolved
 
 - **Commit authorship / attribution** (2026-10-19, stakeholder instruction): **never attribute any AI tool or vendor**

@@ -13,8 +13,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 
 ## Currently in flight
 - #4 L2 program on air — PR #47 in review + runtime check
-- #8 L3 now-playing songs — implementation (L2 follow-ups folded in, see #8 amendment)
-- #51 D7 all 18 podcast categories + A–Z "Other" bucket — implementation
+- #8 L3 now-playing songs — PR #54 in review + runtime check
+- #51 D7 all 18 podcast categories + A–Z "Other" bucket — PR #53 in review + runtime check
 - #10 L4 station menu: schedule + catch-up — implementation
 - Queued (cap 3): O4, D5, F6, O8, M3, then v0.3.0 (system verification → release), R2, R3
 
