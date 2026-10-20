@@ -129,14 +129,18 @@ package Plugins::ABCListen::OnDemand;
 #                              programImage) named and line1 "<label> – <title>": ABC's label
 #                              ("1 of 5"), else "<i> of <N>". No date in the name (all segments of
 #                              an episode share it). A segment row's own menu lists no segments.
-#   "Tracklist (N)" | "No tracklist"
+#   "Tracklist (N)" | "No tracklist" | "Tracklist unavailable"
 #                              the episode document's tracklist (Plugins::ABCListen::Tracklist),
 #                              fetched when the menu opens (8 s at most; the same nextData path and
 #                              TTL as O1's resolver, so F3's cache is shared). A link with the rows
 #                              inline as text items ("00:55 · Rossini, Gioachino – The Barber of
-#                              Seville: Overture"), or a text item when there are none. No row
-#                              without an episode path (nothing is fetched) or when the fetch
-#                              failed (the menu still answers once).
+#                              Seville: Overture"), or a text item when there are none. When the
+#                              fetch failed (or died, or missed its deadline) the row is the text
+#                              "Tracklist unavailable": the row is there whenever the episode has a
+#                              path, so the rows after it keep their index whether the fetch worked
+#                              or not (LMS re-walks menus by index; a stale "More from" id must
+#                              not open the tracklist once a late document is cached). No row
+#                              without an episode path (nothing is fetched). The menu answers once.
 #   "More from <program>"      _moreFromItem: programItem({ title, path, id?, image? }) with
 #                              name/line1 overridden, when both a program path (the episode's
 #                              programPath, else Follow::programPathFor of its path) and a program
@@ -847,12 +851,18 @@ sub _episodeMenu {
 		return _respond( $client, $once, sub { _episodeMenuItems( $client, $episode, undef ) } );
 	}
 
-	_try( $client, $once, sub {
-		Plugins::ABCListen::Tracklist::fetch( { id => $episode->{id}, path => $path }, sub {
-			my $tracklist = shift;
-			_respond( $client, $once, sub { _episodeMenuItems( $client, $episode, $tracklist ) } );
-		} );
-	} );
+	my $answer = sub {
+		my $tracklist = shift;
+		_respond( $client, $once, sub { _episodeMenuItems( $client, $episode, $tracklist ) } );
+	};
+
+	# a fetch that dies is a failed fetch: the menu still lists everything else
+	eval { Plugins::ABCListen::Tracklist::fetch( { id => $episode->{id}, path => $path }, $answer ); 1 } or do {
+		$log->error( 'Fetching the ABC listen tracklist failed: ' . ( $@ || 'unknown error' ) );
+		$answer->( { error => LOAD_FAILED } );
+	};
+
+	return;
 }
 
 # The episode menu's items (see the header); $tracklist is Tracklist->fetch's answer, or undef
@@ -907,7 +917,7 @@ sub _episodeMenuItems {
 		};
 	}
 
-	push @items, _tracklistItem( $client, $tracklist ) if ref $tracklist eq 'HASH' && ref $tracklist->{items} eq 'ARRAY';
+	push @items, _tracklistItem( $client, $tracklist ) if ref $tracklist eq 'HASH';
 
 	my $more = _moreFromItem( $client, $episode );
 	push @items, $more if $more;
@@ -975,9 +985,13 @@ sub _segmentItem {
 	return $item;
 }
 
-# Tracklist (N) with the formatted rows inline (text), or the "No tracklist" text item.
+# Tracklist (N) with the formatted rows inline (text), or the "No tracklist" text item; for a
+# failed fetch ({ error }) the "Tracklist unavailable" text item, so the row count never depends
+# on the fetch.
 sub _tracklistItem {
 	my ( $client, $tracklist ) = @_;
+
+	return { name => cstring( $client, 'PLUGIN_ABCLISTEN_TRACKLIST_UNAVAILABLE' ), type => 'text' } unless ref $tracklist->{items} eq 'ARRAY';
 
 	my @rows = _tracklistRows( $tracklist->{items} );
 	return { name => cstring( $client, 'PLUGIN_ABCLISTEN_NO_TRACKLIST' ), type => 'text' } unless @rows;

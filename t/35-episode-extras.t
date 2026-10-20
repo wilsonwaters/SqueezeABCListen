@@ -8,14 +8,19 @@
 #   or non-text titles, a bogus time); formatRow(); fetch(): the request path, ttl and timeout equal
 #   O1's resolver's (one shared F3 cache entry, in either order), cached() before and after, the
 #   1 h TTL on the fake clock, errors (404 after the buildId refresh, transport error, bad JSON, the
-#   8 s deadline via a deferred response) answered exactly once with WARN once per episode, no
-#   path, a dying callback, coalesced concurrent fetches; the program-path table (Follow's
-#   programPathFor, which O4 calls); presenters de-duplication and joining.
+#   8 s deadline via a deferred response, an API call that dies) answered exactly once with WARN
+#   once per episode (again after a success), a failure cached for 90 s (no API call, no wait) and
+#   removed by a late success, no path, a dying callback, coalesced concurrent fetches, no timer
+#   left, the parsed rows answering without any API call; formatRow decoding nothing twice; the
+#   program-path table (Follow's programPathFor, which O4 calls); presenters de-duplication and
+#   joining.
 # Menu part (OnDemand::_episodeMenu and its O4 rows; Episode.pm's song info):
 #   the Science Show episode submenu reached through the program menu, exact rows and order; each
 #   extra present or absent; Segments -> rows (exact keys, names "1 of 5 – …", meta-cache writes,
 #   fallbacks, invalid segments, no recursion, a stale id); the lazy tracklist fetch on opening
-#   (present, empty, error, 8 s timeout) answering once; a second open makes no request; "More
+#   (present, empty, error, 8 s timeout, a fetch or API call that dies) answering once, a failure
+#   as the "Tracklist unavailable" row so the rows keep their indexes (a stale "More from" index
+#   after a late document); a second open makes no request; "More
 #   from" present/absent per the rules (own program, Lab Notes before and after O1's resolve, a
 #   caller's programPath, no path) and opening it shows O2's program menu; the song-info provider
 #   (registered by Episode->init after 'top', before M2's Follow rows; full, partial, absent and
@@ -94,6 +99,7 @@ my $SCIENCE_IMG_300 = "$WCMS/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop
 my $LOAD_FAILED  = string('PLUGIN_ABCLISTEN_LOAD_FAILED');
 my $NO_TRACKLIST = string('PLUGIN_ABCLISTEN_NO_TRACKLIST');
 my $NO_EPISODES  = string('PLUGIN_ABCLISTEN_NO_EPISODES');
+my $UNAVAILABLE  = string('PLUGIN_ABCLISTEN_TRACKLIST_UNAVAILABLE');
 
 my $EPISODE_MENU  = \&Plugins::ABCListen::OnDemand::_episodeMenu;
 my $PROGRAM_MENU  = \&Plugins::ABCListen::OnDemand::_programMenu;
@@ -276,6 +282,8 @@ subtest 'parse: edge cases (null, [], missing, no document, timestamps, entities
 	is( $TL->formatRow('junk'),                   undef, 'formatRow: not a hash -> undef' );
 	is( $TL->formatRow( { title => 'Only' } ),    'Only', 'formatRow: the title alone' );
 	is( Plugins::ABCListen::Tracklist::formatRow( { title => 'Plain', time => '01:00' } ), "01:00 \x{B7} Plain", 'formatRow also as a plain function' );
+	is( $TL->formatRow( { title => 'R&amp;B', artist => ' Tom  &lt;3 ' } ), "Tom &lt;3 \x{2013} R&amp;B", 'formatRow never decodes a second time (parse decoded once; a literal "&amp;" stays)' );
+	is( $TL->formatRow( $TL->parse( { data => { documentProps => { tracklistPrepared => { items => [ { title => 'R&amp;amp;B' } ] } } } } )->[0] ), 'R&amp;B', 'parse + formatRow: one decoding in all' );
 };
 
 subtest 'fetch: O1\'s path and TTL (shared F3 cache), cached() before/after, 1 h TTL, no second request' => sub {
@@ -293,14 +301,18 @@ subtest 'fetch: O1\'s path and TTL (shared F3 cache), cached() before/after, 1 h
 	is( $NEXT_CALLS[0]->{opts}->{ttl}, Plugins::ABCListen::Episode::DOCUMENT_TTL, 'ttl = Episode.pm DOCUMENT_TTL (O1\'s resolver)' );
 	my ($request) = grep { $_->{url} eq $DRIVE_URL } requests();
 	is( $request->{params}->{timeout}, 8, 'the request times out after 8 s' );
+	is( scalar( Slim::Utils::Timers::pending() ), 0, 'answered: the 8 s deadline timer is cancelled' );
 
 	is_deeply( $TL->cached($DRIVE_ID), $result->{items}, 'cached(): the parsed rows' );
 	is( $TL->cached('nope'), undef, 'cached(bad id): undef' );
 
 	my $before = () = requests();
+	my $calls  = @NEXT_CALLS;
 	$c = fetch_tl( { id => $DRIVE_ID, path => $DRIVE_PATH } );
 	is( $c->count, 1, 'second fetch: answered synchronously' );
 	is( scalar( () = requests() ), $before, '... with no request' );
+	is( scalar @NEXT_CALLS, $calls, '... and no API call at all (the parsed rows, not F3\'s document)' );
+	is( scalar( Slim::Utils::Timers::pending() ), 0, '... and no timer' );
 
 	advanceTime(3601);
 	is( $TL->cached($DRIVE_ID), undef, 'after 1 h: the parsed rows have expired' );
@@ -349,7 +361,7 @@ subtest 'fetch: failures answer once with { error }, WARN once per episode; no p
 	is( $TL->cached($DRIVE_ID), undef, '... nothing cached' );
 
 	$c = fetch_tl( { id => $DRIVE_ID, path => $DRIVE_PATH } );
-	is_deeply( ( $c->args(0) )[0], { error => 'PLUGIN_ABCLISTEN_LOAD_FAILED' }, 'the same episode fails again' );
+	is_deeply( ( $c->args(0) )[0], { error => 'PLUGIN_ABCLISTEN_LOAD_FAILED' }, 'the same episode again (the cached failure)' );
 	is( scalar warnings_logged(), 1, '... no second WARN (once per episode)' );
 
 	fresh();
@@ -396,6 +408,76 @@ subtest 'fetch: failures answer once with { error }, WARN once per episode; no p
 	$calls = 0;
 	$TL->fetch( { id => $DRIVE_ID, path => $DRIVE_PATH }, sub { $calls++; die "again\n" } );
 	is( $calls, 1, 'a dying callback on a cache hit: called once too' );
+};
+
+subtest 'fetch: a failure is cached for 90 s (no new request, no wait); WARN once; a success resets both' => sub {
+	fresh();
+	my $mode = 'down';
+	Slim::Networking::SimpleAsyncHTTP->addRoute( $DRIVE_URL, sub {
+		return $mode eq 'down' ? { error => 'Connect timed out' } : { code => 200, headers => $JSON, content => fixture('ondemand/nextdata-episode-classic-drive-aac.trimmed.json') };
+	} );
+	my $episode = { id => $DRIVE_ID, path => $DRIVE_PATH };
+
+	my $c = fetch_tl($episode);
+	is_deeply( [ map { $_->[0] } $c->calls ], [ { error => 'PLUGIN_ABCLISTEN_LOAD_FAILED' } ], 'a transport error: { error }' );
+	is( scalar @NEXT_CALLS,     1, '... one API call' );
+	is( scalar doc_requests(),  1, '... one request' );
+	is( scalar warnings_logged(), 1, '... WARN' );
+
+	$c = fetch_tl($episode);
+	is_deeply( [ map { $_->[0] } $c->calls ], [ { error => 'PLUGIN_ABCLISTEN_LOAD_FAILED' } ], 'opened again at once: the cached failure, answered synchronously' );
+	is( scalar @NEXT_CALLS,    1, '... no API call' );
+	is( scalar doc_requests(), 1, '... no request' );
+	is( scalar( Slim::Utils::Timers::pending() ), 0, '... no deadline to wait for' );
+
+	advanceTime(89);
+	fetch_tl($episode);
+	is( scalar @NEXT_CALLS, 1, 'after 89 s: still the cached failure' );
+
+	advanceTime(2);
+	$c = fetch_tl($episode);
+	is( scalar @NEXT_CALLS,    2, 'after 91 s: ABC is asked again' );
+	is( scalar doc_requests(), 2, '... one more request' );
+	is_deeply( ( $c->args(0) )[0], { error => 'PLUGIN_ABCLISTEN_LOAD_FAILED' }, '... still down: { error }' );
+	is( scalar warnings_logged(), 1, '... and still one WARN for the episode' );
+
+	$mode = 'up';
+	advanceTime(91);
+	$c = fetch_tl($episode);
+	is( scalar @{ ( $c->args(0) )[0]->{items} }, 3, 'ABC is back (after the 90 s): the rows' );
+
+	# fail -> success -> fail: the success reset the warn-once state
+	advanceTime(3601);    # the rows and F3's document expire
+	$mode = 'down';
+	$c = fetch_tl($episode);
+	is_deeply( ( $c->args(0) )[0], { error => 'PLUGIN_ABCLISTEN_LOAD_FAILED' }, 'down again an hour later: { error }' );
+	is( scalar warnings_logged(), 2, '... WARN again (fail, success, fail: two WARNs)' );
+
+	# the deadline is a failure too; a late success removes the cached failure (an episode without an id: no rows cache)
+	fresh();
+	route( $DRIVE_URL, file => 'ondemand/nextdata-episode-classic-drive-aac.trimmed.json', headers => $JSON, defer => 1 );
+	my $byPath = { path => $DRIVE_PATH };
+	$c = fetch_tl($byPath);
+	advanceTime(8);
+	is_deeply( [ map { $_->[0] } $c->calls ], [ { error => 'PLUGIN_ABCLISTEN_LOAD_FAILED' } ], 'no answer within 8 s: { error }' );
+	$c = fetch_tl($byPath);
+	is( $c->count, 1, 'within 90 s: answered at once from the cached failure' );
+	is( scalar doc_requests(), 1, '... no new request' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	$c = fetch_tl($byPath);
+	is( scalar @{ ( $c->args(0) )[0]->{items} }, 3, 'the late document removed the cached failure: the rows (from F3\'s cache)' );
+	is( scalar doc_requests(), 1, '... still one request' );
+};
+
+subtest 'fetch: an API call that dies is a failure: one { error } callback, fetch never dies' => sub {
+	fresh();
+	no warnings 'redefine';
+	local *Plugins::ABCListen::API::nextData = sub { die "API exploded\n" };
+	my $c = collector();
+	ok( eval { $TL->fetch( { id => $DRIVE_ID, path => $DRIVE_PATH }, $c->cb ); 1 }, 'fetch does not die' ) or diag $@;
+	is_deeply( [ map { $_->[0] } $c->calls ], [ { error => 'PLUGIN_ABCLISTEN_LOAD_FAILED' } ], '... one { error } callback' );
+	ok( scalar( grep { $_->{message} =~ /API exploded/ } warnings_logged() ), '... logged at WARN' );
+	is( scalar( Slim::Utils::Timers::pending() ), 0, '... no timer left' );
 };
 
 subtest 'fetch: an audiobook chapter (its page is the book page) -> no tracklist, no WARN; concurrent opens coalesce' => sub {
@@ -620,7 +702,7 @@ subtest 'segments: rows with exact keys, names "<label> – <title>", meta-cache
 	check_names( $items, 'segments' );
 };
 
-subtest 'tracklist on opening: present, [], error, timeout; each answered once; a second open makes no request' => sub {
+subtest 'tracklist on opening: present, [], error, timeout; each answered once; a second open makes no request; stable rows' => sub {
 	fresh();
 	route( $DRIVE_URL, file => 'ondemand/nextdata-episode-classic-drive-aac.trimmed.json', headers => $JSON );
 	my $drive = { id => $DRIVE_ID, title => 'Classic Drive', path => $DRIVE_PATH, programTitle => 'Classic Drive', programImage => $SCIENCE_IMG };
@@ -637,10 +719,14 @@ subtest 'tracklist on opening: present, [], error, timeout; each answered once; 
 	is_deeply( names( items_of($c) ), [ 'Play episode', $tracklist->{name}, 'More from Classic Drive' ], 'Tracklist before More from' );
 	check_names( items_of($c), 'Classic Drive episode' );
 
+	my $okNames = names( items_of($c) );
+
 	my $before = () = requests();
+	my $calls  = @NEXT_CALLS;
 	$c = feed( $EPISODE_MENU, undef, $drive );
 	is( $c->count, 1, 'a second open: one callback' );
 	is( scalar( () = requests() ), $before, '... and no request' );
+	is( scalar @NEXT_CALLS, $calls, '... and no API call (the parsed rows)' );
 	is( find_named( items_of($c), qr/^Tracklist/ )->{name}, 'Tracklist (3)', '... the same rows' );
 
 	fresh();
@@ -648,12 +734,23 @@ subtest 'tracklist on opening: present, [], error, timeout; each answered once; 
 	$c = feed( $EPISODE_MENU, undef, { id => '90000103', title => 'Empty', path => '/listen/programs/edgecases/tracklist-empty/90000103' } );
 	is_deeply( items_of($c)->[-1], text_item($NO_TRACKLIST), 'items []: the "No tracklist" text item' );
 
+	my $failedNames = [ 'Play episode', $UNAVAILABLE, 'More from Classic Drive' ];
+
 	fresh();
 	route( $DRIVE_URL, code => 500 );
 	$c = feed( $EPISODE_MENU, undef, $drive );
 	is( $c->count, 1, 'the fetch fails: one callback' );
-	is_deeply( names( items_of($c) ), [ 'Play episode', 'More from Classic Drive' ], '... no tracklist row; the rest of the menu' );
+	is_deeply( names( items_of($c) ), $failedNames, '... the "Tracklist unavailable" row in the tracklist\'s place; the rest of the menu' );
+	is_deeply( items_of($c)->[1], text_item($UNAVAILABLE), '... a text item' );
+	is( scalar @{ items_of($c) }, scalar @$okNames, '... as many rows as when the fetch works' );
+	is( items_of($c)->[2]->{name}, $okNames->[2], '... More from at the same index' );
 	is( scalar warnings_logged(), 1, '... WARN once' );
+
+	$calls = @NEXT_CALLS;
+	$c     = feed( $EPISODE_MENU, undef, $drive );
+	is( $c->count, 1, 're-walked at once (LMS re-opens item ids from the top): answered synchronously' );
+	is( scalar @NEXT_CALLS, $calls, '... from the cached failure, without asking ABC' );
+	is_deeply( names( items_of($c) ), $failedNames, '... the same rows' );
 
 	fresh();
 	route( $DRIVE_URL, file => 'ondemand/nextdata-episode-classic-drive-aac.trimmed.json', headers => $JSON, defer => 1 );
@@ -661,11 +758,14 @@ subtest 'tracklist on opening: present, [], error, timeout; each answered once; 
 	is( $c->count, 0, 'a slow ABC: the menu waits' );
 	advanceTime(8);
 	is( $c->count, 1, '... and answers within the 8 s fetch timeout, once' );
-	is_deeply( names( items_of($c) ), [ 'Play episode', 'More from Classic Drive' ], '... without the tracklist row' );
+	is_deeply( names( items_of($c) ), $failedNames, '... with "Tracklist unavailable"' );
+	my $moreId = 2;    # the index a client keeps for "More from"
 	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
 	is( $c->count, 1, 'the late document: still one callback' );
 	$c = feed( $EPISODE_MENU, undef, $drive );
 	is( find_named( items_of($c), qr/^Tracklist/ )->{name}, 'Tracklist (3)', 'the next open shows the tracklist (cached when it arrived)' );
+	is( items_of($c)->[$moreId]->{name}, 'More from Classic Drive', '... and the stale "More from" index still opens More from, not the tracklist' );
+	is_deeply( names( items_of($c) ), $okNames, '... the same rows as a menu that never failed' );
 
 	fresh();
 	route( $DRIVE_URL, file => 'ondemand/nextdata-episode-classic-drive-aac.trimmed.json', headers => $JSON );
@@ -678,7 +778,16 @@ subtest 'tracklist on opening: present, [], error, timeout; each answered once; 
 	{
 		no warnings 'redefine';
 		local *Plugins::ABCListen::Tracklist::fetch = sub { die "tracklist exploded\n" };
-		$EPISODE_MENU->( undef, sub { $calls++; is_deeply( $_[0], { items => [ text_item($LOAD_FAILED) ] }, 'a fetch that dies: the LOAD_FAILED item' ) }, {}, $drive );
+		$EPISODE_MENU->( undef, sub { $calls++; is_deeply( names( $_[0]->{items} ), $failedNames, 'a fetch that dies: the menu, with "Tracklist unavailable" (not LOAD_FAILED)' ) }, {}, $drive );
+	}
+	is( $calls, 1, '... once' );
+
+	fresh();
+	$calls = 0;
+	{
+		no warnings 'redefine';
+		local *Plugins::ABCListen::API::nextData = sub { die "API exploded\n" };
+		$EPISODE_MENU->( undef, sub { $calls++; is_deeply( names( $_[0]->{items} ), $failedNames, 'an API call that dies: the menu, with "Tracklist unavailable" (not LOAD_FAILED)' ) }, {}, $drive );
 	}
 	is( $calls, 1, '... once' );
 };
@@ -882,9 +991,13 @@ subtest 'song info: order with M2\'s Follow rows; a stable row count' => sub {
 	is_deeply( names( $menu->() ), [ 'Episode notes', 'More from Classic Drive', 'Tracklist', 'Follow "Classic Drive"', 'Follow to see its new episodes in My ABC listen' ], 'Episode notes · More from · Tracklist · Follow · hint' );
 
 	Slim::Utils::Cache->new('abclisten')->set( "tracklist-rows:$DRIVE_ID", [ { title => 'One' } ], 3600 );
-	is( scalar @{ $menu->() }, 5, 'tracklist cached: the same number of rows (the Follow rows keep their index)' );
+	my $rows = $menu->();
+	is( scalar @$rows, 5, 'tracklist cached: the same number of rows (the Follow rows keep their index)' );
+	is( $rows->[2]->{name}, 'Tracklist (1)', '... the row now inline: Tracklist (1)' );
 	Slim::Utils::Cache->new('abclisten')->set( "tracklist-rows:$DRIVE_ID", [], 3600 );
-	is( scalar @{ $menu->() }, 5, 'empty tracklist cached: the same number of rows' );
+	$rows = $menu->();
+	is( scalar @$rows, 5, 'empty tracklist cached: the same number of rows' );
+	is( $rows->[2]->{name}, $NO_TRACKLIST, '... the row now "No tracklist"' );
 };
 
 done_testing();

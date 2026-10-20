@@ -348,6 +348,10 @@ PLUGIN_ABCLISTEN_NAMES_AND
 PLUGIN_ABCLISTEN_SEGMENT_OF
 	EN	%s of %s
 
+# Episode menu: the tracklist row when ABC's episode page could not be loaded (added by O4)
+PLUGIN_ABCLISTEN_TRACKLIST_UNAVAILABLE
+	EN	Tracklist unavailable
+
 # === D2 === Popular now, categories and podcasts
 
 PLUGIN_ABCLISTEN_POPULAR_NOW

@@ -22,11 +22,15 @@ package Plugins::ABCListen::Tracklist;
 #       and concurrent opens of one episode make one request. F3's cache hits call back
 #       synchronously too.
 #       The parsed rows are cached under 'tracklist-rows:<id>' (cache namespace abclisten) for
-#       ROWS_TTL (1 h); failures are never cached. A result arriving after the 8 s deadline
-#       answered is still cached (the next open is instant), never answered.
+#       ROWS_TTL (1 h). A failure (the deadline included) is cached too, under
+#       'tracklist-failed:<id>' (else the path) for FAILURE_TTL (90 s): until then fetch answers
+#       that { error } at once, synchronously, without asking ABC (LMS re-walks menus by item id,
+#       so every open below an episode menu would otherwise wait the 8 s again while ABC is
+#       slow). A result arriving after the 8 s deadline answered is still cached (the next open
+#       is instant), never answered; a success removes the cached failure.
 #       A failure is logged at WARN once per episode (again only after a success), with
 #       quiet => 1 so F3 itself logs it at DEBUG. A $cb that dies is logged (ERROR), never
-#       called again.
+#       called again. fetch never dies: an API call that dies is a failure like any other.
 #
 #   cached($id) -> [ rows ] (a copy; [] = no tracklist) | undef (nothing cached, a bad id).
 #       Synchronous, no I/O.
@@ -43,7 +47,8 @@ package Plugins::ABCListen::Tracklist;
 #   formatRow($row) -> "<time> · <artist> – <title>", e.g.
 #       '00:55 · Rossini, Gioachino – The Barber of Seville: Overture'. Without a time:
 #       "<artist> – <title>"; without an artist: "<time> · <title>" or the title alone; undef
-#       for a row without a title (or not a hash).
+#       for a row without a title (or not a hash). Text is taken as parse() left it (decoded
+#       once): formatRow only trims, it never decodes again.
 #
 # Owned by the ondemand stream (O4).
 
@@ -62,6 +67,7 @@ use Plugins::ABCListen::Util qw(CACHE_NAMESPACE decodeEntities);
 use constant DOCUMENT_TTL  => 3600;    # = Episode.pm DOCUMENT_TTL: one F3 cache entry per episode document
 use constant FETCH_TIMEOUT => 8;       # seconds: the request's timeout and the deadline of a whole fetch
 use constant ROWS_TTL      => 3600;    # seconds: parsed rows
+use constant FAILURE_TTL   => 90;      # seconds: a failed fetch is answered from the cache, without asking ABC again
 use constant LOAD_FAILED   => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
 
 use constant ENDASH => "\x{2013}";
@@ -102,6 +108,13 @@ sub fetch {
 		return _answer( $state, { items => $rows } );
 	}
 
+	# a recent failure (e.g. a slow ABC): answer it again at once, so re-walking the menus by
+	# item id doesn't wait for the deadline every time
+	if ( defined( my $token = _recentFailure($key) ) ) {
+		main::DEBUGLOG && $log->is_debug && $log->debug( "Tracklist of episode $key: failed less than " . FAILURE_TTL . ' s ago; not asking ABC again yet' );
+		return _answer( $state, { error => $token } );
+	}
+
 	$state->{timer} = Slim::Utils::Timers::setTimer( undef, Time::HiRes::time() + FETCH_TIMEOUT, sub {
 		delete $state->{timer};
 		return if $state->{answered};
@@ -135,7 +148,9 @@ sub _document {
 			or $log->error( "Tracklist of episode $id: couldn't cache it: " . ( $@ || 'unknown error' ) );
 	}
 
+	# a success ends the episode's failure state: the next failure is cached and warned about again
 	delete $warned{ $state->{key} };
+	eval { _cache()->remove( _failureKey( $state->{key} ) ); 1 };
 
 	main::DEBUGLOG && $log->is_debug && $log->debug( "Tracklist of episode $state->{key}: " . scalar(@$rows) . ' rows' . ( $state->{answered} ? ' (after the deadline: cached only)' : '' ) );
 
@@ -154,6 +169,9 @@ sub _failed {
 	}
 
 	my $token = ref $error eq 'HASH' && defined $error->{error} && !ref $error->{error} && $error->{error} =~ /\APLUGIN_ABCLISTEN_[A-Z0-9_]+\z/ ? $error->{error} : LOAD_FAILED;
+
+	eval { _cache()->set( _failureKey( $state->{key} ), $token, FAILURE_TTL ); 1 }
+		or $log->error( "Tracklist of episode $state->{key}: couldn't cache the failure: " . ( $@ || 'unknown error' ) );
 
 	return _answer( $state, { error => $token } );
 }
@@ -181,6 +199,14 @@ sub cached {
 }
 
 sub _cacheKey { 'tracklist-rows:' . $_[0] }
+
+# The negative cache: an episode's failed fetch (its error token) for FAILURE_TTL, by id (else path).
+sub _failureKey { 'tracklist-failed:' . $_[0] }
+
+sub _recentFailure {
+	my $token = eval { _cache()->get( _failureKey(shift) ) };
+	return defined $token && !ref $token && $token =~ /\APLUGIN_ABCLISTEN_[A-Z0-9_]+\z/ ? $token : undef;
+}
 
 sub _cache { Slim::Utils::Cache->new(CACHE_NAMESPACE) }
 
@@ -228,11 +254,12 @@ sub formatRow {
 	my $row = shift;
 	return undef unless ref $row eq 'HASH';
 
-	my $title = _text( $row->{title} );
+	# rows are parse()'s, decoded once already: only trimmed here (a literal "&amp;" stays as it is)
+	my $title = _trim( $row->{title} );
 	return undef unless defined $title;
 
-	my $artist = _text( $row->{artist} );
-	my $time   = _text( $row->{time} );
+	my $artist = _trim( $row->{artist} );
+	my $time   = _trim( $row->{time} );
 
 	my $text = defined $artist ? $artist . ' ' . ENDASH . ' ' . $title : $title;
 	return defined $time ? $time . ' ' . MIDDOT . ' ' . $text : $text;
@@ -246,8 +273,14 @@ sub formatRow {
 sub _text {
 	my $text = shift;
 	return undef unless defined $text && !ref $text;
+	return _trim( decodeEntities($text) );
+}
 
-	$text = decodeEntities($text);
+# Trimmed, whitespace-collapsed text (no decoding), or undef if empty (or not a string).
+sub _trim {
+	my $text = shift;
+	return undef unless defined $text && !ref $text;
+
 	$text =~ s/\s+/ /g;
 	$text =~ s/\A | \z//g;
 
