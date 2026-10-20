@@ -40,26 +40,35 @@ package Plugins::ABCListen::Live;
 # is fetched within MENU_DEADLINE when it isn't cached):
 #   Listen live           type audio, on_select play, the live URL and favourites, the station logo,
 #                         the description above
-#   On air: <program> · <presenters>   text, from NowPlaying's cache / last-good; left out when unknown
+#   On air: <program> · <presenters>   text, from NowPlaying's cache / last-good; "On air: no program
+#                         information" (PLUGIN_ABCLISTEN_ON_AIR_UNKNOWN) when unknown, so the rows
+#                         below never move
 #   Today, Yesterday, then the 5 dates before ("Sat 17 Oct"), station-local (Schedule->dayList): links
 #                         to the day list (passthrough [<ID>, 'YYYY-MM-DD'], so a menu built at
 #                         23:59 still shows the date it was built for)
-# Day list (_dayMenu): Schedule->day rows in start order, ABC's broadcast day as returned:
+# Day list (_dayMenu): a heading, then Schedule->day rows in start order, ABC's broadcast day as
+# returned:
+#   heading       "Mon 19 Oct · Darwin time" (the date and the station's clock, Schedule->zoneCity;
+#                 "Sydney time" for every eastern station), text without an image: Material shows a
+#                 grid when every row is a link with an image (past days), and a text row keeps the
+#                 day a list of full names
 #   name / line1  "6:00am · <program>" (station-local time; the Default skin shows only the name),
-#                 " (on air)" added to the row with start <= now < end (the latest such start)
-#   rows that have started and have a program path: OnDemand->programItem($client, { title, path,
-#                 image, description => synopsis }) (contract 6: O2's program menu, i.e. that
-#                 program's catch-up episodes), only name/line1 overridden; line2 = presenters when
-#                 O2 set none; image: the schedule's (~340 px), else the station logo
+#                 " (on air)" added to the row with start <= now < end (the latest such start; a
+#                 row starting this second is on air, one ending this second is not)
+#   rows that have started (start <= now) and have a program path: OnDemand->programItem($client,
+#                 { title, path, image, description => synopsis }) (contract 6: O2's program menu,
+#                 i.e. that program's catch-up episodes), only name/line1 overridden; line2 =
+#                 presenters when O2 set none; image: the schedule's (~340 px), else the station logo
 #   other rows (future, no program page, programItem undef): text, line2 = presenters,
-#                 description = synopsis, no image (Material shows the day as a list, not a grid)
-#   no rows: one PLUGIN_ABCLISTEN_NO_SCHEDULE text item; an error: one LOAD_FAILED (or RATE_LIMITED)
-#   text item; answered exactly once, also when building dies or the schedule takes longer than
-#   DAY_DEADLINE.
+#                 description = synopsis, no image (a text item with an image is a grid tile in
+#                 Material, with line2 shown as a literal "<br/>")
+#   no rows: one PLUGIN_ABCLISTEN_NO_SCHEDULE text item (no heading); an error: one LOAD_FAILED (or
+#   RATE_LIMITED) text item; answered exactly once, also when building dies or the schedule takes
+#   longer than DAY_DEADLINE.
 # LMS keeps no browse session for this plugin (code-ref feeds), so every item_id request rebuilds
-# the menus and opens the row at that index: the station menu's rows only move when the on-air
-# line appears or goes (an id taken before that opens the neighbouring row). Feeds called with a
-# stale or unknown station id or date answer one readable error item.
+# the menus and opens the row at that index: station menu rows keep their index (the on-air row is
+# always there). Feeds called with a stale or unknown station id or date answer one readable error
+# item.
 #
 # Public builder (ai-state/streams.md contract 7):
 #   Live->stationItem($client, $serviceId) -> a station row (link + play, above), or undef for
@@ -476,7 +485,9 @@ sub _stationMenuItems {
 		( length $description ? ( description => $description ) : () ),
 	} );
 
-	push @items, { name => $line2, type => 'text' } if defined $line2;
+	# always a row here, so Today keeps its index whether or not the program is known (LMS walks the
+	# menus again for every item_id)
+	push @items, { name => defined $line2 ? $line2 : cstring( $client, 'PLUGIN_ABCLISTEN_ON_AIR_UNKNOWN' ), type => 'text' };
 
 	for my $day ( @{ $SCHEDULE->dayList( $rec->{tz}, time() ) } ) {
 		push @items, {
@@ -511,7 +522,7 @@ sub _dayMenu {
 	eval {
 		$SCHEDULE->day( $id, $date, sub {
 			my ( $rows, $error ) = @_;
-			$answer->( sub { _dayItems( $client, $id, $rows, $error ) } );
+			$answer->( sub { _dayItems( $client, $id, $date, $rows, $error ) } );
 		} );
 		1;
 	} or do {
@@ -532,7 +543,7 @@ sub _dayMenu {
 }
 
 sub _dayItems {
-	my ( $client, $id, $rows, $error ) = @_;
+	my ( $client, $id, $date, $rows, $error ) = @_;
 
 	return [ _textItem( $client, defined $error && $error eq RATE_LIMITED ? RATE_LIMITED : LOAD_FAILED ) ] unless ref $rows eq 'ARRAY';
 	return [ _textItem( $client, NO_SCHEDULE ) ] unless @$rows;
@@ -540,6 +551,11 @@ sub _dayItems {
 	my $rec  = $STATIONS->get($id);
 	my $logo = ref $rec eq 'HASH' ? _logo($rec) : Plugins::ABCListen::Util::ICON;
 	my $now  = time();
+
+	# the heading: the date and the station's clock ("Mon 19 Oct · Darwin time"); a text row without
+	# an image, so Material always shows the day as a list (never a grid of cut-off names)
+	my $city = $SCHEDULE->zoneCity( ref $rec eq 'HASH' ? $rec->{tz} : undef );
+	my @heading = grep { defined } $SCHEDULE->dateLabel($date), cstring( $client, 'PLUGIN_ABCLISTEN_CITY_TIME', $city );
 
 	# on air: start <= now < end; with overlaps, the latest start
 	my $onAir;
@@ -549,8 +565,8 @@ sub _dayItems {
 		$onAir = $i if !defined $onAir || $row->{start} >= $rows->[$onAir]->{start};
 	}
 
-	my $mark = cstring( $client, 'PLUGIN_ABCLISTEN_ON_AIR_MARK' );
-	my @items;
+	my $mark  = cstring( $client, 'PLUGIN_ABCLISTEN_ON_AIR_MARK' );
+	my @items = ( { name => join( MIDDOT, @heading ), type => 'text' } );
 
 	for my $i ( 0 .. $#$rows ) {
 		my $row   = $rows->[$i];

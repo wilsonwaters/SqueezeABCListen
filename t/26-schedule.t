@@ -14,7 +14,9 @@
 #     Brisbane, Adelaide, Broken Hill, Darwin and Perth (2026-10-18T13:30Z: Sydney 19 Oct, Perth
 #     18 Oct), the DST start (2026-10-04, 23 h) and end (2026-04-05, 25 h, repeated hour) days,
 #     labels across DST, month and year ends - all with tzset and with the fixed table;
-#   * the fixed table agrees with tzset for every catalogue tz around every transition 2025-2027
+#   * the DST rule when the 1st is the Sunday (Oct 2028, Apr 2029); dateLabel; zoneCity (one
+#     "Sydney" clock for the eastern zones, Brisbane, Adelaide for Broken Hill, Darwin, Perth);
+#   * the fixed table agrees with tzset for every catalogue tz around every transition 2025-2029
 #     and mid-month all year; the table is used when tzset has no effect; the process TZ (unset,
 #     UTC, America/New_York) is restored after every call, also when the conversion dies;
 #   * day(): the request (service, date, the station's tz, ratio 1x1; Sydney for an unknown id),
@@ -261,8 +263,18 @@ subtest 'dayList: Today, Yesterday, then 5 dates, station-local, across DST, mon
 		is_deeply( [ map { $_->{date} } @$dst ], [qw(2026-10-05 2026-10-04 2026-10-03 2026-10-02 2026-10-01 2026-09-30 2026-09-29)], "$mode: across the 23 h day and a month end: no date skipped or repeated" );
 		is( $dst->[5]->{label}, 'Wed 30 Sep', "$mode: Wed 30 Sep" );
 
+		# 12:30am AEDT on Mon 5 Oct, the day after the 23 h day: 24 h earlier is 11:30pm AEST on
+		# Sat 3 Oct, so subtracting 24 h (instead of counting calendar days) would skip Sun 4 Oct
+		my $after = $SCH->dayList( 'Australia/Sydney', t('2026-10-04T13:30:00Z') );
+		is_deeply( [ map { $_->{date} } @$after[ 0 .. 3 ] ], [qw(2026-10-05 2026-10-04 2026-10-03 2026-10-02)], "$mode: the hour after midnight following the DST start: Yesterday is Sun 4 Oct (no date skipped)" );
+		is( $after->[2]->{label}, 'Sat 3 Oct', "$mode: ... then Sat 3 Oct" );
+		my $adelaide = $SCH->dayList( 'Australia/Adelaide', t('2026-10-04T14:00:00Z') );    # 12:30am ACDT Mon 5 Oct
+		is_deeply( [ map { $_->{date} } @$adelaide[ 0 .. 2 ] ], [qw(2026-10-05 2026-10-04 2026-10-03)], "$mode: the same in Adelaide" );
+
 		my $end = $SCH->dayList( 'Australia/Sydney', t('2026-04-06T00:30:00Z') );
 		is_deeply( [ map { $_->{date} } @$end[ 0 .. 2 ] ], [qw(2026-04-06 2026-04-05 2026-04-04)], "$mode: across the 25 h day" );
+		my $endNight = $SCH->dayList( 'Australia/Sydney', t('2026-04-05T13:30:00Z') );    # 11:30pm AEST Sun 5 Apr
+		is_deeply( [ map { $_->{date} } @$endNight[ 0 .. 2 ] ], [qw(2026-04-05 2026-04-04 2026-04-03)], "$mode: late on the 25 h day: no date repeated" );
 
 		my $year = $SCH->dayList( 'Australia/Perth', t('2027-01-01T20:00:00Z') );
 		is_deeply( [ map { $_->{label} } @$year ], [ 'Today', 'Yesterday', 'Thu 31 Dec', 'Wed 30 Dec', 'Tue 29 Dec', 'Mon 28 Dec', 'Sun 27 Dec' ], "$mode: across the year end (Perth, 2 Jan 2027)" );
@@ -273,12 +285,43 @@ subtest 'dayList: Today, Yesterday, then 5 dates, station-local, across DST, mon
 	is( scalar( grep { $_->{label} !~ /\A(?:Today|Yesterday|(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat) [1-9][0-9]? (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec))\z/ } @$days ), 0, 'every label is a word or a full date, never a bare number' );
 };
 
+subtest 'DST rule when the 1st is the Sunday (Oct 2028, Apr 2029); dateLabel; zoneCity' => sub {
+	is( Plugins::ABCListen::Schedule::_firstSunday( 2028, 10 ), t('2028-10-01T00:00:00Z'), '_firstSunday(2028, 10): Sun 1 Oct 2028 itself' );
+	is( Plugins::ABCListen::Schedule::_firstSunday( 2029, 4 ),  t('2029-04-01T00:00:00Z'), '_firstSunday(2029, 4): Sun 1 Apr 2029 itself' );
+	is( Plugins::ABCListen::Schedule::_firstSunday( 2026, 10 ), t('2026-10-04T00:00:00Z'), '_firstSunday(2026, 10): Sun 4 Oct' );
+
+	both_ways( sub {
+		my $mode = shift;
+		is( $SCH->timeLabel( 'Australia/Sydney', t('2028-09-30T15:59:00Z') ), '1:59am', "$mode: Sun 1 Oct 2028 1:59am AEST ..." );
+		is( $SCH->timeLabel( 'Australia/Sydney', t('2028-09-30T16:00:00Z') ), '3:00am', "$mode: ... then 3:00am AEDT (DST starts on the 1st)" );
+		is( $SCH->timeLabel( 'Australia/Sydney', t('2028-10-07T16:00:00Z') ), '3:00am', "$mode: (a week later still AEDT)" );
+		is( $SCH->timeLabel( 'Australia/Adelaide', t('2029-03-31T16:29:00Z') ), '2:59am', "$mode: Sun 1 Apr 2029 2:59am ACDT ..." );
+		is( $SCH->timeLabel( 'Australia/Adelaide', t('2029-03-31T16:30:00Z') ), '2:00am', "$mode: ... then 2:00am ACST (DST ends on the 1st)" );
+		is( $SCH->localDate( 'Australia/Sydney', t('2028-09-30T13:59:59Z') ), '2028-09-30', "$mode: Sat 30 Sep 2028 ends at 14:00Z (AEST)" );
+	} );
+
+	is( $SCH->dateLabel('2026-10-19'), 'Mon 19 Oct', 'dateLabel: Mon 19 Oct' );
+	is( $SCH->dateLabel('2028-02-29'), 'Tue 29 Feb', 'dateLabel: a leap day' );
+	is( $SCH->dateLabel($_), undef, 'dateLabel(' . ( $_ // 'undef' ) . '): undef' ) for '2026-02-30', 'today', undef;
+
+	my %city = (
+		'Australia/Sydney'    => 'Sydney',   'Australia/Melbourne' => 'Sydney',   'Australia/Hobart'      => 'Sydney',
+		'Australia/Canberra'  => 'Sydney',   'Australia/Brisbane'  => 'Brisbane', 'Australia/Adelaide'    => 'Adelaide',
+		'Australia/Broken_Hill' => 'Adelaide', 'Australia/Darwin'  => 'Darwin',   'Australia/Perth'       => 'Perth',
+		'America/New_York'    => 'New York', ''                    => 'Sydney',
+	);
+	is( $SCH->zoneCity($_), $city{$_}, "zoneCity('$_'): $city{$_}" ) for sort keys %city;
+	is( $SCH->zoneCity(undef), 'Sydney', 'zoneCity(undef): Sydney' );
+	my %catalogue = map { $_->{tz} => 1 } grep { $_->{tz} } Plugins::ABCListen::StationData::records();
+	is( scalar( grep { !exists $city{$_} } keys %catalogue ), 0, '(every catalogue zone is covered above)' );
+};
+
 subtest 'the fixed table agrees with tzset for every catalogue zone' => sub {
 	plan skip_all => 'no zoneinfo on this system' unless $ZONEINFO;
 
 	my %zones = map { $_->{tz} => 1 } grep { $_->{tz} } Plugins::ABCListen::StationData::records();
 	my @instants;
-	for my $year ( 2025 .. 2027 ) {
+	for my $year ( 2025 .. 2029 ) {
 		for my $month ( 1 .. 12 ) {
 			push @instants, map { Time::Local::timegm( 0, 0, $_, 15, $month - 1, $year ) } 0, 12;
 		}
@@ -364,6 +407,28 @@ subtest 'day: the request, the items, the station tz' => sub {
 
 	$c = day_cb( 'TRIPLEJ_PERTH', '2026-10-19' );
 	like( ( schedule_requests() )[-1]->{url}, qr{service=TRIPLEJ_PERTH&tz=Australia%2FPerth\z}, 'a time-zone version uses its own id and tz' );
+};
+
+subtest 'day: API::bff gets the same ttl (so a restart keeps the copy) and a 10 s timeout' => sub {
+	my @opts;
+	my $bff = \&Plugins::ABCListen::API::bff;
+	no warnings 'redefine';
+	local *Plugins::ABCListen::API::bff = sub { push @opts, { %{ $_[-1] } }; goto &$bff };
+
+	reset_all();    # 7:00pm AEDT Mon 19 Oct, 4:00pm AWST
+	route( qr{/core-next/api/schedule\?}, file => 'live/bff-schedule-RN-day.json' );
+	day_cb( 'RN',          '2026-10-19' );
+	day_cb( 'RN',          '2026-10-18' );
+	day_cb( 'RN',          '2026-10-13' );
+	day_cb( 'LOCAL_PERTH', '2026-10-19' );
+	setTime( t('2026-10-19T15:00:00Z') );    # 2:00am AEDT Tue 20 Oct, 11:00pm AWST Mon 19 Oct
+	day_cb( 'RN',          '2026-10-20' );
+	day_cb( 'LOCAL_PERTH', '2026-10-20' );
+	is_deeply(
+		\@opts,
+		[ map { { ttl => $_, timeout => 10 } } 600, 86400, 86400, 600, 600, 600 ],
+		'ttl 600 for the station-local today (and a Perth date ahead of Perth), 86400 for past days; timeout 10'
+	);
 };
 
 subtest 'day: cache 10 min for the station-local today, 24 h for past days' => sub {

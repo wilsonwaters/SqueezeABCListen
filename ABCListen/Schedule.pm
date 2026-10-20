@@ -24,6 +24,12 @@ package Plugins::ABCListen::Schedule;
 #                                     Util::friendlyDate). Day arithmetic is on calendar dates, so DST
 #                                     days (23 h, 25 h) never skip or repeat a date.
 #   timeLabel($tz, $epoch)            '6:00am' in time zone $tz
+#   dateLabel('YYYY-MM-DD')           'Mon 19 Oct' (undef for anything else)
+#   zoneCity($tz)                     the city whose clock a station zone keeps, for "<City> time":
+#                                     Sydney (Sydney, Melbourne, Canberra, Hobart: one eastern
+#                                     clock), Brisbane (no DST), Adelaide (Adelaide, Broken Hill),
+#                                     Darwin, Perth; another zone: its last part ('America/New_York'
+#                                     -> 'New York'); no zone: Sydney
 #
 # Each can be called as a function or as a class method.
 #
@@ -105,6 +111,19 @@ my %TABLE = (
 	'Australia/Brisbane'    => [ 36000, 0 ],
 	'Australia/Darwin'      => [ 34200, 0 ],
 	'Australia/Perth'       => [ 28800, 0 ],
+);
+
+# the city whose clock each catalogue zone keeps ("<City> time"; one label for the eastern clock)
+my %ZONE_CITY = (
+	'Australia/Sydney'      => 'Sydney',
+	'Australia/Melbourne'   => 'Sydney',
+	'Australia/Hobart'      => 'Sydney',
+	'Australia/Canberra'    => 'Sydney',
+	'Australia/Brisbane'    => 'Brisbane',
+	'Australia/Adelaide'    => 'Adelaide',
+	'Australia/Broken_Hill' => 'Adelaide',
+	'Australia/Darwin'      => 'Darwin',
+	'Australia/Perth'       => 'Perth',
 );
 
 my %CACHE;          # "$id|$date" => { items, expires }
@@ -252,7 +271,7 @@ sub dayList {
 	for my $back ( 0 .. DAYS - 1 ) {
 		my @g    = gmtime( $noon - $back * 86400 );
 		my $date = sprintf( '%04d-%02d-%02d', $g[5] + 1900, $g[4] + 1, $g[3] );
-		my %day  = ( date => $date, label => sprintf( '%s %d %s', $DAY_NAMES[ $g[6] ], $g[3], $MONTH_NAMES[ $g[4] ] ) );
+		my %day  = ( date => $date, label => dateLabel($date) );
 
 		if ( $back < 2 ) {
 			$day{token} = $back ? 'PLUGIN_ABCLISTEN_YESTERDAY' : 'PLUGIN_ABCLISTEN_TODAY';
@@ -264,6 +283,29 @@ sub dayList {
 	}
 
 	return \@days;
+}
+
+sub dateLabel {
+	shift if _isClass( $_[0] );
+	my $date = shift;
+	return undef unless _isDate($date);
+
+	my ( $y, $m, $d ) = split /-/, $date;
+	my @g = gmtime( Time::Local::timegm( 0, 0, 12, $d, $m - 1, $y ) );
+
+	return sprintf( '%s %d %s', $DAY_NAMES[ $g[6] ], $g[3], $MONTH_NAMES[ $g[4] ] );
+}
+
+sub zoneCity {
+	shift if _isClass( $_[0] );
+	my $tz = shift;
+	$tz = DEFAULT_TZ unless _isText($tz);
+
+	return $ZONE_CITY{$tz} if $ZONE_CITY{$tz};
+
+	( my $city = $tz ) =~ s{\A.*/}{};
+	$city =~ s/_/ /g;
+	return length $city ? $city : $ZONE_CITY{ +DEFAULT_TZ };
 }
 
 sub timeLabel {

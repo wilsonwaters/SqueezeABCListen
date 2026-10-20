@@ -5,11 +5,15 @@
 #     favorites_type audio, no on_select, no description; a D4-style copy with line2 / description
 #     overridden still opens the same menu;
 #   * the station menu, in order: Listen live (exact keys: audio, on_select play, the live URL and
-#     favourites), "On air: <program> · <presenters>" (only when known; fetched within 3 s when not
-#     cached, once), Today, Yesterday and 5 dates ("Sat 17 Oct") - station-local (Perth vs Sydney),
-#     links with passthrough [<ID>, <date>] and no description;
-#   * day lists: "6:00am · <program>" names, exactly one " (on air)" (start <= now < end, latest
-#     start wins; none in a gap), started rows with a program path built by OnDemand->programItem
+#     favourites), "On air: <program> · <presenters>" (fetched within 3 s when not cached, once;
+#     "On air: no program information" when unknown, so Today keeps index 2 for stale item ids),
+#     Today, Yesterday and 5 dates ("Sat 17 Oct") - station-local (Perth vs Sydney), links with
+#     passthrough [<ID>, <date>] and no description;
+#   * day lists: a heading "Mon 19 Oct · Sydney time" (text, no image: Material lists the day; the
+#     station's clock: Sydney for every eastern zone, Brisbane, Adelaide for Broken Hill, Darwin,
+#     Perth), then "6:00am · <program>" names, exactly one " (on air)" (start <= now < end, latest
+#     start wins; none in a gap; a row starting this second is on air, one ending this second is
+#     not), started rows (start <= now) with a program path built by OnDemand->programItem
 #     ($client, { title, path, image, description }) with only name/line1 overridden (line2 =
 #     presenters when O2 set none), programItem undef or dying -> text row, future rows and rows
 #     without a program path -> text rows (line2 presenters, description synopsis, no image: Material
@@ -17,7 +21,8 @@
 #     one on air, rows after it text);
 #   * NO_SCHEDULE / LOAD_FAILED / RATE_LIMITED text items; stale or unknown ids and dates; exactly one
 #     callback on every path (errors, dying code, a schedule that never answers: 15 s deadline, a
-#     dying callback); no player ($client undef, passed on to programItem); no timers left.
+#     dying callback; the deadline is cancelled by a late-but-in-time answer); no player ($client
+#     undef, passed on to programItem); no timers left.
 
 use strict;
 use warnings;
@@ -123,6 +128,15 @@ sub names { [ map { $_->{name} } @{ $_[0] } ] }
 
 sub text_item { { name => string(shift), type => 'text' } }
 
+# A day list's heading row and its schedule rows.
+sub split_day {
+	my @rows    = @{ shift || [] };
+	my $heading = shift @rows;
+	return ( $heading, \@rows );
+}
+
+sub heading { { name => shift() . " \x{B7} " . shift() . ' time', type => 'text' } }
+
 # ---------------------------------------------------------------------------
 # Station rows
 # ---------------------------------------------------------------------------
@@ -183,7 +197,8 @@ subtest 'station menu: Listen live, On air, Today, Yesterday, 5 dates' => sub {
 	reset_all( t('2026-10-19T07:30:00Z') );
 	route( qr{/epgNowPlaying/}, code => 500 );
 	$items = station_menu( undef, 'RN' );
-	is_deeply( names($items), [ 'Listen live', 'Today', 'Yesterday', 'Sat 17 Oct', 'Fri 16 Oct', 'Thu 15 Oct', 'Wed 14 Oct', 'Tue 13 Oct' ], 'nothing known on air: no on-air line' );
+	is_deeply( names($items), [ 'Listen live', 'On air: no program information', 'Today', 'Yesterday', 'Sat 17 Oct', 'Fri 16 Oct', 'Thu 15 Oct', 'Wed 14 Oct', 'Tue 13 Oct' ], 'nothing known on air: "On air: no program information" in its place' );
+	is_deeply( $items->[1], text_item('PLUGIN_ABCLISTEN_ON_AIR_UNKNOWN'), '... a text item (PLUGIN_ABCLISTEN_ON_AIR_UNKNOWN)' );
 	is( $items->[0]->{description}, $S->get('RN')->{synopsis}, '... and Listen live\'s description is the synopsis' );
 };
 
@@ -197,7 +212,7 @@ subtest 'station menu: the program fetch waits at most 3 s; answered once' => su
 	is( $c->count, 0, 'still at 2.9 s' );
 	advanceTime(0.1);
 	is( $c->count, 1, 'answers at 3 s' );
-	is( items_of($c)->[1]->{name}, 'Today', '... without the on-air line' );
+	is_deeply( [ map { $_->{name} } @{ items_of($c) }[ 1, 2 ] ], [ 'On air: no program information', 'Today' ], '... with "no program information"; Today stays third' );
 	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
 	is( $c->count, 1, 'the late program does not call back again' );
 	is( scalar Slim::Utils::Timers::pending(), 0, 'no timer left' );
@@ -208,15 +223,15 @@ subtest 'station menu: station-local dates (Perth vs Sydney), time-zone versions
 	reset_all( t('2026-10-19T14:30:00Z') );    # 1:30am Tue 20 Oct in Sydney, 10:30pm Mon 19 Oct in Perth
 
 	my $perth = station_menu( undef, 'LOCAL_PERTH' );
-	is_deeply( [ map { $_->{passthrough} } @$perth[ 1, 2 ] ], [ [ 'LOCAL_PERTH', '2026-10-19' ], [ 'LOCAL_PERTH', '2026-10-18' ] ], 'LOCAL_PERTH: Today is the 19th, Yesterday the 18th (Perth time)' );
-	is( $perth->[3]->{name}, 'Sat 17 Oct', '... then Sat 17 Oct' );
+	is_deeply( [ map { $_->{passthrough} } @$perth[ 2, 3 ] ], [ [ 'LOCAL_PERTH', '2026-10-19' ], [ 'LOCAL_PERTH', '2026-10-18' ] ], 'LOCAL_PERTH: Today is the 19th, Yesterday the 18th (Perth time)' );
+	is( $perth->[4]->{name}, 'Sat 17 Oct', '... then Sat 17 Oct' );
 
 	my $rn = station_menu( undef, 'RN' );
-	is_deeply( [ map { $_->{passthrough} } @$rn[ 1, 2 ] ], [ [ 'RN', '2026-10-20' ], [ 'RN', '2026-10-19' ] ], 'RN at the same instant: Today is the 20th (Sydney time)' );
-	is( $rn->[3]->{name}, 'Sun 18 Oct', '... then Sun 18 Oct' );
+	is_deeply( [ map { $_->{passthrough} } @$rn[ 2, 3 ] ], [ [ 'RN', '2026-10-20' ], [ 'RN', '2026-10-19' ] ], 'RN at the same instant: Today is the 20th (Sydney time)' );
+	is( $rn->[4]->{name}, 'Sun 18 Oct', '... then Sun 18 Oct' );
 
 	my $tj = station_menu( undef, 'TRIPLEJ_PERTH' );
-	is_deeply( $tj->[1]->{passthrough}, [ 'TRIPLEJ_PERTH', '2026-10-19' ], 'a time-zone version: its own id and tz' );
+	is_deeply( $tj->[2]->{passthrough}, [ 'TRIPLEJ_PERTH', '2026-10-19' ], 'a time-zone version: its own id and tz' );
 	like( $tj->[0]->{description}, qr/\APerth time - /, '... Listen live says "Perth time - <synopsis>"' );
 
 	$prefs->set( homeState => 'WA' );
@@ -227,7 +242,21 @@ subtest 'station menu: station-local dates (Perth vs Sydney), time-zone versions
 	is_deeply( [ @$row{qw(play passthrough)} ], [ 'abclisten://live/RN_WA', ['RN_WA'] ], 'homeState WA: the Radio National row plays and opens RN_WA' );
 	my $c = open_item( undef, $row );
 	advanceTime(3);
-	is_deeply( items_of($c)->[1]->{passthrough}, [ 'RN_WA', '2026-10-19' ], '... whose Today is Perth\'s (RN WA runs on Perth time)' );
+	is_deeply( items_of($c)->[2]->{passthrough}, [ 'RN_WA', '2026-10-19' ], '... whose Today is Perth\'s (RN WA runs on Perth time)' );
+};
+
+subtest 'station menu: Today keeps its index with and without a program on air (stale item ids)' => sub {
+	reset_all( t('2026-10-19T07:30:00Z') );
+	route( qr{/epgNowPlaying/}, code => 500 );
+	my $without = station_menu( undef, 'RN' );
+	reset_all( t('2026-10-19T07:30:00Z') );
+	route( "${BFF}epgNowPlaying/RN/now?imageRatio=1x1", file => 'live/bff-epgNowPlaying-RN-now.json' );
+	my $with = station_menu( undef, 'RN' );
+
+	is( scalar @$without, scalar @$with, 'the same number of rows' );
+	is_deeply( [ map { $_->{name} } $without->[1], $with->[1] ], [ 'On air: no program information', "On air: The Radio National Hour${MIDDOT}Fran Kelly" ], 'row 1: the on-air row either way' );
+	is_deeply( [ map { $_->{passthrough} } $without->[2], $with->[2] ], [ ( [ 'RN', '2026-10-19' ] ) x 2 ], 'row 2: Today either way' );
+	is_deeply( [ map { $_->{passthrough} } @$without[ 2 .. 8 ] ], [ map { $_->{passthrough} } @$with[ 2 .. 8 ] ], 'rows 2-8: the same days at the same indexes' );
 };
 
 # ---------------------------------------------------------------------------
@@ -238,9 +267,10 @@ subtest 'day list: names, (on air), program rows via OnDemand->programItem, text
 	reset_all();
 	route_day( RN => 'bff-schedule-RN-day.json' );
 
-	my $c     = day_menu( $PLAYER, 'RN', '2026-10-19' );
-	my $items = items_of($c);
+	my $c = day_menu( $PLAYER, 'RN', '2026-10-19' );
+	my ( $heading, $items ) = split_day( items_of($c) );
 	is( $c->count, 1, 'one callback' );
+	is_deeply( $heading, heading( 'Mon 19 Oct', 'Sydney' ), 'first a heading: "Mon 19 Oct · Sydney time" (text, no image)' );
 	is_deeply(
 		names($items),
 		[ "12:00am${MIDDOT}Download This Show", "12:30am${MIDDOT}Crowdscience (BBC)", "5:30am${MIDDOT}ABC News Daily and Radio National Hour Highlights$ON_AIR", "6:00am${MIDDOT}Radio National Breakfast" ],
@@ -280,7 +310,7 @@ subtest 'day list: names, (on air), program rows via OnDemand->programItem, text
 
 	reset_all( t('2026-10-19T08:00:00Z') );    # the whole day has started
 	route_day( RN => 'bff-schedule-RN-day.json' );
-	$items = items_of( day_menu( undef, 'RN', '2026-10-19' ) );
+	( $heading, $items ) = split_day( items_of( day_menu( undef, 'RN', '2026-10-19' ) ) );
 	is_deeply( [ map { $_->{type} } @$items ], [qw(link text link link)], 'later: every started row with a program page links' );
 	is( scalar( grep { $_->{name} =~ /\Q$ON_AIR\E\z/ } @$items ), 0, 'nothing on air at 7pm in this (trimmed) day: no mark' );
 	is( $PROGRAM_ITEM[0]->[0], undef, 'no player: programItem gets undef' );
@@ -290,8 +320,9 @@ subtest 'day list: a full RN day - 31 rows, one on air, rows after it are text' 
 	reset_all( t('2026-10-19T23:50:00Z') );    # 10:50am AEDT Tue 20 Oct: Critics Corner (10:45-11:00)
 	route_day( RN => 'bff-schedule-RN-2026-10-20.trimmed.json' );
 
-	my $items = items_of( day_menu( undef, 'RN', '2026-10-20' ) );
-	is( scalar @$items, 31, 'one row per schedule item' );
+	my ( $heading, $items ) = split_day( items_of( day_menu( undef, 'RN', '2026-10-20' ) ) );
+	is_deeply( $heading, heading( 'Tue 20 Oct', 'Sydney' ), 'the heading' );
+	is( scalar @$items, 31, 'then one row per schedule item' );
 	is( scalar( grep { $_->{name} !~ /\A[0-9]{1,2}:[0-9]{2}[ap]m \x{B7} \S/ } @$items ), 0, 'every name starts with its time ("6:00am · ...")' );
 	my @onAir = grep { $items->[$_]->{name} =~ /\Q$ON_AIR\E\z/ } 0 .. $#$items;
 	is_deeply( [ map { $items->[$_]->{name} } @onAir ], ["10:45am${MIDDOT}Critics Corner$ON_AIR"], 'exactly one row is on air' );
@@ -308,7 +339,7 @@ subtest 'day list: (on air) with overlaps and gaps; the station logo without an 
 
 	reset_all( t('2026-10-19T03:15:00Z') );
 	route_day( RN => { content => $body->( [ '2026-10-19T01:00:00Z', '2026-10-19T04:00:00Z', 'Long' ], [ '2026-10-19T03:00:00Z', '2026-10-19T03:30:00Z', 'Inside' ] ) } );
-	my $items = items_of( day_menu( undef, 'RN', '2026-10-19' ) );
+	my ( undef, $items ) = split_day( items_of( day_menu( undef, 'RN', '2026-10-19' ) ) );
 	is_deeply( names($items), [ "12:00pm${MIDDOT}Long", "2:00pm${MIDDOT}Inside$ON_AIR" ], 'two candidates: the latest start is on air' );
 	is( $PROGRAM_ITEM[0]->[1]->{image}, Plugins::ABCListen::API::imageUrl( $S->get('RN')->{logo}, 300 ), 'no schedule image: programItem gets the station logo' );
 	is( $items->[0]->{image}, Plugins::ABCListen::API::imageUrl( $S->get('RN')->{logo}, 300 ), '... and the row shows it' );
@@ -317,6 +348,20 @@ subtest 'day list: (on air) with overlaps and gaps; the station logo without an 
 	reset_all( t('2026-10-19T02:30:00Z') );
 	route_day( RN => { content => $body->( [ '2026-10-19T01:00:00Z', '2026-10-19T02:00:00Z', 'Before' ], [ '2026-10-19T03:00:00Z', '2026-10-19T04:00:00Z', 'After' ] ) } );
 	is( scalar( grep {/on air/} @{ names( items_of( day_menu( undef, 'RN', '2026-10-19' ) ) ) } ), 0, 'a gap: nothing marked' );
+
+	# a row starting this very second is on air (and links: it has started); a row ending this very
+	# second is not on air, nor is anything in the gap after it
+	reset_all( t('2026-10-19T03:00:00Z') );
+	route_day( RN => { content => $body->( [ '2026-10-19T02:00:00Z', '2026-10-19T03:00:00Z', 'Ending' ], [ '2026-10-19T03:00:00Z', '2026-10-19T04:00:00Z', 'Starting' ] ) } );
+	( undef, $items ) = split_day( items_of( day_menu( undef, 'RN', '2026-10-19' ) ) );
+	is_deeply( names($items), [ "1:00pm${MIDDOT}Ending", "2:00pm${MIDDOT}Starting$ON_AIR" ], 'start == now: on air; end == now: not on air' );
+	is( $items->[1]->{type}, 'link', '... and the row starting now links to its program' );
+
+	reset_all( t('2026-10-19T03:00:00Z') );
+	route_day( RN => { content => $body->( [ '2026-10-19T02:00:00Z', '2026-10-19T03:00:00Z', 'Ending' ], [ '2026-10-19T04:00:00Z', '2026-10-19T05:00:00Z', 'Later' ] ) } );
+	( undef, $items ) = split_day( items_of( day_menu( undef, 'RN', '2026-10-19' ) ) );
+	is( scalar( grep {/on air/} @{ names($items) } ), 0, 'now == end with a gap after it: nothing marked' );
+	is_deeply( [ map { $_->{type} } @$items ], [qw(link text)], '... the ended row links, the later one is text' );
 
 	reset_all( t('2026-10-19T09:00:00Z') );
 	route_day( RN => { content => $body->( [ '2026-10-19T01:00:00Z', '2026-10-19T02:00:00Z', 'First' ], [ '2026-10-19T08:00:00Z', undef, 'Open-ended' ] ) } );
@@ -327,7 +372,7 @@ subtest 'day list: programItem undef or dying -> a text row' => sub {
 	reset_all();
 	route_day( RN => 'bff-schedule-RN-day.json' );
 	$FORCE_PROGRAM_ITEM = sub {undef};
-	my $items = items_of( day_menu( undef, 'RN', '2026-10-19' ) );
+	my ( undef, $items ) = split_day( items_of( day_menu( undef, 'RN', '2026-10-19' ) ) );
 	is_deeply( [ map { $_->{type} } @$items ], [qw(text text text text)], 'programItem undef: text rows' );
 	is( $items->[0]->{name}, "12:00am${MIDDOT}Download This Show", '... with the same name' );
 	is( $items->[0]->{description}, 'Explore the latest in technology, social media, consumer electronics, digital culture and more.', '... and the synopsis' );
@@ -337,8 +382,46 @@ subtest 'day list: programItem undef or dying -> a text row' => sub {
 	$FORCE_PROGRAM_ITEM = sub { die "O2 broke\n" };
 	my $c = day_menu( undef, 'RN', '2026-10-19' );
 	is( $c->count, 1, 'programItem dies: one callback' );
-	is_deeply( [ map { $_->{type} } @{ items_of($c) } ], [qw(text text text text)], '... text rows' );
+	is_deeply( [ map { $_->{type} } @{ items_of($c) } ], [qw(text text text text text)], '... text rows (after the heading)' );
 	ok( ( grep { $_->{message} =~ /O2 broke/ } logged('ERROR') ), '... logged' );
+};
+
+subtest 'day list heading: the date and the station clock; past days stay a list (Material)' => sub {
+	my $body = sub {
+		JSON::PP->new->encode( { formattedScheduleArray => [ { items => [ map { { rawStartTime => $_->[0], rawEndTime => $_->[1], title => $_->[2], start => $_->[3],
+			url => "https://www.abc.net.au/darwin/programs/\L$_->[2]", cardImagePrepared => { imgSrc => "https://resize.abcradio.net.au/x=/340x340/center/middle/\L$_->[2].jpg" } } } @_ ] } ] } );
+	};
+
+	# 105.7 ABC Darwin, yesterday: every row has started and has a program page and an image
+	reset_all( t('2026-10-19T06:00:00Z') );    # 3:30pm Darwin, Monday 19 Oct
+	route_day( LOCAL_DARWIN => { content => $body->( [ '2026-10-17T15:00:00Z', '2026-10-17T20:30:00Z', 'Overnights', '12:30am' ], [ '2026-10-17T20:30:00Z', '2026-10-17T23:30:00Z', 'Breakfast', '6:00am' ] ) } );
+	my $c = day_menu( undef, 'LOCAL_DARWIN', '2026-10-18' );
+	my ( $heading, $rows ) = split_day( items_of($c) );
+	is_deeply( $heading, heading( 'Sun 18 Oct', 'Darwin' ), 'LOCAL_DARWIN, Sun 18 Oct: "Sun 18 Oct · Darwin time"' );
+	ok( !exists $heading->{image} && !exists $heading->{line2}, '... a plain text row: no image, no line2' );
+	is_deeply( [ map { [ $_->{type}, $_->{image} ? 1 : 0 ] } @$rows ], [ [ 'link', 1 ], [ 'link', 1 ] ], 'every schedule row is a link with an image (Material would make a grid of it) ...' );
+	is( scalar( grep { $_->{type} eq 'text' && !exists $_->{image} } @{ items_of($c) } ), 1, '... and the heading is the text row without an image that keeps it a list' );
+	is( $rows->[0]->{name}, "12:30am${MIDDOT}Overnights", 'the schedule rows follow, names unchanged' );
+
+	my %zone = (
+		RN               => 'Sydney',      # Australia/Sydney
+		LOCAL_MELBOURNE  => 'Sydney',      # Australia/Melbourne: the same eastern clock
+		LOCAL_HOBART     => 'Sydney',
+		LOCAL_CANBERRA   => 'Sydney',
+		LOCAL_BRISBANE   => 'Brisbane',    # no DST
+		LOCAL_ADELAIDE   => 'Adelaide',
+		LOCAL_BROKENHILL => 'Adelaide',    # Broken Hill keeps Adelaide time
+		LOCAL_DARWIN     => 'Darwin',
+		LOCAL_PERTH      => 'Perth',
+		TRIPLEJ_PERTH    => 'Perth',
+	);
+	for my $id ( sort keys %zone ) {
+		reset_all( t('2026-10-19T06:00:00Z') );
+		route_day( $id => { content => $body->( [ '2026-10-17T15:00:00Z', '2026-10-17T20:30:00Z', 'Overnights', '12:30am' ] ) } );
+		my ($first) = split_day( items_of( day_menu( undef, $id, '2026-10-18' ) ) );
+		is( $first->{name}, "Sun 18 Oct${MIDDOT}$zone{$id} time", "$id ($S->get($id)->{tz}): $zone{$id} time" );
+	}
+	is( string('PLUGIN_ABCLISTEN_CITY_TIME'), '%s time', '(the clock from PLUGIN_ABCLISTEN_CITY_TIME, as L1\'s "<City> time")' );
 };
 
 subtest 'day list: no schedule, errors, stale ids - one readable text item, once' => sub {
@@ -400,6 +483,18 @@ subtest 'day list: exactly one callback when the schedule dies, never answers, o
 	is( scalar Slim::Utils::Timers::pending(), 0, 'no timer left' );
 
 	reset_all();
+	route_day( RN => { file => 'live/bff-schedule-RN-day.json', defer => 1 } );
+	my $c = day_menu( undef, 'RN', '2026-10-19' );
+	is( scalar Slim::Utils::Timers::pending(), 1, 'an answer that is not cached: the deadline timer runs' );
+	advanceTime(5);
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is( $c->count, 1, 'the schedule arrives after 5 s: answered' );
+	is( scalar Slim::Utils::Timers::pending(), 0, '... and the deadline timer is cancelled' );
+	advanceTime(20);
+	is( $c->count, 1, 'still once after the deadline' );
+	is( scalar( grep { $_->{message} =~ /took longer/ } logged('WARN') ), 0, '... and no deadline WARN' );
+
+	reset_all();
 	route_day( RN => { content => '{}', defer => 1 } );
 	my $calls = 0;
 	Plugins::ABCListen::Live::_dayMenu( undef, sub { $calls++; die "skin broke\n" }, {}, 'RN', '2026-10-19' );
@@ -421,8 +516,10 @@ subtest 'day list: exactly one callback when the schedule dies, never answers, o
 subtest 'accessibility: text conveys the state; names are self-contained' => sub {
 	reset_all();
 	route_day( RN => 'bff-schedule-RN-day.json' );
-	my $items = items_of( day_menu( undef, 'RN', '2026-10-19' ) );
+	my ( $heading, $items ) = split_day( items_of( day_menu( undef, 'RN', '2026-10-19' ) ) );
 	is( scalar( grep { $_->{name} =~ /\(on air\)\z/ && $_->{line1} eq $_->{name} } @$items ), 1, '"(on air)" is in the name and line1 (not only highlight or position)' );
+	like( $heading->{name}, qr/\A(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat) [1-9][0-9]? [A-Z][a-z]{2} \x{B7} [A-Z][A-Za-z ]+ time\z/, 'the heading says the date and the clock in words' );
+	$items = [ $heading, @$items ];
 	is( string('PLUGIN_ABCLISTEN_ON_AIR_MARK'), '(on air)', '(from PLUGIN_ABCLISTEN_ON_AIR_MARK)' );
 	my @menu = @{ station_menu( undef, 'RN' ) };
 	is( scalar( grep { $_->{type} eq 'link' && $_->{name} !~ /\A(?:Today|Yesterday|(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat) [1-9][0-9]? [A-Z][a-z]{2})\z/ } @menu ), 0, 'day labels are words or full dates' );

@@ -284,7 +284,8 @@ subtest 'Sport: "Radio Stations" inline as station rows; Live & Upcoming Events 
 	is( scalar @{ $events->{items} }, 1, 'one playable event station (ABCSPORTSYNC is HLS-only)' );
 	my $row   = $events->{items}->[0];
 	my $title = 'Men’s International Cricket 2nd Test, Day 2: South Africa v Australia';
-	is_deeply( [ @$row{qw(name play line2)} ], [ 'ABC SPORT', 'abclisten://live/GRANDSTAND', $title ], 'a stationItem copy; line2 = the event title' );
+	my $window = Plugins::ABCListen::Util::friendlyTime(1_792_395_000) . "\x{2013}" . Plugins::ABCListen::Util::friendlyTime(1_792_425_600);
+	is_deeply( [ @$row{qw(name play line2)} ], [ 'ABC SPORT', 'abclisten://live/GRANDSTAND', "$title \x{B7} $window" ], 'a stationItem copy; line2 = "<event title> · <start>–<end>" (L4: the time window a link can\'t carry in a description)' );
 	ok( !exists $row->{description}, 'no description: L4 station rows are links (LMS menu rule 1)' );
 	is( ref $row->{url}, 'CODE', '... so the row still opens its station menu' );
 	is( $events->{image}, $row->{image}, 'the link shows the first row\'s artwork' );
@@ -297,6 +298,7 @@ subtest 'Sport events: none playable -> no link; event-only services checked on 
 	my @radio = ( { contentUri => 'coremedia://externallink/1', cardTitle => 'ABC SPORT', articleLink => 'https://www.abc.net.au/listen/live/sport' } );
 	my $carousel = sub { { component => 'LiveRadioCarousel', componentProps => { heading => 'Live & Upcoming Events', cards => [@_] } } };
 	my $event = sub { my ( $id, $title ) = @_; return { papiServiceId => $id, title => $title, start => '2026-10-19T07:30:00+00:00', end => '2026-10-19T16:00:00+00:00' } };
+	my $window = " \x{B7} " . Plugins::ABCListen::Util::friendlyTime(1_792_395_000) . "\x{2013}" . Plugins::ABCListen::Util::friendlyTime(1_792_425_600);
 
 	fresh();
 	route_page_json( 'sport', { component => 'StandardCollection', componentProps => { id => '1', title => 'Radio Stations', items => \@radio } }, $carousel->( $event->( 'ABCSPORTSYNC', 'Rapid only' ) ) );
@@ -306,7 +308,7 @@ subtest 'Sport events: none playable -> no link; event-only services checked on 
 	route_page_json( 'sport', $carousel->( $event->( 'sport_bbl', 'BBL 1' ), $event->( 'SPORT_BBL', 'BBL 2' ), $event->( 'GRANDSTAND', 'Cricket' ) ) );
 	route( "${BFF}epgNowPlaying/SPORT_BBL/now?imageRatio=1x1", file => 'live/epg-event-onair-pls.json', headers => $JSON_TYPE );
 	my $items = section('sport');
-	is_deeply( [ map { [ $_->{play}, $_->{line2} ] } @{ $items->[0]->{items} } ], [ [ 'abclisten://live/SPORT_BBL', 'BBL 1' ], [ 'abclisten://live/GRANDSTAND', 'Cricket' ] ],
+	is_deeply( [ map { [ $_->{play}, $_->{line2} ] } @{ $items->[0]->{items} } ], [ [ 'abclisten://live/SPORT_BBL', "BBL 1$window" ], [ 'abclisten://live/GRANDSTAND', "Cricket$window" ] ],
 		'BBL (event-only, lower-case id) on air: listed once, with its first event; then ABC SPORT' );
 	is( scalar requests_like(qr{epgNowPlaying/SPORT_BBL}), 1, 'one on-air check' );
 
@@ -324,7 +326,12 @@ subtest 'Sport events: none playable -> no link; event-only services checked on 
 	fresh();
 	route_page_json( 'sport', { component => 'LiveRadioCarousel', componentProps => { cards => [ $event->( 'GRANDSTAND', 'Untitled carousel event' ) ] } } );
 	$items = section('sport');
-	is_deeply( [ @{ $items->[0] }{qw(play line2)} ], [ 'abclisten://live/GRANDSTAND', 'Untitled carousel event' ], 'a carousel without a heading: its stations are rows, with the event text' );
+	is_deeply( [ @{ $items->[0] }{qw(play line2)} ], [ 'abclisten://live/GRANDSTAND', "Untitled carousel event$window" ], 'a carousel without a heading: its stations are rows, with the event text' );
+
+	fresh();
+	route_page_json( 'sport', $carousel->( { papiServiceId => 'GRANDSTAND', title => 'No times' }, ) );
+	$items = section('sport');
+	is( $items->[0]->{items}->[0]->{line2}, 'No times', 'an event without start/end: line2 is the title alone' );
 
 	fresh();
 	%FORCE_STATION = ( GRANDSTAND => 'ABC SPORT (audio row)' );
