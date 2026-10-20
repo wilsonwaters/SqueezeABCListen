@@ -56,9 +56,10 @@ package Plugins::ABCListen::LiveMetadata;
 # what is due for the service it plays: NowPlaying (cached until the program ends) and, for a
 # service with song data, Tracks (cached until next_updated, 20-120 s). The next poll comes at the
 # minimum of the program delay (nextDelay: program end + 30 s, clamped 60-900 s; ERROR_DELAY (30 s)
-# after a failed program fetch) and the track delay (Tracks->pollIn: next_updated - now, clamped
-# 20-120 s; 30 s after a failed song fetch; none without song data), and ERROR_DELAY after an
-# update that dies. A poll stops (kills its timer, makes no fetch) once the master is neither
+# after a failed program fetch), the track delay (Tracks->pollIn: next_updated - now, clamped
+# 20-120 s; 30 s after a failed song fetch; none without song data) and, while a song is current,
+# its end (Tracks->songEnd - now, at least 20 s; that poll is answered from Tracks' cache and
+# pushes program mode on time), and ERROR_DELAY after an update that dies. A poll stops (kills its timer, makes no fetch) once the master is neither
 # playing nor paused, or its current playlist URL isn't the polled live URL any more, and on
 # onStop; switching to a station without songs stops the song fetches with it. A poll with neither
 # a pending timer nor a fetch in flight, or kept for another client object with the same id (a
@@ -361,8 +362,17 @@ sub _update {
 	my $song       = $hasSongs ? $TRACKS->current($id) : undef;
 	my $trackDelay = $hasSongs ? $TRACKS->pollIn($id)  : undef;
 
-	my $delay = defined $error ? ERROR_DELAY : nextDelay( $program, Time::HiRes::time() );
+	my $now   = Time::HiRes::time();
+	my $delay = defined $error ? ERROR_DELAY : nextDelay( $program, $now );
 	$delay = $trackDelay if defined $trackDelay && $trackDelay < $delay;
+
+	# a current song that ends before that: poll at its end (answered from Tracks' cache), so the
+	# switch to program mode is pushed when it happens
+	if ( $song && defined( my $end = $TRACKS->songEnd($song) ) ) {
+		my $endDelay = $end - $now;
+		$endDelay = Plugins::ABCListen::Tracks::MIN_TTL if $endDelay < Plugins::ABCListen::Tracks::MIN_TTL;
+		$delay    = $endDelay if $endDelay < $delay;
+	}
 
 	if ( defined $error && !$song ) {
 		main::DEBUGLOG && $log->is_debug && $log->debug( "Live metadata: no program data for $id (fetch failed), no push" );

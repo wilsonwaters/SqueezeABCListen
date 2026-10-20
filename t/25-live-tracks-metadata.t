@@ -4,7 +4,8 @@
 # "<program> · <station>", cover => song cover } while a song is current, program mode (L2) once it
 # is over, between songs, on talk stations and for time-zone versions without data; buildMeta's
 # fallbacks (no program: release title, else station name; cover: song, program image, logo); the
-# poll at min(track delay (next_updated - now, 20-120 s), program delay); last-good on one empty or
+# poll at min(track delay (next_updated - now, 20-120 s), program delay, the current song's end (at
+# least 20 s; answered from the cache)); the push when the program fetch fails; last-good on one empty or
 # failed answer, program mode on the second; pushes only on change; RN never calls a music endpoint;
 # a station switch stops song polling; two players -> one now.json per refresh; master-only polling
 # in a sync group; metadata without a player never fetches songs; the "Recently played" song-info
@@ -58,7 +59,7 @@ my $PERTH_URL = 'abclisten://live/TRIPLEJ_PERTH';
 my $TJ_PLAYED = parseISO8601('2026-10-19T07:11:23+00:00');    # "Could This Be Love", 212 s
 my $TJ_NEXT   = parseISO8601('2026-10-19T07:14:45+00:00');
 my $TJ_END    = $TJ_PLAYED + 212;
-my $TJ_COVER  = 'https://resize.abcradio.net.au/n4TEe5BxO3t8HKtfGyqZUrvMkis=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg';
+my $TJ_COVER  = 'https://www.abc.net.au/triplej/albums/xivy-couldthisbelove.jpg';    # the original (sizes[] stop at 160 px)
 my $ARVOS_IMG = 'https://resize.abcradio.net.au/sig=/580x580/center/middle/arvos.jpg';
 my $PROG_END  = parseISO8601('2026-10-19T08:00:00+00:00');
 
@@ -272,20 +273,22 @@ subtest 'song change, song over (ABC not updated yet), between songs: song <-> p
 	is( scalar( pushes() ), 1, 'played_time + duration passed: one push' );
 	is_deeply( [ @{ np($player) }{qw(title artist album cover)} ], [ 'Arvos', 'Concetta Caristo', 'triple j', $ARVOS_IMG ], '... program mode (L2 fields)' );
 
-	# a new song
-	$MUSIC{triplej} = song_body( 'Halfway', 'Swapmeet', $TJ_PLAYED + 230, 212, $TJ_PLAYED + 400 );
+	# a new (long) song
+	$MUSIC{triplej} = song_body( 'Halfway', 'Swapmeet', $TJ_PLAYED + 230, 600, $TJ_PLAYED + 400 );
 	advanceTime(20);    # 07:15:25
 	is( scalar( pushes() ), 2, 'the next song: one push' );
 	is_deeply( [ @{ np($player) }{qw(title artist album)} ], [ 'Halfway', 'Swapmeet', "Arvos \x{B7} triple j" ], '... song mode again' );
 	is( np($player)->{cover}, 'https://www.abc.net.au/triplej/albums/halfway.jpg', '... with its cover' );
 	is( next_poll_in($player), 120, '... next poll clamped to 120 s' );
 
-	# between songs: {} twice
+	# between songs: {} twice, while the song would still be current (it ends at 07:25:13)
 	$MUSIC{triplej} = empty_body( $TJ_PLAYED + 500 );
-	advanceTime(120);
+	advanceTime(120);    # 07:17:25
 	is( scalar( pushes() ), 2, 'one empty answer while the song is current: last-good, no push' );
 	is( np($player)->{title}, 'Halfway', '... still the song' );
-	advanceTime( next_poll_in($player) );
+	is( next_poll_in($player), 120, '... next poll at next_updated (clamped to 120 s)' );
+	advanceTime(120);    # 07:19:25
+	is( music_requests(), 7, '(a new request)' );
 	is( scalar( pushes() ), 3, 'the second empty answer: one push' );
 	is( np($player)->{title}, 'Arvos', '... program mode' );
 	ok( scalar( grep { $_->{message} =~ /next poll for 00:00:00:00:00:01 in \d+ s/ } logged('DEBUG') ), 'DEBUG "next poll ..."' );
@@ -318,8 +321,27 @@ subtest 'poll delay: min(track delay 20-120 s, program delay)' => sub {
 	$EPG{'TRIPLEJ/now'} = { code => 500 };
 	$player = start();
 	is( next_poll_in($player), 30, 'program fetch failed (song fine): 30 s' );
-	is( np($player)->{title}, 'Could This Be Love', '... the song is still pushed' );
+	is( scalar( pushes() ), 1, '... the song is still pushed' );
+	is_deeply( [ pushed_titles() ], ['Could This Be Love'], '... (setCurrentTitle: the song)' );
+	is( np($player)->{title}, 'Could This Be Love', '... Now Playing: the song' );
 	is( np($player)->{album}, 'Could This Be Love (2026)', '... album = the release (program unknown)' );
+};
+
+subtest 'poll at the song end when that comes first: program mode pushed on time, from the cache' => sub {
+	reset_all();
+	$MUSIC{triplej} = song_body( 'Short', 'A', $TJ_PLAYED, 100, $TJ_PLAYED + 200 );    # ends 40 s from now; next_updated in 140 s
+	my $player = start();
+	is( next_poll_in($player), 40, 'next poll at the song end (40 s), before next_updated (120 s) and the program (900 s)' );
+	advanceTime(40);
+	is( music_requests(), 1, 'that poll is answered from the cache (no request)' );
+	is( scalar( pushes() ), 2, 'the song ended: one push' );
+	is( np($player)->{title}, 'Arvos', '... program mode' );
+	is( next_poll_in($player), 100, '... next poll at the cached answer\'s next_updated (100 s)' );
+
+	reset_all();
+	$MUSIC{triplej} = song_body( 'Shorter', 'A', $TJ_PLAYED, 65, $TJ_PLAYED + 200 );    # ends 5 s from now
+	$player = start();
+	is( next_poll_in($player), 20, 'a song ending in 5 s: at least 20 s' );
 };
 
 subtest 'last-good: one failed answer keeps the song, the second means program mode' => sub {
@@ -330,7 +352,7 @@ subtest 'last-good: one failed answer keeps the song, the second means program m
 	is( scalar( pushes() ), 1, 'one failure: no push' );
 	is( np($player)->{title}, 'Could This Be Love', '... the song while it is current' );
 	is( next_poll_in($player), 30, '... retried in 30 s' );
-	advanceTime(30);    # 07:15:23: the song is over anyway
+	advanceTime(30);    # 07:14:53: the song (until 07:14:55) is still current; the second failure ends it
 	is( scalar( pushes() ), 2, 'the second failure: program mode pushed' );
 	is( np($player)->{title}, 'Arvos', '... Arvos' );
 	is( scalar( grep { $_->{message} =~ /Song for TRIPLEJ unavailable/ } logged('WARN') ), 1, 'WARN once for the run of failures' );
@@ -493,6 +515,18 @@ subtest 'song info: 10 rows "time · Artist – Title"; empty, error and slow: o
 	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
 	is( $c->count, 1, 'the late answer does not call back again' );
 	is( scalar( Slim::Utils::Timers::pending() ), 0, 'no timer left' );
+
+	reset_all();
+	$MUSIC{'search:triplej'} = { content => fixture('live/music-abcradio-plays-search-triplej.json'), defer => 1 };
+	$c = open_item( undef, recent_item( undef, $TJ_URL ) );
+	is( scalar( Slim::Utils::Timers::pending() ), 1, 'a slow answer: the 3 s deadline timer is armed' );
+	advanceTime(1);
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is( $c->count, 1, 'answered after 1 s' );
+	is( scalar( rows($c) ), 10, '... with the 10 rows' );
+	is( scalar( Slim::Utils::Timers::pending() ), 0, '... and the deadline timer is killed' );
+	advanceTime(3);
+	is( $c->count, 1, 'still answered once after the deadline' );
 
 	reset_all();
 	$MUSIC{'search:triplej'} = json( { items => [ { played_time => 'nonsense', recording => { title => 'Only a title' } } ] } );

@@ -3,13 +3,14 @@
 # stations and the TRIPLEJ_/DOUBLEJ_/CLASSIC_ time-zone versions; talk, local, sport, RN and Kids
 # listen versions never make a request); parsing the triple j and ABC Classic now.json fixtures
 # (title, summary.artist incl. the composer in "Last, First" form, release + year, the cover nearest
-# 580 px with square sizes first, epochs, duration) and BFF musicNowPlaying (the variant path:
-# musicNowPlaying/<VARIANT_ID>?tz=<its tz>); synthetic edge cases (missing artwork, summary, artists,
-# duration, next_updated; entities, '&' and non-ASCII); empty now; the cache (until next_updated,
-# clamped 20-120 s, 60 s without it); HTTP 400 -> undef, 6 h, no WARN; a variant's mapiNow null and
-# HTTP 500 -> undef, 6 h; 5xx/429/timeouts -> 30 s, WARN once; last-good (current); pollIn;
-# recently played (parse, limit, 60 s cache, coalescing, main stations only); coalescing; exactly one
-# callback on every path.
+# 580 px with square sizes first, the original url instead of a size under 340 px, epochs, duration)
+# and BFF musicNowPlaying (the variant path: musicNowPlaying/<VARIANT_ID>?tz=<its tz>); synthetic edge
+# cases (missing artwork, summary, artists, duration, next_updated; entities, '&' and non-ASCII);
+# empty now; the cache (until next_updated, clamped 20-120 s, 60 s without it); HTTP 400 -> undef,
+# 6 h, no WARN; a variant's mapiNow null, `null` body (HTTP 200) and HTTP 500 -> undef, 6 h;
+# 5xx/429/timeouts/bad JSON -> 30 s, WARN once; last-good (current); pollIn; recently played (parse,
+# limit, 60 s cache, main stations only); Tracks' own coalescing (one settle, one miss, for every
+# caller); a dying callback doesn't stop the other callers; exactly one callback on every path.
 #
 # Fixtures in t/data/live/ are raw response bodies (the research {_fixture_note, data} wrapper
 # stripped; lists trimmed, shapes unedited):
@@ -54,7 +55,7 @@ my $BFF   = 'https://www.abc.net.au/core-next/api/';
 my $TJ_NOW_URL  = "${MUSIC}plays/triplej/now.json";
 my $TJ_PLAYED   = parseISO8601('2026-10-19T07:11:23+00:00');
 my $TJ_NEXT     = parseISO8601('2026-10-19T07:14:45+00:00');
-my $TJ_COVER    = 'https://resize.abcradio.net.au/n4TEe5BxO3t8HKtfGyqZUrvMkis=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Fxivy-couldthisbelove.jpg';
+my $TJ_COVER    = 'https://www.abc.net.au/triplej/albums/xivy-couldthisbelove.jpg';    # the 1200 px original (sizes[] stop at 160 px)
 my $PERTH_URL   = "${BFF}musicNowPlaying/TRIPLEJ_PERTH?tz=Australia%2FPerth";
 my $CLASSIC_580 = 'https://resize.abcradio.net.au/yYlAKGOr9-21MUnkaFWRbjah6wg=/580x580/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fclassic%2Falbumart%2Favie-av2698.jpg';
 
@@ -148,7 +149,7 @@ subtest 'parseNow: the triple j fixture' => sub {
 			duration    => 212,
 			nextUpdated => $TJ_NEXT,
 		},
-		'title, summary.artist (with "&"), release + year, the size nearest 580 px, epochs, duration'
+		'title, summary.artist (with "&"), release + year, the artwork\'s original url (its sizes stop at 160 px), epochs, duration'
 	);
 	is( $T->songEnd($song), $TJ_PLAYED + 212, 'songEnd: playedTime + duration' );
 };
@@ -179,7 +180,7 @@ subtest 'parseMapiNow: the BFF fixture (variant path shape)' => sub {
 			title       => 'AAAHHH!!!',
 			artist      => 'Rachel Chinouriri',
 			album       => 'I think I spoke too soon',
-			cover       => 'https://resize.abcradio.net.au/GxkKCh6qu5IAP0upFgx0fO1HRO4=/160x160/center/middle/https%3A%2F%2Fwww.abc.net.au%2Ftriplej%2Falbums%2Frachelchinouriri-ithinkispoketoosoon.jpg',
+			cover       => 'https://www.abc.net.au/triplej/albums/rachelchinouriri-ithinkispoketoosoon.jpg',    # 600 px original; sizes to 160 px
 			playedTime  => parseISO8601('2026-10-19T07:18:24+00:00'),
 			duration    => 143,
 			nextUpdated => parseISO8601('2026-10-19T07:20:37+00:00'),
@@ -224,6 +225,26 @@ subtest 'parseNow: missing and odd fields' => sub {
 
 	$song = $T->parseNow( JSON::PP->new->utf8->decode( now_body( recordingArtwork => [ { url => 'https://x/rec.jpg' } ], artwork => [ { url => 'not a url' } ] ) ) );
 	is( $song->{cover}, 'https://x/rec.jpg', 'no usable release artwork: the recording artwork\'s url' );
+};
+
+subtest 'cover: the size nearest 580 px; the original url instead of a thumbnail under 340 px' => sub {
+	my $cover = sub { $T->parseNow( JSON::PP->new->utf8->decode( now_body( artwork => [@_] ) ) )->{cover} };
+	my $sq    = sub { my $w = shift; return +{ url => "https://x/$w.jpg", width => $w, height => $w, aspect_ratio => '1x1' } };
+
+	is( $cover->( { url => 'https://x/orig.jpg', width => 1200, sizes => [ map { $sq->($_) } 100, 160, 340, 580, 940 ] } ),
+		'https://x/580.jpg', 'a 580 px size: that size (not the original)' );
+	is( $cover->( { url => 'https://x/orig.jpg', width => 1200, sizes => [ map { $sq->($_) } 100, 340 ] } ),
+		'https://x/340.jpg', 'best size 340 px: the size' );
+	is( $cover->( { url => 'https://x/orig.jpg', width => 300, height => 300, sizes => [ map { $sq->($_) } 100, 160 ] } ),
+		'https://x/orig.jpg', 'sizes stop at 160 px: the original url (ABC Jazz: 300x300)' );
+	is( $cover->( { url => 'https://x/orig.jpg', sizes => [ map { $sq->($_) } 100, 160 ] } ),
+		'https://x/orig.jpg', '... also when the original\'s size is unknown' );
+	is( $cover->( { sizes => [ map { $sq->($_) } 100, 160 ] } ),
+		'https://x/160.jpg', 'sizes stop at 160 px and no original url: the 160 px size' );
+	is( $cover->( { url => 'https://x/orig.jpg', width => 150, sizes => [ map { $sq->($_) } 100, 160 ] } ),
+		'https://x/160.jpg', 'an original known to be no bigger: the 160 px size' );
+	is( $cover->( { url => 'https://x/orig.jpg', sizes => [ { url => 'https://x/580w.jpg', width => 580, height => 326, aspect_ratio => '16x9' }, $sq->(160) ] } ),
+		'https://x/orig.jpg', 'square sizes first (160 px square, not the 580 px 16x9), then the original over the thumbnail' );
 };
 
 subtest 'parseRecent: the triple j recently played fixture' => sub {
@@ -305,7 +326,7 @@ subtest 'now(): empty now, HTTP 400 (6 h, no WARN), errors (30 s, WARN once)' =>
 	now_cb('TRIPLEJ');
 	is( music_requests(), 2, '... then asked again' );
 
-	for my $case ( [ '500', { code => 500 } ], [ '429', { code => 429 } ], [ 'a timeout', { error => 'Timed out waiting for data' } ], [ 'bad JSON', { content => '<html>' } ] ) {
+	for my $case ( [ '500', { code => 500 } ], [ '429', { code => 429 } ], [ 'a timeout', { error => 'Timed out waiting for data' } ], [ 'bad JSON', { content => '<html>' } ], [ 'a null body (main station)', { content => 'null' } ] ) {
 		my ( $label, $response ) = @$case;
 		reset_all();
 		route( $TJ_NOW_URL, %$response );
@@ -342,6 +363,17 @@ subtest 'time-zone versions: musicNowPlaying/<VARIANT_ID>?tz=..., null and 500 -
 	now_cb('TRIPLEJ_PERTH');
 	is( music_requests(), 1, '... not asked again for 6 h' );
 	is( scalar( logged('WARN') ), 0, '... no WARN' );
+
+	reset_all();
+	route( $PERTH_URL, content => 'null' );    # HTTP 200: API.pm reports status 200 for a non-object body
+	$c = now_cb('TRIPLEJ_PERTH');
+	is_deeply( [ $c->args(0) ], [undef], 'a `null` body (HTTP 200): undef, no error' );
+	is( $T->pollIn('TRIPLEJ_PERTH'), undef, '... no track delay' );
+	advanceTime( 6 * 3600 - 1 );
+	now_cb('TRIPLEJ_PERTH');
+	is( music_requests(), 1, '... not asked again for 6 h' );
+	is( scalar( logged('WARN') ), 0, '... no WARN' );
+	ok( scalar( grep { $_->{message} =~ /No song data for TRIPLEJ_PERTH \(a null response\)/ } logged('INFO') ), '... INFO "a null response"' );
 
 	reset_all();
 	route( $PERTH_URL, content => fixture('live/bff-musicNowPlaying-TRIPLEJ.json') );
@@ -447,6 +479,52 @@ subtest 'recent(): main stations, 60 s cache, coalesced, errors' => sub {
 	ok( !defined( ( $c->args(0) )[0] ) && defined( ( $c->args(0) )[1] ), 'an error: (undef, error)' );
 	$T->recent( 'TRIPLEJ', 10, sub { } );
 	is( scalar( requests() ), 1, '... negatively cached' );
+};
+
+subtest 'Tracks\' own coalescing: one settle for every caller of now() and recent()' => sub {
+	reset_all();
+	route( $TJ_NOW_URL, file => 'live/music-abcradio-plays-triplej-now.json' );
+	now_cb('TRIPLEJ');
+	resetStubs();
+	route( $TJ_NOW_URL, content => json( { now => {}, next_updated => iso( $TJ_PLAYED + 200 ) } ), defer => 1 );
+	advanceTime(120);
+
+	my ( $a, $b ) = ( now_cb('TRIPLEJ'), now_cb('TRIPLEJ') );    # two masters polling at the same moment
+	is( music_requests(), 1, 'one request' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is( $a->count + $b->count, 2, 'both callers answered once' );
+	is_deeply( [ $a->args(0), $b->args(0) ], [ undef, undef ], '... with the same answer (no song now)' );
+	is( scalar( grep { $_->{message} =~ /^Song for TRIPLEJ: none now/ } logged('DEBUG') ), 1, '... settled once' );
+	is( $T->current('TRIPLEJ')->{title}, 'Could This Be Love', 'one empty answer shared by two callers is one miss: still the song' );
+
+	reset_all();
+	my $url = "${MUSIC}plays/search.json?limit=10&order=desc&station=triplej";
+	route( $url, file => 'live/music-abcradio-plays-search-triplej.json', defer => 1 );
+	my @c = map { my $c = collector(); $T->recent( 'TRIPLEJ', 10, $c->cb ); $c } 1 .. 2;
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is( scalar( grep { $_->count == 1 } @c ), 2, 'recent(): both callers answered once' );
+	is( scalar( grep { $_->{message} =~ /^Recently played for TRIPLEJ: 10 songs/ } logged('DEBUG') ), 1, '... settled once' );
+};
+
+subtest 'a caller whose callback dies doesn\'t stop the others' => sub {
+	reset_all();
+	route( $TJ_NOW_URL, file => 'live/music-abcradio-plays-triplej-now.json', defer => 1 );
+	$T->now( 'TRIPLEJ', sub { die "first now broke\n" } );
+	my $second = now_cb('TRIPLEJ');
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is( $second->count, 1, 'now(): the second caller is answered' );
+	is( song_of($second)->{title}, 'Could This Be Love', '... with the song' );
+	ok( scalar( grep { $_->{message} =~ /first now broke/ } logged('ERROR') ), '... the die is logged' );
+
+	reset_all();
+	route( "${MUSIC}plays/search.json?limit=10&order=desc&station=triplej", file => 'live/music-abcradio-plays-search-triplej.json', defer => 1 );
+	$T->recent( 'TRIPLEJ', 10, sub { die "first recent broke\n" } );
+	my $c = collector();
+	$T->recent( 'TRIPLEJ', 10, $c->cb );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is( $c->count, 1, 'recent(): the second caller is answered' );
+	is( scalar @{ ( $c->args(0) )[0] }, 10, '... with the list' );
+	ok( scalar( grep { $_->{message} =~ /first recent broke/ } logged('ERROR') ), '... the die is logged' );
 };
 
 subtest 'exactly one callback, also when the callback dies' => sub {

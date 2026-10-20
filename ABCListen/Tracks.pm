@@ -55,7 +55,10 @@ package Plugins::ABCListen::Tracks;
 #   album        now.release.title (else the recording's first release), plus " (<release_year>)"
 #                when it has a 4-digit year; BFF: mapiNow.release.title or releaseTitle; else undef
 #   cover        the release artwork's sizes[] entry nearest COVER_PX (580) px wide, square sizes
-#                (1x1) first, else that artwork's url; else the same from the recording's artwork;
+#                (1x1) first; when that entry is narrower than MIN_COVER_PX (340) px (ABC's lists
+#                often stop at 160 px), the artwork's original url instead, unless its width is
+#                known and no bigger; without sizes, that url; else the same from the recording's
+#                artwork;
 #                BFF: release artwork, else primaryImage; else undef. resize.abcradio.net.au URLs
 #                are signed, so they are used as ABC gives them.
 #   playedTime   epoch of played_time (BFF: playedTime), or undef
@@ -97,6 +100,7 @@ use constant END_GRACE    => 30;          # a song without a duration is current
 use constant MAX_MISSES   => 1;           # empty/failed answers bridged by the last good song
 use constant TIMEOUT      => 8;           # seconds per request
 use constant COVER_PX     => 580;
+use constant MIN_COVER_PX => 340;         # a smaller best size gives way to the artwork's original url
 
 my $log = logger('plugin.abclisten');
 
@@ -380,8 +384,8 @@ sub _settleNow {
 		my $status  = ref $failure eq 'HASH' ? $failure->{status} : undef;
 		my $message = ref $failure eq 'HASH' && defined $failure->{message} ? $failure->{message} : 'unknown problem';
 
-		if ( _isNoData( $source, $status, $failure ) ) {
-			$noData = defined $status ? "HTTP $status" : 'a null response';
+		if ( my $reason = _noDataReason( $source, $status, $message ) ) {
+			$noData = $reason;
 		}
 		else {
 			$error = $message;
@@ -492,23 +496,26 @@ sub _settleRecent {
 	return;
 }
 
-# No song data for this service (not worth asking again for NO_DATA_TTL): HTTP 400 from the music
-# API; for a time-zone version also HTTP 4xx (not 429) and 500 (BFF's "Query error" for every
-# variant id), and a `null` body.
-sub _isNoData {
-	my ( $source, $status, $failure ) = @_;
+# No song data for this service (not worth asking again for NO_DATA_TTL): the reason, else undef.
+# HTTP 400 from the music API; for a time-zone version also HTTP 4xx (not 429) and 500 (BFF's
+# "Query error" for every variant id), and a `null` (non-object) body. Only 4xx/5xx count as an
+# HTTP error status: API.pm also reports the 2xx code of a body that isn't a JSON object.
+sub _noDataReason {
+	my ( $source, $status, $message ) = @_;
 
-	return 1 if defined $status && $status == 400;
-	return 0 unless $source->{variant};
+	my $httpError = defined $status && $status =~ /\A[0-9]+\z/ && $status >= 400 ? $status : undef;
 
-	if ( defined $status ) {
-		return 1 if $status == 500 || ( $status >= 400 && $status < 500 && $status != 429 );
-		return 0;
+	return 'HTTP 400' if defined $httpError && $httpError == 400;
+	return undef unless $source->{variant};
+
+	if ( defined $httpError ) {
+		return "HTTP $httpError" if $httpError == 500 || ( $httpError < 500 && $httpError != 429 );
+		return undef;
 	}
 
-	my $message = ref $failure eq 'HASH' ? $failure->{message} : undef;
 	return defined $message && !ref $message
-		&& $message =~ /\A(?:Unexpected JSON response \(not an object or array\)|Invalid JSON response: JSON text must be an object or array\b)/ ? 1 : 0;
+		&& $message =~ /\A(?:Unexpected JSON response \(not an object or array\)|Invalid JSON response: JSON text must be an object or array\b)/
+		? 'a null response' : undef;
 }
 
 # ---------------------------------------------------------------------------
@@ -572,7 +579,7 @@ sub _album {
 }
 
 # The first artwork with a usable image: its sizes[] entry nearest COVER_PX wide (square sizes
-# first; ties go to the larger), else its url.
+# first; ties go to the larger), its url instead of a best entry under MIN_COVER_PX, else its url.
 sub _cover {
 	my $artwork = shift;
 	return undef unless ref $artwork eq 'ARRAY';
@@ -586,6 +593,12 @@ sub _cover {
 
 		if (@sizes) {
 			my ($best) = sort { abs( $a->{width} - COVER_PX ) <=> abs( $b->{width} - COVER_PX ) || $b->{width} <=> $a->{width} } @sizes;
+
+			# ABC's sizes[] often stop at 160 px: the original beats a thumbnail, unless it is
+			# known to be no bigger
+			my $original = _seconds( $art->{width} );
+			return $art->{url} if $best->{width} < MIN_COVER_PX && _isUrl( $art->{url} ) && !( $original && $original <= $best->{width} );
+
 			return $best->{url};
 		}
 
