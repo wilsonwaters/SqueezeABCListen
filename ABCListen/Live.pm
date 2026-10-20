@@ -58,8 +58,8 @@ package Plugins::ABCListen::Live;
 #   DAY_DEADLINE.
 # LMS keeps no browse session for this plugin (code-ref feeds), so every item_id request rebuilds
 # the menus and opens the row at that index: the station menu's rows only move when the on-air
-# line appears or goes (an id taken while ABC's EPG had no program then opens the next day). Feeds
-# called with a stale or unknown station id or date answer one readable error item.
+# line appears or goes (an id taken before that opens the neighbouring row). Feeds called with a
+# stale or unknown station id or date answer one readable error item.
 #
 # Public builder (ai-state/streams.md contract 7):
 #   Live->stationItem($client, $serviceId) -> a station row (link + play, above), or undef for

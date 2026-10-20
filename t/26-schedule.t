@@ -314,12 +314,14 @@ subtest 'tzset without effect: the table; the process TZ is always restored' => 
 		local $ENV{TZ} = $env;
 		delete $ENV{TZ} unless defined $env;
 		POSIX::tzset();
+		my $names  = join ',', POSIX::tzname();    # (glibc: as set by tzset; localtime() may change it)
 		my $before = join ',', localtime($probe);
 
 		$SCH->localDate( 'Australia/Darwin', $probe );
 		$SCH->dayList( 'Australia/Sydney', $probe );
 		Plugins::ABCListen::Schedule::_tzsetOffset( 'Australia/Hobart', $probe );
 
+		is( join( ',', POSIX::tzname() ), $names, "process TZ $label: the C library's zone (tzname) is re-read" );    # before localtime(), which may run tzset itself
 		is( $ENV{TZ}, $env, "process TZ $label: \$ENV{TZ} restored" );
 		is( exists $ENV{TZ} ? 1 : 0, defined $env ? 1 : 0, "process TZ $label: (not created)" );
 		is( join( ',', localtime($probe) ), $before, "process TZ $label: localtime unchanged" );
