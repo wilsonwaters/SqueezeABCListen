@@ -1,0 +1,496 @@
+{
+ "formattedScheduleArray": [
+  {
+   "timeBlockTitle": "Early",
+   "items": [
+    {
+     "id": "pe28321a7a",
+     "rawStartTime": "2026-10-18T19:00:00+00:00",
+     "rawEndTime": "2026-10-18T20:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Conversations",
+      "imgSrc": "https://resize.abcradio.net.au/ffLB8lxi1iaYCQcyBE_z0rJI4yc=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2FSarah_Kanowski_Richard_Fidler_square.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/ffLB8lxi1iaYCQcyBE_z0rJI4yc=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2FSarah_Kanowski_Richard_Fidler_square.jpg 100w",
+       "https://resize.abcradio.net.au/LO91zzAnlxTcesaf37WX8f5y7UQ=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2FSarah_Kanowski_Richard_Fidler_square.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prce2412fc",
+       "displayName": "Richard Fidler and Sarah Kanowski"
+      }
+     ],
+     "synopsis": "Conversations draws you deep into the life story of someone you may have heard about, but never met.",
+     "title": "Conversations",
+     "url": "https://www.abc.net.au/listen/programs/conversations",
+     "stationsInfo": [
+      {
+       "title": "102.5 ABC Perth",
+       "papiServiceId": "local_perth",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/2026/cap-cities/abc-perth-logo-2026.png"
+       }
+      }
+     ],
+     "timeBlock": "Early",
+     "onNow": false,
+     "start": "3:00am",
+     "end": "4:00am"
+    },
+    {
+     "id": "pee7cb9c73",
+     "rawStartTime": "2026-10-18T20:00:00+00:00",
+     "rawEndTime": "2026-10-18T21:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Early Mornings",
+      "imgSrc": "https://resize.abcradio.net.au/PfeV-cdmFeC4i09oPU34IzEYqXs=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fivo_da_silva_square.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/PfeV-cdmFeC4i09oPU34IzEYqXs=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fivo_da_silva_square.jpg 100w",
+       "https://resize.abcradio.net.au/tnLfQeW0dbtmhYIPkNC77njVBo4=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fivo_da_silva_square.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "preqdkoldY",
+       "displayName": "Ivo da Silva"
+      }
+     ],
+     "synopsis": "For the Early Birds or Night Owls, enjoy live storytelling and great music from around Western Australia.",
+     "title": "Early Mornings",
+     "url": "https://www.abc.net.au/perth/programs/early-mornings/",
+     "stationsInfo": [
+      {
+       "title": "102.5 ABC Perth",
+       "papiServiceId": "local_perth",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/2026/cap-cities/abc-perth-logo-2026.png"
+       }
+      }
+     ],
+     "timeBlock": "Early",
+     "onNow": false,
+     "start": "4:00am",
+     "end": "5:00am"
+    },
+    {
+     "id": "pe26f2032c",
+     "rawStartTime": "2026-10-18T21:00:00+00:00",
+     "rawEndTime": "2026-10-19T00:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Breakfast",
+      "imgSrc": "https://resize.abcradio.net.au/61KQlpocXZdK79Mn3wE7hL20DhY=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fmark_gibson_square.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/61KQlpocXZdK79Mn3wE7hL20DhY=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fmark_gibson_square.jpg 100w",
+       "https://resize.abcradio.net.au/GPddJbaJ9DEWR8c6z1pmY2qX6JI=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fmark_gibson_square.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prc9a40c60",
+       "displayName": "Mark Gibson"
+      }
+     ],
+     "synopsis": "Get your day started with what you need to know and what you'll want to talk about.",
+     "title": "Breakfast",
+     "url": "https://www.abc.net.au/radio/perth/programs/breakfast/",
+     "stationsInfo": [
+      {
+       "title": "102.5 ABC Perth",
+       "papiServiceId": "local_perth",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/2026/cap-cities/abc-perth-logo-2026.png"
+       }
+      }
+     ],
+     "timeBlock": "Early",
+     "onNow": false,
+     "start": "5:00am",
+     "end": "8:00am"
+    }
+   ]
+  },
+  {
+   "timeBlockTitle": "Morning",
+   "items": [
+    {
+     "id": "pe8533f877",
+     "rawStartTime": "2026-10-19T00:00:00+00:00",
+     "rawEndTime": "2026-10-19T00:30:00+00:00",
+     "cardImagePrepared": {
+      "alt": "AM",
+      "imgSrc": "https://resize.abcradio.net.au/z1HcGVbsq-XZociXKlzRbZamrhE=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fisabella_higgins_square.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/z1HcGVbsq-XZociXKlzRbZamrhE=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fisabella_higgins_square.jpg 100w",
+       "https://resize.abcradio.net.au/dh4ZzaWe43XjPGmY08bz72ufcN4=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fisabella_higgins_square.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prGE6R7B0m",
+       "displayName": "Isabella Higgins"
+      }
+     ],
+     "synopsis": "AM is Australia's most informative morning current affairs program. AM sets the agenda for the nation's daily news and current affairs coverage.",
+     "title": "AM",
+     "url": "https://www.abc.net.au/radio/programs/am/",
+     "stationsInfo": [
+      {
+       "title": "102.5 ABC Perth",
+       "papiServiceId": "local_perth",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/2026/cap-cities/abc-perth-logo-2026.png"
+       }
+      }
+     ],
+     "timeBlock": "Morning",
+     "onNow": false,
+     "start": "8:00am",
+     "end": "8:30am"
+    },
+    {
+     "id": "pe43596f93",
+     "rawStartTime": "2026-10-19T00:30:00+00:00",
+     "rawEndTime": "2026-10-19T03:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Mornings",
+      "imgSrc": "https://resize.abcradio.net.au/UI1EIFSw6qWFUwzpCmmMGX6jRTs=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fnadia_mitsopoulos_square.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/UI1EIFSw6qWFUwzpCmmMGX6jRTs=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fnadia_mitsopoulos_square.jpg 100w",
+       "https://resize.abcradio.net.au/pyXQzeUfawz3iq40n3kVvMep2SM=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fnadia_mitsopoulos_square.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "premDEEgDl",
+       "displayName": "Nadia Mitsopoulos"
+      }
+     ],
+     "synopsis": "Hear from the big names and decision-makers of Perth, and have your say.",
+     "title": "Mornings",
+     "url": "https://www.abc.net.au/perth/programs/mornings/",
+     "stationsInfo": [
+      {
+       "title": "102.5 ABC Perth",
+       "papiServiceId": "local_perth",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/2026/cap-cities/abc-perth-logo-2026.png"
+       }
+      }
+     ],
+     "timeBlock": "Morning",
+     "onNow": false,
+     "start": "8:30am",
+     "end": "11:00am"
+    },
+    {
+     "id": "pe367aa297",
+     "rawStartTime": "2026-10-19T03:00:00+00:00",
+     "rawEndTime": "2026-10-19T04:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Conversations",
+      "imgSrc": "https://resize.abcradio.net.au/L_ljRAlkNxienq7cm1tIjuKW3tA=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fbenjamin_law_square.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/L_ljRAlkNxienq7cm1tIjuKW3tA=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fbenjamin_law_square.jpg 100w",
+       "https://resize.abcradio.net.au/qxxf1QwLYMTeupBqLYKuzqk9ylQ=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fbenjamin_law_square.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "praY6lJJQd",
+       "displayName": "Benjamin Law"
+      }
+     ],
+     "synopsis": "Conversations draws you deeper into the life story of someone you may, or may not, have heard about — someone who has seen and done amazing things.",
+     "title": "Conversations",
+     "url": "https://www.abc.net.au/radio/programs/conversations/",
+     "stationsInfo": [
+      {
+       "title": "102.5 ABC Perth",
+       "papiServiceId": "local_perth",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/2026/cap-cities/abc-perth-logo-2026.png"
+       }
+      }
+     ],
+     "timeBlock": "Morning",
+     "onNow": false,
+     "start": "11:00am",
+     "end": "12:00pm"
+    }
+   ]
+  },
+  {
+   "timeBlockTitle": "Afternoon",
+   "items": [
+    {
+     "id": "pe9a1dbd4c",
+     "rawStartTime": "2026-10-19T04:00:00+00:00",
+     "rawEndTime": "2026-10-19T04:30:00+00:00",
+     "cardImagePrepared": {
+      "alt": "The World Today",
+      "imgSrc": "https://resize.abcradio.net.au/fU4JlM0iAh-GRM7HtsXOvm1-8J0=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fandy_park_square.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/fU4JlM0iAh-GRM7HtsXOvm1-8J0=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fandy_park_square.jpg 100w",
+       "https://resize.abcradio.net.au/7uLBhzOvpqUhOlWSW6Dlj0fna88=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fandy_park_square.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prb0780b8d",
+       "displayName": "Andy Park"
+      }
+     ],
+     "synopsis": "The World Today is a comprehensive current affairs program which backgrounds, analyses, interprets and encourages debate on events and issues of interest and importance to all Australians.",
+     "title": "The World Today",
+     "url": "https://www.abc.net.au/radio/programs/worldtoday/",
+     "stationsInfo": [
+      {
+       "title": "102.5 ABC Perth",
+       "papiServiceId": "local_perth",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/2026/cap-cities/abc-perth-logo-2026.png"
+       }
+      }
+     ],
+     "timeBlock": "Afternoon",
+     "onNow": false,
+     "start": "12:00pm",
+     "end": "12:30pm"
+    },
+    {
+     "id": "pe6908b330",
+     "rawStartTime": "2026-10-19T04:30:00+00:00",
+     "rawEndTime": "2026-10-19T07:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Afternoons",
+      "imgSrc": "https://resize.abcradio.net.au/QjiOweUBQKzmZgHTEAVWvbeBcvU=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fjo_trilling_square.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/QjiOweUBQKzmZgHTEAVWvbeBcvU=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fjo_trilling_square.jpg 100w",
+       "https://resize.abcradio.net.au/NsYjKjjim0tBhj5254Ya9kVYCPI=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fjo_trilling_square.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prcbc60c71",
+       "displayName": "Jo Trilling"
+      }
+     ],
+     "synopsis": "Keeping you entertained and informed whether you're at work, on the school run or at home.",
+     "title": "Afternoons",
+     "url": "https://www.abc.net.au/perth/programs/wa-afternoons/",
+     "stationsInfo": [
+      {
+       "title": "102.5 ABC Perth",
+       "papiServiceId": "local_perth",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/2026/cap-cities/abc-perth-logo-2026.png"
+       }
+      }
+     ],
+     "timeBlock": "Afternoon",
+     "onNow": false,
+     "start": "12:30pm",
+     "end": "3:00pm"
+    },
+    {
+     "id": "peb161114d",
+     "rawStartTime": "2026-10-19T07:00:00+00:00",
+     "rawEndTime": "2026-10-19T10:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Drive",
+      "imgSrc": "https://resize.abcradio.net.au/CKJJFi_4hjTcsgf9tqo7K3wQlAM=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Foliver_peterson_square.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/CKJJFi_4hjTcsgf9tqo7K3wQlAM=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Foliver_peterson_square.jpg 100w",
+       "https://resize.abcradio.net.au/j_rFXCPB-P6wEUVxDPmkXNbE1Us=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Foliver_peterson_square.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "pr06300e34",
+       "displayName": "Oliver Peterson"
+      }
+     ],
+     "synopsis": "Let Drive give you a lift home from work and find out what's been going on in your city today. Entertaining interviews, news of the day, sport, weather, great songs and guaranteed laughs.",
+     "title": "Drive",
+     "url": "https://www.abc.net.au/perth/programs/drive/",
+     "stationsInfo": [
+      {
+       "title": "102.5 ABC Perth",
+       "papiServiceId": "local_perth",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/2026/cap-cities/abc-perth-logo-2026.png"
+       }
+      }
+     ],
+     "timeBlock": "Afternoon",
+     "onNow": false,
+     "start": "3:00pm",
+     "end": "6:00pm"
+    }
+   ]
+  },
+  {
+   "timeBlockTitle": "Evening",
+   "items": [
+    {
+     "id": "pe040e0869",
+     "rawStartTime": "2026-10-19T10:00:00+00:00",
+     "rawEndTime": "2026-10-19T10:30:00+00:00",
+     "cardImagePrepared": {
+      "alt": "PM",
+      "imgSrc": "https://resize.abcradio.net.au/dCMBdsac1eHr36qudT_AkW_gZrQ=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fbarbara_miller_square.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/dCMBdsac1eHr36qudT_AkW_gZrQ=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fbarbara_miller_square.jpg 100w",
+       "https://resize.abcradio.net.au/nbfSAI4ZCfnQLZwQL5qMrLGyPLU=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fbarbara_miller_square.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "pref650d83",
+       "displayName": "Barbara Miller"
+      }
+     ],
+     "synopsis": "PM covers a broad spectrum of issues relevant to all sections of Australia's geographically and culturally diverse community.",
+     "title": "PM",
+     "url": "https://www.abc.net.au/radio/programs/pm/",
+     "stationsInfo": [
+      {
+       "title": "102.5 ABC Perth",
+       "papiServiceId": "local_perth",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/2026/cap-cities/abc-perth-logo-2026.png"
+       }
+      }
+     ],
+     "timeBlock": "Evening",
+     "onNow": false,
+     "start": "6:00pm",
+     "end": "6:30pm"
+    },
+    {
+     "id": "pe39b51a72",
+     "rawStartTime": "2026-10-19T10:30:00+00:00",
+     "rawEndTime": "2026-10-19T11:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Australia Wide",
+      "imgSrc": "https://resize.abcradio.net.au/HVgU9QzVEWGT5MotdrRLB1KZgh8=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fsinead_mangan_square.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/HVgU9QzVEWGT5MotdrRLB1KZgh8=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fsinead_mangan_square.jpg 100w",
+       "https://resize.abcradio.net.au/ExoQEWcztfQY71WJWimKtMx_d3U=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fsinead_mangan_square.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "pre21b0d19",
+       "displayName": "Sinéad Mangan"
+      }
+     ],
+     "synopsis": "The sound of regional Australia. News and analysis from the ABC's unmatched network of regional reporters.",
+     "title": "Australia Wide",
+     "url": "https://www.abc.net.au/radio/programs/australia-wide/",
+     "stationsInfo": [
+      {
+       "title": "102.5 ABC Perth",
+       "papiServiceId": "local_perth",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/2026/cap-cities/abc-perth-logo-2026.png"
+       }
+      }
+     ],
+     "timeBlock": "Evening",
+     "onNow": false,
+     "start": "6:30pm",
+     "end": "7:00pm"
+    },
+    {
+     "id": "pe4e66ada7",
+     "rawStartTime": "2026-10-19T11:00:00+00:00",
+     "rawEndTime": "2026-10-19T15:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Nightlife",
+      "imgSrc": "https://resize.abcradio.net.au/XRR6YJJ9uoqF8lLmaQuxCUXZups=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fphilip_clark_square.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/XRR6YJJ9uoqF8lLmaQuxCUXZups=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fphilip_clark_square.jpg 100w",
+       "https://resize.abcradio.net.au/2o4FflTaM0ykKVau1Xr_ubTJluU=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Fphilip_clark_square.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prd6b80cc6",
+       "displayName": "Philip Clark"
+      }
+     ],
+     "synopsis": "Nightlife has everything you need to get you through the night.",
+     "title": "Nightlife",
+     "url": "https://www.abc.net.au/radio/programs/nightlife/",
+     "stationsInfo": [
+      {
+       "title": "102.5 ABC Perth",
+       "papiServiceId": "local_perth",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/2026/cap-cities/abc-perth-logo-2026.png"
+       }
+      }
+     ],
+     "timeBlock": "Evening",
+     "onNow": false,
+     "start": "7:00pm",
+     "end": "11:00pm"
+    },
+    {
+     "id": "pee1657be2",
+     "rawStartTime": "2026-10-19T15:00:00+00:00",
+     "rawEndTime": "2026-10-19T19:00:00+00:00",
+     "cardImagePrepared": {
+      "alt": "Overnights",
+      "imgSrc": "https://resize.abcradio.net.au/2buCZZr2-Tu_OG-i6XRFKro_NbM=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ffrancis_leach_square.jpg",
+      "ratio": "1x1",
+      "srcSet": [
+       "https://resize.abcradio.net.au/2buCZZr2-Tu_OG-i6XRFKro_NbM=/100x100/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ffrancis_leach_square.jpg 100w",
+       "https://resize.abcradio.net.au/SL7iBDhfZnYTlT6t0d5Nqwwqe0E=/340x340/center/middle/https%3A%2F%2Fwww.abc.net.au%2Fradio%2Fimages%2Fpresenter%2Ffrancis_leach_square.jpg 340w"
+      ]
+     },
+     "presenters": [
+      {
+       "id": "prayD7KADV",
+       "displayName": "Francis Leach"
+      }
+     ],
+     "synopsis": "On Overnights, there's great music and interesting guests from Australia and all parts of the globe.",
+     "title": "Overnights",
+     "url": "https://www.abc.net.au/radio/programs/overnights/",
+     "stationsInfo": [
+      {
+       "title": "102.5 ABC Perth",
+       "papiServiceId": "local_perth",
+       "primaryImage": {
+        "url": "https://www.abc.net.au/radio/images/service/2026/cap-cities/abc-perth-logo-2026.png"
+       }
+      }
+     ],
+     "timeBlock": "Evening",
+     "onNow": false,
+     "start": "11:00pm",
+     "end": "3:00am"
+    }
+   ]
+  }
+ ],
+ "papiServiceIds": [
+  "LOCAL_PERTH"
+ ],
+ "serviceTimezone": "Australia/Perth"
+}

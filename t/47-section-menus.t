@@ -171,6 +171,8 @@ sub check_shapes {
 	is( scalar( grep { $_->{type} ne 'audio' && exists $_->{description} } @$items ), 0, "$label: no description on a non-audio row (LMS menu rule 1)" );
 	is( scalar( grep { $_->{type} eq 'audio' && !( ( $_->{url} // '' ) =~ m{\Aabclisten://live/[A-Z0-9_]+\z} && $_->{favorites_url} eq $_->{url} && ( $_->{on_select} // '' ) eq 'play' ) } @$items ), 0,
 		"$label: station rows play abclisten://live/<ID> and favourite that URL" );
+	is( scalar( grep { exists $_->{play} && $_->{play} =~ m{\Aabclisten://live/} && !( $_->{type} eq 'link' && $_->{favorites_url} eq $_->{play} && !exists $_->{on_select} ) } @$items ), 0,
+		"$label: L4 station rows (link + play) favourite their abclisten://live/<ID> play URL, no on_select" );
 	is( scalar( grep { $_->{type} eq 'link' && !( ref $_->{url} eq 'CODE' || ref $_->{items} eq 'ARRAY' ) } @$items ), 0, "$label: links open a feed or a list" );
 	is( scalar( grep { $_->{type} eq 'text' && ( exists $_->{url} || exists $_->{play} ) } @$items ), 0, "$label: text rows have no action" );
 	is( scalar( grep { $_->{type} ne 'text' && !$_->{image} } @$items ), 0, "$label: artwork on every station / link row" );
@@ -242,7 +244,7 @@ subtest 'News: ABC NewsRadio first (MiniEPG), then the 9 collections in page ord
 	my $items = section('news');
 
 	is_deeply( names($items), [ 'NewsRadio', @NEWS_TITLES ], 'NewsRadio, then the page collections' );
-	is_deeply( [ @{ $items->[0] }{qw(type url favorites_url)} ], [ 'audio', ('abclisten://live/NEWS') x 2 ], 'the station row plays (and favourites) abclisten://live/NEWS' );
+	is_deeply( [ @{ $items->[0] }{qw(type play favorites_url)} ], [ 'link', ('abclisten://live/NEWS') x 2 ], 'the station row plays (and favourites) abclisten://live/NEWS (L4: a link that also plays)' );
 	is_deeply( \@STATION_ITEM, ['NEWS'], 'Live->stationItem($client, "NEWS"), once' );
 	is( $items->[1]->{url}, $COLL_MENU, 'collection links open D1\'s collection menu' );
 	is( $items->[1]->{passthrough}->[0]->{id}, '104903746', '... Latest News (104903746)' );
@@ -273,7 +275,7 @@ subtest 'Sport: "Radio Stations" inline as station rows; Live & Upcoming Events 
 		[ 'ABC SPORT', 'ABC SPORT EXTRA', 'ABC Rugby League World Cup', 'ABC AFLW', 'Live & Upcoming Events', 'Best of ABC Sport', 'Latest Cricket', 'Rugby League World Cup', 'Programs', 'Off Season' ],
 		'station rows, the events link, then the other 5 collections (no "Radio Stations" link)'
 	);
-	is_deeply( [ map { $_->{url} } @$items[ 0 .. 3 ] ], [ map {"abclisten://live/$_"} qw(GRANDSTAND ITINERANT_THREE SPORT_WORLDCUP SPORT_AFLW) ], 'their abclisten://live URLs' );
+	is_deeply( [ map { $_->{play} } @$items[ 0 .. 3 ] ], [ map {"abclisten://live/$_"} qw(GRANDSTAND ITINERANT_THREE SPORT_WORLDCUP SPORT_AFLW) ], 'their abclisten://live URLs' );
 	is( scalar( grep { $_->{name} =~ /RAPID|Rapid|CRICKET/ } @$items ), 0, 'no ABC SPORT RAPID / RLWC Rapid / ABC CRICKET rows (HLS-only: stationItem undef)' );
 	ok( ( grep { $_ eq 'ABCSPORTSYNC' } @STATION_ITEM ) && ( grep { $_ eq 'ITINERANT_FOUR' } @STATION_ITEM ), 'stationItem was asked for them' );
 
@@ -282,8 +284,10 @@ subtest 'Sport: "Radio Stations" inline as station rows; Live & Upcoming Events 
 	is( scalar @{ $events->{items} }, 1, 'one playable event station (ABCSPORTSYNC is HLS-only)' );
 	my $row   = $events->{items}->[0];
 	my $title = 'Men’s International Cricket 2nd Test, Day 2: South Africa v Australia';
-	is_deeply( [ @$row{qw(name url line2)} ], [ 'ABC SPORT', 'abclisten://live/GRANDSTAND', $title ], 'a stationItem copy; line2 = the event title' );
-	is( $row->{description}, "$title (" . Plugins::ABCListen::Util::friendlyTime(1_792_395_000) . "\x{2013}" . Plugins::ABCListen::Util::friendlyTime(1_792_425_600) . ')', 'description "<title> (<start>–<end>)"' );
+	my $window = Plugins::ABCListen::Util::friendlyTime(1_792_395_000) . "\x{2013}" . Plugins::ABCListen::Util::friendlyTime(1_792_425_600);
+	is_deeply( [ @$row{qw(name play line2)} ], [ 'ABC SPORT', 'abclisten://live/GRANDSTAND', "$title \x{B7} $window" ], 'a stationItem copy; line2 = "<event title> · <start>–<end>" (L4: the time window a link can\'t carry in a description)' );
+	ok( !exists $row->{description}, 'no description: L4 station rows are links (LMS menu rule 1)' );
+	is( ref $row->{url}, 'CODE', '... so the row still opens its station menu' );
 	is( $events->{image}, $row->{image}, 'the link shows the first row\'s artwork' );
 	check_shapes( $items, 'Sport' );
 	check_shapes( $events->{items}, 'Sport > Live & Upcoming Events' );
@@ -294,6 +298,7 @@ subtest 'Sport events: none playable -> no link; event-only services checked on 
 	my @radio = ( { contentUri => 'coremedia://externallink/1', cardTitle => 'ABC SPORT', articleLink => 'https://www.abc.net.au/listen/live/sport' } );
 	my $carousel = sub { { component => 'LiveRadioCarousel', componentProps => { heading => 'Live & Upcoming Events', cards => [@_] } } };
 	my $event = sub { my ( $id, $title ) = @_; return { papiServiceId => $id, title => $title, start => '2026-10-19T07:30:00+00:00', end => '2026-10-19T16:00:00+00:00' } };
+	my $window = " \x{B7} " . Plugins::ABCListen::Util::friendlyTime(1_792_395_000) . "\x{2013}" . Plugins::ABCListen::Util::friendlyTime(1_792_425_600);
 
 	fresh();
 	route_page_json( 'sport', { component => 'StandardCollection', componentProps => { id => '1', title => 'Radio Stations', items => \@radio } }, $carousel->( $event->( 'ABCSPORTSYNC', 'Rapid only' ) ) );
@@ -303,7 +308,7 @@ subtest 'Sport events: none playable -> no link; event-only services checked on 
 	route_page_json( 'sport', $carousel->( $event->( 'sport_bbl', 'BBL 1' ), $event->( 'SPORT_BBL', 'BBL 2' ), $event->( 'GRANDSTAND', 'Cricket' ) ) );
 	route( "${BFF}epgNowPlaying/SPORT_BBL/now?imageRatio=1x1", file => 'live/epg-event-onair-pls.json', headers => $JSON_TYPE );
 	my $items = section('sport');
-	is_deeply( [ map { [ $_->{url}, $_->{line2} ] } @{ $items->[0]->{items} } ], [ [ 'abclisten://live/SPORT_BBL', 'BBL 1' ], [ 'abclisten://live/GRANDSTAND', 'Cricket' ] ],
+	is_deeply( [ map { [ $_->{play}, $_->{line2} ] } @{ $items->[0]->{items} } ], [ [ 'abclisten://live/SPORT_BBL', "BBL 1$window" ], [ 'abclisten://live/GRANDSTAND', "Cricket$window" ] ],
 		'BBL (event-only, lower-case id) on air: listed once, with its first event; then ABC SPORT' );
 	is( scalar requests_like(qr{epgNowPlaying/SPORT_BBL}), 1, 'one on-air check' );
 
@@ -321,7 +326,18 @@ subtest 'Sport events: none playable -> no link; event-only services checked on 
 	fresh();
 	route_page_json( 'sport', { component => 'LiveRadioCarousel', componentProps => { cards => [ $event->( 'GRANDSTAND', 'Untitled carousel event' ) ] } } );
 	$items = section('sport');
-	is_deeply( [ @{ $items->[0] }{qw(url line2)} ], [ 'abclisten://live/GRANDSTAND', 'Untitled carousel event' ], 'a carousel without a heading: its stations are rows, with the event text' );
+	is_deeply( [ @{ $items->[0] }{qw(play line2)} ], [ 'abclisten://live/GRANDSTAND', "Untitled carousel event$window" ], 'a carousel without a heading: its stations are rows, with the event text' );
+
+	fresh();
+	route_page_json( 'sport', $carousel->( { papiServiceId => 'GRANDSTAND', title => 'No times' }, ) );
+	$items = section('sport');
+	is( $items->[0]->{items}->[0]->{line2}, 'No times', 'an event without start/end: line2 is the title alone' );
+
+	fresh();
+	%FORCE_STATION = ( GRANDSTAND => 'ABC SPORT (audio row)' );
+	route_page_json( 'sport', { component => 'LiveRadioCarousel', componentProps => { cards => [ $event->( 'GRANDSTAND', 'An event' ) ] } } );
+	$items = section('sport');
+	is( $items->[0]->{description}, 'An event (' . Plugins::ABCListen::Util::friendlyTime(1_792_395_000) . "\x{2013}" . Plugins::ABCListen::Util::friendlyTime(1_792_425_600) . ')', 'an audio station row still gets the description "<title> (<start>–<end>)"' );
 };
 
 # ---------------------------------------------------------------------------
@@ -335,7 +351,7 @@ subtest 'Kids listen (full section): live station, Featured, Latest Programs, Al
 	my $items = section('kids');
 
 	is_deeply( names($items), \@KIDS_NAMES, 'in this order' );
-	is_deeply( [ @{ $items->[0] }{qw(type url favorites_url)} ], [ 'audio', ('abclisten://live/KIDSLISTEN') x 2 ], 'ABC KIDS listen plays abclisten://live/KIDSLISTEN' );
+	is_deeply( [ @{ $items->[0] }{qw(type play favorites_url)} ], [ 'link', ('abclisten://live/KIDSLISTEN') x 2 ], 'ABC KIDS listen plays abclisten://live/KIDSLISTEN (L4: a link that also plays)' );
 	is_deeply( \@STATION_ITEM, [qw(KIDSLISTEN KIDSLISTEN_NT KIDSLISTEN_QLD KIDSLISTEN_SA KIDSLISTEN_WA)], 'the state versions are asked for too (HLS-only: undef, so not listed)' );
 
 	my %by = map { $_->{name} => $_ } @$items;
@@ -392,7 +408,7 @@ subtest 'Kids listen: state versions listed when stationItem defines them; extra
 	fresh();
 	route_page_json( 'kids', { component => 'StandardCollection', componentProps => { id => '104141842', title => 'Kids & Families on the page', items => [ { contentUri => 'coremedia://program/1', cardTitle => 'P', articleLink => '/listen/programs/p/' } ] } } );
 	route_kids_extras();
-	is( scalar( grep { ( $_->{passthrough}->[0]->{id} // '' ) eq '104141842' } @{ section('kids') } ), 1, 'a collection the page lists itself is not repeated as an extra' );
+	is( scalar( grep { ref $_->{passthrough}->[0] eq 'HASH' && ( $_->{passthrough}->[0]->{id} // '' ) eq '104141842' } @{ section('kids') } ), 1, 'a collection the page lists itself is not repeated as an extra' );
 };
 
 subtest 'live stations: a service named by the MiniEPG, the static list and an inline station collection is listed once' => sub {
@@ -406,7 +422,7 @@ subtest 'live stations: a service named by the MiniEPG, the static list and an i
 	my $items = section('kids');
 
 	is( scalar( grep { $_ eq 'KIDSLISTEN' } @STATION_ITEM ), 3, 'stationItem built KIDSLISTEN three times: MiniEPG, the static list, the inline collection' );
-	is( scalar( grep { ( $_->{url} // '' ) eq 'abclisten://live/KIDSLISTEN' } @$items ), 1, 'one KIDSLISTEN row' );
+	is( scalar( grep { ( $_->{play} // '' ) eq 'abclisten://live/KIDSLISTEN' } @$items ), 1, 'one KIDSLISTEN row' );
 	is_deeply( names($items), [ 'ABC KIDS listen', @KIDS_NAMES[ 3 .. $#KIDS_NAMES ] ], 'ABC KIDS listen once, then the extras (no "Radio Stations" link)' );
 
 	fresh();

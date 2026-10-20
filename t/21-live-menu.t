@@ -13,6 +13,10 @@
 # last-good data used, answered once); stationItem from cached data only, never fetching; Sport
 # fetches the listed stations after the event checks. L3: Sport makes exactly the expected number
 # of requests (a cap), and an on-air event service's program reuses the event check's response.
+# L4: station rows are links that also play (exact keys: type link, url = the station menu,
+# passthrough [<ID>], play / favorites_url abclisten://live/<ID>, favorites_type audio, no on_select,
+# no description); L2's description (and the "<City> time" text of home-state versions) moved to
+# the station menu's Listen live (t/27-station-menu.t covers the menu itself).
 
 use strict;
 use warnings;
@@ -79,7 +83,7 @@ my %VARIANT_TITLE = (
 		[ TRIPLEJ => 'triple j' ], [ DOUBLEJ => 'Double J' ], [ CLASSIC => 'ABC Classic' ],
 );
 
-my @STATION_KEYS = sort qw(name line1 favorites_title type on_select url favorites_url image favorites_icon description);
+my @STATION_KEYS = sort qw(name line1 favorites_title type url passthrough play favorites_url favorites_type image favorites_icon);
 
 # record INFO and DEBUG calls too
 $Slim::Utils::Log::CATEGORIES{'plugin.abclisten'} = { defaultLevel => 'DEBUG', description => 'PLUGIN_ABCLISTEN' };
@@ -140,7 +144,16 @@ sub state_stations {
 	return items_of( open_feed( $client, $stateItem ) );
 }
 
-sub id_of { my ($id) = ( $_[0]->{url} // '' ) =~ m{\Aabclisten://live/([A-Z0-9_]+)\z}; return $id }
+sub id_of { my ($id) = ( $_[0]->{play} // '' ) =~ m{\Aabclisten://live/([A-Z0-9_]+)\z}; return $id }
+
+# L4: a station row's station menu, opened like XMLBrowser does; its first row is Listen live.
+sub listen_live {
+	my ( $client, $row ) = @_;
+	my $c = open_feed( $client, $row );
+	advanceTime(3);
+	my $items = items_of($c) || [];
+	return $items->[0];
+}
 
 sub check_names {
 	my ( $items, $label ) = @_;
@@ -199,24 +212,29 @@ subtest 'station item: exact keys and values' => sub {
 	my ($rn) = grep { id_of($_) && id_of($_) eq 'RN' } @$items;
 	my $rec = $S->get('RN');
 
-	is_deeply( [ sort keys %$rn ], \@STATION_KEYS, 'exact keys: name line1 favorites_title type on_select url favorites_url image favorites_icon description' );
+	is_deeply( [ sort keys %$rn ], \@STATION_KEYS, 'exact keys: name line1 favorites_title type url passthrough play favorites_url favorites_type image favorites_icon' );
 	my $image = Plugins::ABCListen::API::imageUrl( $rec->{logo}, 300 );
+	is( ref $rn->{url}, 'CODE', 'url: the station menu (a feed)' );
 	is_deeply(
-		$rn,
+		{ %$rn, url => 'CODE' },
 		{
 			name            => 'Radio National',
 			line1           => 'Radio National',
 			favorites_title => 'Radio National',
-			type            => 'audio',
-			on_select       => 'play',
-			url             => 'abclisten://live/RN',
+			type            => 'link',
+			url             => 'CODE',
+			passthrough     => ['RN'],
+			play            => 'abclisten://live/RN',
 			favorites_url   => 'abclisten://live/RN',
+			favorites_type  => 'audio',
 			image           => $image,
 			favorites_icon  => $image,
-			description     => $rec->{synopsis},
 		},
-		'values: name, play, abclisten://live/RN, logo at 300 px, synopsis'
+		'values: a link to the RN station menu that plays abclisten://live/RN, favourites that URL as audio, logo at 300 px'
 	);
+	ok( !exists $rn->{on_select},   'no on_select (touch skins open the row; play plays it)' );
+	ok( !exists $rn->{description}, 'no description on a link (LMS menu rule 1)' );
+	is( listen_live( undef, $rn )->{description}, $rec->{synopsis}, 'the synopsis moved to the station menu\'s Listen live' );
 	like( $image, qr{\Ahttps://live-production\.wcms\.abc-cdn\.net\.au/[0-9a-f]{32}\?impolicy=wcms_crop_resize&cropH=\d+&cropW=\d+&xPos=0&yPos=0&width=300&height=300\z}, 'the logo keeps its crop params, 300 px' );
 
 	for my $row ( @$items[ 0 .. 11 ] ) {
@@ -320,7 +338,7 @@ subtest 'home-state variants: SA/QLD/NT/WA substitute RN, triple j, Double J, AB
 			is( id_of($item), $variant, "$home: the $name row plays $variant" );
 			is( $item->{favorites_url}, "abclisten://live/$variant", "$home: $name favourite URL" );
 			is( $item->{name}, $name, "$home: $name keeps its name" );
-			like( $item->{description}, qr/\A\Q$CITY{$home}\E time\b/, "$home: $name description starts \"$CITY{$home} time\"" );
+			like( listen_live( undef, $item )->{description}, qr/\A\Q$CITY{$home}\E time\b/, "$home: $name Listen live's description starts \"$CITY{$home} time\"" );
 			is( $item->{favorites_title}, $VARIANT_TITLE{$variant}, "$home: $name favorites_title \"$VARIANT_TITLE{$variant}\"" );
 		}
 
@@ -337,7 +355,7 @@ subtest 'home-state variants: SA/QLD/NT/WA substitute RN, triple j, Double J, AB
 	reset_all();
 	$prefs->set( homeState => 'WA' );
 	my ($tj) = grep { $_->{name} eq 'triple j' } @{ radio(undef) };
-	like( $tj->{description}, qr/\APerth time - /, 'WA: "Perth time - <synopsis>"' );
+	like( listen_live( undef, $tj )->{description}, qr/\APerth time - /, 'WA: "Perth time - <synopsis>" (station menu, Listen live)' );
 	is( string('PLUGIN_ABCLISTEN_CITY_TIME'), '%s time', '(from PLUGIN_ABCLISTEN_CITY_TIME)' );
 };
 
@@ -382,7 +400,7 @@ subtest 'Sport: listed services; no HLS-only, duplicate or off-air services' => 
 	is_deeply( [ map { id_of($_) } @$items ], [qw(GRANDSTAND ITINERANT_THREE ITINERANT_ONE ITINERANT_TWO)], 'GRANDSTAND, ITINERANT_THREE, ITINERANT_ONE, ITINERANT_TWO' );
 	is_deeply( [ map { $_->{name} } @$items ], [ 'ABC SPORT', 'ABC SPORT EXTRA', 'ABC Rugby League World Cup', 'ABC AFLW' ], 'their names' );
 	is( scalar( grep { $_->{name} =~ /RAPID|CRICKET/i } @$items ), 0, 'no ABC SPORT RAPID / RLWC RAPID / CRICKET rows' );
-	is( scalar( grep { $_->{url} =~ /SPORT_WORLDCUP|SPORT_AFLW/ } @$items ), 0, 'duplicates listed once (under ITINERANT_ONE / ITINERANT_TWO)' );
+	is( scalar( grep { $_->{play} =~ /SPORT_WORLDCUP|SPORT_AFLW/ } @$items ), 0, 'duplicates listed once (under ITINERANT_ONE / ITINERANT_TWO)' );
 	my %event = map { $_->{id} => 1 } grep { $_->{eventOnly} } $S->list('sport');
 	is( scalar( grep { m{/epgNowPlaying/(\w+)/} && $event{$1} } map { $_->{url} } requests() ), 7, 'one check per event-only service' );
 	my %sport = map { $_->{id} => 1 } $S->list('sport');
@@ -408,7 +426,7 @@ subtest 'Sport: listed services; no HLS-only, duplicate or off-air services' => 
 	resetStubs();
 	route( qr{epgNowPlaying/}, code => 500 );
 	$items = items_of( open_feed( undef, sport_feed(undef) ) );
-	is( scalar( grep { $_->{url} =~ /SPORT_BBL/ } @$items ), 1, 'within 5 min the cached status is used (no new check)' );
+	is( scalar( grep { $_->{play} =~ /SPORT_BBL/ } @$items ), 1, 'within 5 min the cached status is used (no new check)' );
 	is( scalar( requests() ), 0, '... no request' );
 };
 
@@ -462,7 +480,7 @@ subtest 'stationItem: undef for unknown, hidden and unplayable ids' => sub {
 
 	for my $id (qw(NEWS KIDSLISTEN LOCAL_WIDEBAY TRIPLEJ_PERTH SPORT_WORLDCUP SPORT_AFLW GRANDSTAND)) {
 		my $item = Plugins::ABCListen::Live->stationItem( $PLAYER, $id );
-		is( $item && $item->{url}, "abclisten://live/$id", "stationItem($id): a playable row" );
+		is( $item && $item->{play}, "abclisten://live/$id", "stationItem($id): a playable row" );
 		is_deeply( [ sort keys %{ $item || {} } ], \@STATION_KEYS, "stationItem($id): station keys" );
 	}
 	is( Plugins::ABCListen::Live->stationItem( undef, 'TRIPLEJ_PERTH' )->{name}, 'triple j Perth', 'a variant by its own name' );
@@ -485,7 +503,7 @@ sub row_of {
 	return $row;
 }
 
-subtest 'on air: line2 and description from the program on air' => sub {
+subtest 'on air: line2, and the description in the station menu, from the program on air' => sub {
 	reset_all();
 	setTime( $RN_START + 1800 );
 	route( "${BFF}epgNowPlaying/RN/now?imageRatio=1x1", file => 'live/bff-epgNowPlaying-RN-now.json' );
@@ -498,21 +516,27 @@ subtest 'on air: line2 and description from the program on air' => sub {
 
 	my $rn = row_of( $items, 'RN' );
 	is( $rn->{line2}, "On air: The Radio National Hour \x{B7} Fran Kelly", 'line2 "On air: <program> · <presenters>"' );
-	is( $rn->{description}, "The Radio National Hour (6:00pm\x{2013}7:00pm) \x{2014} Fran Kelly\n" . $S->get('RN')->{synopsis}, 'description "<program> (<slot>) — <presenters>", then the synopsis on a new line' );
+	is( listen_live( undef, $rn )->{description}, "The Radio National Hour (6:00pm\x{2013}7:00pm) \x{2014} Fran Kelly\n" . $S->get('RN')->{synopsis}, 'Listen live\'s description "<program> (<slot>) — <presenters>", then the synopsis on a new line' );
 	is_deeply( [ sort keys %$rn ], [ sort @STATION_KEYS, 'line2' ], 'station keys plus line2' );
 	is( $rn->{name}, 'Radio National', 'the name stays the station\'s' );
 	is( string('PLUGIN_ABCLISTEN_ON_AIR'), 'On air: %s', '(PLUGIN_ABCLISTEN_ON_AIR has a placeholder)' );
 
 	my $news = row_of( $items, 'NEWS' );
 	is( $news->{line2}, 'On air: BBC World', 'no presenters: no " · "' );
-	like( $news->{description}, qr/\ABBC World \(10:00pm\x{2013}6:00am\)\n/, 'no presenters: no " — "; a slot across midnight' );
+	like( listen_live( undef, $news )->{description}, qr/\ABBC World \(10:00pm\x{2013}6:00am\)\n/, 'no presenters: no " — "; a slot across midnight' );
 
 	my $tj = row_of( $items, 'TRIPLEJ' );
 	ok( !exists $tj->{line2}, 'a station without program data: no line2' );
-	is( $tj->{description}, $S->get('TRIPLEJ')->{synopsis}, '... and the L1 description' );
+	is( listen_live( undef, $tj )->{description}, $S->get('TRIPLEJ')->{synopsis}, '... and the L1 description in its station menu' );
 	check_names( $items, 'Radio (on air)' );
 
-	is( epg_requests(), 12, '(still 12 requests)' );
+	setTime( $RN_START + 1800 );    # (listen_live moved the clock)
+	resetStubs();
+	route( "${BFF}epgNowPlaying/RN/now?imageRatio=1x1", file => 'live/bff-epgNowPlaying-RN-now.json' );
+	route( "${BFF}epgNowPlaying/NEWS/now?imageRatio=1x1", content => '{"title":"BBC World","start":"2026-10-19T11:00:00+00:00","end":"2026-10-19T19:00:00+00:00","preparedPresenters":[],"preparedImage":null}' );
+	$NP->_reset();
+	open_feed( undef, radio_item(undef) );
+	is( epg_requests(), 12, '(again from scratch: 12 requests)' );
 	$c = open_feed( $PLAYER, radio_item($PLAYER) );
 	is( epg_requests(), 12, 'opened again at once: no request (programs cached, failures in the 60 s negative cache)' );
 	is( row_of( items_of($c), 'RN' )->{line2}, $rn->{line2}, '... RN from the cache' );
@@ -531,7 +555,7 @@ subtest 'on air: a home-state time-zone version uses its own EPG' => sub {
 	my $tj = row_of( radio(undef), 'TRIPLEJ_PERTH' );
 	is( $tj->{name},  'triple j', 'the triple j row plays TRIPLEJ_PERTH' );
 	is( $tj->{line2}, "On air: Drive \x{B7} Jordan & Luka", 'line2 from TRIPLEJ_PERTH\'s EPG' );
-	like( $tj->{description}, qr/\ADrive \(3:00pm\x{2013}5:30pm\) \x{2014} Jordan & Luka\nPerth time - /, 'description: on air, then "Perth time - <synopsis>"' );
+	like( listen_live( undef, $tj )->{description}, qr/\ADrive \(3:00pm\x{2013}5:30pm\) \x{2014} Jordan & Luka\nPerth time - /, 'Listen live\'s description: on air, then "Perth time - <synopsis>"' );
 	is( scalar( grep { $_->{url} =~ m{/epgNowPlaying/TRIPLEJ/} } requests() ), 0, 'the network\'s own EPG is not fetched for it' );
 };
 
@@ -590,7 +614,7 @@ subtest 'stationItem: cached and last-good data only, never a fetch; a new hash 
 	$NP->programNow( 'RN', sub { } );
 	$item = Plugins::ABCListen::Live->stationItem( $PLAYER, 'RN' );
 	is( $item->{line2}, "On air: The Radio National Hour \x{B7} Fran Kelly", 'cached: line2' );
-	like( $item->{description}, qr/\AThe Radio National Hour \(6:00pm\x{2013}7:00pm\) \x{2014} Fran Kelly\n/, 'cached: description' );
+	ok( !exists $item->{description}, 'no description on the row (a link)' );
 
 	advanceTime(900);
 	is( Plugins::ABCListen::Live->stationItem( undef, 'RN' )->{line2}, $item->{line2}, 'stale but still on air: the last-good program' );
