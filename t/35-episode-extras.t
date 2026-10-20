@@ -370,6 +370,7 @@ subtest 'fetch: failures answer once with { error }, WARN once per episode; no p
 	is( scalar warnings_logged(), 1, '... WARN once' );
 	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
 	is( $c->count, 1, 'the late document: no second callback' );
+	is( scalar errors_logged(), 0, '... and no error (nothing is answered twice)' );
 	is( scalar @{ $TL->cached($DRIVE_ID) }, 3, '... but its rows are cached for the next open' );
 	is( scalar( Slim::Utils::Timers::pending() ), 0, 'no timer left behind' );
 
