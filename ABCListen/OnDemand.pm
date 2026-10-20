@@ -10,11 +10,14 @@ package Plugins::ABCListen::OnDemand;
 #   -> _programsRoot (O3): "By network" · "All programs A–Z" · "By type"
 #   By network -> the networks (Programs::networks order) -> the network's programs (programItem rows)
 #   -> _programMenu -> episodes (episodeItem rows) -> _episodeMenu.
-#   All programs A–Z (O3) -> "<L> (<n>)" for A..Z, then "0–9 (<n>)", letters without programs
-#   omitted -> that letter's programs (rows as in programsByType). A program's letter is the first
-#   [a-z0-9] character of its Programs::sortKey (a leading "The " ignored, accents folded); a digit,
-#   or no such character, files it under 0–9. In fallback mode (ProgramIndex: network lists) the
-#   first item is the PLUGIN_ABCLISTEN_INDEX_FALLBACK text.
+#   All programs A–Z (O3) -> "<L> (<n>)" for A..Z, then "0–9 (<n>)", then (D7) "Other (<n>)"
+#   (PLUGIN_ABCLISTEN_AZ_OTHER), rows without programs omitted -> that row's programs (rows as in
+#   programsByType). A program's row comes from the first letter or digit of its Programs::sortKey
+#   (a leading "The " ignored, accents folded; punctuation, symbols and spaces before it skipped):
+#   a-z -> that letter; D7: a letter NFD leaves alone maps to its Latin letter (æ -> A, ø œ -> O,
+#   ł -> L, đ ð -> D, þ -> T, ß -> S, ı -> I); a digit -> 0–9; any other letter (CJK, Cyrillic,
+#   Greek, ...) or no letter or digit at all -> Other. In fallback mode (ProgramIndex: network
+#   lists) the first item is the PLUGIN_ABCLISTEN_INDEX_FALLBACK text.
 #   By type (O3) -> "<type label> (<n>)" in programsByType's type order, empty types omitted ->
 #   programsByType($client, $cb, <type key>). In fallback mode: only the INDEX_FALLBACK text.
 #   Program data: Plugins::ABCListen::ProgramIndex->programs (one Algolia query a day).
@@ -94,11 +97,12 @@ package Plugins::ABCListen::OnDemand;
 # Plugins::ABCListen::OnDemand->programsByTypeAZ($client, $cb, $typeKey)                (D6; used by D2)
 #   programsByType grouped by letter, as All programs A–Z groups the index. Class method; $client
 #   may be undef. Calls $cb->(\@items) EXACTLY ONCE, with an array ref:
-#     - the letter rows of the type's programs: "<L> (<n>)" for A..Z, then "0–9 (<n>)", letters
-#       without programs omitted (All programs A–Z's bucket rule and row keys, passthrough
-#       [<letter>, $typeKey]); the counts add up to the rows programsByType($typeKey) lists. A
-#       letter opens that letter's rows of programsByType($typeKey) (same keys, names, order);
-#       a letter without programs of the type (a stale link) is one NO_PROGRAMS text item;
+#     - the letter rows of the type's programs: "<L> (<n>)" for A..Z, then "0–9 (<n>)", then
+#       "Other (<n>)" (D7), rows without programs omitted (All programs A–Z's bucket rule and row
+#       keys, passthrough [<letter>, $typeKey]: 'a'..'z', '0-9' or 'other'); the counts add up to
+#       the rows programsByType($typeKey) lists. A letter opens that letter's rows of
+#       programsByType($typeKey) (same keys, names, order); a letter without programs of the
+#       type (a stale link) is one NO_PROGRAMS text item;
 #     - fallback mode, no programs of that type, an unknown $typeKey (WARN) or an index error:
 #       programsByType's one text item (INDEX_FALLBACK, NO_PROGRAMS, LOAD_FAILED).
 #   Never dies ($cb dying is logged; it is not called again).
@@ -120,7 +124,8 @@ package Plugins::ABCListen::OnDemand;
 # Ownership: O2 creates everything; O3 then owns _programsRoot, O4 owns episodeItem/_episodeMenu;
 # programItem, _programMenu and the provider registry stay with O2. D6 added programsByTypeAZ inside
 # O3's section (programsByType's core moved to _byType; _letterRows/_bucketRows are shared with
-# All programs A–Z, whose menus are unchanged).
+# All programs A–Z, whose menus are unchanged). D7 changed _bucket (Latin letters NFD leaves alone,
+# the Other row) and _letterRows (the Other row), for both A–Z lists.
 
 use strict;
 use warnings;
@@ -237,7 +242,24 @@ sub _networkFeed {
 
 use constant INDEX_FALLBACK => 'PLUGIN_ABCLISTEN_INDEX_FALLBACK';
 use constant NO_PROGRAMS    => 'PLUGIN_ABCLISTEN_NO_PROGRAMS';
-use constant DIGITS         => '0-9';    # the A–Z bucket of programs not starting with a letter
+use constant DIGITS         => '0-9';      # the A–Z bucket of programs starting with a digit
+use constant OTHER          => 'other';    # D7: ... with a non-Latin letter (or no letter or digit)
+use constant AZ_OTHER       => 'PLUGIN_ABCLISTEN_AZ_OTHER';
+
+# D7: Latin letters that NFD does not reduce to a-z -> their A–Z letter: æ, ø, œ, ł, đ, ð (eth),
+# þ (thorn), ß, ı (dotless i). sortKey has lower-cased the title; the capitals are here too in
+# case a title reaches it as a byte string, which lc leaves alone above ASCII.
+my %LATIN_LETTER = (
+	"\x{E6}"  => 'a', "\x{C6}"  => 'a',
+	"\x{F8}"  => 'o', "\x{D8}"  => 'o',
+	"\x{153}" => 'o', "\x{152}" => 'o',
+	"\x{142}" => 'l', "\x{141}" => 'l',
+	"\x{111}" => 'd', "\x{110}" => 'd',
+	"\x{F0}"  => 'd', "\x{D0}"  => 'd',
+	"\x{FE}"  => 't', "\x{DE}"  => 't',
+	"\x{DF}"  => 's', "\x{1E9E}" => 's',
+	"\x{131}" => 'i',
+);
 
 # By type: the type keys (ProgramIndex::typeKey) in menu order, with their label tokens
 my @TYPES = (
@@ -252,26 +274,27 @@ my %TYPE_LABEL = map { $_->[0] => $_->[1] } @TYPES;
 
 sub programsByType {
 	my ( $class, $client, $cb, $typeKey ) = @_;
-	_byType( $client, $cb, $typeKey, sub { _programRows( $client, shift ) } );
+	_byType( 'programsByType', $client, $cb, $typeKey, sub { _programRows( $client, shift ) } );
 	return;
 }
 
 # D6: the type's letter rows (see the header); its letters open _letterFeed with the type.
 sub programsByTypeAZ {
 	my ( $class, $client, $cb, $typeKey ) = @_;
-	_byType( $client, $cb, $typeKey, sub { _letterRows( $client, shift, $typeKey ) } );
+	_byType( 'programsByTypeAZ', $client, $cb, $typeKey, sub { _letterRows( $client, shift, $typeKey ) } );
 	return;
 }
 
 # programsByType's core (D6: shared with programsByTypeAZ and a type's letters):
-# $cb->($build->(\@refs of the type)) once, or programsByType's text item.
+# $cb->($build->(\@refs of the type)) once, or programsByType's text item. $caller names the
+# entry point in log lines (D7).
 sub _byType {
-	my ( $client, $cb, $typeKey, $build ) = @_;
+	my ( $caller, $client, $cb, $typeKey, $build ) = @_;
 	my $once = _once($cb);
 
 	eval {
 		if ( !( defined $typeKey && !ref $typeKey && $TYPE_LABEL{$typeKey} ) ) {
-			$log->warn( 'programsByType: unknown program type ' . ( defined $typeKey ? "'$typeKey'" : 'undef' ) );
+			$log->warn( "$caller: unknown program type " . ( defined $typeKey ? "'$typeKey'" : 'undef' ) );
 			$once->( [ _textItem( $client, LOAD_FAILED ) ] );
 			return 1;
 		}
@@ -288,7 +311,7 @@ sub _byType {
 			};
 
 			if ( ref $items ne 'ARRAY' ) {
-				$log->error( 'Building the ABC listen programs menu failed: ' . ( $@ || 'unknown error' ) );
+				$log->error( "$caller: building the ABC listen programs menu failed: " . ( $@ || 'unknown error' ) );
 				$items = [ _textItem( $client, LOAD_FAILED ) ];
 			}
 
@@ -297,8 +320,8 @@ sub _byType {
 
 		1;
 	} or do {
-		$log->error( 'programsByType failed: ' . ( $@ || 'unknown error' ) );
-		eval { $once->( [ _textItem( $client, LOAD_FAILED ) ] ); 1 } or $log->error( 'programsByType callback failed: ' . ( $@ || 'unknown error' ) );
+		$log->error( "$caller failed: " . ( $@ || 'unknown error' ) );
+		eval { $once->( [ _textItem( $client, LOAD_FAILED ) ] ); 1 } or $log->error( "$caller callback failed: " . ( $@ || 'unknown error' ) );
 	};
 
 	return;
@@ -325,8 +348,9 @@ sub _azFeed {
 	} );
 }
 
-# The letter rows of $refs: "<L> (<n>)" for a..z, then "0–9 (<n>)", empty letters omitted, each
-# opening _letterFeed with passthrough [$bucket] or, for one type's letters (D6), [$bucket, $typeKey].
+# The letter rows of $refs: "<L> (<n>)" for a..z, then "0–9 (<n>)", then "Other (<n>)" (D7),
+# empty rows omitted, each opening _letterFeed with passthrough [$bucket] or, for one type's
+# letters (D6), [$bucket, $typeKey].
 sub _letterRows {
 	my ( $client, $refs, $typeKey ) = @_;
 
@@ -335,13 +359,19 @@ sub _letterRows {
 
 	return [ map {
 		+{
-			name        => ( $_ eq DIGITS ? '0' . ENDASH . '9' : uc $_ ) . " ($count{$_})",
+			name        => _bucketName( $client, $_ ) . " ($count{$_})",
 			type        => 'link',
 			url         => \&_letterFeed,
 			passthrough => [ $_, defined $typeKey ? $typeKey : () ],
 			image       => Plugins::ABCListen::Util::ICON,
 		}
-	} grep { $count{$_} } 'a' .. 'z', DIGITS ];
+	} grep { $count{$_} } 'a' .. 'z', DIGITS, OTHER ];
+}
+
+# A bucket's row name: the upper-case letter, "0–9" or (D7) PLUGIN_ABCLISTEN_AZ_OTHER's text.
+sub _bucketName {
+	my ( $client, $bucket ) = @_;
+	return $bucket eq DIGITS ? '0' . ENDASH . '9' : $bucket eq OTHER ? cstring( $client, AZ_OTHER ) : uc $bucket;
 }
 
 # One letter's programs; with a type key (D6: programsByTypeAZ's letters), that letter's rows of
@@ -349,7 +379,7 @@ sub _letterRows {
 sub _letterFeed {
 	my ( $client, $cb, $args, $bucket, $typeKey ) = @_;
 
-	return _byType( $client, $cb, $typeKey, sub { _bucketRows( $client, shift, $bucket ) } ) if defined $typeKey;
+	return _byType( 'programsByTypeAZ letter', $client, $cb, $typeKey, sub { _bucketRows( $client, shift, $bucket ) } ) if defined $typeKey;
 
 	my $once = _once($cb);
 
@@ -444,11 +474,18 @@ sub _indexTitle {
 	return _hasText( $ref->{title} ) ? $ref->{title} : defined $ref->{path} ? $ref->{path} : '';
 }
 
-# A program's A–Z bucket: the first [a-z0-9] character of its sort key; digits and titles
-# without one -> DIGITS.
+# A program's A–Z bucket, from the first letter or digit of its sort key (punctuation, symbols
+# and spaces before it skipped): a-z -> that letter; D7: a Latin letter NFD leaves alone (æ, ø,
+# œ, ł, đ, ð, þ, ß, ı) -> its letter (%LATIN_LETTER); a digit -> DIGITS; any other letter
+# (non-Latin), or no letter or digit at all -> OTHER.
 sub _bucket {
-	my ($char) = Plugins::ABCListen::Programs::sortKey( _indexTitle(shift) ) =~ /([a-z0-9])/;
-	return defined $char && $char =~ /[a-z]/ ? $char : DIGITS;
+	my ($char) = Plugins::ABCListen::Programs::sortKey( _indexTitle(shift) ) =~ /([\p{L}\p{N}])/;
+
+	return OTHER unless defined $char;
+	return $char if $char =~ /\A[a-z]\z/;
+	return $LATIN_LETTER{$char} if exists $LATIN_LETTER{$char};
+	return DIGITS if $char =~ /\p{N}/;
+	return OTHER;
 }
 
 # === end O3 ===

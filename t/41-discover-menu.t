@@ -4,7 +4,8 @@
 # unrouted URL; fake clock): the Home and Podcasts items (exact keys, weights, menuWeights, no
 # network) and their place at the top; Home's root (Featured, Popular now, Popular in sport, then
 # the home collections in page order without the home "Categories" collection, found by
-# podcasts()'s rule rather than its id (D6); Featured omitted
+# podcasts()'s rule rather than its id (D6; D7: a mixed collection with a category card stays
+# listed, a categories collection without an id leaves the next one listed); Featured omitted
 # without a mappable hero item; no request beyond the home page); collection menus (20 per page + More… with the right offsets, last page
 # without More…, missing total, empty / null / past-the-end pages, API errors, the depth limit);
 # the home Categories collection -> True Crime (dynamiccollection leaf ids); Radio Stations with and without L1's live
@@ -294,6 +295,25 @@ subtest 'Home root (D6): the categories collection is found by podcasts()\'s rul
 	fresh();
 	$with->( 14123152 => [] );
 	is_deeply( names( home_root() ), [ $FEATURED, $POPULAR, $SPORT, @HOME_TITLES ], 'no categories collection: every collection listed' );
+
+	# D7 (D6 review finding 1): ABC adds one category card to an earlier Home collection
+	my ($categoryCard) = @{ $categories->{componentProps}->{items} };
+	my $mixed = { %$picks, componentProps => { %{ $picks->{componentProps} }, items => [ @{ $picks->{componentProps}->{items} }, $categoryCard ] } };
+	fresh();
+	$with->( 103194114 => [$mixed] );
+	$items = home_root();
+	is_deeply( names($items), [ $FEATURED, $POPULAR, $SPORT, @HOME_TITLES ], 'D7: Today\'s Top Picks with one category card added: still listed; Categories still hidden' );
+	ok( ( grep { $_ eq '103194114' } @{ $ids->($items) } ), '(the mixed collection 103194114 is listed)' );
+	ok( !( grep { $_ eq '14123152' } @{ $ids->($items) } ), '(the real categories collection 14123152 is not)' );
+
+	# D7 (D6 review finding 2): a categories collection without an id, then the real one
+	my $noId = { %$categories, key => 'no-id', componentProps => { %{ $categories->{componentProps} } } };
+	delete $noId->{componentProps}->{id};
+	fresh();
+	$with->( 103194114 => [ $noId, $picks ] );
+	$items = home_root();
+	ok( ( grep { $_ eq '14123152' } @{ $ids->($items) } ), 'D7: a categories collection without an id first: categoriesId undef, so the second (14123152) is listed under Home' );
+	is_deeply( names($items), [ $FEATURED, $POPULAR, $SPORT, @HOME_TITLES, 'Categories' ], '(the id-less one is omitted; Categories is listed last, in page order)' );
 };
 
 subtest 'Home root: Featured omitted when no hero item maps; collection link fallbacks' => sub {

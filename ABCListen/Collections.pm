@@ -8,8 +8,8 @@ package Plugins::ABCListen::Collections;
 # behave the same everywhere. All I/O goes through Plugins::ABCListen::API (async).
 #
 # ---- Callbacks ------------------------------------------------------------------------------------
-#   page, home, items, aggregationItems, menuPage, itemsFor, checkOnAir, podcasts, recommendations
-#   and withImages call $cb EXACTLY ONCE, on every path. Failures are { error => TOKEN }, the API
+#   page, home, items, aggregationItems, menuPage, itemsFor, checkOnAir, podcasts, categories (D7),
+#   recommendations and withImages call $cb EXACTLY ONCE, on every path. Failures are { error => TOKEN }, the API
 #   token passed through ('PLUGIN_ABCLISTEN_LOAD_FAILED' or 'PLUGIN_ABCLISTEN_RATE_LIMITED'). Cache
 #   hits call back synchronously, other calls later: code must work either way. A callback that
 #   dies is logged and never leads to a second call.
@@ -66,10 +66,13 @@ package Plugins::ABCListen::Collections;
 #       An untitled StandardCollection keeps title undef; collectionItem names it Featured.
 #     D6 adds one key (callers that don't use it ignore it):
 #         categoriesId        the id of the page's categories collection: the first
-#                             StandardCollection with podcast category cards, by podcasts()'s
-#                             rule (_categoryCards: dynamiccollection cards whose path ends in a
-#                             numeric page id); undef when that collection has no id; absent
-#                             when no StandardCollection has such cards. Home leaves it out.
+#                             StandardCollection that is a categories collection by podcasts()'s
+#                             rule (D7, _categoriesCollection: every supported embedded card is a
+#                             podcast category card, i.e. a dynamiccollection card whose path ends
+#                             in a numeric page id, and they name at least 2 different pages; a
+#                             category card in a mixed collection does not count); undef when that
+#                             collection has no id (a later one is not looked at); absent when no
+#                             StandardCollection qualifies. Home leaves it out.
 #   home($cb)  = page('/listen', $cb).
 #
 #   items($collectionId, $offset, $size, $cb, \%extraQuery)
@@ -158,18 +161,39 @@ package Plugins::ABCListen::Collections;
 # ---- D2 additions (Podcasts menu, Popular now / Popular in sport) ---------------------------------
 #
 #   podcasts($cb) -> $cb->({ collections => [{ id, title, query }], categories => [{ id, title,
-#                    image, fallbackPath }], stale => 0|1 }) | $cb->({ error => TOKEN })
+#                    image, fallbackPath }], categoriesId => id | undef, stale => 0|1 })
+#                    | $cb->({ error => TOKEN })
 #       API::nextData('/listen/podcasts') (ttl 1 h, stale_ok, timeout 8 s), componentsContent[]:
 #         the first MetaCollection -> collections: its componentProps.items[] { id, title } in
 #             order (no numeric id, or itemsCount 0: left out), each with query =>
 #             { rootMetaCollectionId => the MetaCollection's id, metaInMeta => 'false' };
-#         the first StandardCollection with dynamiccollection cards -> categories: per card
-#             id = the numeric last segment of articleLink (none: left out), title = cardTitle,
-#             image = the card image, fallbackPath = articleLink's site path. (The same rule,
-#             _categoryCards, gives page()'s categoriesId; D6.)
+#         the first StandardCollection that is a categories collection (D7: page()'s
+#             categoriesId rule, _categoriesCollection) -> categories: per category card
+#             id = the numeric last segment of articleLink, title = cardTitle, image = the card
+#             image, fallbackPath = articleLink's site path; duplicates (same id) dropped, ABC's
+#             order kept; categoriesId = that collection's id (componentProps.id, else its key;
+#             undef without one). The page renders only the collection's first 8 cards
+#             (2026-10-19: 8 of 18), so menus take the full list from categories() below.
+#             categoriesId is absent when no collection qualifies.
 #       Missing parts are empty lists (callers decide: Discover shows LOAD_FAILED / the static list).
-#   staticCategories() -> the 8 podcast categories of 2026-10-19 as above (image undef), in ABC's
-#       order: the fallback when the podcasts page fails or lists none.
+#   staticCategories() -> the 18 podcast categories of 2026-10-19 as above (image undef), in ABC's
+#       order: the last fallback of categories().
+#
+#   categories(\%podcasts, $cb) -> $cb->(\@categories, $source)  (never an error)              (D7)
+#       Every podcast category for Browse by category, from podcasts()'s result (or its error):
+#         1. the whole categories collection: items-style BFF requests (collection/x, the
+#            same URLs and cache entries as items(); ttl PAGE_TTL, stale_ok, timeout 8 s) for
+#            categoriesId, CATEGORY_PAGE_SIZE (PAGE_SIZE, 20) cards a page from offset 0, paged to
+#            pagination.total (at most CATEGORY_MAX_PAGES pages), the category cards of every page
+#            (_categoryCards) in ABC's order, duplicate page ids dropped; source 'collection';
+#         2. else the podcasts page's categories (source 'page') - if the collection paging stopped
+#            part-way (a page failed, or the deadline), the cards it found first, then the page's
+#            cards it had not found (source 'collection+page');
+#         3. else staticCategories() (source 'static').
+#       Same shape as podcasts()'s categories. No categoriesId (or a podcasts() error): 2 or 3 at
+#       once, without a request. Answers at most CATEGORY_DEADLINE (3 s, the Podcasts menu's
+#       withImages wait) after the call; pages still in flight then carry on (and go on paging)
+#       to warm the cache for the next open. Exactly one callback, also if paging dies.
 #
 #   recommendations($name, $cb) -> $cb->({ title, cards => [refs], stale => 0|1 }) | $cb->({ error => TOKEN })
 #       API::bff("recommendations/listen/$name") (ttl 1 h, stale_ok, timeout 8 s); $name is
@@ -185,7 +209,7 @@ package Plugins::ABCListen::Collections;
 #       (collectionItem then uses the plugin icon). Lookups still queued or in flight at the
 #       deadline carry on and warm the cache for the menus.
 #
-# Owned by the discovery stream (D1 creates; D2, D4 and D6 extend additively).
+# Owned by the discovery stream (D1 creates; D2, D4, D6 and D7 extend additively).
 
 use strict;
 use warnings;
@@ -216,6 +240,13 @@ use constant PODCASTS_PATH       => '/listen/podcasts';    # D2
 use constant RECOMMENDATIONS_TTL => 3600;                  # D2 recommendations()
 use constant IMAGE_DEADLINE      => 3;                     # D2 withImages(), seconds
 use constant IMAGE_CONCURRENCY   => 4;                     # D6 withImages(): first pages loading at once
+
+use constant CATEGORY_DEADLINE  => IMAGE_DEADLINE;    # D7 categories(): seconds (runs alongside withImages)
+use constant CATEGORY_MAX_PAGES => 10;                # D7 categories(): collection pages at most
+use constant MIN_CATEGORIES     => 2;                 # D7: category cards a categories collection has at least
+
+# D7 categories(): cards per collection page (PAGE_SIZE; tests page smaller)
+our $CATEGORY_PAGE_SIZE = PAGE_SIZE;
 
 use constant LOAD_FAILED => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
 use constant EMPTY       => 'PLUGIN_ABCLISTEN_EMPTY_COLLECTION';
@@ -355,8 +386,9 @@ sub _standardCollection {
 	my $id = _digits( $props->{id} );
 	$id = _digits( $component->{key} ) unless defined $id;
 
-	# D6: the first StandardCollection with category cards is the page's categories collection
-	$page->{categoriesId} = $id if !exists $page->{categoriesId} && _categoryCards($props);
+	# D6/D7: the first categories collection (podcasts()'s rule) is the page's; decided before the
+	# id check, so one without an id makes categoriesId undef rather than naming a later one
+	$page->{categoriesId} = $id if !exists $page->{categoriesId} && _categoriesCollection($props);
 
 	return unless defined $id;
 
@@ -621,7 +653,9 @@ sub _menuPage {
 # D2: the podcasts page, recommendations, collection images
 # ---------------------------------------------------------------------------
 
-# The podcast categories (2026-10-19), ABC's order: [ page id, name, page slug ].
+# The podcast categories, ABC's order: [ page id, name, page slug ]. All 18 cards of ABC's categories
+# collection 14123152 (collection/x?collectionId=14123152, 2026-10-19; D7): ids and slugs from each
+# card's articleLink (/listen/listenapp/<slug>/<id>). The podcasts page renders only the first 8.
 my @STATIC_CATEGORIES = (
 	[ 104142082 => 'News & Analysis',              'news-and-analysis' ],
 	[ 104142226 => 'True Crime',                   'true-crime' ],
@@ -631,6 +665,16 @@ my @STATIC_CATEGORIES = (
 	[ 104142164 => 'Society & Culture',            'society-and-culture' ],
 	[ 104142058 => 'Music',                        'music' ],
 	[ 104141814 => 'Conversations & Storytelling', 'conversations-storytelling' ],
+	[ 104141870 => 'Health & Wellbeing',           'health-and-wellbeing' ],
+	[ 104142140 => 'Science & Environment',        'science-and-environment' ],
+	[ 104141660 => 'Arts & Pop Culture',           'arts-pop-culture' ],
+	[ 104141762 => 'Business & Technology',        'business-and-technology' ],
+	[ 104141798 => 'Comedy',                       'comedy' ],
+	[ 104141952 => 'Indigenous',                   'indigenous' ],
+	[ 104141980 => 'Leisure & Lifestyle',          'leisure-and-lifestyle' ],
+	[ 104142014 => 'Life Improvement',             'life-improvement' ],
+	[ 104142104 => 'Parenting',                    'parenting' ],
+	[ 104142128 => 'Religion & Ethics',            'religion-and-ethics' ],
 );
 
 sub podcasts {
@@ -654,7 +698,7 @@ sub podcasts {
 sub _parsePodcasts {
 	my ( $pageProps, $info ) = @_;
 
-	my ( $collections, $categories );
+	my ( $collections, $categories, $categoriesId );
 
 	for my $component ( _list( _hash( _hash($pageProps)->{data} )->{componentsContent} ) ) {
 		next unless ref $component eq 'HASH' && _isText( $component->{component} );
@@ -662,23 +706,55 @@ sub _parsePodcasts {
 		if ( $component->{component} eq 'MetaCollection' ) {
 			$collections ||= _subCollections($component);
 		}
-		elsif ( $component->{component} eq 'StandardCollection' && !( $categories && @$categories ) ) {
-			$categories = [
-				map { { id => _leaf( $_->{path} ), title => $_->{title}, image => $_->{image}, fallbackPath => $_->{path} } }
-				_categoryCards( _hash( $component->{componentProps} ) )
-			];
+		elsif ( $component->{component} eq 'StandardCollection' && !$categories ) {
+			# D7: page()'s categoriesId rule (_standardCollection), so both name the same collection
+			my $props = _hash( $component->{componentProps} );
+			my @cards = _categoriesCollection($props) or next;
+
+			$categories   = [ _categoryList(@cards) ];
+			$categoriesId = _digits( $props->{id} );
+			$categoriesId = _digits( $component->{key} ) unless defined $categoriesId;
 		}
 	}
 
-	return { collections => $collections || [], categories => $categories || [], stale => _hash($info)->{stale} ? 1 : 0 };
+	return {
+		collections => $collections || [],
+		categories  => $categories  || [],
+		$categories ? ( categoriesId => $categoriesId ) : (),
+		stale => _hash($info)->{stale} ? 1 : 0,
+	};
 }
 
-# A StandardCollection's podcast category cards: its dynamiccollection card refs whose path ends in
-# a numeric page id. podcasts() lists the first such collection's; page() names it categoriesId (D6).
+# Podcast category cards: the card refs that are dynamiccollection cards whose path ends in a
+# numeric page id (the category's page id). D7: categories() keeps these from the full collection.
 sub _categoryCards {
-	my $props = shift;
-	return grep { $_->{type} eq 'dynamiccollection' && defined _leaf( $_->{path} ) }
-		grep {defined} map { Plugins::ABCListen::API::cardRef($_) } _list( $props->{items} );
+	return grep { ref $_ eq 'HASH' && _isText( $_->{type} ) && $_->{type} eq 'dynamiccollection' && defined _leaf( $_->{path} ) } @_;
+}
+
+# D7: a StandardCollection's componentProps -> its category card refs when it is a categories
+# collection: every supported embedded card (_target) a category card, naming at least
+# MIN_CATEGORIES different page ids; else (). podcasts() lists the first such collection's cards;
+# page() names it categoriesId (D6).
+sub _categoriesCollection {
+	my $props     = shift;
+	my @supported = grep { _target($_) } grep {defined} map { Plugins::ABCListen::API::cardRef($_) } _list( $props->{items} );
+	my @cards     = _categoryCards(@supported);
+	my %pages     = map { _leaf( $_->{path} ) => 1 } @cards;
+
+	return keys %pages >= MIN_CATEGORIES && @cards == @supported ? @cards : ();
+}
+
+# Category card refs -> categories { id, title, image, fallbackPath }, the first of each page id.
+sub _categoryList {
+	my %seen;
+	return grep { !$seen{ $_->{id} }++ }
+		map { { id => _leaf( $_->{path} ), title => $_->{title}, image => $_->{image}, fallbackPath => $_->{path} } } _categoryCards(@_);
+}
+
+# The first of each category id, in order (categories() merging collection and page cards).
+sub _uniqueCategories {
+	my %seen;
+	return grep { ref $_ eq 'HASH' && defined _digits( $_->{id} ) && !$seen{ $_->{id} }++ } @_;
 }
 
 # A MetaCollection's sub-collections: [{ id, title, query }], those with itemsCount 0 left out.
@@ -709,6 +785,112 @@ sub _subCollections {
 
 sub staticCategories {
 	return map { { id => "$_->[0]", title => $_->[1], image => undef, fallbackPath => "/listen/listenapp/$_->[2]/$_->[0]" } } @STATIC_CATEGORIES;
+}
+
+# D7: every podcast category (see the header): the whole categories collection, else the podcasts
+# page's cards, else the static list; $cb->(\@categories, $source) once, within CATEGORY_DEADLINE.
+sub categories {
+	shift if _isClass( $_[0] );
+	my ( $podcasts, $cb ) = @_;
+	my $once = _once($cb);
+
+	$podcasts = _hash($podcasts);
+
+	my @pageCards = $podcasts->{error} ? () : _uniqueCategories( map { {%$_} } grep { ref $_ eq 'HASH' } _list( $podcasts->{categories} ) );
+	my $id        = $podcasts->{error} ? undef : _digits( $podcasts->{categoriesId} );
+
+	my ( @found, $finished, $timer );
+
+	# $complete: the collection was paged to its end. Else: what it gave first, then the page's cards.
+	my $finish = sub {
+		my ( $complete, $why ) = @_;
+		return if $finished++;
+
+		Slim::Utils::Timers::killSpecific($timer) if $timer;
+		undef $timer;
+
+		my @collection = _uniqueCategories(@found);
+		my ( $list, $source );
+
+		if ( $complete && @collection ) {
+			( $list, $source ) = ( \@collection, 'collection' );
+		}
+		elsif ( my @merged = _uniqueCategories( @collection, @pageCards ) ) {
+			( $list, $source ) = ( \@merged, @collection ? 'collection+page' : 'page' );
+		}
+		else {
+			( $list, $source ) = ( [ staticCategories() ], 'static' );
+		}
+
+		my $note = 'ABC listen: Browse by category: ' . scalar(@$list) . " categories ($source" . ( defined $why ? "; $why" : '' ) . ')';
+		if ( $source eq 'collection' ) { main::DEBUGLOG && $log->is_debug && $log->debug($note) }
+		else                           { main::INFOLOG && $log->is_info && $log->info($note) }
+
+		$once->( [ map { {%$_} } @$list ], $source );
+	};
+
+	if ( !defined $id ) {
+		$finish->( 0, $podcasts->{error} ? 'podcasts page failed' : exists $podcasts->{categoriesId} ? 'no collection id' : 'no categories collection' );
+		return;
+	}
+
+	$timer = Slim::Utils::Timers::setTimer( undef, Time::HiRes::time() + CATEGORY_DEADLINE, sub {
+		undef $timer;
+		$finish->( 0, "collection $id not loaded within " . CATEGORY_DEADLINE . ' s' );
+	} );
+
+	my $state = {
+		id     => $id,
+		size   => _int($CATEGORY_PAGE_SIZE) || PAGE_SIZE,
+		pages  => 0,
+		found  => \@found,
+		done   => sub { $finished },
+		finish => $finish,
+	};
+
+	eval { _categoryPage( $state, 0 ); 1 } or do {
+		$log->error( "ABC listen: loading the categories collection $id failed: " . ( $@ || 'unknown error' ) );
+		$finish->( 0, 'paging failed' );
+	};
+
+	return;
+}
+
+# categories(): one page of the categories collection from $offset, then the next while ABC has more
+# (CATEGORY_MAX_PAGES at most). Pages answered after the deadline only warm the cache.
+sub _categoryPage {
+	my ( $state, $offset ) = @_;
+	$state->{pages}++;
+
+	_bffCollection( 'collection/x', PAGE_TTL, $state->{id}, $offset, $state->{size}, sub {
+		my $result = shift;
+
+		eval {
+			if ( $result->{error} ) {
+				$state->{finish}->( 0, "collection $state->{id} failed at offset $offset" );
+				return 1;
+			}
+
+			push @{ $state->{found} }, _categoryList( _list( $result->{cards} ) ) unless $state->{done}->();
+
+			my $next = $offset + $result->{count};
+			my $more = $result->{count} > 0 && defined $result->{total} && $next < $result->{total};
+
+			if ( $more && $state->{pages} < CATEGORY_MAX_PAGES ) {
+				_categoryPage( $state, $next );
+			}
+			else {
+				$state->{finish}->( $more ? 0 : 1, $more ? "collection $state->{id} longer than " . CATEGORY_MAX_PAGES . ' pages' : undef );
+			}
+
+			1;
+		} or do {
+			$log->error( "ABC listen: paging the categories collection $state->{id} failed: " . ( $@ || 'unknown error' ) );
+			$state->{finish}->( 0, 'paging failed' );
+		};
+	} );
+
+	return;
 }
 
 sub recommendations {

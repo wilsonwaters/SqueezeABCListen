@@ -6,6 +6,8 @@
 # letters, counts and buckets; By type; program rows via programItem with the duplicate-title
 # name override; the public programsByType for D2/D4; fallback and LOAD_FAILED states; exactly one
 # callback on every path, also when the consumer's callback dies).
+# D7: the A–Z bucket rule (Æ/Ø/Œ/Ł/Đ/Ð/Þ/ß/ı -> their Latin letter, non-Latin first letters and
+# titles without a letter or digit -> the Other row after 0–9, digits -> 0–9).
 # O7: network-relative program paths ('/triplej/hottest-100'): the page check through
 # API::nextData (which follows ABC's 308), listed or left out, the 24 h decision cache, at most 4
 # checks in flight, and Hottest 100 through A–Z -> H -> its program menu.
@@ -469,15 +471,60 @@ subtest 'sortKey and A–Z buckets: "The", digits, punctuation, accents, only "T
 		[ '#Hashtag Hour',                 '#hashtag hour',        'h' ],
 		[ "\x{201C}Quoted\x{201D}",        "\x{201C}quoted\x{201D}", 'q' ],
 		[ "\x{C9}lan",                     'elan',                 'e' ],
-		[ "\x{58F0}\x{97F3}\x{4E4B}\x{65C5}", "\x{58F0}\x{97F3}\x{4E4B}\x{65C5}", '0-9' ],
-		[ '...',                           '...',                  '0-9' ],
+		# D7: a non-Latin first letter -> Other (no longer 0–9); no letter or digit at all -> Other
+		[ "\x{58F0}\x{97F3}\x{4E4B}\x{65C5}", "\x{58F0}\x{97F3}\x{4E4B}\x{65C5}", 'other' ],
+		[ '...',                           '...',                  'other' ],
+		[ '',                              '',                     'l' ],    # no title: the path ('/listen/...')
 	);
 	for my $row (@table) {
 		my ( $title, $key, $expected ) = @$row;
-		is( Plugins::ABCListen::Programs::sortKey($title), $key, "sortKey('$title')" );
+		is( Plugins::ABCListen::Programs::sortKey($title), $key, "sortKey('$title')" ) if length $title;
 		is( $bucket->($title), $expected, "'$title' -> $expected" );
 	}
 	is( Plugins::ABCListen::OnDemand::_bucket( { path => '/listen/programs/zebra' } ), 'l', 'no title: the path programItem shows decides' );
+};
+
+subtest 'A–Z buckets (D7): Latin letters NFD leaves alone, non-Latin letters -> Other, digits -> 0–9, punctuation skipped' => sub {
+	my $bucket = sub { Plugins::ABCListen::OnDemand::_bucket( { title => $_[0], path => '/listen/programs/x' } ) };
+	my @table = (
+		[ "\x{C6}sop's Fables",                 'a' ],        # Æ
+		[ "\x{E6}ble",                          'a' ],        # æ
+		[ "\x{D8}resund",                       'o' ],        # Ø
+		[ "\x{F8}l",                            'o' ],        # ø
+		[ "\x{152}uvre",                        'o' ],        # Œ
+		[ "\x{153}il",                          'o' ],        # œ
+		[ "\x{141}\x{F3}d\x{17A}",              'l' ],        # Łódź
+		[ "\x{142}abu",                         'l' ],        # ł
+		[ "\x{110}\x{1ED3}ng",                  'd' ],        # Đồng
+		[ "\x{111}i",                           'd' ],        # đ
+		[ "\x{DE}ing",                          't' ],        # Þing
+		[ "\x{FE}orn",                          't' ],        # þ
+		[ "\x{DF}tra\x{DF}e",                   's' ],        # ß
+		[ "\x{D0}\x{F3}ra",                     'd' ],        # Ð (eth)
+		[ "\x{131}rmak",                        'i' ],        # ı (dotless i)
+		[ "The \x{C6}gean",                     'a' ],        # a leading "The" still ignored
+		[ "\x{2014} \x{C6}ther",                'a' ],        # punctuation before it skipped
+		[ "\x{58F0}\x{97F3}\x{4E4B}\x{65C5}",   'other' ],    # CJK (声音之旅)
+		[ "\x{41C}\x{438}\x{440}",              'other' ],    # Cyrillic (Мир)
+		[ "\x{39A}\x{3CC}\x{3C3}\x{3BC}\x{3BF}\x{3C2}", 'other' ],    # Greek (Κόσμος)
+		[ "\x{300C}\x{58F0}\x{97F3}\x{300D}",   'other' ],    # CJK quotes skipped, then CJK
+		[ "\x{58F0}\x{97F3} 2024",              'other' ],    # the FIRST letter or digit decides
+		[ "2024 \x{58F0}\x{97F3}",              '0-9' ],      # a digit first: 0–9
+		[ "#1 Hits",                            '0-9' ],      # punctuation skipped to the digit
+		[ "\x{2605}\x{2605} Stars",             's' ],        # symbols skipped
+		[ "\x{BD} Hour",                        '0-9' ],      # ½: a number
+		[ "\x{1F3B5} Music",                    'm' ],        # an emoji skipped
+		[ '!!!',                                'other' ],    # no letter or digit at all
+	);
+	for my $row (@table) {
+		my ( $title, $expected ) = @$row;
+		is( $bucket->($title), $expected, "'$title' -> $expected" );
+	}
+
+	# a title that reaches sortKey as a byte string (lc leaves Latin-1 capitals alone): still mapped
+	my $bytes = "\x{C6}sop";
+	utf8::downgrade($bytes);
+	is( $bucket->($bytes), 'a', 'Æ in a byte string -> a' );
 };
 
 subtest 'Algolia fails with a last-good copy: the stale data, no fallback' => sub {
@@ -848,13 +895,14 @@ subtest 'All programs A–Z: letters with counts, empty letters omitted, 0–9 l
 	my $c = feed($AZ);
 	is( $c->count, 1, 'one callback' );
 	my $letters = items_of($c);
-	is_deeply( names($letters), [ 'B (4)', 'D (1)', 'E (1)', 'H (1)', 'Q (1)', 'S (4)', 'T (3)', "0${ENDASH}9 (3)" ], 'letters A..Z with programs, then 0–9; counts in the name' );
-	is( ( grep { $_->{name} =~ /\A(?:[A-Z]|0\x{2013}9) \([0-9]+\)\z/ } @$letters ), scalar @$letters, 'every name matches ^([A-Z]|0–9) \(\d+\)$' );
+	is_deeply( names($letters), [ 'B (4)', 'D (1)', 'E (1)', 'H (1)', 'Q (1)', 'S (4)', 'T (3)', "0${ENDASH}9 (2)", 'Other (1)' ], 'letters A..Z with programs, then 0–9, then Other (D7); counts in the name' );
+	is( ( grep { $_->{name} =~ /\A(?:[A-Z]|0\x{2013}9|Other) \([0-9]+\)\z/ } @$letters ), scalar @$letters, 'every name matches ^([A-Z]|0–9|Other) \(\d+\)$' );
 	my $sum = 0;
 	$sum += ( $_->{name} =~ /\(([0-9]+)\)/ )[0] for @$letters;
 	is( $sum, 18, 'the counts add up to the programs' );
 	is_deeply( $letters->[5], { name => 'S (4)', type => 'link', url => $LETTER, passthrough => ['s'], image => $ICON }, 'letter row: exact keys' );
-	is_deeply( $letters->[-1]->{passthrough}, ['0-9'], '0–9 row passthrough' );
+	is_deeply( $letters->[-2]->{passthrough}, ['0-9'], '0–9 row passthrough' );
+	is_deeply( $letters->[-1], { name => 'Other (1)', type => 'link', url => $LETTER, passthrough => ['other'], image => $ICON }, 'Other row (D7): last, exact keys, PLUGIN_ABCLISTEN_AZ_OTHER text' );
 	check_names( $letters, 'letters' );
 	is( scalar algolia_requests(), 1, 'one Algolia request' );
 
@@ -882,7 +930,8 @@ subtest 'All programs A–Z: letters with counts, empty letters omitted, 0–9 l
 
 	is_deeply( names( items_of( open_item( $letters->[6] ) ) ), [ "'Tis the Season", 'The', 'Theatre Talk' ], 'T: only-"The" and "Theatre" under T' );
 	is_deeply( names( items_of( open_item( $letters->[1] ) ) ), ['the drum'], 'D: "the drum" (case-insensitive "The")' );
-	is_deeply( names( items_of( open_item( $letters->[-1] ) ) ), [ '100 Years of Radio', '7.30', "\x{58F0}\x{97F3}\x{4E4B}\x{65C5}" ], '0–9: digits and a title without [a-z0-9]' );
+	is_deeply( names( items_of( open_item( $letters->[-2] ) ) ), [ '100 Years of Radio', '7.30' ], '0–9: titles starting with a digit only' );
+	is_deeply( names( items_of( open_item( $letters->[-1] ) ) ), ["\x{58F0}\x{97F3}\x{4E4B}\x{65C5}"], 'Other (D7): the Chinese title (声音之旅)' );
 	is_deeply( names( items_of( open_item( $letters->[3] ) ) ), ['#Hashtag Hour'], 'H: leading punctuation skipped' );
 	is_deeply( names( items_of( open_item( $letters->[2] ) ) ), ["\x{C9}lan"], 'E: accent folded' );
 
