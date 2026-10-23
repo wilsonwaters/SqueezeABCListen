@@ -29,9 +29,14 @@ package Plugins::ABCListen::Live;
 # stationItem uses cached/last-good data only.
 #
 # Station rows (L4) both open and play (ai-state/research/lms-plugin-guide.md section 4):
-#   { name, line1, line2?, type => 'link', url => \&_stationMenu, passthrough => [<ID>],
+#   { name, line1, line2?, type => 'playlist', url => \&_stationMenu, passthrough => [<ID>],
 #     play => 'abclisten://live/<ID>', favorites_url => the same URL, favorites_type => 'audio',
 #     favorites_title => the station's own title, favorites_icon, image }
+# type 'playlist', not 'link': Material offers Play now / Play next / Append to queue (item menu
+# and tile hover buttons) only for items of type audio, playlist, album, artist, genre or year, so
+# a 'link' with 'play' could only be played from inside its menu; a 'playlist' with a feed url
+# still opens (LMS: hasitems 1, the feed is fetched) and 'play' plays it (XMLBrowser turns it into
+# an audio item for playlist play / add / insert; the Default skin's Play icon plays 'play').
 # No on_select (touch skins open the row; 'play' plays it and is what favourites store, so
 # favourites saved before L4, plain abclisten://live/<ID> audio entries, play as before) and no
 # description (LMS menu rule 1: a non-audio item with a description can't be opened over JSON-RPC).
@@ -71,7 +76,7 @@ package Plugins::ABCListen::Live;
 # item.
 #
 # Public builder (ai-state/streams.md contract 7):
-#   Live->stationItem($client, $serviceId) -> a station row (link + play, above), or undef for
+#   Live->stationItem($client, $serviceId) -> a station row (opens + plays, above), or undef for
 #   unknown, hidden, HLS-only and off-air (or not yet known) event services. Never fetches;
 #   consumers that override line2 do so on their copy (every call builds a new hash).
 #
@@ -409,7 +414,8 @@ sub _link {
 	};
 }
 
-# A station row (L4): a link to the station menu that also plays the station (play). Favourites keep
+# A station row (L4): opens the station menu and also plays the station (play); type 'playlist' so
+# that Material offers its play actions on the row (see the header). Favourites keep
 # the abclisten://live/<ID> URL, the station's own title and its logo. %opts: name (shown instead
 # of the station's). With a cached or last-good program on air (never fetched here), line2 says
 # what is on air. No description (LMS menu rule 1; the station menu's Listen live carries it).
@@ -426,7 +432,7 @@ sub _stationItem {
 		name            => $name,
 		line1           => $name,
 		( defined $line2 ? ( line2 => $line2 ) : () ),
-		type            => 'link',
+		type            => 'playlist',
 		url             => \&_stationMenu,
 		passthrough     => [ $rec->{id} ],
 		play            => $url,

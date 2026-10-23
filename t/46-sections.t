@@ -381,7 +381,7 @@ subtest 'amendment 1: station cards are looked up by path (L1 owns the rules); /
 	fresh();
 	my $url = sub {
 		my $item = $COL->itemFor( $CLIENT, Plugins::ABCListen::API::cardRef( card(@_) ), 1 );
-		return $item ? $item->{play} : undef;    # L4: station rows are links that play
+		return $item ? $item->{play} : undef;    # L4: station rows open a menu and play
 	};
 
 	is( $url->( 'coremedia://externallink/1', articleLink => 'https://www.abc.net.au/listen/news' ), 'abclisten://live/NEWS', '/listen/news (externallink, no /live/ segment) -> NEWS' );
