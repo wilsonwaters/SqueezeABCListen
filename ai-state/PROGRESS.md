@@ -26,6 +26,9 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - 2026-10-19 ~21:50–23:07 UTC: usage limit again (5 agents) + worker restart. Global git identity reset again (repo
   .git/config kept Wilson Waters, so no wrong-author commits). Testbed restarted, stale L5 lock cleared. Resumed L2,
   F5, O7; L5 and D6 held until those finish. New cap: ≤3 concurrent agents.
+- 2026-10-20 ~03:00 UTC: usage limit again (SYS, D5 review, M4) + worker restart; stakeholder paused all work
+  ("hold off"). 2026-10-23 22:59 UTC: resumed — global git identity reset to Wilson Waters again, testbed restarted,
+  stale D5-review lock broken, main re-linked; SYS, D5 review and M4 resumed from saved state.
 
 ## Last completions
 - #10 L4 merged (PR #55, squash ff1be94): station rows link + play; station menu (Listen live, on air, Today,
