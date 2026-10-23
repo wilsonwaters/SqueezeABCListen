@@ -309,7 +309,7 @@ sub _collectLatest {
 
 		if ( $result->{error} ) {
 			$stats{failed}++;
-			$log->warn( "Latest episodes: skipped the followed program $entry->{title} ($entry->{path}): " . ( $result->{message} || $result->{error} ) );
+			$log->warn( "Latest episodes: skipped the program $entry->{title} ($entry->{path}): " . ( $result->{message} || $result->{error} ) );
 		}
 		else {
 			$stats{ok}++;
@@ -338,7 +338,7 @@ sub _collectLatest {
 	$timer = Slim::Utils::Timers::setTimer( undef, Time::HiRes::time() + LATEST_DEADLINE, sub {
 		undef $timer;
 		my $missing = $total - $stats{ok} - $stats{failed};
-		$log->warn( 'Latest episodes: answered after ' . LATEST_DEADLINE . " s without $missing of $total followed programs" );
+		$log->warn( 'Latest episodes: answered after ' . LATEST_DEADLINE . " s without $missing of $total programs" );
 		$finish->();
 	} );
 
@@ -346,7 +346,8 @@ sub _collectLatest {
 	return;
 }
 
-# One followed program's newest episodes: $cb->({ entry, detail, episodes }) or $cb->({ error }), once.
+# One program's newest episodes (a followed program or a tombstone): $cb->({ entry, detail, episodes })
+# or $cb->({ error }), once.
 sub _programLatest {
 	my ( $entry, $cb ) = @_;
 
