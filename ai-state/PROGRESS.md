@@ -18,11 +18,10 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   Net::HTTP limit is 8,192 ("Header line too long"). v0.2.0's install passed on 10-19, so GitHub changed it. → R4 (#62):
   serve zips from raw.githubusercontent.com (orphan branch release-assets), repair v0.3.0, re-check the install.
 - #62 R4 raw-hosted release zips — implementation
-- #19 O4 episode extras — PR #57 APPROVED + review fixes verified (head e6b6886); merge after v0.3.0
-- #59 M4 Latest episodes stable after unfollow — PR #60 APPROVED; small test fixes in progress; merge after v0.3.0
+- #56 D8 A–Z completeness (AM, Persuasion) + D7 follow-ups — implementation
 - #23 D5 audiobook chapters — PR #58 fixes pushed (8885d44: Episodes list for restricted podcasts, seenAt via API `at`,
   /radio/geo/ geo rule, tests) — focused re-review
-- Queued (cap 3): F6, O8, M3, D8, then v0.3.0 (system verification → release), R2, R3
+- Queued (cap 3): O8, M3, F6, then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
 - 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
@@ -36,6 +35,10 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   stale D5-review lock broken, main re-linked; SYS, D5 review and M4 resumed from saved state.
 
 ## Last completions
+- #59 M4 merged (PR #60, squash f2727e2): Latest episodes stable after an unfollow (tombstones kept 30 min).
+- #19 O4 merged (PR #57, squash 92d6b51): episode extras — segments, tracklist (stable rows, 90 s failure cache),
+  presenters, More from, episode song info.
+- v0.3.0 Material D-1 fix merged (PR #61, squash 1e40eb3): station rows type playlist.
 - #10 L4 merged (PR #55, squash ff1be94): station rows link + play; station menu (Listen live, on air, Today,
   Yesterday, 5 days); day lists with "<date> · <City> time" heading; past programs → catch-up. Review + runtime APPROVE;
   review fixes verified (diff read + merged-tree check.sh 668 tests). **Live stream L1–L5 complete.**
