@@ -13,13 +13,14 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 
 ## Currently in flight
 - #4 L2 program on air — PR #47 in review + runtime check
-- **v0.3.0 system verification: PASS_WITH_NOTES** (12/12 journeys, 85/85 stations, upgrade from v0.2.0 OK, no plugin
-  errors). D-1 (medium, Material regression from L4: station tiles have no Play now/Next/Append) → fix before release
-  (L4-fix, branch fix/L4-material-station-play). Then CHANGELOG + bump → v0.3.0. O4/D5 held until then.
+- **v0.3.0 release** in progress: system verification PASS_WITH_NOTES (12/12 journeys, 85/85 stations, upgrade OK);
+  D-1 fixed in #61 (squash 1e40eb3, station rows type playlist; orchestrator spot-checked JSON-RPC add/browse);
+  CHANGELOG + repo.xml desc (4e5c735), bump (54320bb) → Release workflow run 40040776497. Next: install-from-GitHub
+  check, then merge O4 (#57), M4 (#60), D5 (#58 after re-review).
 - #19 O4 episode extras — PR #57 APPROVED + review fixes verified (head e6b6886); merge after v0.3.0
 - #59 M4 Latest episodes stable after unfollow — PR #60 APPROVED; small test fixes in progress; merge after v0.3.0
-- #23 D5 audiobook chapters — PR #58 REQUEST_CHANGES (isAudiobook false positives on restricted podcasts e.g. Bluey Listen
-  Along → add an Episodes list for them; seenAt from fetch time; /radio/geo/ geo message; tests) — implementer fixing
+- #23 D5 audiobook chapters — PR #58 fixes pushed (8885d44: Episodes list for restricted podcasts, seenAt via API `at`,
+  /radio/geo/ geo rule, tests) — focused re-review
 - Queued (cap 3): F6, O8, M3, D8, then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
