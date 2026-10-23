@@ -4,15 +4,18 @@
 #   * the top-level "My ABC listen" item (exact keys, weight, menuWeights, last among the hooks' items);
 #   * My ABC listen: the empty state (one instructional text item), "Latest episodes" and
 #     "Followed programs (N)" (N counts follows, not tombstones; both rows stay while only
-#     tombstones are left); Followed programs as OnDemand->programItem rows in follow order, an
-#     unfollowed program keeping its row for 30 min;
+#     tombstones are left, and Latest episodes lists the tombstones' episodes); Followed programs as
+#     OnDemand->programItem rows in follow order, an unfollowed program keeping its row for 30 min;
 #   * Latest episodes over three routed programs: merge order (date, then program, then id; undated
 #     last), one row per episode (its own program wins), the 50 cap, "<program>: " name/line1
 #     prefixes with the meta-cache title untouched, O2's programTitle rule, at most 4 programs in
 #     flight, a failing program skipped, all failing -> LOAD_FAILED, nothing -> NO_EPISODES, the
-#     25 s deadline (late results ignored), the 15 min cache (no request on a hit; a follow starts a
-#     new list; an unfollowed program's episodes drop out), exactly one callback (also when LMS's
-#     callback dies);
+#     25 s deadline (late results ignored), the 15 min cache (a hit starts no fetch and serves the
+#     same cache entry; a follow starts a new list; an unfollow or a re-follow within 30 min keeps
+#     it), exactly one callback (also when LMS's callback dies). Cache hits are told from rebuilds
+#     by Latest's fetch starts (a spy on Programs::episodes at Latest's page size) and by a marker
+#     planted in the cached list, never by HTTP requests: O2 caches the program pages (6 h) and
+#     episode lists (15 min), so a rebuild makes none;
 #   * the program-menu provider (OnDemand's registry): two follow rows from isFollowed (Follow + hint
 #     text, or "✓ Following" text + Unfollow), explicit op, [] without a path, exactly one callback;
 #     through OnDemand's real program menu;
@@ -24,6 +27,15 @@
 #     (the reviewer's sequence: two programs whose menus share a layout, the first unfollowed) and
 #     after a new follow (one that would sort first A-Z), every id from before opens the same row
 #     and never changes the follows; a re-follow within 30 min restores the follows exactly;
+#   * M4 (#59), stale item ids through My ABC listen -> Latest episodes -> episode -> "More from
+#     <program>" -> program menu (O4's row; until O4 is in, the episode menu is wrapped to add it
+#     by O4's rule): follow A, B, C, unfollow B there, then every id from before leads to the same
+#     episode, the same More from and the same rows (only B's own follow rows changed state), the
+#     repeated Unfollow id lands on B's hint text (a no-op), and no id ever changes the follows; a
+#     re-follow there restores B in place; the cached list (marker) is served throughout and no
+#     fetch starts. Latest keeps B's episodes in place for 30 min, also when the 15 min cache
+#     expires meanwhile: B's tombstone is fetched too, the rebuilt rows are exactly the old ones
+#     (programTitle included) and every id re-walks to the same rows; then they leave;
 #   * the song-info provider: the follow rows only for episode URLs whose meta-cache entry has a path
 #     under /programs/ or /audiobooks/ and a programTitle; the named labels follow the state; undef
 #     for live (even with a meta entry under the live id) and foreign URLs; no HTTP; an exception
@@ -114,6 +126,7 @@ sub fresh {
 	Slim::Web::Settings->reset;
 	Plugins::ABCListen::API::_reset();
 	Plugins::ABCListen::OnDemand::_resetProviders();
+	reset_latest_fetches();
 	%{ prefs() } = %{ Slim::Utils::Prefs::Namespace->new('plugin.abclisten') };
 	$MY->init();
 	setTime($T0);
@@ -183,6 +196,42 @@ sub check_names {
 
 sub program_requests { grep {m{/_next/data/.*/(?:listen|triplej)/programs/}} map { $_->{url} } requests() }
 sub episode_requests { grep {/episodesWithSegments/} map { $_->{url} } requests() }
+
+# Latest's fetch starts: the collection id of every Programs::episodes call made with Latest's page
+# size (MyABC::LATEST_PER_PROGRAM; program menus ask for 50), counted at the call, before any cache.
+# O2 caches each program's page (6 h) and episode list (15 min), so a Latest list built again makes
+# no HTTP request: HTTP requests can't tell a Latest cache hit from a rebuild; fetch starts can.
+# latest_fetches() -> the ids (list) or how many (scalar); fresh() resets them.
+my @LATEST_FETCHES;
+{
+	no warnings 'redefine';
+	my $episodes = \&Plugins::ABCListen::Programs::episodes;
+	*Plugins::ABCListen::Programs::episodes = sub {
+		push @LATEST_FETCHES, $_[0] if defined $_[2] && $_[2] == Plugins::ABCListen::MyABC::LATEST_PER_PROGRAM;
+		goto &$episodes;
+	};
+}
+
+sub latest_fetches       { return @LATEST_FETCHES }
+sub reset_latest_fetches { @LATEST_FETCHES = (); return }
+
+sub _cache { Slim::Utils::Cache->new( Plugins::ABCListen::Util::CACHE_NAMESPACE ) }
+
+# Plant a marker in every ref of the Latest list cached under the key of every entry (followed
+# programs and tombstones). Call it in the fake-clock second the list was built, so the entry keeps
+# its expiry. A row served from that cache entry carries the marker in its passthrough; a list built
+# again (a new key, a dropped entry, a refresh) does not. Returns the number of refs marked.
+sub plant_marker {
+	my $key    = Plugins::ABCListen::MyABC::_latestKey( [ $F->listWithUnfollowed ] );
+	my $cached = _cache()->get($key);
+	return 0 unless ref $cached eq 'ARRAY' && @$cached;
+	$_->{episode}->{m4Marker} = 1 for @$cached;
+	_cache()->set( $key, $cached, Plugins::ABCListen::MyABC::LATEST_TTL );
+	return scalar @$cached;
+}
+
+# How many rows carry the marker (served from the marked cache entry).
+sub marked { my $items = shift; return scalar grep { ref $_->{passthrough} eq 'ARRAY' && ref $_->{passthrough}->[0] eq 'HASH' && $_->{passthrough}->[0]->{m4Marker} } @{ $items || [] } }
 
 sub warnings_logged { map { $_->{message} } grep { $_->{level} eq 'WARN' } Slim::Utils::Log->messages( category => 'plugin.abclisten' ) }
 sub errors_logged   { map { $_->{message} } grep { $_->{level} eq 'ERROR' } Slim::Utils::Log->messages( category => 'plugin.abclisten' ) }
@@ -315,11 +364,16 @@ subtest 'My ABC listen with follows: Latest episodes, Followed programs (N)' => 
 	is( items_of( feed( $MY_ABC, undef ) )->[1]->{name}, 'Followed programs (2)', 'the count follows the list (a tombstone is not counted)' );
 
 	$F->unfollow($_) for $SCIENCE, $CLASSIC;
-	is_deeply( names( items_of( feed( $MY_ABC, undef ) ) ), [ 'Latest episodes', 'Followed programs (0)' ], 'only tombstones left: both rows stay (ids into Followed programs still work)' );
-	is_deeply( items_of( feed( $LATEST, undef ) ), [ text_item($HELP) ], '... Latest episodes: the help text (tombstones ignored)' );
+	is_deeply( names( items_of( feed( $MY_ABC, undef ) ) ), [ 'Latest episodes', 'Followed programs (0)' ], 'only tombstones left: both rows stay (ids into Followed programs and Latest episodes still work)' );
+	is( scalar requests(), 0, 'no network access for My ABC listen' );
+
+	route_three();
+	my %programs = map { ( $_->{name} =~ /\A([^:]+):/ )[0] => 1 } @{ items_of( feed( $LATEST, undef ) ) };
+	is_deeply( [ sort keys %programs ], [ 'Classic Drive', 'Hack', 'The Science Show' ], '... Latest episodes: the unfollowed programs\' episodes until their tombstones expire (M4)' );
+
 	advanceTime(1800);
 	is_deeply( items_of( feed( $MY_ABC, undef ) ), [ text_item($HELP) ], '30 min later: the help text' );
-	is( scalar requests(), 0, 'no network access' );
+	is_deeply( items_of( feed( $LATEST, undef ) ), [ text_item($HELP) ], '... and Latest episodes (a stale id): the help text' );
 };
 
 subtest 'Followed programs: OnDemand->programItem rows in follow order; an unfollowed program keeps its row 30 min' => sub {
@@ -504,8 +558,8 @@ subtest 'Latest episodes: a failing program is skipped (WARN); all failing -> LO
 	is_deeply( [ sort keys %{ { map { ( $_->{name} =~ /\A([^:]+):/ )[0] => 1 } @$items } } ], ['The Science Show'], 'the program that answered is shown' );
 	is( scalar @$items, 5, 'its five episodes' );
 	my @warnings = warnings_logged();
-	ok( ( grep {m{skipped the followed program Classic Drive \(/listen/programs/classic-drive\)}} @warnings ), 'Classic Drive (404) skipped, logged at WARN' );
-	ok( ( grep {m{skipped the followed program Hack \(/triplej/programs/hack\)}} @warnings ),           'Hack (episodes timed out) skipped, logged at WARN' );
+	ok( ( grep {m{skipped the program Classic Drive \(/listen/programs/classic-drive\)}} @warnings ), 'Classic Drive (404) skipped, logged at WARN' );
+	ok( ( grep {m{skipped the program Hack \(/triplej/programs/hack\)}} @warnings ),           'Hack (episodes timed out) skipped, logged at WARN' );
 
 	fresh();
 	follow_three();
@@ -513,7 +567,7 @@ subtest 'Latest episodes: a failing program is skipped (WARN); all failing -> LO
 	$c = feed( $LATEST, undef );
 	is( $c->count, 1, 'all failing: one callback' );
 	is_deeply( items_of($c), [ text_item($LOAD_FAILED) ], 'all failing: one LOAD_FAILED text item' );
-	is( scalar( grep {/skipped the followed program/} warnings_logged() ), 3, 'three WARNs' );
+	is( scalar( grep {/skipped the program/} warnings_logged() ), 3, 'three WARNs' );
 
 	feed( $LATEST, undef );
 	ok( scalar( program_requests() ) > 3, 'LOAD_FAILED is not cached: the next open requests again' );
@@ -552,7 +606,7 @@ subtest 'Latest episodes: the 25 s deadline answers with what has arrived; late 
 	my $items = items_of($c);
 	is( scalar @$items, 5, 'with The Science Show\'s five rows' );
 	ok( !( grep { $_->{name} !~ /\AThe Science Show: / } @$items ), 'only The Science Show' );
-	ok( ( grep {/answered after 25 s without 2 of 3 followed programs/} warnings_logged() ), 'WARN: how many programs were left out' );
+	ok( ( grep {/answered after 25 s without 2 of 3 programs/} warnings_logged() ), 'WARN: how many programs were left out' );
 
 	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
 	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
@@ -572,42 +626,65 @@ subtest 'Latest episodes: the 25 s deadline answers with what has arrived; late 
 	is( $c->count, 1, 'still one answer' );
 };
 
-subtest 'Latest episodes: cached 15 min; a cache hit makes no request; a follow starts a new list' => sub {
+subtest 'Latest episodes: cached 15 min; a cache hit starts no fetch; a follow starts a new list, an unfollow keeps it' => sub {
 	fresh();
 	route_three();
 	follow_three();
+	my $gen1 = '/listen/programs/gen-1';
 
+	# cache hits are told apart from rebuilds by Latest's fetch starts and by a marker planted in the
+	# cached list, not by HTTP requests (O2's own caches answer a rebuild without any)
 	my $first = items_of( feed( $LATEST, undef ) );
+	is_deeply( [ sort( latest_fetches() ) ], [qw(2885458 90000102 90000202)], 'first open: one fetch per program' );
 	my $count = scalar requests();
 
 	my $second = items_of( feed( $LATEST, undef ) );
-	is( scalar requests(), $count, 'second open: no HTTP request' );
+	is( scalar( latest_fetches() ), 3, 'second open: no fetch started (a Latest cache hit)' );
+	is( scalar requests(), $count, '... and no HTTP request' );
 	is_deeply( $second, $first, 'the same rows' );
 
-	my $client = ABCListenTest::FakeClient->new('00:00:00:00:00:01');
-	is_deeply( names( items_of( feed( $LATEST, $client ) ) ), names($first), 'the same rows for a player (server-wide)' );
-	is( scalar requests(), $count, '... from the cache' );
+	ok( plant_marker(), 'a marker planted in the cached list' );
+	my $client    = ABCListenTest::FakeClient->new('00:00:00:00:00:01');
+	my $forPlayer = items_of( feed( $LATEST, $client ) );
+	is_deeply( names($forPlayer), names($first), 'the same rows for a player (server-wide)' );
+	is( marked($forPlayer), scalar @$first, '... from the same cache entry (every row has the marker)' );
+	is( scalar( latest_fetches() ), 3, '... no fetch started' );
 
 	route_generated(1);
-	$F->follow( { title => 'Generated 1', path => '/listen/programs/gen-1' } );
+	$F->follow( { title => 'Generated 1', path => $gen1 } );
 	my $third = items_of( feed( $LATEST, undef ) );
-	ok( scalar requests() > $count, 'after a follow: requests again (a new cache key)' );
+	is_deeply( [ sort( ( latest_fetches() )[ 3 .. 6 ] ) ], [qw(2885458 90000102 90000202 91000001)], 'after a follow: a new list (a new cache key), the four programs fetched' );
+	is( marked($third), 0, '... built again (no marker)' );
 	ok( ( grep { $_->{name} =~ /\AGenerated 1: / } @$third ), 'and the new program\'s episodes are in' );
 
-	$F->unfollow('/listen/programs/gen-1');
-	$count = scalar requests();
-	is_deeply( names( items_of( feed( $LATEST, undef ) ) ), names($first), 'after the unfollow: the earlier list (the tombstone is ignored: its episodes drop out)' );
-	is( scalar requests(), $count, '... still cached' );
+	ok( plant_marker(), 'a marker planted in the new cached list' );
+	$F->unfollow($gen1);
+	my $unfollowed = items_of( feed( $LATEST, undef ) );
+	is_deeply( names($unfollowed), names($third), 'after the unfollow: the same list (M4: the tombstone keeps its episodes in place)' );
+	is( marked($unfollowed), scalar @$third, '... the same cache entry (the same key): every row has the marker' );
+	is( scalar( latest_fetches() ), 7, '... no fetch started' );
+
+	$F->follow( { title => 'Generated 1', path => $gen1 } );
+	my $refollowed = items_of( feed( $LATEST, undef ) );
+	is_deeply( names($refollowed), names($third), 'a re-follow within 30 min: the same list' );
+	is( marked($refollowed), scalar @$third, '... the same cache entry' );
+	is( scalar( latest_fetches() ), 7, '... no fetch started' );
+	$F->unfollow($gen1);
 
 	advanceTime(901);
-	feed( $LATEST, undef );
-	ok( scalar requests() > $count, 'after 15 min: requested again' );
+	my $refreshed = items_of( feed( $LATEST, undef ) );
+	is_deeply( [ sort( ( latest_fetches() )[ 7 .. 10 ] ) ], [qw(2885458 90000102 90000202 91000001)], 'after 15 min: fetched again, gen-1\'s tombstone included' );
+	is( scalar( latest_fetches() ), 11, '... once each' );
+	is( marked($refreshed), 0, '... a new list (no marker)' );
+	ok( ( grep { $_->{name} =~ /\AGenerated 1: / } @$refreshed ), '... gen-1\'s episodes still in (its tombstone is 901 s old)' );
 
-	my $cache = Slim::Utils::Cache->new( Plugins::ABCListen::Util::CACHE_NAMESPACE );
-	my $cached = $cache->get( Plugins::ABCListen::MyABC::_latestKey( [ $F->list ] ) );
-	ok( ref $cached eq 'ARRAY' && !( grep { ref $_->{episode} ne 'HASH' } @$cached ), 'the cache holds plain episode refs' );
+	my $cached = _cache()->get( Plugins::ABCListen::MyABC::_latestKey( [ $F->listWithUnfollowed ] ) );
+	ok( ref $cached eq 'ARRAY' && !( grep { ref $_->{episode} ne 'HASH' } @$cached ), 'the cache holds plain episode refs (keyed on follows and tombstones)' );
 	my $dump = JSON::PP->new->allow_unknown->canonical->encode($cached);
 	unlike( $dump, qr/CODE/, '... no code refs' );
+
+	advanceTime(900);    # 1801 s after the unfollow
+	is_deeply( names( items_of( feed( $LATEST, undef ) ) ), names($first), '30 min after the unfollow: the list without it' );
 };
 
 subtest 'Latest episodes: exactly one callback when LMS\'s callback dies' => sub {
@@ -1010,6 +1087,229 @@ subtest 'stale ids, Followed programs: follow a new program, then every id from 
 	# the stale Unfollow id of the first row: still Classic Drive's, and only it
 	is_deeply( names( open_id( $my, 1, 0, $u ) ), ['No longer following Classic Drive'], "the stale id 1.0.$u: Unfollow \"Classic Drive\", as when it was issued" );
 	ok( $F->isFollowed($HACK) && $F->isFollowed('/listen/programs/atlas'), '... Hack and Atlas still followed' );
+};
+
+# ---------------------------------------------------------------------------
+# Stale ids through Latest episodes -> episode -> "More from <program>" -> program menu (M4, #59)
+# ---------------------------------------------------------------------------
+
+# O4 adds "More from <program>" to the episode menu: a programItem row for the episode's program.
+# Until O4 is in, $code runs with the episode menu wrapped to append the same row by O4's rule (the
+# program path Follow::programPathFor(episode path), the episode's programTitle, programId and
+# programImage, name "More from <title>"); when the menu already has a program row (O4's own),
+# nothing is added. Every id is re-walked from the top, as LMS does (open_id).
+sub with_more_from {
+	my $code = shift;
+	my $orig = \&Plugins::ABCListen::OnDemand::_episodeMenu;
+
+	no warnings 'redefine';
+	local *Plugins::ABCListen::OnDemand::_episodeMenu = sub {
+		my ( $client, $cb, $args, $episode ) = @_;
+		$orig->( $client, sub {
+			my ( $result, @rest ) = @_;
+			my $items = ref $result eq 'HASH' ? $result->{items} : undef;
+			my $path  = ref $episode eq 'HASH' ? $F->programPathFor( $episode->{path} ) : undef;
+
+			if ( ref $items eq 'ARRAY' && !( grep { ref $_->{url} eq 'CODE' && $_->{url} == $PROGRAM } @$items ) && defined $path && defined $episode->{programTitle} ) {
+				my %program = ( path => $path, title => $episode->{programTitle} );
+				$program{id}    = $episode->{programId}    if defined $episode->{programId};
+				$program{image} = $episode->{programImage} if defined $episode->{programImage};
+
+				my $more = Plugins::ABCListen::OnDemand->programItem( $client, \%program );
+				$more->{name} = $more->{line1} = "More from $program{title}";
+				$result = { %$result, items => [ @$items, $more ] };
+			}
+
+			$cb->( $result, @rest );
+		}, $args, $episode );
+	};
+
+	return $code->();
+}
+
+# The index of the "More from" row (O4's, or with_more_from's) in an episode menu.
+sub more_from_index {
+	my $items = shift;
+	my @found = grep { ref $items->[$_]->{url} eq 'CODE' && $items->[$_]->{url} == $PROGRAM } 0 .. $#$items;
+	return $found[0];
+}
+
+# Every id a client can hold into Latest episodes, as index paths from My ABC listen: [0, n] per
+# episode row, [0, n, m] per row of its episode menu that opens ("More from"), and [0, n, m, k] per
+# row of that program menu that opens (Follow / Unfollow, episodes, More episodes).
+sub latest_ids {
+	my $my = shift;
+	my @ids;
+	for my $n ( openable( open_id( $my, 0 ) ) ) {
+		push @ids, [ 0, $n ];
+		for my $m ( openable( open_id( $my, 0, $n ) ) ) {
+			push @ids, [ 0, $n, $m ], map { [ 0, $n, $m, $_ ] } openable( open_id( $my, 0, $n, $m ) );
+		}
+	}
+	return @ids;
+}
+
+# After B (Classic Drive) was unfollowed: every id from before (\%was: id -> row name) leads to
+# the same row now, except B's Unfollow rows, which are B's hint text (B is not followed).
+sub check_ids_after_unfollow {
+	my ( $my, $ids, $was, $when ) = @_;
+	for my $id (@$ids) {
+		my $now  = row_at( $my, @$id );
+		my $then = $was->{ id_of($id) };
+		if ( $then eq 'Unfollow "Classic Drive"' ) {
+			is( $now, $HINT_ROW->{name}, "$when: id " . id_of($id) . ': B\'s Unfollow row is now B\'s hint text (B not followed)' );
+		}
+		else {
+			is( $now, $then, "$when: id " . id_of($id) . " still leads to $then" );
+		}
+	}
+	return;
+}
+
+sub program_of { my $name = shift; return defined $name && $name =~ /\A([^:]+): / ? $1 : undef }
+
+sub route_latest_and_menus {
+	route_three();
+	route_program_menus();
+	route( qr{\Q$EPS\E\?collectionId=2885458&offset=0&size=50\z}, file => 'myabc/bff-episodesWithSegments-scienceshow-latest.synthetic.json', headers => $JSON_TYPE );
+}
+
+subtest 'stale ids, Latest -> episode -> More from: unfollow B there; every id from before -> the same programs; the repeated Unfollow id is a no-op on B' => sub {
+	fresh();
+	route_latest_and_menus();
+	follow_three();    # A = The Science Show, B = Classic Drive, C = Hack
+	my $my = sub { items_of( feed( $MY_ABC, undef ) ) };
+
+	with_more_from( sub {
+		my $latest = open_id( $my, 0 );
+		my @before = @{ plays($latest) };
+		is_deeply( [ map { program_of( $_->{name} ) } @$latest[ 0 .. 2 ] ], [ 'The Science Show', 'Classic Drive', 'Hack' ], 'Latest episodes: A, B, C first' );
+
+		# B's first row, its More from row, and B's Unfollow row in that program menu
+		my ($n) = grep { ( program_of( $latest->[$_]->{name} ) // '' ) eq 'Classic Drive' } 0 .. $#$latest;
+		my $m = more_from_index( open_id( $my, 0, $n ) );
+		ok( defined $m, "row $n (Classic Drive) has a More from row at $m" );
+		is( row_at( $my, 0, $n, $m ), 'More from Classic Drive', '... More from Classic Drive' );
+		my $u = op_index( open_id( $my, 0, $n, $m ), 'unfollow' );
+		is( row_at( $my, 0, $n, $m, $u ), 'Unfollow "Classic Drive"', "... whose menu has Unfollow \"Classic Drive\" at $u" );
+
+		# the trap the fix closes: without B's rows, row n is Hack's, with More from at the same index
+		# and Unfollow "Hack" at the same index in Hack's menu
+		my ($h) = grep { ( program_of( $latest->[$_]->{name} ) // '' ) eq 'Hack' } 0 .. $#$latest;
+		is( more_from_index( open_id( $my, 0, $h ) ), $m, "Hack's row $h: More from at $m too" );
+		is( row_at( $my, 0, $h, $m, $u ), 'Unfollow "Hack"', "... and Unfollow \"Hack\" at $u (a moved row would hit it)" );
+
+		my @ids = latest_ids($my);
+		my %was = map { id_of($_) => row_at( $my, @$_ ) } @ids;
+		is( scalar( latest_fetches() ), 3, 'the whole walk fetched each program once (every other open was a Latest cache hit)' );
+
+		# a marker in the cached list: every row served from that same cache entry carries it
+		is( plant_marker(), scalar @before, 'a marker planted in every ref of the cached list' );
+
+		# unfollow B through Latest episodes -> episode -> More from
+		is_deeply( names( open_id( $my, 0, $n, $m, $u ) ), ['No longer following Classic Drive'], "0.$n.$m.$u: No longer following Classic Drive" );
+		ok( !$F->isFollowed($CLASSIC), 'B unfollowed' );
+		ok( $F->isFollowed($SCIENCE) && $F->isFollowed($HACK), 'A and C still followed' );
+		my $stored = stored_follows();
+
+		my $now = open_id( $my, 0 );
+		is_deeply( plays($now), \@before, 'Latest episodes: the same rows in the same order (B\'s episodes kept)' );
+		is( marked($now), scalar @before, '... served from the same cache entry: the marker is on every row (the key did not change, nothing dropped it)' );
+		is( scalar( latest_fetches() ), 3, '... and no fetch was started' );
+
+		# every id from before leads to the same row; only B's own follow rows changed state
+		check_ids_after_unfollow( $my, \@ids, \%was, 'after the unfollow' );
+
+		# the repeated Unfollow id: B's hint text row (a no-op), never A's or C's Unfollow
+		is_deeply( open_id( $my, 0, $n, $m, $u ), $HINT_ROW, "the repeated Unfollow id 0.$n.$m.$u: B's hint text row, a no-op" );
+		is( stored_follows(), $stored, '... the follows are unchanged' );
+
+		# every other id from before: the same rows, and none changes the follows
+		for my $id (@ids) {
+			my $now = row_at( $my, @$id );
+			if ( is_action_name($now) && $now eq $was{ id_of($id) } ) {
+				pass( 'id ' . id_of($id) . " is still $now (not stale, not re-opened)" );
+				next;
+			}
+			open_id( $my, @$id );
+			is( stored_follows(), $stored, 'stale id ' . id_of($id) . " (was $was{ id_of($id) }): the follows are unchanged" );
+		}
+		ok( !$F->isFollowed($CLASSIC) && $F->isFollowed($SCIENCE) && $F->isFollowed($HACK), 'after every stale id: only B unfollowed' );
+
+		# a re-follow from the same place within 30 min: the same list, B followed again in place
+		my $f = op_index( open_id( $my, 0, $n, $m ), 'follow' );
+		is( $f, $u - 1, "B's menu now offers Follow at $f" );
+		is_deeply( names( open_id( $my, 0, $n, $m, $f ) ), ['Following Classic Drive'], 'Follow from the same place: following Classic Drive' );
+		is_deeply( [ map { $_->{path} } $F->list ], [ $SCIENCE, $CLASSIC, $HACK ], '... in its place' );
+		my $end = open_id( $my, 0 );
+		is_deeply( plays($end), \@before, '... and Latest episodes is unchanged' );
+		is( marked($end), scalar @before, 'after every stale id and the re-follow: still the same cache entry (the marker)' );
+		is( scalar( latest_fetches() ), 3, '... and no fetch was started at all' );
+	} );
+};
+
+subtest 'Latest after an unfollow: B\'s episodes stay in place for 30 min (also across the 15 min refresh), then leave' => sub {
+	fresh();
+	route_latest_and_menus();
+	follow_three();
+	my $my = sub { items_of( feed( $MY_ABC, undef ) ) };
+
+	my $latest = items_of( feed( $LATEST, undef ) );
+	my @before = @{ plays($latest) };
+	my @bRows  = grep { ( program_of( $latest->[$_]->{name} ) // '' ) eq 'Classic Drive' } 0 .. $#$latest;
+	ok( scalar @bRows, 'Classic Drive (B) has rows: ' . join( ', ', @bRows ) );
+	my $key = Plugins::ABCListen::MyABC::_latestKey( [ $F->listWithUnfollowed ] );
+	is( ref _cache()->get($key), 'ARRAY', 'cached under the key of every entry, tombstones included' );
+	is_deeply( [ map { $_->{passthrough}->[0]->{programTitle} } @$latest[@bRows] ], [ ('Classic Drive') x @bRows ], 'B\'s own episodes carry programTitle (More from needs it)' );
+
+	# every id through Latest -> episode -> More from -> program menu, and the row it leads to
+	my ( @ids, %was );
+	with_more_from( sub {
+		@ids = latest_ids($my);
+		%was = map { id_of($_) => row_at( $my, @$_ ) } @ids;
+	} );
+	ok( ( grep { ( $was{$_} // '' ) eq 'More from Classic Drive' } keys %was ), 'ids into B\'s program menu through More from' );
+	is( plant_marker(), scalar @before, 'a marker planted in every ref of the cached list' );
+	is( scalar( latest_fetches() ), 3, 'so far: one fetch per program' );
+
+	$F->unfollow($CLASSIC);
+	my $unfollowed = items_of( feed( $LATEST, undef ) );
+	is_deeply( plays($unfollowed), \@before, 'unfollowed: the same rows' );
+	is( marked($unfollowed), scalar @before, '... from the same cache entry (the marker): an unfollow keeps the cache key' );
+	is( scalar( latest_fetches() ), 3, '... no fetch started' );
+	is( _cache()->get( Plugins::ABCListen::MyABC::_latestKey( [ $F->list ] ) ), undef, '... (no list was built under a key of the followed programs only)' );
+
+	advanceTime(901);
+	is( _cache()->get($key), undef, '15 min later: the cached list has expired' );
+	my $rebuilt = items_of( feed( $LATEST, undef ) );
+	is( ref _cache()->get($key), 'ARRAY', '... and is built again under the same key' );
+	my @fetched = latest_fetches();
+	is_deeply( [ sort @fetched[ 3 .. $#fetched ] ], [qw(2885458 90000102 90000202)], '... fetched from A, B (the tombstone) and C, once each' );
+	is( marked($rebuilt), 0, '... a new list (no marker)' );
+	is_deeply( plays($rebuilt), \@before, '... with B\'s episodes still in their places (the tombstone is fetched too)' );
+	is_deeply( $rebuilt, $latest, '... exactly the rows from before the unfollow (passthrough included: B\'s programTitle, programId, programImage)' );
+
+	# the rebuilt list, walked again: every id from before still leads to the same episode, its More
+	# from to the same program menu, and the same rows there (B's follow rows now offer Follow)
+	ok( plant_marker(), 'a marker planted in the rebuilt list' );
+	with_more_from( sub { check_ids_after_unfollow( $my, \@ids, \%was, 'after the 15 min rebuild' ) } );
+	is( scalar( latest_fetches() ), 6, '... the walk started no fetch' );
+
+	advanceTime(898);    # 1799 s after the unfollow
+	my $late = items_of( feed( $LATEST, undef ) );
+	is_deeply( plays($late), \@before, '1799 s after the unfollow: still the same rows' );
+	is( marked($late), scalar @before, '... from the cache entry built at 901 s (the marker)' );
+	is( scalar( latest_fetches() ), 6, '... no fetch started' );
+
+	advanceTime(1);      # 1800 s: the tombstone expires (the list cached at 901 s is still fresh)
+	is( ref _cache()->get($key), 'ARRAY', '1800 s: the list with B is still cached ...' );
+	my $after = items_of( feed( $LATEST, undef ) );
+	is( scalar( grep { ( program_of( $_->{name} ) // '' ) eq 'Classic Drive' } @$after ), 0, '30 min after the unfollow: no row from B any more' );
+	ok( !( grep { $_ eq '107300001' || $_ eq '107300003' || $_ eq '107300004' || $_ eq '107300005' } @{ plays($after) } ), '... B\'s own episodes are gone' );
+	is_deeply( [ map { $_->{name} } grep { ( $_->{play} || '' ) =~ /107300002\z/ } @$after ], ["Hack: Thu 15 Oct $ENDASH Classic Drive: Wednesday"], '... except the one C (Hack) lists itself, now as Hack\'s row' );
+	is_deeply( [ sort keys %{ { map { ( program_of( $_->{name} ) // '' ) => 1 } @$after } } ], [ 'Hack', 'The Science Show' ], '... A and C stay' );
+	is( ref _cache()->get( Plugins::ABCListen::MyABC::_latestKey( [ $F->list ] ) ), 'ARRAY', '... the new list is cached under the key of A and C (B\'s tombstone gone)' );
+	is( items_of( feed( $MY_ABC, undef ) )->[1]->{name}, 'Followed programs (2)', 'Followed programs (2)' );
 };
 
 # ---------------------------------------------------------------------------

@@ -15,7 +15,8 @@ package Plugins::ABCListen::Follow;
 #   refresh or a re-follow keeps its place. Nothing is ever sorted, so a follow never moves a row.
 #   A followed program has no unfollowedAt. An entry with unfollowedAt is a program unfollowed
 #   recently (a tombstone): not followed, but kept at its place for UNFOLLOW_TTL (30 min), so the
-#   Followed programs menu keeps its rows (LMS re-opens stale item ids by index; see MyABC.pm).
+#   Followed programs and Latest episodes menus keep their rows (LMS re-opens stale item ids by
+#   index; see MyABC.pm).
 #   Tombstones live in the pref itself, so they survive an LMS restart; they expire 30 min after
 #   the unfollow: reads ignore them from then on, and the next write drops them.
 #   Every write sets a fresh array of fresh hashes (never the stored arrayref changed in place), so
@@ -41,7 +42,9 @@ package Plugins::ABCListen::Follow;
 #   isFollowed($path) -> 1 | 0 (a tombstone is not followed).
 #   list() -> copies of the followed entries, in follow order (no tombstones).
 #   listWithUnfollowed() -> copies of the followed entries and of the tombstones (with their
-#       unfollowedAt), in follow order: each tombstone at its place. For the Followed programs menu.
+#       unfollowedAt), in follow order: each tombstone at its place. For the Followed programs menu
+#       and Latest episodes (M4: an unfollowed program keeps its rows there until the tombstone
+#       expires).
 #   programPathFor($episodePath) -> program path | undef. Pure. The prefix of the canonical
 #       episode path up to and including the segment after the first /programs/ or /audiobooks/
 #       segment: '/listen/programs/scienceshow/<slug>/107266790' -> '/listen/programs/scienceshow',
