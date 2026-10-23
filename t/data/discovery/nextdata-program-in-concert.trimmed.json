@@ -1,0 +1,49 @@
+{
+  "pageProps": {
+    "programTemplate": "audio",
+    "webDistributionRestricted": true,
+    "programCollectionPrepared": null,
+    "latestEpisodePrepared": null,
+    "heroImageWithCTAPrepared": {
+      "heading": "In Concert",
+      "heroImagePrepared": {
+        "alt": "",
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/20a9fea5d4185ccf7ddcf2b1874eff51?impolicy=wcms_crop_resize&cropH=1080&cropW=1080&xPos=405&yPos=0&width=862&height=862",
+        "ratio": "1x1",
+        "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/20a9fea5d4185ccf7ddcf2b1874eff51?impolicy=wcms_crop_resize&cropH=1080&cropW=1080&xPos=398&yPos=0&width=160&height=160 160w",
+          "https://live-production.wcms.abc-cdn.net.au/20a9fea5d4185ccf7ddcf2b1874eff51?impolicy=wcms_crop_resize&cropH=1080&cropW=1080&xPos=405&yPos=0&width=862&height=862 862w"
+        ],
+        "width": "862",
+        "height": "862"
+      },
+      "uri": "coremedia://program/105919800",
+      "attributionLinksPrepared": [],
+      "canonicalURI": "/listen/programs/in-concert"
+    },
+    "heroDescriptionPrepared": {
+      "descriptionPrepared": {
+        "descriptor": {
+          "type": "tagname",
+          "key": "div",
+          "props": {},
+          "children": [
+            {
+              "type": "tagname",
+              "key": "@@standfirst",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "BBC In Concert is a special live music performance series from Radio 2 featuring some of the biggest names in music from across the years and genres."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "uri": "coremedia://program/105919800"
+    },
+    "presentersPrepared": []
+  }
+}

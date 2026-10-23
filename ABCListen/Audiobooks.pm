@@ -2,90 +2,114 @@ package Plugins::ABCListen::Audiobooks;
 
 # Audiobook chapters (D5, discovery stream): a "Chapters" link in every audiobook's program menu,
 # whichever route reached the book (Audiobooks, Kids listen -> Books for Kids, Home, Search,
-# Programs -> By type -> Audiobooks, My ABC listen).
+# Programs -> By type -> Audiobooks, My ABC listen), and an "Episodes" link for the other
+# restricted programs ABC's website lists no episodes for (podcasts such as Bluey Listen Along).
 #
 # ABC's website lists no chapters for its audiobooks (ai-state/research/abc-listen-api.md §6.1): a
 # book page has programTemplate 'audiobook' (or 'default'), webDistributionRestricted true and no
-# episode collection, and each chapter page redirects to the book. The chapters are in ABC's
-# Algolia index (contentType:audioepisode AND programID=<book id>, a numeric filter), with MP3
-# renditions under /geo-001/ that ABC's CDN serves only to Australian addresses. All chapters of a
-# book share one publication date, so the reading order is the ascending numeric id.
+# episode collection, and each chapter page redirects to the book. A few restricted podcasts look
+# the same, but with programTemplate 'audio' (Bluey Listen Along, Bluey Book Reads, Midsomer
+# Murders Mayhem, Odd Squadcast, In Concert, The Bomb on 2026-10-23). Their chapters / episodes
+# are in ABC's Algolia index (contentType:audioepisode AND programID=<id>, a numeric filter), with
+# MP3 renditions under /geo-001/ or /radio/geo/ (served only to Australian addresses) or, for some
+# classics, unrestricted /audio/ ones. All chapters of a book share one publication date, so the
+# reading order is the ascending numeric id; a podcast's episodes are listed newest first.
 #
 #   init
-#     Called from Plugins::ABCListen::Discover->init (so before MyABC's init: the Chapters link
-#     comes before M2's Follow rows). Registers _programMenuExtras with
+#     Called from Plugins::ABCListen::Discover->init (so before MyABC's init: the Chapters /
+#     Episodes link comes before M2's Follow rows). Registers _programMenuExtras with
 #     Plugins::ABCListen::OnDemand->registerProgramMenuProvider when OnDemand has that method
-#     (else a WARN line and no Chapters link). Never dies.
+#     (else a WARN line and no link). Never dies.
 #
 #   isAudiobook(\%program) -> 1 | 0                                      (pure; class method too)
 #     \%program is the program-menu provider input (O2, ai-state/streams.md contract 6):
 #     { %program row, id, title, template, restricted, episodeCollectionId }. True when
 #       - template is 'audiobook' (any case), or
-#       - restricted is true and there is no episodeCollectionId (books under /listen/programs/,
-#         such as Octonauts, have template 'default'), or
+#       - restricted is true, there is no episodeCollectionId and the template is not 'audio' (books
+#         under /listen/programs/, such as Octonauts, have template 'default'; restricted podcasts
+#         have 'audio'), or
 #       - no template was passed (fallback) and the canonical path is under /listen/audiobooks/,
 #         without an episodeCollectionId.
 #     A restricted program with an episode collection is not a book (its episodes are listed).
 #
-#   chapters($programId, $cb)                                             (class method too)
-#     Calls $cb EXACTLY ONCE with { items => [chapter refs] } or { error => TOKEN }
+#   isRestrictedProgram(\%program) -> 1 | 0                              (pure; class method too)
+#     True for a restricted program without an episode collection that is not an audiobook (in
+#     practice template 'audio': restricted podcasts). Its episodes come from the index too.
+#
+#   chapters($programId, $cb), episodes($programId, $cb)                   (class methods too)
+#     Call $cb EXACTLY ONCE with { items => [refs], fetchedAt => <epoch> } or { error => TOKEN }
 #     (PLUGIN_ABCLISTEN_RATE_LIMITED from API.pm, else PLUGIN_ABCLISTEN_LOAD_FAILED). A $cb that
-#     dies is logged, never called again. A cached answer calls back synchronously.
-#     - One API::algolia query: { query => '', hitsPerPage => 1000, filters =>
-#       'contentType:audioepisode AND programID=<id>', attributesToRetrieve => [objectID title
-#       canonicalURL duration dates mediaRenditions mediaDownloadStatus mediaStreamingStatus
-#       programTitle programID] }, opts { ttl => 86400, stale_ok => 1, timeout => 8 }: at most
-#       one query per book per day (API.pm caches by the canonical params, also across LMS
-#       restarts, coalesces identical queries in flight and enforces the plugin's hourly Algolia
-#       budget; over budget -> RATE_LIMITED without a request). On an error the last good list is
-#       served (stale_ok, kept 7 days).
+#     dies is logged, never called again; so is a second answer from the API. A cached answer
+#     calls back synchronously. chapters: ascending numeric id (reading order); episodes: newest
+#     first (publication date, then id, descending; undated last).
+#     - Both send the same API::algolia query (so they share one cache entry): { query => '',
+#       hitsPerPage => 1000, filters => 'contentType:audioepisode AND programID=<id>',
+#       attributesToRetrieve => [objectID title canonicalURL duration dates mediaRenditions
+#       mediaDownloadStatus mediaStreamingStatus programTitle programID] }, opts { ttl => 86400,
+#       stale_ok => 1, timeout => 8 }: at most one query per program per day (API.pm caches by the
+#       canonical params, also across LMS restarts, coalesces identical queries in flight and
+#       enforces the plugin's hourly Algolia budget; over budget -> RATE_LIMITED without a
+#       request). On an error the last good list is served (stale_ok, kept 7 days).
+#     - fetchedAt: when ABC answered (API.pm's info at), also for a cache hit or a last-good copy.
 #     - A $programId that isn't all digits: LOAD_FAILED without a request.
-#     - Chapter ref (the episode meta-cache shape, contract 3), every key only when known:
+#     - Ref (the episode meta-cache shape, contract 3), every key only when known:
 #         { id (digits of objectID coremedia://<audioepisode|audio|audiosegment>/<id>), docType
 #           (that type), title, programTitle, programId (programID), path (API::sitePath of
 #           canonicalURL), duration (s), date (dates.publicationDate, epoch),
 #           renditions => [ { url, mime (contentType), bitrate, fileSize (when given) } ],
 #           availableTo (dates.mediaStreamingAvailableTo), downloadAvailableTo
-#           (dates.mediaDownloadAvailableTo), seenAt (now) }
+#           (dates.mediaDownloadAvailableTo), seenAt (fetchedAt) }
 #       As D3 (Search.pm) seeds search hits: a missing or unparseable window end is stored as
 #       Episode.pm's open end (OPEN_END), never undef (the cache merge would keep an end O1 had
-#       closed); renditions, both window ends and seenAt come as one set, only when the hit has
-#       http(s) renditions and neither window opens later; seenAt only for a fresh answer, not
-#       for a stale (last good) one. Text is entity-decoded and trimmed.
+#       closed); renditions and both window ends come only when the hit has http(s) renditions and
+#       neither window opens later. seenAt is the fetch time, and only when the answer is not a
+#       stale (last good) copy and is younger than 6 h (SEEN_MAX_AGE, O1's freshness window): O1
+#       never trusts renditions older than that without asking ABC. Text is entity-decoded and
+#       trimmed.
 #     - Hits are skipped when not a hash or without a parseable objectID, hidden when
 #       mediaDownloadStatus and mediaStreamingStatus are both EXPIRED or NONE (any case; DQ4,
-#       PENDING and missing statuses are kept), each id once (the first hit wins), then sorted by
-#       numeric id, ascending (reading order).
-#     - nbHits above the hits returned (more than 1000 chapters): the hits returned are used and
-#       a WARN line is logged once per book per run.
-#     - A fresh answer also remembers the number of chapters for the provider (Slim::Utils::Cache
-#       namespace abclisten, key 'audiobooks:count:<id>', 24 h, written only when there is no
-#       entry or the number changed, so it expires with API.pm's cached query).
+#       PENDING and missing statuses are kept), each id once (the first hit wins).
+#     - nbHits above the hits returned (more than 1000): the hits returned are used and a WARN
+#       line is logged once per program per run.
+#     - A fresh answer also remembers how many it lists for the provider (Slim::Utils::Cache
+#       namespace abclisten, key 'audiobooks:count:<id>', { count, at => fetchedAt }, valid until
+#       24 h after fetchedAt, like API.pm's cached query).
 #
 #   _programMenuExtras($client, $program, $cb)   (O2 program-menu provider)
 #     Synchronous, no network I/O, never dies, calls $cb exactly once with an array ref:
-#     - not an audiobook (isAudiobook), or no numeric id (DEBUG line) -> [];
-#     - else one link: { name => 'Chapters (N)' (PLUGIN_ABCLISTEN_CHAPTERS_N, N from the count
-#       above, read only) or 'Chapters' (PLUGIN_ABCLISTEN_CHAPTERS), type => 'playlist',
-#       url => \&_chaptersFeed, passthrough => [ { id, title?, image? } ] }. type 'playlist' makes
-#       skins offer Play all / Add all (queued in reading order). No description (LMS menu rule 1).
+#     - neither an audiobook nor a restricted program, or no numeric id (DEBUG line) -> [];
+#     - known to list nothing (count 0, e.g. The Bomb): one PLUGIN_ABCLISTEN_NO_EPISODES text item,
+#       O2's own wording (O2 leaves that row out for restricted programs);
+#     - an audiobook: { name => 'Chapters (N)' (PLUGIN_ABCLISTEN_CHAPTERS_N, N from the count, read
+#       only) or 'Chapters' (PLUGIN_ABCLISTEN_CHAPTERS), type => 'playlist', url => \&_chaptersFeed,
+#       passthrough => [ { id, title?, image? } ] }; type 'playlist' makes skins offer Play all /
+#       Add all (queued in reading order);
+#     - a restricted program: { name => 'Episodes (N)' (PLUGIN_ABCLISTEN_EPISODES_N) or 'Episodes'
+#       (O2's PLUGIN_ABCLISTEN_EPISODES), type => 'link', url => \&_episodesFeed, passthrough as
+#       above }.
+#     No description on either (LMS menu rule 1).
 #
-#   _chaptersFeed($client, $cb, $args, \%book)   (the Chapters link)
-#     Calls $cb EXACTLY ONCE with { items => [...] }, within FEED_DEADLINE (12 s; later answers
-#     still warm the cache):
-#     - one row per chapter: Plugins::ABCListen::OnDemand->episodeItem($client, { %ref,
-#       programImage => book image, programTitle/programId from the book when the hit has none }),
-#       with name and line1 "<n>. <title>" (n = reading position, 1-based; the text carries it for
-#       non-visual clients); play => abclisten://episode/<id>, opening a row shows O2's episode
-#       page. episodeItem writes the meta cache; if it ever stops storing the seeded keys, they
-#       are written here (Util::setEpisodeMeta), so O1 plays a chapter without fetching a page;
-#     - no chapters: one PLUGIN_ABCLISTEN_NO_EPISODES text item;
+#   _chaptersFeed / _episodesFeed($client, $cb, $args, \%program)   (the two links)
+#     Call $cb EXACTLY ONCE with { items => [...] }, within FEED_DEADLINE (12 s; later answers
+#     still warm the caches):
+#     - one row per ref: Plugins::ABCListen::OnDemand->episodeItem($client, { %ref, programImage =>
+#       program image, programTitle/programId from the program when the hit has none }); chapters
+#       get name and line1 "<n>. <title>" (n = reading position, 1-based; the text carries it for
+#       non-visual clients), episodes keep episodeItem's "<date> – <title>". play =>
+#       abclisten://episode/<id>; opening a row shows O2's episode page. episodeItem writes the
+#       meta cache; if it ever stops storing the seeded keys, they are written here
+#       (Util::setEpisodeMeta), so O1 plays without fetching a page;
+#     - an older answer never overwrites newer audio data: when the meta cache's seenAt is not
+#       older than fetchedAt, or O1 closed the entry's windows (both ends equal, past) at or after
+#       fetchedAt, the ref's renditions, window ends and seenAt are not written;
+#     - nothing listed: one PLUGIN_ABCLISTEN_NO_EPISODES text item;
 #     - an error: one text item with the token's text (RATE_LIMITED or LOAD_FAILED);
 #     - a passthrough without a numeric id (a stale or malformed link), the deadline passing, or
 #       building the rows dying: one PLUGIN_ABCLISTEN_LOAD_FAILED text item.
 #
-# Owned by the discovery stream (D5). Outside this file D5 only adds the Audiobooks->init call to
-# Discover->init and the "# === D5 ===" strings section.
+# Owned by the discovery stream (D5). Outside this file D5 adds the Audiobooks->init call to
+# Discover->init, the "# === D5 ===" strings section and (sanctioned in review) the info at key in
+# API.pm and the /radio/geo/ path in Episode.pm's geo rule.
 
 use strict;
 use warnings;
@@ -101,10 +125,11 @@ use Plugins::ABCListen::API;
 use Plugins::ABCListen::OnDemand;
 use Plugins::ABCListen::Util;
 
-use constant CHAPTERS_TTL    => 86400;            # seconds: one Algolia query per book per day
+use constant INDEX_TTL       => 86400;            # seconds: one Algolia query per program per day
+use constant SEEN_MAX_AGE    => 6 * 3600;         # seconds: O1 trusts seeded renditions this long (= Episode.pm's)
 use constant MAX_HITS        => 1000;             # Algolia's hitsPerPage maximum
 use constant REQUEST_TIMEOUT => 8;                # seconds (a menu request, as Programs.pm's)
-use constant FEED_DEADLINE   => 12;               # seconds for the Chapters feed to answer
+use constant FEED_DEADLINE   => 12;               # seconds for a feed to answer
 use constant OPEN_END        => 4_102_444_800;    # an open window end in the episode meta cache (= Episode.pm's)
 
 use constant LOAD_FAILED  => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
@@ -112,6 +137,8 @@ use constant RATE_LIMITED => 'PLUGIN_ABCLISTEN_RATE_LIMITED';
 use constant NO_EPISODES  => 'PLUGIN_ABCLISTEN_NO_EPISODES';
 use constant CHAPTERS     => 'PLUGIN_ABCLISTEN_CHAPTERS';
 use constant CHAPTERS_N   => 'PLUGIN_ABCLISTEN_CHAPTERS_N';
+use constant EPISODES     => 'PLUGIN_ABCLISTEN_EPISODES';
+use constant EPISODES_N   => 'PLUGIN_ABCLISTEN_EPISODES_N';
 
 my @ATTRIBUTES = qw(objectID title canonicalURL duration dates mediaRenditions mediaDownloadStatus
 	mediaStreamingStatus programTitle programID);
@@ -122,9 +149,15 @@ my @SEED_KEYS = qw(renditions availableTo downloadAvailableTo seenAt);
 my %AUDIO_TYPE = map { $_ => 1 } qw(audioepisode audio audiosegment);
 my %GONE       = map { $_ => 1 } qw(EXPIRED NONE);
 
+# What each list is called in the logs, and its order.
+my %KIND = (
+	chapters => { what => 'chapters', sort => sub { $a->{id} <=> $b->{id} } },
+	episodes => { what => 'episodes', sort => sub { ( $b->{date} || 0 ) <=> ( $a->{date} || 0 ) || $b->{id} <=> $a->{id} } },
+);
+
 my $log = logger('plugin.abclisten');
 
-my %truncationWarned;    # book id => 1 once "more chapters than returned" was logged
+my %truncationWarned;    # program id => 1 once "more than returned" was logged
 
 # Forget the in-memory state (for tests).
 sub _reset { %truncationWarned = (); return }
@@ -135,7 +168,7 @@ sub init {
 			Plugins::ABCListen::OnDemand->registerProgramMenuProvider( \&_programMenuExtras );
 		}
 		else {
-			$log->warn('The ABC listen program menus have no provider registry: audiobooks get no Chapters item');
+			$log->warn('The ABC listen program menus have no provider registry: audiobooks get no Chapters item, restricted programs no Episodes item');
 		}
 		1;
 	} or $log->error( 'Could not add Chapters to the ABC listen audiobook menus: ' . ( $@ || 'unknown error' ) );
@@ -144,7 +177,7 @@ sub init {
 }
 
 # ---------------------------------------------------------------------------
-# Audiobook test
+# Which programs
 # ---------------------------------------------------------------------------
 
 sub isAudiobook {
@@ -153,12 +186,13 @@ sub isAudiobook {
 	return 0 unless ref $program eq 'HASH';
 
 	my $template = _text( $program->{template} );
-	return 1 if defined $template && lc $template eq 'audiobook';
+	$template = lc $template if defined $template;
+	return 1 if defined $template && $template eq 'audiobook';
 
-	my $hasCollection = defined $program->{episodeCollectionId} && !ref $program->{episodeCollectionId} && length $program->{episodeCollectionId};
-	return 0 if $hasCollection;
+	return 0 if _hasCollection($program);
 
-	return 1 if $program->{restricted};
+	# restricted without an episode list on the web: a book, unless it is an audio (podcast) program
+	return 1 if $program->{restricted} && !( defined $template && $template eq 'audio' );
 	return 0 if defined $template;
 
 	# no template: O2 didn't pass the program detail
@@ -166,16 +200,31 @@ sub isAudiobook {
 	return defined $path && $path =~ m{\A/listen/audiobooks/[^/]} ? 1 : 0;
 }
 
+sub isRestrictedProgram {
+	shift if _isClass( $_[0] );
+	my $program = shift;
+	return 0 unless ref $program eq 'HASH' && $program->{restricted} && !_hasCollection($program);
+	return isAudiobook($program) ? 0 : 1;
+}
+
+sub _hasCollection {
+	my $id = $_[0]->{episodeCollectionId};
+	return defined $id && !ref $id && length $id ? 1 : 0;
+}
+
 # ---------------------------------------------------------------------------
-# Chapters (data)
+# Chapters and episodes (data)
 # ---------------------------------------------------------------------------
 
-sub chapters {
-	shift if _isClass( $_[0] );
-	my ( $programId, $cb ) = @_;
+sub chapters { shift if _isClass( $_[0] ); _list( 'chapters', @_ ) }
+sub episodes { shift if _isClass( $_[0] ); _list( 'episodes', @_ ) }
+
+sub _list {
+	my ( $kind, $programId, $cb ) = @_;
+	my $what = $KIND{$kind}->{what};
 
 	if ( ref $cb ne 'CODE' ) {
-		$log->error('Audiobooks->chapters called without a callback');
+		$log->error("Audiobooks->$kind called without a callback");
 		return;
 	}
 
@@ -183,13 +232,13 @@ sub chapters {
 	my $answer  = sub {
 		my $result = shift;
 		return if $settled++;
-		eval { $cb->($result); 1 } or $log->error( 'Audiobook chapters: the callback died: ' . ( $@ || 'unknown error' ) );
+		eval { $cb->($result); 1 } or $log->error( "Program $what: the callback died: " . ( $@ || 'unknown error' ) );
 		return;
 	};
 
 	my $id = _digits($programId);
 	if ( !defined $id ) {
-		main::INFOLOG && $log->is_info && $log->info( 'Audiobook chapters: not a program id: ' . ( defined $programId ? "'$programId'" : 'undef' ) );
+		main::INFOLOG && $log->is_info && $log->info( "Program $what: not a program id: " . ( defined $programId ? "'$programId'" : 'undef' ) );
 		return $answer->( { error => LOAD_FAILED } );
 	}
 
@@ -198,23 +247,26 @@ sub chapters {
 			_query($id),
 			sub {
 				my ( $data, $info ) = @_;
-				my $stale = ref $info eq 'HASH' && $info->{stale} ? 1 : 0;
+				$info = {} unless ref $info eq 'HASH';
 
-				my $refs = eval { _chapterRefs( $id, $data, $stale ) };
+				my $stale = $info->{stale} ? 1 : 0;
+				my $at    = _isEpoch( $info->{at} ) ? $info->{at} + 0 : undef;
+
+				my $refs = eval { _refs( $kind, $id, $data, $at, $stale ) };
 				if ( ref $refs ne 'ARRAY' ) {
-					$log->error( "Audiobook $id chapters: " . ( $@ || 'unknown error' ) );
+					$log->error( "Program $id $what: " . ( $@ || 'unknown error' ) );
 					return $answer->( { error => LOAD_FAILED } );
 				}
 
-				_rememberCount( $id, scalar @$refs ) unless $stale;
-				$answer->( { items => $refs } );
+				_rememberCount( $id, scalar @$refs, $at ) unless $stale;
+				$answer->( { items => $refs, ( defined $at ? ( fetchedAt => $at ) : () ) } );
 			},
 			sub { $answer->( { error => _token(shift) } ) },
-			{ ttl => CHAPTERS_TTL, stale_ok => 1, timeout => REQUEST_TIMEOUT },
+			{ ttl => INDEX_TTL, stale_ok => 1, timeout => REQUEST_TIMEOUT },
 		);
 		1;
 	} or do {
-		$log->error( "Audiobook $id chapters: the search request failed: " . ( $@ || 'unknown error' ) );
+		$log->error( "Program $id $what: the search request failed: " . ( $@ || 'unknown error' ) );
 		$answer->( { error => LOAD_FAILED } );
 	};
 
@@ -231,35 +283,40 @@ sub _query {
 	};
 }
 
-# The Algolia response -> chapter refs in reading order (dies without a hits list).
-sub _chapterRefs {
-	my ( $id, $data, $stale ) = @_;
+# The Algolia response -> refs in the list's order (dies without a hits list).
+sub _refs {
+	my ( $kind, $id, $data, $at, $stale ) = @_;
 
 	die "the search response has no hits list\n" unless ref $data eq 'HASH' && ref $data->{hits} eq 'ARRAY';
 
-	my @hits = @{ $data->{hits} };
+	my $what  = $KIND{$kind}->{what};
+	my @hits  = @{ $data->{hits} };
 	my $total = _positive( $data->{nbHits} );
 	if ( $total && $total > @hits && !$truncationWarned{$id}++ ) {
-		$log->warn( "Audiobook $id: ABC's search index has $total chapters, listing the " . scalar(@hits) . ' it returned' );
+		$log->warn( "Program $id: ABC's search index has $total $what, listing the " . scalar(@hits) . ' it returned' );
 	}
 
 	my $now = time();
-	my ( @refs, %seen );
 
+	# seenAt vouches for the renditions: only a fresh answer's fetch time, while O1 would trust it
+	my $seenAt = !$stale && defined $at && $now - $at < SEEN_MAX_AGE ? $at : undef;
+
+	my ( @refs, %seen );
 	for my $hit ( grep { ref $_ eq 'HASH' } @hits ) {
-		my ( $type, $chapterId ) = Plugins::ABCListen::API::coreMediaRef( $hit->{objectID} );
+		my ( $type, $refId ) = Plugins::ABCListen::API::coreMediaRef( $hit->{objectID} );
 		next unless $type && $AUDIO_TYPE{$type};
 		next if _gone( $hit->{mediaDownloadStatus} ) && _gone( $hit->{mediaStreamingStatus} );
-		next if $seen{$chapterId}++;
+		next if $seen{$refId}++;
 
-		push @refs, _chapterRef( $hit, $type, $chapterId, $now, $stale );
+		push @refs, _ref( $hit, $type, $refId, $now, $seenAt );
 	}
 
-	return [ sort { $a->{id} <=> $b->{id} } @refs ];
+	my $order = $KIND{$kind}->{sort};
+	return [ sort $order @refs ];
 }
 
-sub _chapterRef {
-	my ( $hit, $type, $id, $now, $stale ) = @_;
+sub _ref {
+	my ( $hit, $type, $id, $now, $seenAt ) = @_;
 
 	my $dates = ref $hit->{dates} eq 'HASH' ? $hit->{dates} : {};
 
@@ -282,7 +339,7 @@ sub _chapterRef {
 		$ref{renditions}          = $renditions;
 		$ref{availableTo}         = _windowEnd( $dates->{mediaStreamingAvailableTo} );
 		$ref{downloadAvailableTo} = _windowEnd( $dates->{mediaDownloadAvailableTo} );
-		$ref{seenAt}              = $now unless $stale;
+		$ref{seenAt}              = $seenAt;
 	}
 
 	return { map { $_ => $ref{$_} } grep { defined $ref{$_} } keys %ref };
@@ -324,81 +381,100 @@ sub _token {
 }
 
 # ---------------------------------------------------------------------------
-# Chapter count (for the Chapters link; no network)
+# How many a program lists (for the links; no network)
 # ---------------------------------------------------------------------------
 
 sub _countKey { "audiobooks:count:$_[0]" }
 
 sub _cache { Slim::Utils::Cache->new( Plugins::ABCListen::Util::CACHE_NAMESPACE ) }
 
+# Remember the count of an answer fetched at $at until that answer is 24 h old.
 sub _rememberCount {
-	my ( $id, $count ) = @_;
+	my ( $id, $count, $at ) = @_;
+	$at = time() unless defined $at;
+
+	my $left = INDEX_TTL - ( time() - $at );
+	return unless $left > 0;
 
 	eval {
-		my $known = _cachedCount($id);
-		_cache()->set( _countKey($id), { count => $count }, CHAPTERS_TTL ) unless defined $known && $known == $count;
+		_cache()->set( _countKey($id), { count => $count, at => $at }, $left );
 		1;
-	} or $log->error( "Audiobook $id: couldn't cache the number of chapters: " . ( $@ || 'unknown error' ) );
+	} or $log->error( "Program $id: couldn't cache how many it lists: " . ( $@ || 'unknown error' ) );
 
 	return;
 }
 
-# The number of chapters of a fresh answer in the last 24 h, else undef.
+# The count of a fresh answer fetched in the last 24 h, else undef.
 sub _cachedCount {
 	my $id = shift;
 
 	my $entry = eval { _cache()->get( _countKey($id) ) };
-	return ref $entry eq 'HASH' && defined $entry->{count} && $entry->{count} =~ /\A[0-9]+\z/ ? $entry->{count} : undef;
+	return undef unless ref $entry eq 'HASH' && defined $entry->{count} && $entry->{count} =~ /\A[0-9]+\z/;
+	return undef if _isEpoch( $entry->{at} ) && time() - $entry->{at} >= INDEX_TTL;
+
+	return $entry->{count};
 }
 
 # ---------------------------------------------------------------------------
-# Program-menu provider and the Chapters feed
+# Program-menu provider and the two feeds
 # ---------------------------------------------------------------------------
 
 sub _programMenuExtras {
 	my ( $client, $program, $cb ) = @_;
 
-	my $rows = eval { [ _chaptersLink( $client, $program ) ] };
+	my $rows = eval { [ _extras( $client, $program ) ] };
 	$log->error( 'Building the audiobook Chapters item failed: ' . ( $@ || 'unknown error' ) ) unless $rows;
 
 	$cb->( $rows || [] );
 	return;
 }
 
-sub _chaptersLink {
+sub _extras {
 	my ( $client, $program ) = @_;
 
-	return () unless isAudiobook($program);
+	my $kind = isAudiobook($program) ? 'chapters' : isRestrictedProgram($program) ? 'episodes' : return ();
 
 	my $id = _digits( $program->{id} );
 	if ( !defined $id ) {
-		main::DEBUGLOG && $log->is_debug && $log->debug( 'Audiobook without a program id (' . ( _text( $program->{path} ) || 'no path' ) . '): no Chapters item' );
+		main::DEBUGLOG && $log->is_debug && $log->debug( 'Restricted program without a program id (' . ( _text( $program->{path} ) || 'no path' ) . "): no $kind item" );
 		return ();
 	}
 
-	my %book = ( id => $id );
-	$book{title} = _text( $program->{title} ) if defined _text( $program->{title} );
-	$book{image} = $program->{image}          if _hasText( $program->{image} ) || ref $program->{image} eq 'HASH';
-
 	my $count = _cachedCount($id);
 
+	# known to list nothing: what O2 says for a program without episodes
+	return _textItem( $client, NO_EPISODES ) if defined $count && $count == 0;
+
+	my %target = ( id => $id );
+	$target{title} = _text( $program->{title} ) if defined _text( $program->{title} );
+	$target{image} = $program->{image}          if _hasText( $program->{image} ) || ref $program->{image} eq 'HASH';
+
+	my $chapters = $kind eq 'chapters';
+	my $name     = defined $count
+		? cstring( $client, $chapters ? CHAPTERS_N : EPISODES_N, $count )
+		: cstring( $client, $chapters ? CHAPTERS : EPISODES );
+
 	return {
-		name        => defined $count ? cstring( $client, CHAPTERS_N, $count ) : cstring( $client, CHAPTERS ),
-		type        => 'playlist',
-		url         => \&_chaptersFeed,
-		passthrough => [ \%book ],
+		name        => $name,
+		type        => $chapters ? 'playlist' : 'link',
+		url         => $chapters ? \&_chaptersFeed : \&_episodesFeed,
+		passthrough => [ \%target ],
 	};
 }
 
-sub _chaptersFeed {
-	my ( $client, $cb, $args, $book ) = @_;
+sub _chaptersFeed { _listFeed( 'chapters', @_ ) }
+sub _episodesFeed { _listFeed( 'episodes', @_ ) }
+
+sub _listFeed {
+	my ( $kind, $client, $cb, $args, $program ) = @_;
 	my $once = _once($cb);
+	my $what = $KIND{$kind}->{what};
 
-	$book = {} unless ref $book eq 'HASH';
+	$program = {} unless ref $program eq 'HASH';
 
-	my $id = _digits( $book->{id} );
+	my $id = _digits( $program->{id} );
 	if ( !defined $id ) {
-		$log->warn('Audiobook chapters opened without a program id (a stale or malformed item)');
+		$log->warn("Program $what opened without a program id (a stale or malformed item)");
 		return _textFeed( $client, $once, LOAD_FAILED );
 	}
 
@@ -410,29 +486,29 @@ sub _chaptersFeed {
 
 	$timer = Slim::Utils::Timers::setTimer( undef, Time::HiRes::time() + FEED_DEADLINE, sub {
 		undef $timer;
-		$log->warn( "Audiobook $id chapters: no answer from ABC within " . FEED_DEADLINE . ' s' );
+		$log->warn( "Program $id $what: no answer from ABC within " . FEED_DEADLINE . ' s' );
 		_textFeed( $client, $once, LOAD_FAILED );
 	} );
 
 	eval {
-		chapters( $id, sub {
+		_list( $kind, $id, sub {
 			my $result = shift;
 			$stopTimer->();
 			# after the deadline this only seeds the meta cache: $once drops the late answer
-			_respond( $client, $once, sub { _chapterRows( $client, $book, $result ) } );
+			_respond( $client, $once, sub { _rows( $kind, $client, $program, $result ) } );
 		} );
 		1;
 	} or do {
 		$stopTimer->();
-		$log->error( "Audiobook $id chapters failed: " . ( $@ || 'unknown error' ) );
+		$log->error( "Program $id $what failed: " . ( $@ || 'unknown error' ) );
 		_textFeed( $client, $once, LOAD_FAILED );
 	};
 
 	return;
 }
 
-sub _chapterRows {
-	my ( $client, $book, $result ) = @_;
+sub _rows {
+	my ( $kind, $client, $program, $result ) = @_;
 
 	return [ _textItem( $client, LOAD_FAILED ) ] unless ref $result eq 'HASH';
 	return [ _textItem( $client, $result->{error} ) ] if $result->{error};
@@ -442,15 +518,20 @@ sub _chapterRows {
 		next unless ref $ref eq 'HASH';
 
 		my %episode = %$ref;
-		$episode{programImage} = $book->{image} if defined $book->{image};
-		$episode{programTitle} = $book->{title} if !defined $episode{programTitle} && defined $book->{title};
-		$episode{programId}    = $book->{id}    if !defined $episode{programId};
+		$episode{programImage} = $program->{image} if defined $program->{image};
+		$episode{programTitle} = $program->{title} if !defined $episode{programTitle} && defined $program->{title};
+		$episode{programId}    = $program->{id}    if !defined $episode{programId};
+
+		# an older answer never overwrites audio data stored later (by O1, or a newer answer)
+		delete @episode{@SEED_KEYS} if _cachedIsNewer( $ref->{id}, $result->{fetchedAt} );
 
 		my $item = Plugins::ABCListen::OnDemand->episodeItem( $client, \%episode ) or next;
-		_seed($ref);
+		_seed( \%episode );
 
-		my $title = _hasText( $item->{line1} ) ? $item->{line1} : _hasText( $ref->{title} ) ? $ref->{title} : Plugins::ABCListen::Util::DISPLAY_NAME;
-		$item->{name} = $item->{line1} = ( @rows + 1 ) . ". $title";
+		if ( $kind eq 'chapters' ) {
+			my $title = _hasText( $item->{line1} ) ? $item->{line1} : _hasText( $ref->{title} ) ? $ref->{title} : Plugins::ABCListen::Util::DISPLAY_NAME;
+			$item->{name} = $item->{line1} = ( @rows + 1 ) . ". $title";
+		}
 
 		push @rows, $item;
 	}
@@ -458,7 +539,25 @@ sub _chapterRows {
 	return @rows ? \@rows : [ _textItem( $client, NO_EPISODES ) ];
 }
 
-# Make sure the episode meta cache holds the chapter's seeded set (episodeItem stores it today).
+# Does the meta cache hold audio data newer than an answer fetched at $at? Its seenAt is not
+# older, or O1 closed its windows (both ends set to the same past moment, a restricted or not yet
+# released episode) at or after $at. An unknown $at counts as older than anything dated.
+sub _cachedIsNewer {
+	my ( $id, $at ) = @_;
+	$at = 0 unless _isEpoch($at);
+
+	my $cached = Plugins::ABCListen::Util::getEpisodeMeta($id);
+	return 0 unless ref $cached eq 'HASH';
+
+	return 1 if _isEpoch( $cached->{seenAt} ) && $cached->{seenAt} >= $at;
+
+	my ( $to, $downloadTo ) = @$cached{qw(availableTo downloadAvailableTo)};
+	return 1 if _isEpoch($to) && _isEpoch($downloadTo) && $to == $downloadTo && $to <= time() && $to >= $at;
+
+	return 0;
+}
+
+# Make sure the episode meta cache holds the ref's seeded set (episodeItem stores it today).
 sub _seed {
 	my $ref = shift;
 	return unless ref $ref->{renditions} eq 'ARRAY' && @{ $ref->{renditions} };
@@ -495,6 +594,8 @@ sub _text {
 sub _hasText { defined $_[0] && !ref $_[0] && $_[0] =~ /\S/ }
 
 sub _digits { defined $_[0] && !ref $_[0] && $_[0] =~ /\A[0-9]+\z/ ? "$_[0]" : undef }
+
+sub _isEpoch { defined $_[0] && !ref $_[0] && $_[0] =~ /\A[0-9]+(?:\.[0-9]+)?\z/ ? 1 : 0 }
 
 sub _positive {
 	my $value = shift;

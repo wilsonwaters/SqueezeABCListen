@@ -107,7 +107,6 @@
       "title": "Chapter Seven",
       "canonicalURL": "https://www.abc.net.au/listen/audiobooks/edge-book-page/chapter-seven/900107",
       "duration": 1700,
-      "programID": 900100,
       "programTitle": "Edge Book",
       "mediaDownloadStatus": "PENDING",
       "mediaStreamingStatus": "PENDING",
@@ -185,12 +184,32 @@
       ]
     },
     {
+      "objectID": "coremedia://audioepisode/900110",
+      "title": "Chapter Ten",
+      "canonicalURL": "https://www.abc.net.au/listen/audiobooks/edge-book-page/chapter-ten/900110",
+      "duration": 2000,
+      "programID": 900100,
+      "programTitle": "Edge Book",
+      "mediaDownloadStatus": "PENDING",
+      "mediaStreamingStatus": "AVAILABLE",
+      "dates": {
+        "publicationDate": "2026-04-01T13:00:00+00:00",
+        "mediaDownloadAvailableFrom": "2026-12-01T13:00:00+00:00",
+        "mediaDownloadAvailableTo": "2027-12-01T13:00:00+00:00",
+        "mediaStreamingAvailableFrom": "2026-04-01T13:00:00+00:00",
+        "mediaStreamingAvailableTo": "2027-04-01T13:00:00+00:00"
+      },
+      "mediaRenditions": [
+        { "url": "https://mediacore-live-production.akamaized.net/geo-001/audio/90/01/Z/10.mp3", "contentType": "audio/mpeg", "bitrate": 192 }
+      ]
+    },
+    {
       "objectID": "coremedia://program/900111",
       "title": "A program hit",
       "programID": 900100
     }
   ],
-  "nbHits": 15,
+  "nbHits": 16,
   "page": 0,
   "nbPages": 1,
   "hitsPerPage": 1000,

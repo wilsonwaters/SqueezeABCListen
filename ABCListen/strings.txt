@@ -387,3 +387,8 @@ PLUGIN_ABCLISTEN_CHAPTERS
 # The same link once the number of chapters is known (%s = how many)
 PLUGIN_ABCLISTEN_CHAPTERS_N
 	EN	Chapters (%s)
+
+# The episodes link of a restricted podcast ABC's website lists no episodes for, once the number is
+# known (%s = how many; before that O2's PLUGIN_ABCLISTEN_EPISODES "Episodes")
+PLUGIN_ABCLISTEN_EPISODES_N
+	EN	Episodes (%s)
