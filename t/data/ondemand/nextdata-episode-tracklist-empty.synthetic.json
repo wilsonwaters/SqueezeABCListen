@@ -1,0 +1,13 @@
+{
+  "pageProps": {
+    "data": {
+      "documentProps": {
+        "id": "90000103",
+        "docType": "audioepisode",
+        "title": "A music episode whose tracklist is empty",
+        "canonicalURL": "https://www.abc.net.au/listen/programs/edgecases/tracklist-empty/90000103",
+        "tracklistPrepared": { "items": [], "pagination": { "offset": 0, "total": 0, "size": 200 } }
+      }
+    }
+  }
+}

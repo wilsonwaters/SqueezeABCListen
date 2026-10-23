@@ -11,7 +11,7 @@ use Test::More;
 
 use File::Find;
 
-my @EXPECTED = qw(API Collections Discover Episode Follow HTTP Live LiveMetadata MyABC NowPlaying OnDemand Plugin ProgramIndex Programs ProtocolHandler Schedule Search Sections Settings StationData Stations Tracks Util);
+my @EXPECTED = qw(API Collections Discover Episode Follow HTTP Live LiveMetadata MyABC NowPlaying OnDemand Plugin ProgramIndex Programs ProtocolHandler Schedule Search Sections Settings StationData Stations Tracklist Tracks Util);
 
 my @modules;
 find( { no_chdir => 1, wanted => sub { push @modules, $File::Find::name if /\.pm$/ } }, 'ABCListen' );

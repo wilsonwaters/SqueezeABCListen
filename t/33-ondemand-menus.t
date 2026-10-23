@@ -8,8 +8,8 @@
 # the menu's requests; NO_EPISODES / LOAD_FAILED states (restricted audiobooks without a
 # collection: no NO_EPISODES row, unless nothing else would be listed: never an empty list); the
 # provider registry (order, merged program detail, dying / silent / double / non-array providers);
-# the episode submenu; readable names everywhere; exactly one callback on every path, also when
-# LMS's callback dies.
+# the episode submenu, also with O4's extras after O2's rows (O4's own tests: t/35); readable
+# names everywhere; exactly one callback on every path, also when LMS's callback dies.
 #
 # Fixtures: t/data/ondemand/ (see t/32-programs.t for provenance) and the F3 search page
 # t/data/foundation/listen-search.trimmed.html (buildId build-3afcd04f). Episode pages for paging
@@ -828,6 +828,41 @@ subtest 'episode submenu: Play episode, synopsis, Broadcast line' => sub {
 	$c = feed( $EPISODE_MENU, ABCListenTest::FakeClient->new('00:00:00:00:00:01'), $episode );
 	is( items_of($c)->[1]->{name}, 'Play episode', 'with a client' );
 	check_names( items_of($c), 'episode submenu' );
+};
+
+subtest 'episode submenu with O4\'s extras: O2\'s rows first and unchanged, the extras after them (t/35)' => sub {
+	fresh();
+	route( "$NEXT$SCIENCE/trees/107266790.json", file => 'ondemand/nextdata-episode-scienceshow-mp3.trimmed.json', headers => $JSON_TYPE );
+	my $episode = {
+		id           => '107266790',
+		title        => 'Trees and potatoes',
+		description  => 'Palm oil and nickel.',
+		path         => "$SCIENCE/trees/107266790",
+		date         => timegm( 0, 0, 1, 17, 9, 2026 ),
+		duration     => 3276,
+		programImage => $SCIENCE_IMG,
+		programTitle => 'The Science Show',
+		presenters   => ['Robyn Williams'],
+		segments     => [ { id => '107277426', title => 'Part one', label => '1 of 2' }, { id => '107277432', title => 'Part two', label => '2 of 2' } ],
+	};
+	my $c = feed( $EPISODE_MENU, undef, $episode );
+	is( $c->count, 1, 'one callback' );
+	my $items = items_of($c);
+	is_deeply(
+		[ map { [ $_->{type}, $_->{name} ] } @$items ],
+		[
+			[ textarea => 'Palm oil and nickel.' ],
+			[ audio    => 'Play episode' ],
+			[ text     => "Broadcast Sat 17 Oct \x{B7} 55 min" ],
+			[ text     => 'Presented by Robyn Williams' ],
+			[ link     => 'Segments (2)' ],
+			[ text     => string('PLUGIN_ABCLISTEN_NO_TRACKLIST') ],
+			[ link     => 'More from The Science Show' ],
+		],
+		'synopsis, Play episode, Broadcast (O2) · Presented by, Segments (N), No tracklist, More from <program> (O4)'
+	);
+	is_deeply( [ map { $_->{fn} } @API_CALLS ], ['nextData'], 'one API call: the tracklist (the episode document, lazily)' );
+	check_names( $items, 'episode submenu with extras' );
 };
 
 done_testing();

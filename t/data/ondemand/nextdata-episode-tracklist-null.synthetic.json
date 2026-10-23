@@ -1,0 +1,13 @@
+{
+  "pageProps": {
+    "data": {
+      "documentProps": {
+        "id": "90000102",
+        "docType": "audioepisode",
+        "title": "A talk episode without a tracklist",
+        "canonicalURL": "https://www.abc.net.au/listen/programs/edgecases/tracklist-null/90000102",
+        "tracklistPrepared": null
+      }
+    }
+  }
+}
