@@ -25,7 +25,7 @@ package Plugins::ABCListen::Sections;
 #     2. One link per LiveRadioCarousel heading (Sport's "Live & Upcoming Events") listing copies of
 #        the stationItem rows of its events, each service once, with line2 = "<title> · <start>–<end>"
 #        (Util::friendlyTime; the title alone without both times) and, on an audio row only (L4:
-#        station rows are links, LMS menu rule 1), description = "<title> (<start>–<end>)"; no link
+#        station rows open a menu, LMS menu rule 1), description = "<title> (<start>–<end>)"; no link
 #        when none is playable.
 #        Carousel entries without a heading are station rows (1.) with the same text.
 #        The event-only services among 1. and 2. are checked first (Collections->checkOnAir, ≤ 3 s).
@@ -256,7 +256,7 @@ sub _sectionItems {
 	# 1. live stations
 	for my $item ( ( map { _stationRow( $client, $_->{serviceId}, $_->{event} ) } @{ $s->{live} } ), @{ $s->{inline} || [] } ) {
 		next unless ref $item eq 'HASH';
-		my $key = defined $item->{play} ? $item->{play} : $item->{url};    # L4: station rows are links + play
+		my $key = defined $item->{play} ? $item->{play} : $item->{url};    # L4: station rows open a menu and play
 		push @items, $item unless $seen{ defined $key ? $key : '' }++;
 	}
 
@@ -342,7 +342,7 @@ sub _eventLinks {
 }
 
 # Live->stationItem, or undef; with an event, a copy with its title as line2 and (audio rows only:
-# L4's station rows are links, LMS menu rule 1) description.
+# L4's station rows open a menu, LMS menu rule 1) description.
 sub _stationRow {
 	my ( $client, $serviceId, $event ) = @_;
 	return undef unless $LIVE->can('stationItem');
@@ -354,7 +354,7 @@ sub _stationRow {
 
 	my @times = grep {defined} map { defined $_ ? Plugins::ABCListen::Util::friendlyTime($_) : undef } $event->{start}, $event->{end};
 
-	# L4: the time window goes into line2 ("<title> · 7:30pm–10:00pm"): station rows are links, which
+	# L4: the time window goes into line2 ("<title> · 7:30pm–10:00pm"): station rows open a menu, so they
 	# can't carry a description (LMS menu rule 1); an audio row also keeps the description
 	my $window = @times == 2 ? $times[0] . ENDASH . $times[1] : undef;
 	my %row = ( %$item, line2 => defined $window ? "$event->{title} \x{B7} $window" : $event->{title} );

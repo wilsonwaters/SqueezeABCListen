@@ -171,8 +171,8 @@ sub check_shapes {
 	is( scalar( grep { $_->{type} ne 'audio' && exists $_->{description} } @$items ), 0, "$label: no description on a non-audio row (LMS menu rule 1)" );
 	is( scalar( grep { $_->{type} eq 'audio' && !( ( $_->{url} // '' ) =~ m{\Aabclisten://live/[A-Z0-9_]+\z} && $_->{favorites_url} eq $_->{url} && ( $_->{on_select} // '' ) eq 'play' ) } @$items ), 0,
 		"$label: station rows play abclisten://live/<ID> and favourite that URL" );
-	is( scalar( grep { exists $_->{play} && $_->{play} =~ m{\Aabclisten://live/} && !( $_->{type} eq 'link' && $_->{favorites_url} eq $_->{play} && !exists $_->{on_select} ) } @$items ), 0,
-		"$label: L4 station rows (link + play) favourite their abclisten://live/<ID> play URL, no on_select" );
+	is( scalar( grep { exists $_->{play} && $_->{play} =~ m{\Aabclisten://live/} && !( $_->{type} eq 'playlist' && ref $_->{url} eq 'CODE' && $_->{favorites_url} eq $_->{play} && !exists $_->{on_select} ) } @$items ), 0,
+		"$label: L4 station rows (type playlist + play) open a feed and favourite their abclisten://live/<ID> play URL, no on_select" );
 	is( scalar( grep { $_->{type} eq 'link' && !( ref $_->{url} eq 'CODE' || ref $_->{items} eq 'ARRAY' ) } @$items ), 0, "$label: links open a feed or a list" );
 	is( scalar( grep { $_->{type} eq 'text' && ( exists $_->{url} || exists $_->{play} ) } @$items ), 0, "$label: text rows have no action" );
 	is( scalar( grep { $_->{type} ne 'text' && !$_->{image} } @$items ), 0, "$label: artwork on every station / link row" );
@@ -244,7 +244,7 @@ subtest 'News: ABC NewsRadio first (MiniEPG), then the 9 collections in page ord
 	my $items = section('news');
 
 	is_deeply( names($items), [ 'NewsRadio', @NEWS_TITLES ], 'NewsRadio, then the page collections' );
-	is_deeply( [ @{ $items->[0] }{qw(type play favorites_url)} ], [ 'link', ('abclisten://live/NEWS') x 2 ], 'the station row plays (and favourites) abclisten://live/NEWS (L4: a link that also plays)' );
+	is_deeply( [ @{ $items->[0] }{qw(type play favorites_url)} ], [ 'playlist', ('abclisten://live/NEWS') x 2 ], 'the station row plays (and favourites) abclisten://live/NEWS (L4: opens and plays, type playlist)' );
 	is_deeply( \@STATION_ITEM, ['NEWS'], 'Live->stationItem($client, "NEWS"), once' );
 	is( $items->[1]->{url}, $COLL_MENU, 'collection links open D1\'s collection menu' );
 	is( $items->[1]->{passthrough}->[0]->{id}, '104903746', '... Latest News (104903746)' );
@@ -286,7 +286,7 @@ subtest 'Sport: "Radio Stations" inline as station rows; Live & Upcoming Events 
 	my $title = 'Men’s International Cricket 2nd Test, Day 2: South Africa v Australia';
 	my $window = Plugins::ABCListen::Util::friendlyTime(1_792_395_000) . "\x{2013}" . Plugins::ABCListen::Util::friendlyTime(1_792_425_600);
 	is_deeply( [ @$row{qw(name play line2)} ], [ 'ABC SPORT', 'abclisten://live/GRANDSTAND', "$title \x{B7} $window" ], 'a stationItem copy; line2 = "<event title> · <start>–<end>" (L4: the time window a link can\'t carry in a description)' );
-	ok( !exists $row->{description}, 'no description: L4 station rows are links (LMS menu rule 1)' );
+	ok( !exists $row->{description}, 'no description: L4 station rows open a menu (LMS menu rule 1)' );
 	is( ref $row->{url}, 'CODE', '... so the row still opens its station menu' );
 	is( $events->{image}, $row->{image}, 'the link shows the first row\'s artwork' );
 	check_shapes( $items, 'Sport' );
@@ -351,7 +351,7 @@ subtest 'Kids listen (full section): live station, Featured, Latest Programs, Al
 	my $items = section('kids');
 
 	is_deeply( names($items), \@KIDS_NAMES, 'in this order' );
-	is_deeply( [ @{ $items->[0] }{qw(type play favorites_url)} ], [ 'link', ('abclisten://live/KIDSLISTEN') x 2 ], 'ABC KIDS listen plays abclisten://live/KIDSLISTEN (L4: a link that also plays)' );
+	is_deeply( [ @{ $items->[0] }{qw(type play favorites_url)} ], [ 'playlist', ('abclisten://live/KIDSLISTEN') x 2 ], 'ABC KIDS listen plays abclisten://live/KIDSLISTEN (L4: opens and plays, type playlist)' );
 	is_deeply( \@STATION_ITEM, [qw(KIDSLISTEN KIDSLISTEN_NT KIDSLISTEN_QLD KIDSLISTEN_SA KIDSLISTEN_WA)], 'the state versions are asked for too (HLS-only: undef, so not listed)' );
 
 	my %by = map { $_->{name} => $_ } @$items;

@@ -13,7 +13,8 @@
 # last-good data used, answered once); stationItem from cached data only, never fetching; Sport
 # fetches the listed stations after the event checks. L3: Sport makes exactly the expected number
 # of requests (a cap), and an on-air event service's program reuses the event check's response.
-# L4: station rows are links that also play (exact keys: type link, url = the station menu,
+# L4: station rows open and also play (exact keys: type playlist - Material offers its play
+# actions only for audio / playlist / album... types, D-1 -, url = the station menu,
 # passthrough [<ID>], play / favorites_url abclisten://live/<ID>, favorites_type audio, no on_select,
 # no description); L2's description (and the "<City> time" text of home-state versions) moved to
 # the station menu's Listen live (t/27-station-menu.t covers the menu itself).
@@ -221,7 +222,7 @@ subtest 'station item: exact keys and values' => sub {
 			name            => 'Radio National',
 			line1           => 'Radio National',
 			favorites_title => 'Radio National',
-			type            => 'link',
+			type            => 'playlist',
 			url             => 'CODE',
 			passthrough     => ['RN'],
 			play            => 'abclisten://live/RN',
@@ -230,10 +231,10 @@ subtest 'station item: exact keys and values' => sub {
 			image           => $image,
 			favorites_icon  => $image,
 		},
-		'values: a link to the RN station menu that plays abclisten://live/RN, favourites that URL as audio, logo at 300 px'
+		'values: type playlist (Material play actions) opening the RN station menu, plays abclisten://live/RN, favourites that URL as audio, logo at 300 px'
 	);
 	ok( !exists $rn->{on_select},   'no on_select (touch skins open the row; play plays it)' );
-	ok( !exists $rn->{description}, 'no description on a link (LMS menu rule 1)' );
+	ok( !exists $rn->{description}, 'no description on a browsable row (LMS menu rule 1)' );
 	is( listen_live( undef, $rn )->{description}, $rec->{synopsis}, 'the synopsis moved to the station menu\'s Listen live' );
 	like( $image, qr{\Ahttps://live-production\.wcms\.abc-cdn\.net\.au/[0-9a-f]{32}\?impolicy=wcms_crop_resize&cropH=\d+&cropW=\d+&xPos=0&yPos=0&width=300&height=300\z}, 'the logo keeps its crop params, 300 px' );
 
