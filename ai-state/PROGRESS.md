@@ -17,7 +17,7 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   errors). D-1 (medium, Material regression from L4: station tiles have no Play now/Next/Append) → fix before release
   (L4-fix, branch fix/L4-material-station-play). Then CHANGELOG + bump → v0.3.0. O4/D5 held until then.
 - #19 O4 episode extras — PR #57 APPROVED + review fixes verified (head e6b6886); merge after v0.3.0
-- #59 M4 Latest episodes stable after unfollow — implementation
+- #59 M4 Latest episodes stable after unfollow — PR #60 APPROVED; small test fixes in progress; merge after v0.3.0
 - #23 D5 audiobook chapters — PR #58 REQUEST_CHANGES (isAudiobook false positives on restricted podcasts e.g. Bluey Listen
   Along → add an Episodes list for them; seenAt from fetch time; /radio/geo/ geo message; tests) — implementer fixing
 - Queued (cap 3): F6, O8, M3, D8, then v0.3.0 (system verification → release), R2, R3
