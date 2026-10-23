@@ -9,6 +9,8 @@ package Plugins::ABCListen::API;
 # ---- Callbacks (every network function below) ---------------------------------------------------
 #   Exactly one of $cb / $ecb is called per call, on every path.
 #     success: $cb->($data, \%info)   $info->{stale} is 1 when $data is the last-good copy, else 0
+#              $info->{at} is when $data was fetched from ABC (epoch): now for a network answer, the
+#              stored time for a cache hit or a last-good copy (D5: freshness of seeded audio URLs).
 #     error:   $ecb->({ error => TOKEN, message => <readable detail for logs>, status => <HTTP code | undef> })
 #              TOKEN is 'PLUGIN_ABCLISTEN_LOAD_FAILED', or 'PLUGIN_ABCLISTEN_RATE_LIMITED' (HTTP 429, or
 #              the Algolia budget is used up).
@@ -658,7 +660,7 @@ sub _run {
 	if ( !$op->{force} ) {
 		if ( my $hit = _fresh( $op->{cacheKey}, _ttl( $op, $opts ) ) ) {
 			main::DEBUGLOG && $log->is_debug && $log->debug("$op->{what}: from the cache");
-			return _call( $cb, $hit->{data}, { stale => 0 } );
+			return _call( $cb, $hit->{data}, { stale => 0, at => $hit->{at} } );
 		}
 	}
 
@@ -703,7 +705,7 @@ sub _settle {
 
 		for my $w (@$waiters) {
 			if ( $isStale->($w) ) {
-				_call( $w->{cb}, _copy( $lastGood->{data} ), { stale => 1 } );
+				_call( $w->{cb}, _copy( $lastGood->{data} ), { stale => 1, at => $lastGood->{at} } );
 			}
 			elsif ( ref $w->{ecb} eq 'CODE' ) {
 				_call( $w->{ecb}, {%$error} );
@@ -714,6 +716,7 @@ sub _settle {
 	}
 
 	my $data = $result->{data};
+	my $at   = defined $result->{at} ? $result->{at} : time();
 
 	# keep it as long as the longest-lived waiter wants it
 	my $keep = 0;
@@ -724,7 +727,7 @@ sub _settle {
 	}
 
 	if ( $keep > 0 ) {
-		my $entry = { data => $data, at => defined $result->{at} ? $result->{at} : time() };
+		my $entry = { data => $data, at => $at };
 		for my $key ( @{ $result->{cacheKeys} || [ $op->{cacheKey} ] } ) {
 			eval { _cache()->set( _bytes($key), $entry, $keep ); 1 }
 				or $log->error( "$op->{what}: couldn't cache the result: " . _clean($@) );
@@ -733,7 +736,7 @@ sub _settle {
 
 	my $first = 1;
 	for my $w (@$waiters) {
-		_call( $w->{cb}, $first ? $data : _copy($data), { stale => 0 } );
+		_call( $w->{cb}, $first ? $data : _copy($data), { stale => 0, at => $at } );
 		$first = 0;
 	}
 

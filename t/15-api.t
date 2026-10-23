@@ -211,7 +211,7 @@ subtest 'bff: success callback gets the decoded data and { stale => 0 }' => sub 
 	my ( $ok, $err ) = api( bff => [ 'collection/x', { collectionId => 103194120 } ] );
 	my ( $data, $info ) = one_ok( $ok, $err, 'collection' );
 	is_deeply( $data, json_file('bff-collection-home-most-popular-podcasts.json'), 'the decoded body' );
-	is_deeply( $info, { stale => 0 }, 'info: stale 0' );
+	is_deeply( $info, { stale => 0, at => $T0 }, 'info: stale 0, at = when it was fetched' );
 
 	clear_routes();
 	route( "$BFF/collection/x?collectionId=1", file => 'foundation/bff-collection-empty.json', headers => $JSON_TYPE );
@@ -330,7 +330,7 @@ subtest 'ttl: no request within it, one after it; no ttl, no cache; cache hits a
 	my ( $data, $info ) = one_ok( $ok, $err, 'within the TTL' );
 	is( scalar requests(), 1, 'within the TTL: no request' );
 	is( $data->{collection}->{title}, 'Most Popular Podcasts', "the cached copy isn't changed by a caller" );
-	is_deeply( $info, { stale => 0 }, 'cache hit: stale 0' );
+	is_deeply( $info, { stale => 0, at => $T0 }, 'cache hit: stale 0, at = when it was fetched (299 s ago), not now' );
 
 	( $ok, $err ) = api( bff => [ 'collection/x', undef ], { ttl => 1000 } );
 	is( scalar requests(), 1, "a caller's longer TTL also hits (age 299 s)" );
@@ -366,7 +366,7 @@ subtest 'stale_ok: last-good copy on error, WARN once then DEBUG; quiet; no copy
 	( $ok, $err ) = api( bff => [ 'collection/x', undef ], { stale_ok => 1 } );
 	my ( $data, $info ) = one_ok( $ok, $err, 'error after an earlier success' );
 	is_deeply( $data, $good, 'the old data' );
-	is_deeply( $info, { stale => 1 }, 'info: stale 1' );
+	is_deeply( $info, { stale => 1, at => $T0 }, 'info: stale 1, at = when the last good copy was fetched (600 s ago)' );
 	my @w = warns();
 	is( scalar @w, 1, 'one WARN' );
 	like( $w[0]->{message}, qr/last good copy.*503 Service Unavailable/, 'WARN: serving the last good copy, and why' ) if @w;
@@ -476,7 +476,7 @@ subtest 'siteConfig: buildId and the Search component Algolia config' => sub {
 		{ buildId => $BUILD, algolia => { appId => 'TESTAPPID', apiKey => 'testsearchkey', indexName => 'listen_prod_all' } },
 		'buildId and the listen_prod_all config (not the masthead query-suggestions index)'
 	);
-	is_deeply( $info, { stale => 0 }, 'fresh' );
+	is_deeply( $info, { stale => 0, at => $T0 }, 'fresh (at = now)' );
 	is_deeply( [ urls() ], [$SEARCH], 'GET /listen/search' );
 	is( ( requests() )[0]->{headers}->header('User-Agent'), Slim::Utils::Misc::userAgentString(), 'User-Agent' );
 
@@ -1097,7 +1097,7 @@ subtest 'algolia: request URL, headers and body from the discovered config' => s
 	my ( $ok, $err ) = api( algolia => [ {%QUERY} ] );
 	my ( $data, $info ) = one_ok( $ok, $err, 'query' );
 	is_deeply( $data, json_file('algolia-listen_prod_all-query.json'), 'the decoded response' );
-	is_deeply( $info, { stale => 0 }, 'not stale' );
+	is_deeply( $info, { stale => 0, at => $T0 }, 'not stale (at = now)' );
 
 	my ($req) = requests();
 	is( $req->{method}, 'POST', 'POST' );
