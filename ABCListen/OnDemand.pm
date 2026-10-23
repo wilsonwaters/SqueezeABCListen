@@ -116,13 +116,42 @@ package Plugins::ABCListen::OnDemand;
 # programTitle/programId only when the episode path is under the program path
 # ('<program path>/...'); otherwise O1 fills them at play time.
 #
-# Episode menu (_episodeMenu; O4 extends it): synopsis (textarea) · "Play episode" (type audio,
+# Episode menu (_episodeMenu; O4 extended it): synopsis (textarea) · "Play episode" (type audio,
 # favourites keep the abclisten:// URL) · "Broadcast <date> · <duration>". The textarea must stay
 # first (Slim::Control::XMLBrowser's menu mode replaces item 0 with an empty item when it moves a
-# textarea into the window), so items O4 adds go after it.
+# textarea into the window), so items O4 adds go after it. O4's rows, each only when its data
+# exists, in this order:
+#   "Presented by A, B and C"  the episode's presenters, each once (case-insensitive); text.
+#   "Segments (N)"             link -> _segmentsMenu: the episode's segments (each with a digit id;
+#                              N counts those), in ABC's order, as episodeItem rows (docType
+#                              audiosegment unless given; image: the segment's, else the episode's,
+#                              else programImage; the episode's programTitle/programId/
+#                              programImage) named and line1 "<label> – <title>": ABC's label
+#                              ("1 of 5"), else "<i> of <N>". No date in the name (all segments of
+#                              an episode share it). A segment row's own menu lists no segments.
+#   "Tracklist (N)" | "No tracklist" | "Tracklist unavailable"
+#                              the episode document's tracklist (Plugins::ABCListen::Tracklist),
+#                              fetched when the menu opens (8 s at most; the same nextData path and
+#                              TTL as O1's resolver, so F3's cache is shared). A link with the rows
+#                              inline as text items ("00:55 · Rossini, Gioachino – The Barber of
+#                              Seville: Overture"), or a text item when there are none. When the
+#                              fetch failed (or died, or missed its deadline) the row is the text
+#                              "Tracklist unavailable": the row is there whenever the episode has a
+#                              path, so the rows after it keep their index whether the fetch worked
+#                              or not (LMS re-walks menus by index; a stale "More from" id must
+#                              not open the tracklist once a late document is cached). No row
+#                              without an episode path (nothing is fetched). The menu answers once.
+#   "More from <program>"      _moreFromItem: programItem({ title, path, id?, image? }) with
+#                              name/line1 overridden, when both a program path (the episode's
+#                              programPath, else Follow::programPathFor of its path) and a program
+#                              title (the episode's programTitle, else the meta cache's, written by
+#                              O1) are known.
+# No row has a description (LMS menu rule 1). Episode.pm's song info (O4) reuses _moreFromItem
+# and _tracklistRows.
 #
-# Ownership: O2 creates everything; O3 then owns _programsRoot, O4 owns episodeItem/_episodeMenu;
-# programItem, _programMenu and the provider registry stay with O2. D6 added programsByTypeAZ inside
+# Ownership: O2 creates everything; O3 then owns _programsRoot, O4 owns episodeItem/_episodeMenu
+# (and its private subs in the O4 section); programItem, _programMenu and the provider registry
+# stay with O2. D6 added programsByTypeAZ inside
 # O3's section (programsByType's core moved to _byType; _letterRows/_bucketRows are shared with
 # All programs A–Z, whose menus are unchanged). D7 changed _bucket (Latin letters NFD leaves alone,
 # the Other row) and _letterRows (the Other row), for both A–Z lists.
@@ -137,8 +166,10 @@ use Slim::Utils::Strings qw(cstring);
 use Slim::Utils::Timers;
 
 use Plugins::ABCListen::API;
+use Plugins::ABCListen::Follow;
 use Plugins::ABCListen::ProgramIndex;
 use Plugins::ABCListen::Programs;
+use Plugins::ABCListen::Tracklist;
 use Plugins::ABCListen::Util;
 
 use constant ENDASH => "\x{2013}";
@@ -808,44 +839,235 @@ sub _runProviders {
 
 sub _episodeMenu {
 	my ( $client, $cb, $args, $episode ) = @_;
+	my $once = _once($cb);
+
+	$episode = {} unless ref $episode eq 'HASH';
+
+	# O4: the tracklist is fetched when the menu opens, for an episode with a page (no page, or no
+	# id: no fetch and no tracklist row). Tracklist->fetch answers once, within 8 s.
+	my $path = defined Plugins::ABCListen::Util::episodeUrl( $episode->{id} ) ? Plugins::ABCListen::API::sitePath( $episode->{path} ) : undef;
+
+	if ( !defined $path || $path eq '/' ) {
+		return _respond( $client, $once, sub { _episodeMenuItems( $client, $episode, undef ) } );
+	}
+
+	my $answer = sub {
+		my $tracklist = shift;
+		_respond( $client, $once, sub { _episodeMenuItems( $client, $episode, $tracklist ) } );
+	};
+
+	# a fetch that dies is a failed fetch: the menu still lists everything else
+	eval { Plugins::ABCListen::Tracklist::fetch( { id => $episode->{id}, path => $path }, $answer ); 1 } or do {
+		$log->error( 'Fetching the ABC listen tracklist failed: ' . ( $@ || 'unknown error' ) );
+		$answer->( { error => LOAD_FAILED } );
+	};
+
+	return;
+}
+
+# The episode menu's items (see the header); $tracklist is Tracklist->fetch's answer, or undef
+# when nothing was fetched.
+sub _episodeMenuItems {
+	my ( $client, $episode, $tracklist ) = @_;
+
+	my $url   = Plugins::ABCListen::Util::episodeUrl( $episode->{id} ) or die "no episode id\n";
+	my $title = _episodeTitle($episode);
+	my $image = Plugins::ABCListen::API::imageUrl( _episodeImage($episode), IMAGE_PX ) || Plugins::ABCListen::Util::ICON;
+
+	my @items;
+
+	# The synopsis comes first: in menu mode (Jive, Material, CLI menu:1) Slim::Control::XMLBrowser
+	# moves a textarea into the window and writes an empty item at index 0, which would wipe out
+	# a "Play episode" item listed before it.
+	push @items, { name => $episode->{description}, type => 'textarea' } if _hasText( $episode->{description} );
+
+	push @items, {
+		name            => cstring( $client, 'PLUGIN_ABCLISTEN_PLAY_EPISODE' ),
+		type            => 'audio',
+		on_select       => 'play',
+		url             => $url,
+		favorites_url   => $url,
+		favorites_title => $title,
+		favorites_icon  => $image,
+		image           => $image,
+	};
+
+	my $date     = Plugins::ABCListen::Util::friendlyDate( $episode->{date} );
+	my $duration = Plugins::ABCListen::Util::friendlyDuration( $episode->{duration} );
+
+	if ( defined $date ) {
+		push @items, { name => cstring( $client, 'PLUGIN_ABCLISTEN_BROADCAST', _dateDuration($episode) ), type => 'text' };
+	}
+	elsif ( length $duration ) {
+		push @items, { name => $duration, type => 'text' };
+	}
+
+	# === O4 === presenters, segments, tracklist, "More from <program>": each only when known
+
+	my $presenters = _presenterList( $client, $episode->{presenters} );
+	push @items, { name => cstring( $client, 'PLUGIN_ABCLISTEN_PRESENTED_BY', $presenters ), type => 'text' } if defined $presenters;
+
+	my @segments = _segments($episode);
+	if (@segments) {
+		push @items, {
+			name        => cstring( $client, 'PLUGIN_ABCLISTEN_SEGMENTS', scalar @segments ),
+			type        => 'link',
+			url         => \&_segmentsMenu,
+			passthrough => [$episode],
+		};
+	}
+
+	push @items, _tracklistItem( $client, $tracklist ) if ref $tracklist eq 'HASH';
+
+	my $more = _moreFromItem( $client, $episode );
+	push @items, $more if $more;
+
+	return \@items;
+}
+
+# ---------------------------------------------------------------------------
+# === O4 === Episode extras: segments, tracklist, "More from <program>" (see the header)
+# ---------------------------------------------------------------------------
+
+# Segments (N) -> the segments in ABC's order: episodeItem rows named "<label> – <title>"
+# (ABC's "1 of 5", else "<i> of <N>"). A stale id whose episode lists no segments any more: one
+# NO_EPISODES text item.
+sub _segmentsMenu {
+	my ( $client, $cb, $args, $episode ) = @_;
 	$episode = {} unless ref $episode eq 'HASH';
 
 	_respond( $client, $cb, sub {
-		my $url   = Plugins::ABCListen::Util::episodeUrl( $episode->{id} ) or die "no episode id\n";
-		my $title = _episodeTitle($episode);
-		my $image = Plugins::ABCListen::API::imageUrl( _episodeImage($episode), IMAGE_PX ) || Plugins::ABCListen::Util::ICON;
+		my @segments = _segments($episode);
+		return [ _textItem( $client, 'PLUGIN_ABCLISTEN_NO_EPISODES' ) ] unless @segments;
 
-		my @items;
-
-		# The synopsis comes first: in menu mode (Jive, Material, CLI menu:1) Slim::Control::XMLBrowser
-		# moves a textarea into the window and writes an empty item at index 0, which would wipe out
-		# a "Play episode" item listed before it.
-		push @items, { name => $episode->{description}, type => 'textarea' } if _hasText( $episode->{description} );
-
-		push @items, {
-			name            => cstring( $client, 'PLUGIN_ABCLISTEN_PLAY_EPISODE' ),
-			type            => 'audio',
-			on_select       => 'play',
-			url             => $url,
-			favorites_url   => $url,
-			favorites_title => $title,
-			favorites_icon  => $image,
-			image           => $image,
-		};
-
-		my $date     = Plugins::ABCListen::Util::friendlyDate( $episode->{date} );
-		my $duration = Plugins::ABCListen::Util::friendlyDuration( $episode->{duration} );
-
-		if ( defined $date ) {
-			push @items, { name => cstring( $client, 'PLUGIN_ABCLISTEN_BROADCAST', _dateDuration($episode) ), type => 'text' };
-		}
-		elsif ( length $duration ) {
-			push @items, { name => $duration, type => 'text' };
-		}
-
-		return \@items;
+		my $i = 0;
+		return [ grep {defined} map { _segmentItem( $client, $episode, $_, ++$i, scalar @segments ) } @segments ];
 	} );
 }
+
+# The episode's playable segments: hashes with a digit id (a segment without one is skipped and
+# not counted). Segments of segments don't exist: a segment's own segments are never listed.
+sub _segments {
+	my $episode = shift;
+	return () unless ref $episode->{segments} eq 'ARRAY';
+	return grep { ref $_ eq 'HASH' && defined Plugins::ABCListen::Util::episodeUrl( $_->{id} ) } @{ $episode->{segments} };
+}
+
+# One segment as an episodeItem (which writes it to the meta cache, so O1 resolves it by path):
+# docType audiosegment unless the segment says otherwise; image = the segment's, else the parent
+# episode's (else programImage, episodeItem's fallback); the program fields of the parent.
+sub _segmentItem {
+	my ( $client, $episode, $segment, $i, $n ) = @_;
+
+	my %segment = (
+		id       => $segment->{id},
+		docType  => _hasText( $segment->{docType} ) ? $segment->{docType} : 'audiosegment',
+		segments => [],
+	);
+
+	for my $key (qw(title description path date duration presenters)) {
+		$segment{$key} = $segment->{$key} if defined $segment->{$key};
+	}
+
+	my $image = _hasText( $segment->{image} ) ? $segment->{image} : $episode->{image};
+	$segment{image} = $image if _hasText($image);
+
+	for my $key (qw(programTitle programId programImage)) {
+		$segment{$key} = $episode->{$key} if defined $episode->{$key};
+	}
+
+	my $item = __PACKAGE__->episodeItem( $client, \%segment ) or return undef;
+
+	# The position in text, so lists read well without seeing their order (OPML, non-visual clients)
+	my $label = _hasText( $segment->{label} ) ? $segment->{label} : cstring( $client, 'PLUGIN_ABCLISTEN_SEGMENT_OF', $i, $n );
+	$item->{name} = $item->{line1} = $label . ' ' . ENDASH . ' ' . _episodeTitle( \%segment );
+
+	return $item;
+}
+
+# Tracklist (N) with the formatted rows inline (text), or the "No tracklist" text item; for a
+# failed fetch ({ error }) the "Tracklist unavailable" text item, so the row count never depends
+# on the fetch.
+sub _tracklistItem {
+	my ( $client, $tracklist ) = @_;
+
+	return { name => cstring( $client, 'PLUGIN_ABCLISTEN_TRACKLIST_UNAVAILABLE' ), type => 'text' } unless ref $tracklist->{items} eq 'ARRAY';
+
+	my @rows = _tracklistRows( $tracklist->{items} );
+	return { name => cstring( $client, 'PLUGIN_ABCLISTEN_NO_TRACKLIST' ), type => 'text' } unless @rows;
+
+	return {
+		name  => cstring( $client, 'PLUGIN_ABCLISTEN_TRACKLIST', scalar @rows ),
+		type  => 'link',
+		items => \@rows,
+	};
+}
+
+# Tracklist rows -> text items (Tracklist->formatRow; rows without a title are skipped).
+# O4-internal: Episode.pm's song info uses it too.
+sub _tracklistRows {
+	my $rows = shift;
+	return map { +{ name => $_, type => 'text' } } grep {defined} map { Plugins::ABCListen::Tracklist::formatRow($_) } ref $rows eq 'ARRAY' ? @$rows : ();
+}
+
+# "More from <program>": programItem for the episode's program with name/line1 "More from
+# <title>", or undef unless both a program path and a program title are known.
+#   - program path: the episode's programPath when a caller gave one, else
+#     Follow::programPathFor(the episode's path, else its meta-cache path);
+#   - title (with id and programImage): the episode's own programTitle (O2 sets it only for the
+#     browsed program's own episodes), else the meta cache's (O1 writes it when it resolves the
+#     episode) with its programId and no image (programImage belongs to the browsed program).
+# O4-internal: Episode.pm's song info uses it too.
+sub _moreFromItem {
+	my ( $client, $episode ) = @_;
+	return undef unless ref $episode eq 'HASH';
+
+	my $meta = eval { Plugins::ABCListen::Util::getEpisodeMeta( $episode->{id} ) };
+	$meta = {} unless ref $meta eq 'HASH';
+
+	my $path = _hasText( $episode->{programPath} ) ? Plugins::ABCListen::API::sitePath( $episode->{programPath} ) : undef;
+	$path = Plugins::ABCListen::Follow::programPathFor( _hasText( $episode->{path} ) ? $episode->{path} : $meta->{path} ) unless defined $path && $path ne '/';
+	return undef unless defined $path && $path ne '/';
+
+	my %program;
+	if ( _hasText( $episode->{programTitle} ) ) {
+		%program = ( title => $episode->{programTitle}, id => $episode->{programId}, image => $episode->{programImage} );
+	}
+	elsif ( _hasText( $meta->{programTitle} ) ) {
+		%program = ( title => $meta->{programTitle}, id => $meta->{programId} );
+	}
+	else {
+		return undef;
+	}
+
+	%program = ( ( map { $_ => $program{$_} } grep { _hasText( $program{$_} ) } keys %program ), path => $path );
+
+	my $item = __PACKAGE__->programItem( $client, \%program ) or return undef;
+	$item->{name} = $item->{line1} = cstring( $client, 'PLUGIN_ABCLISTEN_MORE_FROM', $program{title} );
+
+	return $item;
+}
+
+# "A", "A and B", "A, B and C": the presenters' names, each once (case-insensitively, the first
+# spelling kept; blanks and non-strings skipped), or undef without any.
+sub _presenterList {
+	my ( $client, $names ) = @_;
+	return undef unless ref $names eq 'ARRAY';
+
+	my ( %seen, @names );
+	for my $name ( grep { _hasText($_) } @$names ) {
+		( my $clean = $name ) =~ s/\s+/ /g;
+		$clean =~ s/\A | \z//g;
+		push @names, $clean unless $seen{ lc $clean }++;
+	}
+
+	return undef unless @names;
+
+	my $last = pop @names;
+	return @names ? cstring( $client, 'PLUGIN_ABCLISTEN_NAMES_AND', join( ', ', @names ), $last ) : $last;
+}
+
+# === end O4 ===
 
 # ---------------------------------------------------------------------------
 # Helpers

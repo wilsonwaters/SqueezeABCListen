@@ -66,7 +66,24 @@ package Plugins::ABCListen::Episode;
 #     a sync group, again after a seek) changes nothing. The song's own duration and start
 #     offset are never set (the "never set song duration" rule, narrowed to this fill for O6).
 #
-# Owned by the ondemand stream (O1, O6).
+#   Song info (O4): init also registers the Slim::Menu::TrackInfo provider 'abclistenepisode'
+#     (after 'top'; Slim::Menu::Base orders providers with the same anchor by name, so these rows
+#     come before M2's 'abclistenfollow' Follow rows). For an abclisten://episode/<id> URL with a
+#     metadata cache entry, in this order, each only when known:
+#       Episode notes   the cached description, shaped like core's COMMENT item:
+#                       { name => "Episode notes", items => [ { type => 'text', wrap => 1, name } ], unfold => 1 }
+#       More from <program>  OnDemand::_moreFromItem (the episode menu's row: program path from the
+#                       cached path, title and id from the cache);
+#       a tracklist row (when the cache has a path): "Tracklist (N)" with the rows inline when
+#                       Tracklist->cached has rows, "No tracklist" (text) when it holds an empty
+#                       list, else a "Tracklist" link whose feed runs Tracklist->fetch when opened
+#                       and answers once: the rows, "No tracklist" or LOAD_FAILED.
+#     Always the same number of rows for one cached entry (the tracklist row only changes form),
+#     so the Follow rows after them keep their index (stale ids, see MyABC.pm).
+#     Synchronous, no network I/O; undef for live or foreign URLs, without a cache entry (or a
+#     corrupt one), or with nothing to show. Never dies: an exception is logged at WARN, undef.
+#
+# Owned by the ondemand stream (O1, O6; O4 added the song info).
 
 use strict;
 use warnings;
@@ -79,7 +96,9 @@ use Slim::Utils::Strings;
 use Slim::Utils::Timers;
 
 use Plugins::ABCListen::API;
+use Plugins::ABCListen::OnDemand;
 use Plugins::ABCListen::ProtocolHandler;
+use Plugins::ABCListen::Tracklist;
 use Plugins::ABCListen::Util qw(ICON decodeEntities parseISO8601);
 
 use constant SEEN_MAX_AGE    => 6 * 3600;    # cached renditions younger than this are used without a request
@@ -120,6 +139,16 @@ sub init {
 			onStream => \&_onStream,
 		}
 	);
+
+	# O4: the episode's song info (notes, More from, tracklist)
+	eval {
+		require Slim::Menu::TrackInfo;
+		Slim::Menu::TrackInfo->registerInfoProvider( abclistenepisode => (
+			after => 'top',
+			func  => \&_trackInfo,
+		) );
+		1;
+	} or $log->error( 'Could not add the episode notes to ABC listen song info: ' . ( $@ || 'unknown error' ) );
 
 	return;
 }
@@ -687,6 +716,114 @@ sub _streamKbps {
 
 	return undef;
 }
+
+# ---------------------------------------------------------------------------
+# === O4 === Song info (Slim::Menu::TrackInfo provider 'abclistenepisode', see the header)
+# ---------------------------------------------------------------------------
+
+sub _trackInfo {
+	my ( $client, $url ) = @_;
+
+	my $items = eval { _trackInfoItems( $client, $url ) };
+
+	if ($@) {
+		$log->warn( 'Song info for ' . ( defined $url && !ref $url ? $url : 'an episode' ) . " failed: $@" );
+		return undef;
+	}
+
+	return ref $items eq 'ARRAY' && @$items ? $items : undef;
+}
+
+# Synchronous, no I/O: the rows from the metadata cache and the cached tracklist.
+sub _trackInfoItems {
+	my ( $client, $url ) = @_;
+
+	my $parsed = Plugins::ABCListen::Util::parseUrl($url);
+	return undef unless $parsed && $parsed->{kind} eq 'episode';
+
+	my $id    = $parsed->{id};
+	my $entry = _entry($id) or return undef;
+
+	my @items;
+
+	# shaped like core's COMMENT item: a bare text item shows as an empty row in some UIs
+	my $notes = _plain( $entry->{description} );
+	push @items, {
+		name   => Slim::Utils::Strings::cstring( $client, 'PLUGIN_ABCLISTEN_EPISODE_NOTES' ),
+		items  => [ { type => 'text', wrap => 1, name => $notes } ],
+		unfold => 1,
+	} if defined $notes;
+
+	my $more = Plugins::ABCListen::OnDemand::_moreFromItem( $client, { %$entry, id => $id } );
+	push @items, $more if $more;
+
+	my $path = Plugins::ABCListen::API::sitePath( $entry->{path} );
+	push @items, _trackInfoTracklist( $client, $id, $path ) if defined $path && $path ne '/';
+
+	return \@items;
+}
+
+# Tracklist (N) with the rows inline when they are cached, No tracklist when the cache holds an
+# empty list, else a Tracklist link that fetches them when opened.
+sub _trackInfoTracklist {
+	my ( $client, $id, $path ) = @_;
+
+	my $rows = Plugins::ABCListen::Tracklist::cached($id);
+
+	if ( !$rows ) {
+		return {
+			name        => Slim::Utils::Strings::cstring( $client, 'PLUGIN_ABCLISTEN_TRACKLIST_LINK' ),
+			type        => 'link',
+			url         => \&_trackInfoTracklistFeed,
+			passthrough => [ { id => $id, path => $path } ],
+		};
+	}
+
+	my @rows = Plugins::ABCListen::OnDemand::_tracklistRows($rows);
+	return { name => Slim::Utils::Strings::cstring( $client, 'PLUGIN_ABCLISTEN_NO_TRACKLIST' ), type => 'text' } unless @rows;
+
+	return {
+		name  => Slim::Utils::Strings::cstring( $client, 'PLUGIN_ABCLISTEN_TRACKLIST', scalar @rows ),
+		type  => 'link',
+		items => \@rows,
+	};
+}
+
+# The Tracklist link's feed: the rows (text items), No tracklist, or LOAD_FAILED, exactly once.
+sub _trackInfoTracklistFeed {
+	my ( $client, $cb, $args, $episode ) = @_;
+
+	my $answered = 0;
+	my $answer   = sub {
+		return if $answered++;
+		my $items = shift;
+		eval { $cb->( { items => $items } ); 1 } or $log->error( 'Song info tracklist: the callback died: ' . ( $@ || 'unknown error' ) );
+	};
+
+	my $text = sub { [ { name => Slim::Utils::Strings::cstring( $client, shift ), type => 'text' } ] };
+
+	eval {
+		Plugins::ABCListen::Tracklist::fetch( $episode, sub {
+			my $result = shift;
+
+			my $items = eval {
+				return $text->(LOAD_FAILED) unless ref $result eq 'HASH' && ref $result->{items} eq 'ARRAY';
+				my @rows = Plugins::ABCListen::OnDemand::_tracklistRows( $result->{items} );
+				return @rows ? \@rows : $text->('PLUGIN_ABCLISTEN_NO_TRACKLIST');
+			};
+
+			$answer->( ref $items eq 'ARRAY' ? $items : $text->(LOAD_FAILED) );
+		} );
+		1;
+	} or do {
+		$log->error( 'Song info tracklist failed: ' . ( $@ || 'unknown error' ) );
+		$answer->( $text->(LOAD_FAILED) );
+	};
+
+	return;
+}
+
+# === end O4 ===
 
 # ---------------------------------------------------------------------------
 # Helpers

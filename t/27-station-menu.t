@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 # Plugins::ABCListen::Live station menu and day lists (L4; offline, fake clock, any process TZ):
-#   * station rows (Radio lists, stationItem for D1/D4) are link + play: exact keys, type link,
+#   * station rows (Radio lists, stationItem for D1/D4) open and play: exact keys, type playlist
+#     (Material offers Play now / Play next / Append only for audio, playlist, album... types, D-1),
 #     url = the station menu, passthrough [<ID>], play / favorites_url abclisten://live/<ID>,
 #     favorites_type audio, no on_select, no description; a D4-style copy with line2 / description
 #     overridden still opens the same menu;
@@ -141,14 +142,15 @@ sub heading { { name => shift() . " \x{B7} " . shift() . ' time', type => 'text'
 # Station rows
 # ---------------------------------------------------------------------------
 
-subtest 'station rows: link + play, exact keys; stationItem has the same shape (D1, D4)' => sub {
+subtest 'station rows: open + play (type playlist), exact keys; stationItem has the same shape (D1, D4)' => sub {
 	reset_all();
 	my $rec  = $S->get('RN');
 	my $logo = Plugins::ABCListen::API::imageUrl( $rec->{logo}, 300 );
 	my $row  = $LIVE->stationItem( undef, 'RN' );
 
 	is_deeply( [ sort keys %$row ], [ sort qw(name line1 type url passthrough play favorites_url favorites_type favorites_title image favorites_icon) ], 'exact keys' );
-	is( $row->{type}, 'link', 'type link' );
+	is( $row->{type}, 'playlist', 'type playlist: Material shows Play now / Play next / Append for it (not for a link)' );
+	ok( $row->{type} ne 'link' && $row->{type} ne 'audio', '... neither a link (no play actions in Material) nor audio (would not open)' );
 	is( $row->{url}, \&Plugins::ABCListen::Live::_stationMenu, 'url: the station menu' );
 	is_deeply( $row->{passthrough}, ['RN'], 'passthrough [RN]' );
 	is( $row->{play}, 'abclisten://live/RN', 'play abclisten://live/RN (the play control and the CLI play the station)' );

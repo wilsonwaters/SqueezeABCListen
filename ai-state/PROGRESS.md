@@ -9,18 +9,19 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - ondemand: O1 #12 · O2 #16 · O3 #18 · O4 #19 · O6 #30 · O7 #40 · O8 #48 (O7 follow-ups)
 - discovery: D1 #5 · D2 #6 · D3 #13 · D4 #22 · D5 #23 · D6 #44 (podcast A–Z groups) · D7 #51 (all categories) · D8 #56 (D7 follow-ups)
 - myabc: M1 #11 · M2 #20 · M3 #52 (settings/L5 follow-ups) · M4 #59 (Latest stale-id unfollow)
-- release: R1 #9 · R2 #15 · R3 #17
+- release: R1 #9 · R2 #15 · R3 #17 · R4 #62 (raw-hosted zips: LMS can't read GitHub's download redirect)
 
 ## Currently in flight
 - #4 L2 program on air — PR #47 in review + runtime check
-- **v0.3.0 system verification: PASS_WITH_NOTES** (12/12 journeys, 85/85 stations, upgrade from v0.2.0 OK, no plugin
-  errors). D-1 (medium, Material regression from L4: station tiles have no Play now/Next/Append) → fix before release
-  (L4-fix, branch fix/L4-material-station-play). Then CHANGELOG + bump → v0.3.0. O4/D5 held until then.
-- #19 O4 episode extras — PR #57 APPROVED + review fixes verified (head e6b6886); merge after v0.3.0
-- #59 M4 Latest episodes stable after unfollow — implementation
-- #23 D5 audiobook chapters — PR #58 REQUEST_CHANGES (isAudiobook false positives on restricted podcasts e.g. Bluey Listen
-  Along → add an Episodes list for them; seenAt from fetch time; /radio/geo/ geo message; tests) — implementer fixing
-- Queued (cap 3): F6, O8, M3, D8, then v0.3.0 (system verification → release), R2, R3
+- **v0.3.0 released** (bump 54320bb → workflow run 40040776497 success; repo.xml 6a934a7; asset sha1 132f345c…).
+  **Install from GitHub FAILS on LMS 9.1.1**: GitHub's releases/download 302 now has a 9,243-char CSP header; LMS's
+  Net::HTTP limit is 8,192 ("Header line too long"). v0.2.0's install passed on 10-19, so GitHub changed it. → R4 (#62):
+  serve zips from raw.githubusercontent.com (orphan branch release-assets), repair v0.3.0, re-check the install.
+- #62 R4 raw-hosted release zips — implementation
+- #56 D8 A–Z completeness (AM, Persuasion) + D7 follow-ups — implementation
+- #23 D5 audiobook chapters — PR #58 fixes pushed (8885d44: Episodes list for restricted podcasts, seenAt via API `at`,
+  /radio/geo/ geo rule, tests) — focused re-review
+- Queued (cap 3): O8, M3, F6, then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
 - 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
@@ -34,6 +35,10 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   stale D5-review lock broken, main re-linked; SYS, D5 review and M4 resumed from saved state.
 
 ## Last completions
+- #59 M4 merged (PR #60, squash f2727e2): Latest episodes stable after an unfollow (tombstones kept 30 min).
+- #19 O4 merged (PR #57, squash 92d6b51): episode extras — segments, tracklist (stable rows, 90 s failure cache),
+  presenters, More from, episode song info.
+- v0.3.0 Material D-1 fix merged (PR #61, squash 1e40eb3): station rows type playlist.
 - #10 L4 merged (PR #55, squash ff1be94): station rows link + play; station menu (Listen live, on air, Today,
   Yesterday, 5 days); day lists with "<date> · <City> time" heading; past programs → catch-up. Review + runtime APPROVE;
   review fixes verified (diff read + merged-tree check.sh 668 tests). **Live stream L1–L5 complete.**
