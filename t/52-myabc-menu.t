@@ -1194,6 +1194,7 @@ subtest 'Latest after an unfollow: B\'s episodes stay in place for 30 min (also 
 	my $count = scalar requests();
 	is_deeply( plays( items_of( feed( $LATEST, undef ) ) ), \@before, 'unfollowed: the same rows' );
 	is( scalar requests(), $count, '... from the cache: an unfollow keeps the cache key' );
+	is( _cache()->get( Plugins::ABCListen::MyABC::_latestKey( [ $F->list ] ) ), undef, '... (no list was built under a key of the followed programs only)' );
 
 	advanceTime(901);
 	is( _cache()->get($key), undef, '15 min later: the cached list has expired' );
