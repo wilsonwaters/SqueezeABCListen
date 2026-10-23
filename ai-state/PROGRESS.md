@@ -13,7 +13,9 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 
 ## Currently in flight
 - #4 L2 program on air — PR #47 in review + runtime check
-- **v0.3.0 system verification** on ff1be94 (journeys J1–J12 incl. upgrade from v0.2.0). Hold O4/D5 merges until v0.3.0 is cut.
+- **v0.3.0 system verification: PASS_WITH_NOTES** (12/12 journeys, 85/85 stations, upgrade from v0.2.0 OK, no plugin
+  errors). D-1 (medium, Material regression from L4: station tiles have no Play now/Next/Append) → fix before release
+  (L4-fix, branch fix/L4-material-station-play). Then CHANGELOG + bump → v0.3.0. O4/D5 held until then.
 - #19 O4 episode extras — PR #57 APPROVED + review fixes verified (head e6b6886); merge after v0.3.0
 - #59 M4 Latest episodes stable after unfollow — implementation
 - #23 D5 audiobook chapters — PR #58 REQUEST_CHANGES (isAudiobook false positives on restricted podcasts e.g. Bluey Listen
