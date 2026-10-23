@@ -901,6 +901,18 @@ subtest 'seenAt is the fetch time (API.pm info at); none once the answer is 6 h 
 	my $meta = Plugins::ABCListen::Util::getEpisodeMeta('106353760');
 	ok( $meta->{renditions} && !exists $meta->{seenAt}, '7 h old answer: renditions seeded, no seenAt' );
 	is( scalar algolia_requests(), 1, '(still one query)' );
+
+	# a last-good copy never vouches for its renditions, however young (API.pm decides when it serves one)
+	fresh();
+	{
+		no warnings 'redefine';
+		my $data = JSON::PP::decode_json( fixture('discovery/algolia-audiobook-chapters.trimmed.json') );
+		local *Plugins::ABCListen::API::algolia = sub { $_[1]->( $data, { stale => 1, at => time() - 60 } ) };
+		my $r = result_of( chapters($BOOK_ID) );
+		ok( $r->{items}->[0]->{renditions} && !exists $r->{items}->[0]->{seenAt}, 'a stale copy fetched a minute ago: renditions, no seenAt' );
+		is( $r->{fetchedAt}, $T0 - 60, '... fetchedAt is its fetch time' );
+	}
+	is( Plugins::ABCListen::Audiobooks::_cachedCount($BOOK_ID), undef, '... and no count is remembered from it' );
 };
 
 subtest 'an older answer never overwrites newer audio data in the meta cache' => sub {
@@ -969,6 +981,18 @@ subtest 'counts: per program; follow a new answer; expire 24 h after the fetch' 
 	is( $name->($book), 'Chapters', 'after 24 h: the count expired with the query' );
 	chapters($BOOK_ID);
 	is( $name->($book), 'Chapters (9)', 'a new answer with another count: the new count' );
+
+	# the query's cache entry is evicted early (cache purge): the next answer replaces a count still valid
+	setTime( $T0 + $DAY + 2 * $HOUR );
+	my $queryKey = 'api:algolia:' . JSON::PP->new->canonical(1)->utf8(1)->encode( Plugins::ABCListen::Audiobooks::_query($BOOK_ID) );
+	ok( Slim::Utils::Cache->new('abclisten')->get($queryKey), '(the query is cached under its canonical params)' );
+	Slim::Utils::Cache->new('abclisten')->remove($queryKey);
+	Slim::Networking::SimpleAsyncHTTP->reset;
+	route( "$SITE/listen/search", file => 'foundation/listen-search.trimmed.html', headers => { 'Content-Type' => 'text/html' } );
+	serve_book();
+	chapters($BOOK_ID);
+	is( scalar algolia_requests(), 1, 'evicted: one new request' );
+	is( $name->($book), 'Chapters (4)', '... and the count follows the new answer at once' );
 
 	# a count written from a cached answer still expires 24 h after that answer was fetched
 	fresh();
