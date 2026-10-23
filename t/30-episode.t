@@ -419,6 +419,18 @@ subtest 'matrix: restricted and geo-001' => sub {
 	$r = answer( resolve_doc( edit_doc( sub { $_[0]->{renditions} = [ rendition( $geoAac, 'audio/aac', 0 ), rendition( $SCIENCE_MP3, 'audio/mpeg', 192 ) ] } ) ), 'non-geo + geo' );
 	is_deeply( [ candidates($r), $r->{failToken} ], [ [ $SCIENCE_MP3, $geoAac ], $GEO ],
 		'non-geo MP3 primary, geo AAC alternate: both tried; if both fail, the geo message (the alternate may have failed for being geo)' );
+
+	# D5: some audiobooks (The Secret Keeper) and Bluey Book Reads are on abcmedia's /radio/geo/ path
+	my $radioGeo = 'https://abcmedia.akamaized.net/radio/geo/listen-audio-books/the-secret-keeper/01.mp3';
+	fresh();
+	$r = answer( resolve_doc( edit_doc( sub { $_[0]->{renditions} = [ rendition( $radioGeo, 'audio/mp3', 128 ) ] } ) ), 'radio/geo' );
+	is_deeply( [ @$r{qw(url alternates failToken)} ], [ $radioGeo, [], $GEO ], 'abcmedia /radio/geo/ MP3 (audio/mp3): failToken EPISODE_GEO' );
+
+	for my $url ( 'https://abcmedia.akamaized.net/radio/kidslisten/bluey/01.mp3', "$MEDIA/audio/geography/02/x.mp3", 'https://abcmedia.akamaized.net/radio/geology/01.mp3' ) {
+		fresh();
+		$r = answer( resolve_doc( edit_doc( sub { $_[0]->{renditions} = [ rendition( $url, 'audio/mpeg', 128 ) ] } ) ), "not geo: $url" );
+		ok( $r->{url} && !exists $r->{failToken}, "not a geo path ($url): no failToken" );
+	}
 };
 
 # ---- resolution paths ----

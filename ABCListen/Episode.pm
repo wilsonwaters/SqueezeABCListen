@@ -47,8 +47,9 @@ package Plugins::ABCListen::Episode;
 #       included) and every .m3u8/.f4m URL is ignored;
 #     - candidates: MP3 by bitrate (highest first; 0 or none last), then AAC, each URL once. The
 #       first is url, the rest alternates. None: EPISODE_EXPIRED (also before the window opens);
-#     - a /geo-001/ URL among them sets failToken EPISODE_GEO: it plays only in Australia, so
-#       when every candidate fails the player says so (elsewhere Akamai answers 403).
+#     - a /geo-001/ (mediacore) or /radio/geo/ (abcmedia; D5: audiobooks, Bluey Book Reads) URL among
+#       them sets failToken EPISODE_GEO: it plays only in Australia, so when every candidate fails
+#       the player says so (elsewhere Akamai answers 403).
 #
 #   episode kind metadata($client, $url, $id): synchronous, no network, never dies. From the
 #     metadata cache: title, artist = programTitle, album = network (if a writer stored one)
@@ -378,7 +379,7 @@ sub _choose {
 	return { error => EXPIRED } unless @candidates;
 
 	my %choice = ( url => shift @candidates, alternates => \@candidates );
-	$choice{failToken} = GEO if grep {m{/geo-001/}} $choice{url}, @candidates;
+	$choice{failToken} = GEO if grep {m{/(?:geo-001|radio/geo)/}} $choice{url}, @candidates;
 
 	return \%choice;
 }
