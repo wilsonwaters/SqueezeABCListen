@@ -1,0 +1,74 @@
+{
+  "pageProps": {
+    "programTemplate": "audio",
+    "webDistributionRestricted": true,
+    "programCollectionPrepared": null,
+    "latestEpisodePrepared": null,
+    "heroImageWithCTAPrepared": {
+      "heading": "Bluey Book Reads",
+      "heroImagePrepared": {
+        "alt": "ABC Bluey Book Reads artwork showing Bandit reading a bedtime story to Bluey and Bingo on a bed.",
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/444f480bf8ca94cf853a3cdf16be1531?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+        "ratio": "1x1",
+        "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/444f480bf8ca94cf853a3cdf16be1531?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w",
+          "https://live-production.wcms.abc-cdn.net.au/444f480bf8ca94cf853a3cdf16be1531?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862 862w"
+        ],
+        "width": "862",
+        "height": "862"
+      },
+      "uri": "coremedia://program/106131618",
+      "attributionLinksPrepared": [
+        {
+          "url": "https://www.abc.net.au/kidslisten/",
+          "title": "ABC Kids listen",
+          "screenReaderText": "Source:"
+        }
+      ],
+      "canonicalURI": "/listen/programs/bluey-book-reads",
+      "channelLogoPrepared": [
+        {
+          "canonicalURI": "/kidslisten/",
+          "canonicalURL": "https://www.abc.net.au/kidslisten/",
+          "id": "9317564",
+          "label": {
+            "full": "ABC Kids listen"
+          },
+          "contentImagePrepared": {
+            "alt": "",
+            "imgSrc": "https://live-production.wcms.abc-cdn.net.au/06b825e65ff933bca13296e9b363cf32?impolicy=wcms_crop_resize&cropH=1024&cropW=1024&xPos=0&yPos=0&width=862&height=862",
+            "ratio": "1x1",
+            "srcSet": [
+              "https://live-production.wcms.abc-cdn.net.au/06b825e65ff933bca13296e9b363cf32?impolicy=wcms_crop_resize&cropH=1024&cropW=1024&xPos=0&yPos=0&width=160&height=160 160w",
+              "https://live-production.wcms.abc-cdn.net.au/06b825e65ff933bca13296e9b363cf32?impolicy=wcms_crop_resize&cropH=1024&cropW=1024&xPos=0&yPos=0&width=862&height=862 862w"
+            ]
+          }
+        }
+      ]
+    },
+    "heroDescriptionPrepared": {
+      "descriptionPrepared": {
+        "descriptor": {
+          "type": "tagname",
+          "key": "div",
+          "props": {},
+          "children": [
+            {
+              "type": "tagname",
+              "key": "@@standfirst",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "Enjoy your favourite tales in Heeler History, read by some big Bluey fans you might recognise."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "uri": "coremedia://program/106131618"
+    },
+    "presentersPrepared": []
+  }
+}

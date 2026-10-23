@@ -1,0 +1,49 @@
+{
+  "pageProps": {
+    "programTemplate": "audio",
+    "webDistributionRestricted": true,
+    "programCollectionPrepared": null,
+    "latestEpisodePrepared": null,
+    "heroImageWithCTAPrepared": {
+      "heading": "The Bomb",
+      "heroImagePrepared": {
+        "alt": "Stylised graphic of a falling bomb overlaid with the silhouette of a man in a hat and a slide rule against a fiery background",
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/bae93e36abd7dbe8d1bd55533a4a3297?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+        "ratio": "1x1",
+        "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/bae93e36abd7dbe8d1bd55533a4a3297?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w",
+          "https://live-production.wcms.abc-cdn.net.au/bae93e36abd7dbe8d1bd55533a4a3297?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862 862w"
+        ],
+        "width": "862",
+        "height": "862"
+      },
+      "uri": "coremedia://program/106126660",
+      "attributionLinksPrepared": [],
+      "canonicalURI": "/listen/programs/the-bomb"
+    },
+    "heroDescriptionPrepared": {
+      "descriptionPrepared": {
+        "descriptor": {
+          "type": "tagname",
+          "key": "div",
+          "props": {},
+          "children": [
+            {
+              "type": "tagname",
+              "key": "@@standfirst",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "How the nuclear bomb shaped world history. The scientists who raced to build weapons, the spies who stole the technology and the superpowers who grappled with deployment."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "uri": "coremedia://program/106126660"
+    },
+    "presentersPrepared": []
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "pageProps": {
+    "programTemplate": "audio",
+    "webDistributionRestricted": true,
+    "programCollectionPrepared": null,
+    "latestEpisodePrepared": null,
+    "heroImageWithCTAPrepared": {
+      "heading": "Midsomer Murders Mayhem",
+      "heroImagePrepared": {
+        "alt": "",
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/c225ba6ac740791e768f67fd7d8fec42?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+        "ratio": "1x1",
+        "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/c225ba6ac740791e768f67fd7d8fec42?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w",
+          "https://live-production.wcms.abc-cdn.net.au/c225ba6ac740791e768f67fd7d8fec42?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862 862w"
+        ],
+        "width": "862",
+        "height": "862"
+      },
+      "uri": "coremedia://program/106243538",
+      "attributionLinksPrepared": [],
+      "canonicalURI": "/listen/programs/midsomer-murders-mayhem"
+    },
+    "heroDescriptionPrepared": {
+      "descriptionPrepared": {
+        "descriptor": {
+          "type": "tagname",
+          "key": "div",
+          "props": {},
+          "children": [
+            {
+              "type": "tagname",
+              "key": "@@standfirst",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "Midsomer Murders Mayhem delves into the history of the hit television show whilst discussing the eternal question of how such a quaint county in England can be host to so many murders and such a staggering death toll."
+                }
+              ]
+            },
+            {
+              "type": "tagname",
+              "key": "p",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "Hosted by Nicki Chapman with insights from the cast, each episode of the podcast focuses on a single episode of the television series. Special guest Scottish comedian Ashley Storrie (Dinosaur) features alongside Nicki Chapman as a regular guest and host of the superfan quiz, while the series guests include American TV writer Bill Young, professional detectives, pathologists and crime-scene experts who will share their insights and opinions into the eternal appeal of the attractive, yet surprisingly lethal drama, which has seen cheese and washing machines used as murders weapons. "
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "uri": "coremedia://program/106243538"
+    },
+    "presentersPrepared": []
+  }
+}

@@ -70,7 +70,17 @@ use constant EMPTY       => 'PLUGIN_ABCLISTEN_EMPTY_COLLECTION';
 
 my $log = logger('plugin.abclisten');
 
-sub init { return }
+sub init {
+	# D5: a Chapters item in every audiobook program menu (Discover's init runs before MyABC's, so
+	# it comes before M2's Follow item); loaded here so a broken Audiobooks.pm only loses Chapters
+	eval {
+		require Plugins::ABCListen::Audiobooks;
+		Plugins::ABCListen::Audiobooks->init();
+		1;
+	} or $log->error( 'Could not load the ABC listen audiobook chapters: ' . ( $@ || 'unknown error' ) );
+
+	return;
+}
 
 # The top-level items sort at the "home" and "podcasts" weights (see Plugin.pm, Util::topWeight);
 # D4's section items at theirs.

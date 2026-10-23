@@ -1,0 +1,74 @@
+{
+  "pageProps": {
+    "programTemplate": "audio",
+    "webDistributionRestricted": true,
+    "programCollectionPrepared": null,
+    "latestEpisodePrepared": null,
+    "heroImageWithCTAPrepared": {
+      "heading": "Odd Squadcast",
+      "heroImagePrepared": {
+        "alt": "",
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/42c41e4d7a96bcd54c935564fd327bef?impolicy=wcms_crop_resize&cropH=1600&cropW=1600&xPos=0&yPos=0&width=862&height=862",
+        "ratio": "1x1",
+        "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/42c41e4d7a96bcd54c935564fd327bef?impolicy=wcms_crop_resize&cropH=1600&cropW=1600&xPos=0&yPos=0&width=160&height=160 160w",
+          "https://live-production.wcms.abc-cdn.net.au/42c41e4d7a96bcd54c935564fd327bef?impolicy=wcms_crop_resize&cropH=1600&cropW=1600&xPos=0&yPos=0&width=862&height=862 862w"
+        ],
+        "width": "862",
+        "height": "862"
+      },
+      "uri": "coremedia://program/105966832",
+      "attributionLinksPrepared": [
+        {
+          "url": "https://www.abc.net.au/kidslisten/",
+          "title": "ABC Kids listen",
+          "screenReaderText": "Source:"
+        }
+      ],
+      "canonicalURI": "/listen/programs/odd-squadcast",
+      "channelLogoPrepared": [
+        {
+          "canonicalURI": "/kidslisten/",
+          "canonicalURL": "https://www.abc.net.au/kidslisten/",
+          "id": "9317564",
+          "label": {
+            "full": "ABC Kids listen"
+          },
+          "contentImagePrepared": {
+            "alt": "",
+            "imgSrc": "https://live-production.wcms.abc-cdn.net.au/06b825e65ff933bca13296e9b363cf32?impolicy=wcms_crop_resize&cropH=1024&cropW=1024&xPos=0&yPos=0&width=862&height=862",
+            "ratio": "1x1",
+            "srcSet": [
+              "https://live-production.wcms.abc-cdn.net.au/06b825e65ff933bca13296e9b363cf32?impolicy=wcms_crop_resize&cropH=1024&cropW=1024&xPos=0&yPos=0&width=160&height=160 160w",
+              "https://live-production.wcms.abc-cdn.net.au/06b825e65ff933bca13296e9b363cf32?impolicy=wcms_crop_resize&cropH=1024&cropW=1024&xPos=0&yPos=0&width=862&height=862 862w"
+            ]
+          }
+        }
+      ]
+    },
+    "heroDescriptionPrepared": {
+      "descriptionPrepared": {
+        "descriptor": {
+          "type": "tagname",
+          "key": "div",
+          "props": {},
+          "children": [
+            {
+              "type": "tagname",
+              "key": "@@standfirst",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "Spinning off from the “odd-ventures” of \"Odd Squad\" is the Odd Squad: Odd Squadcast! This podcast follows The Big O as she hosts a weekly radio address for agents all over the world — and tries to stop an odd invasion on headquarters at the same time!"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "uri": "coremedia://program/105966832"
+    },
+    "presentersPrepared": []
+  }
+}

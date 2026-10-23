@@ -1,0 +1,17 @@
+{
+  "hits": [],
+  "nbHits": 0,
+  "page": 0,
+  "nbPages": 0,
+  "hitsPerPage": 1000,
+  "exhaustiveNbHits": true,
+  "exhaustiveTypo": true,
+  "exhaustive": {
+    "nbHits": true,
+    "typo": true
+  },
+  "query": "",
+  "params": "hitsPerPage=1000&filters=contentType%3Aaudioepisode+AND+programID%3D106126660&attributesToRetrieve=%5B%22objectID%22%2C%22title%22%2C%22canonicalURL%22%2C%22duration%22%2C%22dates%22%2C%22mediaRenditions%22%2C%22mediaDownloadStatus%22%2C%22mediaStreamingStatus%22%2C%22programTitle%22%2C%22programID%22%5D&optionalFilters=%5B%5B%22contentType%3A+article%22%2C%22contentType%3A+channel%22%2C%22contentType%3A+program%22%2C%22contentType%3A+recipe%22%2C%22contentSource%3A+iview%22%2C%22mediaStreamingStatus%3A+AVAILABLE%22%2C%22mediaDownloadStatus%3A++AVAILABLE%22%5D%5D&optionalFilters=%5B%5B%22contentType%3A+article%22%2C%22contentType%3A+channel%22%2C%22contentType%3A+program%22%2C%22contentType%3A+recipe%22%2C%22contentSource%3A+iview%22%2C%22mediaStreamingStatus%3A+AVAILABLE%22%2C%22mediaDownloadStatus%3A+AVAILABLE%22%5D%5D&optionalFilters=%5B%22contentType%3Aprogram%3Cscore%3D1%3E%22%5D",
+  "processingTimeMS": 4,
+  "serverTimeMS": 4
+}

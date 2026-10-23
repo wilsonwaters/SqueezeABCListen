@@ -397,3 +397,18 @@ PLUGIN_ABCLISTEN_AUDIOBOOKS_AU_ONLY
 # The A–Z row of programs whose title starts with a non-Latin letter (e.g. Chinese), after 0–9
 PLUGIN_ABCLISTEN_AZ_OTHER
 	EN	Other
+
+# === D5 === Audiobook chapters
+
+# The link to an audiobook's chapters in its program menu (Play all / Add all queue them in reading order)
+PLUGIN_ABCLISTEN_CHAPTERS
+	EN	Chapters
+
+# The same link once the number of chapters is known (%s = how many)
+PLUGIN_ABCLISTEN_CHAPTERS_N
+	EN	Chapters (%s)
+
+# The episodes link of a restricted podcast ABC's website lists no episodes for, once the number is
+# known (%s = how many; before that O2's PLUGIN_ABCLISTEN_EPISODES "Episodes")
+PLUGIN_ABCLISTEN_EPISODES_N
+	EN	Episodes (%s)

@@ -1,0 +1,126 @@
+{
+  "pageProps": {
+    "programTemplate": "audio",
+    "webDistributionRestricted": true,
+    "programCollectionPrepared": null,
+    "latestEpisodePrepared": null,
+    "heroImageWithCTAPrepared": {
+      "heading": "Bluey Listen Along",
+      "heroImagePrepared": {
+        "alt": "ABC Bluey Listen Along artwork showing Bluey and Bingo, wearing headphones and seatbelts on a bus, listening together.",
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/0cea8102d63730da12bab55f2ef74985?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+        "ratio": "1x1",
+        "srcSet": [
+          "https://live-production.wcms.abc-cdn.net.au/0cea8102d63730da12bab55f2ef74985?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w",
+          "https://live-production.wcms.abc-cdn.net.au/0cea8102d63730da12bab55f2ef74985?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862 862w"
+        ],
+        "width": "862",
+        "height": "862"
+      },
+      "uri": "coremedia://program/104672698",
+      "attributionLinksPrepared": [
+        {
+          "url": "https://www.abc.net.au/kidslisten/",
+          "title": "ABC Kids listen",
+          "screenReaderText": "Source:"
+        }
+      ],
+      "canonicalURI": "/listen/programs/bluey-listen-along",
+      "channelLogoPrepared": [
+        {
+          "canonicalURI": "/kidslisten/",
+          "canonicalURL": "https://www.abc.net.au/kidslisten/",
+          "id": "9317564",
+          "label": {
+            "full": "ABC Kids listen"
+          },
+          "contentImagePrepared": {
+            "alt": "",
+            "imgSrc": "https://live-production.wcms.abc-cdn.net.au/06b825e65ff933bca13296e9b363cf32?impolicy=wcms_crop_resize&cropH=1024&cropW=1024&xPos=0&yPos=0&width=862&height=862",
+            "ratio": "1x1",
+            "srcSet": [
+              "https://live-production.wcms.abc-cdn.net.au/06b825e65ff933bca13296e9b363cf32?impolicy=wcms_crop_resize&cropH=1024&cropW=1024&xPos=0&yPos=0&width=160&height=160 160w",
+              "https://live-production.wcms.abc-cdn.net.au/06b825e65ff933bca13296e9b363cf32?impolicy=wcms_crop_resize&cropH=1024&cropW=1024&xPos=0&yPos=0&width=862&height=862 862w"
+            ]
+          }
+        }
+      ]
+    },
+    "heroDescriptionPrepared": {
+      "descriptionPrepared": {
+        "descriptor": {
+          "type": "tagname",
+          "key": "div",
+          "props": {},
+          "children": [
+            {
+              "type": "tagname",
+              "key": "@@standfirst",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "Listen up, squirts! More audio-only versions of your favourite Bluey episodes are available for families as screen-free entertainment. "
+                }
+              ]
+            },
+            {
+              "type": "tagname",
+              "key": "p",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "Designed to relax, engage and ignite the imaginations of children, "
+                },
+                {
+                  "type": "tagname",
+                  "key": "strong",
+                  "props": {},
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Bluey Listen Along"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " is the perfect soundtrack to car trips and the ultimate companion for bedtime."
+                }
+              ]
+            },
+            {
+              "type": "tagname",
+              "key": "p",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "Mixed by Bluey’s own sound designer, Dan Brumm, twenty more episodes are available. The second drop of the "
+                },
+                {
+                  "type": "tagname",
+                  "key": "strong",
+                  "props": {},
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Bluey Listen Along"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": " series is comprised of fan favourites from seasons 1-3 including Markets, Wagon Ride, Taxi, Bumpy and the Wise Old Wolfhound, The Sleepover, Teasing, Squash, Daddy Dropoff, Army, Escape, Flat Pack, Grandad, Barky Boats, Burger Shop, Octopus, Easter, Curry Quest, Explorers, Pizza Girls, Faceytalk."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "uri": "coremedia://program/104672698"
+    },
+    "presentersPrepared": []
+  }
+}
