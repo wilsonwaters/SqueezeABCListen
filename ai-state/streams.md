@@ -159,7 +159,9 @@ books without chapters; they play only in Australia anyway), then L4, then M2 (M
 3. **Episode metadata cache (F1 `Util.pm`).** `setEpisodeMeta($id, \%m)` / `getEpisodeMeta($id)`, cache namespace
    `abclisten`. Shape `{id, docType, title, programTitle, programId, path (canonical site path), image, description,
    date (epoch), duration (s)}` plus optional `{renditions => [{url, mime, bitrate, fileSize (O6: needed for AAC seek — seeders must include it when known)}], availableTo, downloadAvailableTo,
-   seenAt}`. Written by O2, O3, D1, D2, D3, M2; read by O1 (resolver), O4, M2.
+   seenAt}`. `seenAt` is the time the data was **fetched** from ABC (D5: `info->{at}`), never the time it was mapped;
+   omit it for stale answers or answers ≥ 6 h old, and never let an older answer overwrite newer renditions/windows.
+   Written by O2, O3, D1, D2, D3, D5, M2; read by O1 (resolver), O4, M2.
 4. **Protocol-handler kind registry (F2, `ProtocolHandler.pm` frozen after F2).**
    `Plugins::ABCListen::ProtocolHandler->registerKind($kind, {resolve, metadata, onStream?, onStop?})`:
    `resolve($client, $id, $cb)` → `$cb->({url, alternates => [...], meta => {...}, failToken => 'PLUGIN_…'})` or
@@ -171,7 +173,8 @@ books without chapters; they play only in Australia anyway), then L4, then M2 (M
 5. **ABC data client (F3 `API.pm`).** `bff`, `nextData` (buildId discovery, one refresh-and-retry on 404, follows
    `__N_REDIRECT`), `algolia` (runtime appId/key/index discovery from `/listen/search`, hourly budget → error
    `PLUGIN_ABCLISTEN_RATE_LIMITED`), `papi`, `music`, `text`; all `($…, $cb, $ecb, \%opts)` with exactly one callback;
-   opts `ttl`, `stale_ok`, `quiet`. Pure helpers `imageUrl`, `richText`, `coreMediaRef`, `cardRef`, `sitePath`.
+   opts `ttl`, `stale_ok`, `quiet`. The success info hash carries `stale` (a last-good copy) and `at` (epoch the cached
+   entry was stored; D5 #58, append-only). Pure helpers `imageUrl`, `richText`, `coreMediaRef`, `cardRef`, `sitePath`.
    `cardRef`'s `id` is the card's **`cardId`** (document id) when numeric, else the `articleLink` leaf, else the
    `contentUri` id (kept as `uriId`): curated `contentUri` ids are often teaser ids, some dynamic (research §6.1).
    `sitePath` accepts `www.abc.net.au` and `abc.net.au`.
@@ -179,12 +182,15 @@ books without chapters; they play only in Australia anyway), then L4, then M2 (M
    description?, network?}`; `path` required) → OPML `link`; `episodeItem($client, \%episode)` (meta-cache shape; `id`
    required) → `link` with `play => abclisten://episode/<id>` and writes the meta cache;
    `registerProgramMenuProvider(sub { my ($client, $program, $cb) = @_; $cb->(\@items) })` → extra items at the top of
-   every program menu (used by M2's Follow and D5's audiobook Chapters; registration order Discover before MyABC).
+   every program menu (used by M2's Follow and D5's audiobook **Chapters** / restricted-podcast **Episodes**;
+   registration order Discover before MyABC). Providers are synchronous and never do I/O.
    Providers receive the program hash merged with `Programs->program` detail `{id, title, template, restricted,
    episodeCollectionId}` (`template` = `programTemplate`, `restricted` = `webDistributionRestricted`); a program with no
-   episode collection and `restricted` true (ABC audiobooks) shows no "No episodes available" row.
+   episode collection and `restricted` true shows no "No episodes available" row: D5 lists audiobooks' Chapters and
+   (template `audio`, e.g. Bluey Listen Along) restricted podcasts' Episodes from ABC's search index instead.
 7. **Live builders (L1, `Live.pm`/`Stations.pm`).** `Live->stationItem($client, $serviceId)` → playable station item
-   (or undef for unknown/hidden/off-air/HLS-only); `Stations->byPageSlug($slugOrUrl)` → service id for live-page links
+   (or undef for unknown/hidden/off-air/HLS-only); since L4 a row is `type => 'playlist'` + `url` (station menu) +
+   `play => abclisten://live/<ID>` (Material offers play actions only for playlist-like types; #61); `Stations->byPageSlug($slugOrUrl)` → service id for live-page links
    (`/listen/live/<slug>`, `/triplej/live/<slug>`), network homes (`/listen/radionational/`, `/triplej/`, `/kidslisten/`,
    `/pacific/live/`, …) and `abc.net.au` links without `www`. Consumers: D1 (Home "Radio Stations"), D4 (News, Sport,
    Kids listen station rows; may override `line2`/`description` on a copy), L4. Event-only services (sport events):
@@ -306,3 +312,5 @@ books without chapters; they play only in Australia anyway), then L4, then M2 (M
 - 2026-10-19 — L5 merged (PR #49) without the `hls` option: PlayHLS hands ffmpeg `$FILE$`, which F2 rewrites to
   `abclisten://…`, so it can't play our stations. `liveQuality` is `standard` | `mediahub`; HLS-only stations and
   higher-bitrate HLS wait for stretch L6 (own handler, or an F2 change so a convert rule gets the real URL).
+- 2026-10-23 — Contracts 3, 5, 6, 7 updated after D5 (#58: `info->{at}`, seenAt = fetch time, restricted-podcast
+  Episodes provider) and the L4 Material fix (#61: station rows `type => 'playlist'`).

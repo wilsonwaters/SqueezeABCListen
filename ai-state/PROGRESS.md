@@ -19,9 +19,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   serve zips from raw.githubusercontent.com (orphan branch release-assets), repair v0.3.0, re-check the install.
 - #62 R4 raw-hosted release zips — implementation
 - #56 D8 A–Z completeness (AM, Persuasion) + D7 follow-ups — implementation
-- #23 D5 audiobook chapters — PR #58 fixes pushed (8885d44: Episodes list for restricted podcasts, seenAt via API `at`,
-  /radio/geo/ geo rule, tests) — focused re-review
-- Queued (cap 3): O8, M3, F6, then v0.3.0 (system verification → release), R2, R3
+- #52 M3 settings/live-quality follow-ups — implementation
+- Queued (cap 3): O8, F6, then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
 - 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
@@ -35,6 +34,9 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   stale D5-review lock broken, main re-linked; SYS, D5 review and M4 resumed from saved state.
 
 ## Last completions
+- #23 D5 merged (PR #58, squash da61cf4; orchestrator merged main into the branch to resolve t/10): audiobook Chapters,
+  restricted-podcast Episodes (Bluey Listen Along), seenAt = fetch time (API info `at`), /radio/geo/ geo message.
+  Review REQUEST_CHANGES → fixes → re-review APPROVE.
 - #59 M4 merged (PR #60, squash f2727e2): Latest episodes stable after an unfollow (tombstones kept 30 min).
 - #19 O4 merged (PR #57, squash 92d6b51): episode extras — segments, tracklist (stable rows, 90 s failure cache),
   presenters, More from, episode song info.
