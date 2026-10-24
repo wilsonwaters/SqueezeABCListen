@@ -55,17 +55,22 @@ package Plugins::ABCListen::API;
 #       - F4: the path (and every redirect target) is requested as ABC serves it: characters
 #         outside the URL path characters %-encoded as UTF-8, then all lower-case ('/listen/x/
 #         el-ni%C3%B1o' -> '/listen/x/el-ni%c3%b1o'). Any other spelling gets a 307 with only an
-#         x-nextjs-redirect header (to the lower-cased path) and no Location: LMS can't follow it
-#         and HTTP.pm's error callback gets no headers, so it isn't followed. A 307 still answered
-#         (to another page, say) is LOAD_FAILED with status undef, without a buildId refresh.
+#         x-nextjs-redirect header (to the lower-cased path) and no Location, which LMS can't follow;
+#         so it is never asked for.
+#       - F6: a 307 (or 301/302/303) that still comes back without a Location, to another page,
+#         say, is followed by its x-nextjs-redirect header, once per call: HTTP.pm passes the
+#         error callback LMS's response. A second such 307 in one chain is LOAD_FAILED (status
+#         307). One without x-nextjs-redirect is LOAD_FAILED with status undef, without a buildId
+#         refresh, as before.
 #       - 404 or a non-JSON body (stale buildId): refresh siteConfig once and retry once, only if the
 #         buildId changed. Refreshes are limited to one per 60 s across all callers: within that window
 #         a 404 is returned as LOAD_FAILED (status 404) without a new discovery.
 #       - Follows pageProps.__N_REDIRECT (site-relative, relative or absolute) and, F4, HTTP redirects
 #         LMS doesn't follow: a 308 (legacy '/radionational/programs/futuretense' -> Location
-#         '/listen/programs/futuretense'), by its Location, else its x-nextjs-redirect header. Up to 2
-#         hops in all; a 3rd hop, a loop or an off-site target -> LOAD_FAILED (status 200 for a
-#         __N_REDIRECT, the HTTP code for a 308). A 308 without either header: as a non-JSON body.
+#         '/listen/programs/futuretense'), by its Location, else its x-nextjs-redirect header, and
+#         (F6) the 307 above. Up to 2 hops in all; a 3rd hop, a loop or an off-site target ->
+#         LOAD_FAILED (status 200 for a __N_REDIRECT, the HTTP code for a 308 or 307). A 308
+#         without either header: as a non-JSON body.
 #       - Cached under the final path, and the path asked for (both as requested, so every spelling
 #         of a page shares one entry), never under the buildId.
 #   algolia(\%params, $cb, $ecb, \%opts)
@@ -376,9 +381,12 @@ sub _nextDataGet {
 		_handler( $done, $what, sub {
 			my $error = _httpError(@_);
 
-			# F4: a redirect LMS doesn't follow (a 308: legacy /radionational/programs/... paths)
-			if ( defined( my $target = _redirectTarget( $_[1] ) ) ) {
-				return _nextDataRedirect( $state, $buildId, $path, $target, $error->{status} );
+			# F4: a redirect LMS doesn't follow (a 308: legacy /radionational/programs/... paths);
+			# F6: or can't (a 307 with only x-nextjs-redirect: its response comes third)
+			my ( $target, $code, $nextjs ) = _redirectTarget( $_[1], $_[2] );
+			if ( defined $target ) {
+				my $status = defined $error->{status} ? $error->{status} : $code;
+				return _nextDataRedirect( $state, $buildId, $path, $target, $status, $nextjs );
 			}
 
 			# a stale buildId shows as a 404 or an HTML page instead of JSON
@@ -411,9 +419,10 @@ sub _nextDataResponse {
 
 # Follow the page data at $path to $target: a __N_REDIRECT, or an HTTP redirect LMS didn't follow
 # (F4). One hop of the chain: loops, a 3rd hop and off-site targets are LOAD_FAILED with $status
-# (200 for __N_REDIRECT, the HTTP code otherwise).
+# (200 for __N_REDIRECT, the HTTP code otherwise). $nextjs (F6): the hop is a 307's
+# x-nextjs-redirect, which is followed once per call; a second one is LOAD_FAILED too.
 sub _nextDataRedirect {
-	my ( $state, $buildId, $path, $target, $status ) = @_;
+	my ( $state, $buildId, $path, $target, $status, $nextjs ) = @_;
 	my $done  = $state->{done};
 	my $chain = $state->{chain};
 
@@ -429,6 +438,9 @@ sub _nextDataRedirect {
 	push @$chain, $next;
 	if ( @$chain - 1 > MAX_REDIRECTS ) {
 		return $done->( { error => _error( LOAD_FAILED, 'Too many redirects: ' . join( ' -> ', @$chain ), $status ) } );
+	}
+	if ( $nextjs && $state->{nextjsRedirects}++ ) {
+		return $done->( { error => _error( LOAD_FAILED, 'A second x-nextjs-redirect: ' . join( ' -> ', @$chain ), $status ) } );
 	}
 
 	main::DEBUGLOG && $log->is_debug && $log->debug("nextData $state->{path}: redirected to $next");
@@ -454,26 +466,46 @@ sub _redirectPath {
 	return _servedPath( sitePath($target) );
 }
 
-# F4: the target of an HTTP redirect that reached HTTP.pm's error callback unfollowed, from its
-# Location header, else its x-nextjs-redirect header; undef for anything else. LMS's Async::HTTP
-# follows 301, 302, 303 and 307 when they have a Location, but treats a 308 as a plain response:
-# its body (the target path, not JSON) fails to decode, and $http carries the code and headers.
-# A 307 without Location never gets here with headers: LMS fails it ("Redirection without
-# location") and passes HTTP.pm only the message.
+# F4: the target of an HTTP redirect that reached HTTP.pm's error callback unfollowed:
+# ($target, $code, $nextjs), or () for anything else. LMS's Async::HTTP follows 301, 302, 303 and
+# 307 when they have a Location, but treats a 308 as a plain response: its body (the target path,
+# not JSON) fails to decode, and $http carries the code and headers. Its target is the Location
+# header, else the x-nextjs-redirect header.
+# F6: a 301/302/303/307 without a Location, which LMS fails ("Redirection without location"):
+# $http has no code or headers then, but $response, LMS's HTTP::Response (HTTP.pm's third error
+# callback argument), does. Its target is the x-nextjs-redirect header, with $nextjs true. A
+# $response with a Location is never used: LMS has followed that redirect already (the error came
+# later) or given up on it ("Redirection limit exceeded").
 sub _redirectTarget {
-	my $http = shift;
-	return undef unless ref $http;
+	my ( $http, $response ) = @_;
 
-	my $code = eval { $http->code };
-	return undef unless defined $code && $code =~ /\A30[12378]\z/;
-
-	my $headers = eval { $http->headers } or return undef;
-	for my $name (qw(Location X-Nextjs-Redirect)) {
-		my $value = eval { $headers->header($name) };
-		return $value if defined $value && !ref $value && length $value;
+	my $code = ref $response ? eval { $response->code } : undef;
+	if ( defined $code && $code =~ /\A30[1237]\z/ && !defined _header( $response, 'Location' ) ) {
+		my $target = _header( $response, 'X-Nextjs-Redirect' );
+		return ( $target, $code + 0, 1 ) if defined $target;
 	}
 
-	return undef;
+	return () unless ref $http;
+
+	$code = eval { $http->code };
+	return () unless defined $code && $code =~ /\A30[12378]\z/;
+
+	for my $name (qw(Location X-Nextjs-Redirect)) {
+		my $value = _header( $http, $name );
+		return ( $value, $code + 0, 0 ) if defined $value;
+	}
+
+	return ();
+}
+
+# A non-empty header of $http (anything with ->headers), or undef.
+sub _header {
+	my ( $http, $name ) = @_;
+
+	my $headers = eval { $http->headers } or return undef;
+	my $value   = eval { $headers->header($name) };
+
+	return defined $value && !ref $value && length $value ? $value : undef;
 }
 
 # F4: a site path spelled the way ABC serves its page data without a redirect: every character
@@ -482,9 +514,10 @@ sub _redirectTarget {
 # characters kept). ABC answers any path that isn't all lower-case, upper-case %XX escapes
 # included, with a 307 whose only pointer is an x-nextjs-redirect header to the lower-cased path
 # (measured on /listen, /kidslisten and /news pages, 2026-10-19). That 307 has no Location, so LMS
-# fails it ("Redirection without location"), and the header can't be followed here: HTTP.pm's
-# error callback gets no response headers. ABC's own links spell non-ASCII slugs with upper-case
-# escapes (articleLink, canonicalURL, __N_REDIRECT), so they are requested lower-cased instead.
+# fails it ("Redirection without location"); since F6 its header could be followed (one hop, at
+# most one per call), but asking for the served spelling saves the request and the hop. ABC's own
+# links spell non-ASCII slugs with upper-case escapes (articleLink, canonicalURL, __N_REDIRECT),
+# so they are requested lower-cased instead.
 sub _servedPath {
 	my $path = shift;
 	return undef unless defined $path;

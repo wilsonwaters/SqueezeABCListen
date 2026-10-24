@@ -23,6 +23,11 @@ package Plugins::ABCListen::HTTP;
 #   - Exactly one callback is called per request:
 #       $cb->($data, $http)     $data = decoded JSON (getJSON/postFormJSON/postJSON) or body string (get)
 #       $ecb->($message, $http) $message is readable, e.g. "HTTP request failed: 403 Forbidden (<url>)"
+#       $ecb->($message, $http, $response)
+#                               F6: when LMS fails a request that got an HTTP answer (a status other
+#                               than 2xx/3xx, or a redirect it can't follow: "Redirection without
+#                               location"), its HTTP::Response comes third, with the answer's code and
+#                               headers ($http has neither on that path). Otherwise two arguments.
 #     If $cb itself dies, the exception propagates; $ecb is not called as well.
 #
 # Owned by the foundation stream: other streams may only append to it (and must say so in their PR).
@@ -70,8 +75,8 @@ sub _request {
 	$opts ||= {};
 
 	my $onError = sub {
-		my ( $http, $error ) = @_;
-		_fail( $ecb, sprintf( 'HTTP request failed: %s (%s)', $error || 'unknown error', $url ), $http, $opts->{quiet} );
+		my ( $http, $error, $response ) = @_;
+		_fail( $ecb, sprintf( 'HTTP request failed: %s (%s)', $error || 'unknown error', $url ), $http, $opts->{quiet}, $response );
 	};
 
 	my %params = ( timeout => $opts->{timeout} || DEFAULT_TIMEOUT );
@@ -137,8 +142,10 @@ sub _decodeJSON {
 	return ($data);
 }
 
+# $response (F6): the HTTP::Response LMS's SimpleAsyncHTTP passes its error callback, if any. It
+# goes on to $ecb as a third argument; without one $ecb gets two arguments, as before.
 sub _fail {
-	my ( $ecb, $message, $http, $quiet ) = @_;
+	my ( $ecb, $message, $http, $quiet, $response ) = @_;
 
 	if ($quiet) {
 		main::DEBUGLOG && $log->is_debug && $log->debug($message);
@@ -146,7 +153,7 @@ sub _fail {
 	else {
 		$log->warn($message);
 	}
-	$ecb->( $message, $http ) if $ecb;
+	$ecb->( $message, $http, ( ref $response ? $response : () ) ) if $ecb;
 
 	return;
 }

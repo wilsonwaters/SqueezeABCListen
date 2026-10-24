@@ -16,6 +16,7 @@
 #   ABC_EPISODE_PATH  any-slug episode page that redirects (default /listen/programs/scienceshow/x/107266790)
 #   ABC_COLLECTION_ID collection for the collection family (default 103194120)
 #   ABC_NONASCII_ID   episode whose canonical path has a non-ASCII slug (default 107267360, "El Niño")
+#   ABC_LEGACY_PATH   legacy program path that 308-redirects to /listen (default /radionational/programs/futuretense)
 #
 #   ABC_PROGRAM_PATH=/listen/programs/nope scripts/abc-endpoints-check.sh   # FAIL _next/data: ...
 set -uo pipefail
@@ -25,6 +26,8 @@ PROGRAM_PATH=${ABC_PROGRAM_PATH:-/listen/programs/scienceshow}
 EPISODE_PATH=${ABC_EPISODE_PATH:-/listen/programs/scienceshow/x/107266790}
 COLLECTION_ID=${ABC_COLLECTION_ID:-103194120}
 NONASCII_ID=${ABC_NONASCII_ID:-107267360}
+LEGACY_PATH=${ABC_LEGACY_PATH:-/radionational/programs/futuretense}
+FAMILIES=12
 
 for tool in curl jq; do
   command -v "$tool" >/dev/null || { echo "abc-endpoints-check: $tool is required" >&2; exit 2; }
@@ -229,9 +232,28 @@ elif get_json 'non-ASCII path' "$tmp/nonascii-redirect.json" "$SITE/_next/data/$
   fi
 fi
 
+# 12. legacy program path (F4, F6): the page data of /radionational/programs/futuretense (Algolia's
+#     canonicalURL for some programs) answers HTTP 308 with a Location to its /listen page. LMS
+#     doesn't follow a 308; API::nextData follows the Location (x-nextjs-redirect only without one).
+if [[ -z "$build_id" ]]; then
+  fail 'legacy 308' 'no buildId (search page failed)'
+else
+  status=$(fetch "$tmp/legacy.body" "$SITE/_next/data/$build_id$LEGACY_PATH.json" -D "$tmp/legacy.headers")
+  location=''
+  [[ -s "$tmp/legacy.headers" ]] && location=$(tr -d '\r' <"$tmp/legacy.headers" | sed -n 's/^[Ll][Oo][Cc][Aa][Tt][Ii][Oo][Nn]: *//p' | head -n 1)
+  location=${location#https://www.abc.net.au}
+  if [[ "$status" != 308 ]]; then
+    fail 'legacy 308' "HTTP $status from $LEGACY_PATH (expected 308)$( [[ -n "$location" ]] && printf ' Location %s' "$location" )"
+  elif [[ "$location" != /listen/* ]]; then
+    fail 'legacy 308' "308 from $LEGACY_PATH, but its Location '${location:-none}' is not a /listen page"
+  else
+    pass 'legacy 308' "$LEGACY_PATH -> 308, Location $location"
+  fi
+fi
+
 echo
 if ((failures)); then
-  echo "abc-endpoints-check: $failures of 11 families FAILED ($((SECONDS - started)) s)"
+  echo "abc-endpoints-check: $failures of $FAMILIES families FAILED ($((SECONDS - started)) s)"
   exit 1
 fi
-echo "abc-endpoints-check: all 11 families passed ($((SECONDS - started)) s)"
+echo "abc-endpoints-check: all $FAMILIES families passed ($((SECONDS - started)) s)"
