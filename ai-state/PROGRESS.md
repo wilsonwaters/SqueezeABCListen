@@ -17,7 +17,7 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   (raw.githubusercontent.com); repair run on main succeeded; repo.xml → raw URL, same SHA1. Orchestrator install check
   from the public repo.xml on the testbed: downloaded + SHA1-verified, 0.3.0 installed, 10 top-level items, triple j
   played with song metadata; then uninstalled and dev link restored. #62 closed.
-- O8/D9 review test gaps — small follow-up PR (test/O8-D9-gaps)
+- Next after R2: R3 (#17, amendment 2 posted) — v1.0.0 release, clean-profile install, final verification, pi14 checklist
 - #15 R2 smoke test + docs — PR #68 REQUEST_CHANGES (smoke check 6 vacuous on fallback; follow-restore merge not overwrite;
   privacy hosts incl. CDNs; screenshot tab; AU-only string wording) — implementer fixing
 - Queued (cap 3): then v0.3.0 (system verification → release), R2, R3
@@ -34,6 +34,7 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   stale D5-review lock broken, main re-linked; SYS, D5 review and M4 resumed from saved state.
 
 ## Last completions
+- O8/D9 review test gaps merged (PR #71, squash 4eeb267): tests only + one comment.
 - #48 O8 merged (PR #69, squash 286f338): Hottest 100 follow row + More from; page checks resilient (10-min unconfirmed
   cache, 403 = no answer, dying check listed). #66 D9 merged (PR #70, squash 965d7d0): Search finds AM / same-title
   programs (siteFilter + mergeTwins, distinct 0); A–Z byte-identical. One reviewer, both APPROVE; merged-tree check.sh
