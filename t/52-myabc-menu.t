@@ -37,9 +37,15 @@
 #     expires meanwhile: B's tombstone is fetched too, the rebuilt rows are exactly the old ones
 #     (programTitle included) and every id re-walks to the same rows; then they leave;
 #   * the song-info provider: the follow rows only for episode URLs whose meta-cache entry has a path
-#     under /programs/ or /audiobooks/ and a programTitle; the named labels follow the state; undef
-#     for live (even with a meta entry under the live id) and foreign URLs; no HTTP; an exception
-#     contained.
+#     under /programs/ or /audiobooks/ (O8: or under a network-relative program such as
+#     /triplej/hottest-100) and a programTitle; the named labels follow the state; undef for live
+#     (even with a meta entry under the live id) and foreign URLs; no HTTP; an exception contained;
+#   * O8, Hottest 100 (/triplej/hottest-100, which 308s to /triplej/programs/hottest-100): its
+#     program menu's episodes -> song info with Follow "Hottest 100" -> Followed programs lists it
+#     under the A–Z row's path, the program menu says Following too, Latest lists its episodes, the
+#     two song-info rows stay two through follow and unfollow, and the unfollowed program keeps its
+#     Followed programs row (M4). Its fixtures are O7's (t/data/ondemand/
+#     nextdata-program-hottest-100.trimmed.json, bff-episodesWithSegments-hottest-100.trimmed.json).
 #
 # Fixtures: t/data/ondemand/nextdata-program-scienceshow.trimmed.json (O2), the F3 search page
 # t/data/foundation/listen-search.trimmed.html (buildId build-3afcd04f), and t/data/myabc/
@@ -1399,6 +1405,98 @@ subtest 'song info: no item without an episode URL, a known path or a program ti
 	is( $item, undef, '... no item' );
 	ok( ( grep {/Song info Follow item failed: cache exploded/} warnings_logged() ), '... logged at WARN' );
 	is( scalar requests(), 0, 'no HTTP' );
+};
+
+# ---------------------------------------------------------------------------
+# O8: Hottest 100, a network-relative program
+# ---------------------------------------------------------------------------
+
+my $H100 = '/triplej/hottest-100';
+
+# ABC's answers on 2026-10-19 (O7): /triplej/hottest-100 308s to /triplej/programs/hottest-100.
+sub route_hottest_100 {
+	route( "$NEXT$H100.json", code => 308, headers => { Location => '/triplej/programs/hottest-100' }, content => '/triplej/programs/hottest-100' );
+	route( "$NEXT/triplej/programs/hottest-100.json", file => 'ondemand/nextdata-program-hottest-100.trimmed.json', headers => $JSON_TYPE );
+	route( qr{\A\Q$EPS\E\?collectionId=12158996&}, file => 'ondemand/bff-episodesWithSegments-hottest-100.trimmed.json', headers => $JSON_TYPE );
+}
+
+subtest 'O8: Hottest 100 - an episode\'s song info has Follow "Hottest 100"; following lists it in Followed programs under the A–Z row\'s path' => sub {
+	fresh();
+	route_hottest_100();
+	my $client = ABCListenTest::FakeClient->new('00:00:00:00:00:01');
+
+	# Programs -> All programs A–Z -> H -> Hottest 100 (the row O7's index lists) -> its episodes
+	my $row  = Plugins::ABCListen::OnDemand->programItem( $client, { title => 'Hottest 100', path => $H100, id => '8199386', network => 'triple j' } );
+	my $menu = items_of( open_item( $row, $client ) );
+	is_deeply( [ @{ names($menu) }[ 1, 2 ] ], [ 'Follow "Hottest 100"', 'Follow to see its new episodes in My ABC listen' ], 'the program menu: Follow "Hottest 100" (as before O8)' );
+	is_deeply( plays( [ grep { $_->{play} } @$menu ] ), [qw(106246016 106246024)], 'its 2 episodes' );
+
+	# one plays: song info
+	my $url  = 'abclisten://episode/106246016';
+	my $meta = Plugins::ABCListen::Util::getEpisodeMeta('106246016');
+	is( $meta->{path}, "$H100/hottest-100-25---1/106246016", 'the episode\'s path is network-relative (/triplej/hottest-100/<slug>/<id>)' );
+	is( $meta->{programTitle}, 'Hottest 100', '... with its program title' );
+
+	my $rows   = $TRACKINFO->( $client, $url, undef, {}, {} );
+	my $target = { title => 'Hottest 100', path => $H100, id => '8199386', image => $meta->{image} };
+	is_deeply(
+		$rows,
+		[ {
+			name        => 'Follow "Hottest 100"',
+			type        => 'link',
+			url         => $ACTION,
+			nextWindow  => 'parent',
+			passthrough => [ { op => 'follow', program => $target } ],
+		}, text_item('Follow to see its new episodes in My ABC listen') ],
+		'song info: Follow "Hottest 100" for /triplej/hottest-100, then the hint (no rows before O8)'
+	);
+
+	# Follow there
+	is_deeply( names( items_of( open_item( $rows->[0], $client ) ) ), ['Following Hottest 100'], 'Follow: "Following Hottest 100"' );
+	ok( $F->isFollowed($H100), 'followed under /triplej/hottest-100' );
+
+	# My ABC listen -> Followed programs: Hottest 100
+	is( items_of( feed( $MY_ABC, $client ) )->[1]->{name}, 'Followed programs (1)', 'My ABC listen: Followed programs (1)' );
+	my $followed = items_of( feed( $FOLLOWED, $client ) );
+	is_deeply( names($followed), ['Hottest 100'], 'Followed programs: Hottest 100' );
+	is( $followed->[0]->{passthrough}->[0]->{path}, $H100, '... the row opens /triplej/hottest-100 (the A–Z row\'s path)' );
+
+	# the same program everywhere: its program menu (from the A–Z row or from Followed programs) says Following
+	for my $from ( [ 'the A–Z row', $row ], [ 'Followed programs', $followed->[0] ] ) {
+		my $items = items_of( open_item( $from->[1], $client ) );
+		is_deeply( [ @{ names($items) }[ 1, 2 ] ], [ "\x{2713} Following \"Hottest 100\"", 'Unfollow "Hottest 100"' ], "the program menu from $from->[0]: Following, Unfollow" );
+	}
+
+	# Latest episodes: its episodes
+	my $latest = items_of( feed( $LATEST, $client ) );
+	is_deeply( plays($latest), [qw(106246016 106246024)], 'Latest episodes: its 2 episodes' );
+	like( $latest->[0]->{name}, qr/\AHottest 100: /, '... "Hottest 100: " rows' );
+
+	# song info now: Following, Unfollow (still two rows); Unfollow there
+	$rows = $TRACKINFO->( $client, $url );
+	is_deeply( names($rows), [ "\x{2713} Following \"Hottest 100\"", 'Unfollow "Hottest 100"' ], 'song info while following: Following, Unfollow (two rows)' );
+	is_deeply( names( items_of( open_item( $rows->[1], $client ) ) ), ['No longer following Hottest 100'], 'Unfollow: "No longer following Hottest 100"' );
+	ok( !$F->isFollowed($H100), 'not followed any more' );
+	is_deeply( names( items_of( feed( $FOLLOWED, $client ) ) ), ['Hottest 100'], 'Followed programs keeps its row for 30 min (M4 tombstone)' );
+	is( scalar @{ $TRACKINFO->( $client, $url ) }, 2, 'song info: two rows again (Follow, hint)' );
+
+	# the other episode: the same program
+	is( $TRACKINFO->( undef, 'abclisten://episode/106246024' )->[0]->{passthrough}->[0]->{program}->{path}, $H100, 'the other episode: the same program path' );
+
+	is( scalar( warnings_logged() ) + scalar( errors_logged() ), 0, 'nothing at WARN or ERROR' );
+};
+
+subtest 'O8: /programs/ episodes are unchanged; a network page or an archived page under a network has no follow rows' => sub {
+	fresh();
+	Plugins::ABCListen::Util::setEpisodeMeta( '107266790', { path => "$SCIENCE/trees-potatoes-brendan-may-step/107266790", programTitle => 'The Science Show' } );
+	Plugins::ABCListen::Util::setEpisodeMeta( '107400001', { path => '/triplej/programs/hack/hack-15-october/107400001', programTitle => 'Hack' } );
+	Plugins::ABCListen::Util::setEpisodeMeta( '7099490',   { path => '/listen/radionational/archived/summerschool/chas-licciardello/7099490', programTitle => 'Summer School' } );
+	Plugins::ABCListen::Util::setEpisodeMeta( '2913842',   { path => '/listen/radionational/robyn-williams/2913842', programTitle => 'The Science Show' } );
+
+	is( $TRACKINFO->( undef, 'abclisten://episode/107266790' )->[0]->{passthrough}->[0]->{program}->{path}, $SCIENCE, '/listen/programs/: the program path, as before' );
+	is( $TRACKINFO->( undef, 'abclisten://episode/107400001' )->[0]->{passthrough}->[0]->{program}->{path}, $HACK,    '/triplej/programs/: the program path, as before' );
+	is( $TRACKINFO->( undef, 'abclisten://episode/7099490' ), undef, 'an archived program\'s page under /listen/radionational: no follow rows' );
+	is( $TRACKINFO->( undef, 'abclisten://episode/2913842' ), undef, 'a presenter page under /listen/radionational: no follow rows' );
 };
 
 done_testing();

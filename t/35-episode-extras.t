@@ -26,6 +26,9 @@
 #   (registered by Episode->init after 'top', before M2's Follow rows; full, partial, absent and
 #   corrupt cache; inline vs lazy Tracklist and the lazy link's feed; undef for live and foreign
 #   URLs; no HTTP; exceptions contained); readable names everywhere (no raw token, no empty row).
+#   O8: a Hottest 100 episode (network-relative path /triplej/hottest-100/<slug>/<id>) gets
+#   "More from Hottest 100" for /triplej/hottest-100 in its menu and song info, and song info's
+#   Follow rows after it, with a stable row count.
 #
 # Fixtures: t/data/ondemand/ - nextdata-episode-classic-drive-aac.trimmed.json (tracklist, 3 of
 # 31 items), nextdata-episode-scienceshow-mp3.trimmed.json (tracklistPrepared null),
@@ -861,6 +864,57 @@ subtest 'More from on an episode reached through Search (D3)' => sub {
 	route_doc( $TREES_PATH, 'nextdata-episode-scienceshow-mp3.trimmed.json' );
 	my $c = open_item($row);
 	is( find_named( items_of($c), qr/^More from/ )->{name}, 'More from The Science Show', 'a search result\'s episode menu: More from <program>' );
+};
+
+# O8: Hottest 100 (O7's fixtures): /triplej/hottest-100 308s to /triplej/programs/hottest-100; its
+# episodes are at /triplej/hottest-100/<slug>/<id>.
+my $H100    = '/triplej/hottest-100';
+my $H100_ID = '106246016';
+
+sub route_hottest_100 {
+	route( "$NEXT$H100.json", code => 308, headers => { Location => '/triplej/programs/hottest-100' }, content => '/triplej/programs/hottest-100' );
+	route_doc( '/triplej/programs/hottest-100', 'nextdata-program-hottest-100.trimmed.json' );
+	route( qr{\A\Q$EPS\E\?collectionId=12158996&}, file => 'ondemand/bff-episodesWithSegments-hottest-100.trimmed.json', headers => $JSON );
+	route_doc( "$H100/hottest-100-25---1/$H100_ID", 'nextdata-episode-tracklist-null.synthetic.json' );
+}
+
+subtest 'More from (O8): a Hottest 100 episode -> "More from Hottest 100" (/triplej/hottest-100, the A–Z row\'s path); song info: More from, then the Follow rows' => sub {
+	fresh();
+	route_hottest_100();
+
+	my $menu = items_of( feed( $PROGRAM_MENU, undef, { title => 'Hottest 100', path => $H100 } ) );
+	my ($episode) = grep { ( $_->{play} || '' ) eq "abclisten://episode/$H100_ID" } @$menu;
+	ok( $episode, 'Hottest 100\'s program menu lists episode 106246016' );
+	is( $episode->{passthrough}->[0]->{path}, "$H100/hottest-100-25---1/$H100_ID", '... at its network-relative path' );
+
+	my $c = open_item($episode);
+	is( $c->count, 1, 'the episode menu: one callback' );
+	my $more = find_named( items_of($c), qr/^More from/ );
+	ok( $more, 'the episode menu has a More from row (none before O8)' );
+	is( $more->{name}, 'More from Hottest 100', '... "More from Hottest 100"' );
+	is( $more->{passthrough}->[0]->{path}, $H100, '... for /triplej/hottest-100 (the path the A–Z lists, not the 308 target)' );
+	is( $more->{passthrough}->[0]->{title}, 'Hottest 100', '... titled Hottest 100' );
+
+	my $program = items_of( open_item($more) );
+	is_deeply( [ grep {defined} map { $_->{play} } @$program ], [ "abclisten://episode/$H100_ID", 'abclisten://episode/106246024' ], 'opening it: Hottest 100\'s program menu with its episodes' );
+
+	# song info while it plays: Episode notes?, More from, Tracklist, then M2's Follow rows; a stable count
+	Plugins::ABCListen::Episode->init;
+	Plugins::ABCListen::MyABC->init;
+	my @afterTop = sort grep { ( $Slim::Menu::TrackInfo::PROVIDERS{$_}->{after} || '' ) eq 'top' } keys %Slim::Menu::TrackInfo::PROVIDERS;
+	my $url  = "abclisten://episode/$H100_ID";
+	my $info = sub { [ map { my $r = provider($_)->{func}->( undef, $url, undef, {}, {} ); ref $r eq 'ARRAY' ? @$r : () } @afterTop ] };
+
+	my $rows = $info->();
+	is_deeply( [ grep { !/^Episode notes\z/ } @{ names($rows) } ], [ 'More from Hottest 100', $NO_TRACKLIST, 'Follow "Hottest 100"', 'Follow to see its new episodes in My ABC listen' ], 'song info: More from Hottest 100 · No tracklist (fetched with the menu) · Follow "Hottest 100" · hint' );
+	is( $rows->[-2]->{passthrough}->[0]->{program}->{path}, $H100, '... the Follow row follows /triplej/hottest-100' );
+
+	my $count = scalar @$rows;
+	Slim::Utils::Cache->new('abclisten')->set( "tracklist-rows:$H100_ID", [ { title => 'One' } ], 3600 );
+	is( scalar @{ $info->() }, $count, 'a tracklist cached: the same number of rows' );
+	Plugins::ABCListen::Follow::follow( { title => 'Hottest 100', path => $H100 } );
+	is( scalar @{ $info->() }, $count, 'following: the same number of rows' );
+	is_deeply( [ @{ names( $info->() ) }[ -2, -1 ] ], [ "\x{2713} Following \"Hottest 100\"", 'Unfollow "Hottest 100"' ], '... Following, Unfollow' );
 };
 
 # ===========================================================================
