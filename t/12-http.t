@@ -408,10 +408,12 @@ subtest "F6: the error callback gets LMS's response third (a 307 LMS can't follo
 		}
 	}
 
-	# no HTTP answer, or one LMS passed to the success callback: two arguments, as before
+	# no response read (the stub's transport errors model one before any headers: it never passes
+	# a response with them; LMS does when it had read headers, e.g. a body timeout, and HTTP.pm then
+	# passes it on as above), or an answer LMS passed to the success callback: two arguments
 	my @two = (
-		[ 'a transport error',              getJSON  => [$NEXT],              { error => 'Timed out waiting for data' } ],
-		[ 'no route',                       get      => [$NEXT],              undef ],
+		[ 'a transport error before any headers', getJSON => [$NEXT],         { error => 'Timed out waiting for data' } ],
+		[ 'no route (no response read)',    get      => [$NEXT],              undef ],
 		[ 'invalid JSON',                   getJSON  => [$NEXT],              { code => 200, content => '<html></html>' } ],
 		[ 'a 308 (not JSON; code on $http)', getJSON => [$NEXT],              { code => 308, headers => { Location => '/listen/programs/new-name' }, content => '/listen/programs/new-name' } ],
 		[ 'an unencodable body',            postJSON => [ $NEXT, 'not a ref' ], { code => 200, content => '{}' } ],
@@ -422,8 +424,24 @@ subtest "F6: the error callback gets LMS's response third (a 307 LMS can't follo
 		route( $NEXT, %$response ) if $response;
 		my ( $ok, $err ) = run_request( $fn => $leading, undef );
 		exactly_one( $ok, $err, 'err', $name );
-		is( scalar( my @args = $err->args(0) ), 2, "$name: two arguments, as before" );
+		is( scalar( my @args = $err->args(0) ), 2, "$name: no response to pass on, so two arguments" );
 	}
+
+	# LMS's onError passes $http->response whatever the error, once it had read headers: e.g. a
+	# timeout after LMS followed a redirect, with that 30x (Location included). The stub can't
+	# produce one, so call the error handler as SimpleAsyncHTTP::onError would.
+	resetStubs();
+	route( $NEXT, code => 200, content => '{}', defer => 1 );
+	my ( $ok, $err ) = run_request( getJSON => [$NEXT], undef );
+	my ($http) = map { $_->[0] } @Slim::Networking::SimpleAsyncHTTP::DEFERRED;
+	@Slim::Networking::SimpleAsyncHTTP::DEFERRED = ();
+	my $followed = Slim::Networking::SimpleAsyncHTTP::Response->new( 307, 'Temporary Redirect', Slim::Networking::SimpleAsyncHTTP::Headers->new( Location => '/listen/programs/new-name' ), '' );
+	$http->ecb->( $http, 'Timed out waiting for data', $followed );
+	exactly_one( $ok, $err, 'err', 'a transport error after a followed redirect' );
+	my @args = $err->args(0);
+	is( $args[0], "HTTP request failed: Timed out waiting for data ($NEXT)", 'a transport error after a followed redirect: the message as before' );
+	is( scalar @args, 3, '... and the response LMS passed, third' );
+	is( ref $args[2] && $args[2]->header('Location'), '/listen/programs/new-name', '... unchanged (the 307 LMS followed)' );
 };
 
 done_testing();

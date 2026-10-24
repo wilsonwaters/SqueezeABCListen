@@ -24,10 +24,17 @@ package Plugins::ABCListen::HTTP;
 #       $cb->($data, $http)     $data = decoded JSON (getJSON/postFormJSON/postJSON) or body string (get)
 #       $ecb->($message, $http) $message is readable, e.g. "HTTP request failed: 403 Forbidden (<url>)"
 #       $ecb->($message, $http, $response)
-#                               F6: when LMS fails a request that got an HTTP answer (a status other
-#                               than 2xx/3xx, or a redirect it can't follow: "Redirection without
-#                               location"), its HTTP::Response comes third, with the answer's code and
-#                               headers ($http has neither on that path). Otherwise two arguments.
+#                               F6: LMS's SimpleAsyncHTTP passes its error callback the request's
+#                               HTTP::Response whenever LMS had read response headers, and it comes
+#                               third here, with their code and headers ($http has neither on that
+#                               path): a status other than 2xx/3xx; a redirect LMS can't follow
+#                               ("Redirection without location") or gave up on ("Redirection limit
+#                               exceeded"); an error reading the body; or a transport error after
+#                               LMS followed a redirect (the response is then that 30x, Location
+#                               included). Without one (e.g. a connect error or a timeout before any
+#                               headers), and for a body that isn't JSON, two arguments. (The
+#                               t/lib SimpleAsyncHTTP stub never passes a response with a
+#                               transport error.)
 #     If $cb itself dies, the exception propagates; $ecb is not called as well.
 #
 # Owned by the foundation stream: other streams may only append to it (and must say so in their PR).

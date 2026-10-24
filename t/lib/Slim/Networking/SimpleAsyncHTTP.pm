@@ -15,7 +15,9 @@ package Slim::Networking::SimpleAsyncHTTP;
 # method, URL, headers, body and params, and answered synchronously:
 #   { code => 200, content => '...', headers => { 'Content-Type' => '...' } }   # response
 #   { error => 'Timed out waiting for data' }                                 # transport error
-# A request with no matching route fails like a network error.
+# A request with no matching route fails like a network error. Neither passes onError a response
+# (a transport error before any headers; LMS passes one when it had read headers, which the stub
+# doesn't model).
 # F6: a 301/302/303/307 without a Location header fails as Slim::Networking::Async::HTTP fails it
 # ("Redirection without location", the response as onError's third argument), e.g. ABC's 307 with
 # only x-nextjs-redirect: { code => 307, headers => { 'x-nextjs-redirect' => '/listen/...' } }.
