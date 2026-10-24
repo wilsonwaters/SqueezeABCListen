@@ -198,7 +198,7 @@ date and title ("Fri 23 Oct – Mental health and the manosphere"). Long lists e
 **More episodes…**. Programs use ABC's current titles, such as "Radio National Breakfast" and
 "If You're Listening".
 
-![A program's page in the Default web interface: All In the Mind's description, presenter, the Follow row, then its episodes, newest first, each with its date](docs/images/default-program-episodes.png)
+![A program's page in the Default web interface: All In the Mind's presenter, network and Follow row, then its episodes, newest first, each named with its date and title](docs/images/default-program-episodes.png)
 
 An episode plays from its row. Open it for:
 
@@ -225,7 +225,7 @@ Controller players and some LMS apps offer in their Search menu: it lists an **A
 with **Results for '*your words*'** and the same **Programs (N)** and **Episodes (N)** lists.
 Material's own search box doesn't include ABC listen; use **ABC listen → Search** there.
 
-![Search results for "science" in the Default web interface: Programs (20) and Episodes (40)](docs/images/default-search-results.png)
+![Search results for "science" in the Default web interface: the Programs (20) list, starting with The Chase — Science on the Run, Science Friction and The Science Show](docs/images/default-search-results.png)
 
 ### My ABC listen
 
@@ -279,7 +279,7 @@ the cover art, updated at every song change (the plugin checks ABC's song data e
 2 minutes, and at the end of each song). Between songs, Now Playing shows the program.
 **Song Info** also has **Recently played**, the last ten songs with their times.
 
-![Now Playing in the Material web interface while triple j plays: the song title (Ritalin), the artist (Ruby Fields), the program and station (Weekends · triple j) and the album cover](docs/images/material-now-playing.png)
+![Now Playing in the Material web interface while Double J plays: the song title (New Shoes), the artist (Sharon Jones & the Dap-Kings), the program and station (Live at the Wireless · Double J) and the song's artwork](docs/images/material-now-playing.png)
 
 **Episodes** show the episode's title, the program, the episode's artwork and its duration, and
 can be sought. **Song Info** for an episode has **Episode notes**, **More from** *program*, its
