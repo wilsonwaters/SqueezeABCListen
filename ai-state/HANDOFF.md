@@ -80,7 +80,7 @@ stream quality** (Standard 56 kbps, or ABC mediahub with automatic fallback).
 
 | Priority | Issue |
 |---|---|
-| P1 (1.0.1) | #75 release tooling "403" match (in progress) · #76 `seenAt` from fetch time · #77 drift probe coverage + weekly run · #79 docs touch-ups · any pi14 ✗ |
+| P1 (1.0.1) | #76 `seenAt` from fetch time · #77 drift probe coverage + weekly run · #79 docs touch-ups · any pi14 ✗ |
 | P2 | #80 HLS / higher-quality live (before the cricket season) · #78 log noise and cache writes |
 | P3 | #81 episodes beyond 250 / hide expired · #72 Default-skin placeholder icons |
 | Won't (proposed) | ABC-account (Gigya) sync of follows — fragile, needs credentials, little gain |

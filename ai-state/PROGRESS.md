@@ -26,7 +26,7 @@ Phase 6 — v1.0.0 released and verified (2026-10-24); handoff written (ai-state
   read + merged-tree check.sh). Evidence + pi14 checklist posted on #17 (comments 6380815256, 6380828931).
 - Phase 6: final review vs brief — v1.0.0 delivers the brief (criterion 7 partial: pi14 acceptance pending; one
   post-instruction commit with the old identity, 71e77b6). Backlog filed: #76 F7, #77 R6, #78 F8, #79 R7, #80 L6, #81 O5.
-  HANDOFF.md written. #75 R5 in progress.
+  HANDOFF.md written. #75 R5 merged (PR #82, squash 9021af9: shared scripts/push-refused.sh; deterministic t/99).
 - Queued (cap 3): then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
