@@ -1,7 +1,7 @@
 # Project Progress
 
 ## Phase
-Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
+Phase 5/6 — v1.0.0 released (2026-10-24); final verification + pi14 checklist (R3), then handoff.
 
 ## Issue map (task ID → GitHub issue)
 - foundation: F1 #1 · F2 #3 · F3 #7 · F4 #34 (bug) · F5 #37 (cardRef names) · F6 #41 (F4 follow-ups)
@@ -17,8 +17,9 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   (raw.githubusercontent.com); repair run on main succeeded; repo.xml → raw URL, same SHA1. Orchestrator install check
   from the public repo.xml on the testbed: downloaded + SHA1-verified, 0.3.0 installed, 10 top-level items, triple j
   played with song metadata; then uninstalled and dev link restored. #62 closed.
-- #17 R3 phase 1 — pre-release smoke gate on main + release PR (install.xml 1.0.0 + CHANGELOG); then orchestrator merges →
-  Release workflow → R3 phase 2 (verify release, clean-profile install, final system verification, pi14 checklist)
+- **v1.0.0 RELEASED** (PR #73 squash a6bf826; t/98 generalised first in #74): release v1.0.0 + asset; release-assets
+  ABCListen-1.0.0.zip (sha1 7a39ccee…); repo.xml 1.0.0 → raw URL, by Wilson Waters. Pre-release smoke 15/15 on main.
+- #17 R3 phase 2 — release verification, clean-profile install from GitHub, final system verification, pi14 checklist
 - Queued (cap 3): then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
