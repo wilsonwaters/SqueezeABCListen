@@ -20,7 +20,6 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - #48 O8 (PR #69) + #66 D9 (PR #70) — in review (one reviewer for both)
 - #15 R2 smoke test + docs — PR #68 REQUEST_CHANGES (smoke check 6 vacuous on fallback; follow-restore merge not overwrite;
   privacy hosts incl. CDNs; screenshot tab; AU-only string wording) — implementer fixing
-- #41 F6 F4 follow-ups — PR #67 APPROVED; small fixes (cached-path 307 fallback, HTTP.pm comment) in progress
 - Queued (cap 3): then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
@@ -35,6 +34,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   stale D5-review lock broken, main re-linked; SYS, D5 review and M4 resumed from saved state.
 
 ## Last completions
+- #41 F6 merged (PR #67, squash e979a24): HTTP.pm response to error callbacks, x-nextjs-redirect follow, stale renditions
+  fallback, drift probe 12. Review APPROVE; fixes verified (diff read + merged-tree check.sh 752 tests).
 - #56 D8 merged (PR #65, squash 9be5881): A–Z 709 → 736 (AM via URL site segment; distinct 0 + strict twin merge),
   Audiobooks A–Z 20, last-good categories at the deadline, A–Z buckets for modifier/compat letters. Review APPROVE;
   fixes verified (diff read + merged-tree check.sh 746 tests).
