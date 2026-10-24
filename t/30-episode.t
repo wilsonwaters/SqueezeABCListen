@@ -17,6 +17,10 @@
 # F4: a non-ASCII cached path (upper-case escapes, as O2 caches it) and the generic path of a non-ASCII
 # episode play; a cached path that fails (any error) falls back once to the id chain (generic path,
 # then the lookup) within the deadline and caches the corrected path; RATE_LIMITED over budget.
+# F6: when that fallback finds nothing (no hit, a hit with neither audio nor a page, a document that
+# isn't audio, a second lookup), the renditions cached earlier are tried before NOT_FOUND; a cached
+# path that serves no document for the episode (a 307 x-nextjs-redirect to the program page, now
+# followed by API.pm; another id's document) falls back like a failed one.
 #
 # Fixtures in t/data/ondemand/ are raw response bodies as served:
 #   nextdata-episode-scienceshow-mp3.trimmed.json   GET /_next/data/<buildId>/listen/programs/scienceshow/trees-potatoes-brendan-may-step/107266790.json
@@ -28,8 +32,8 @@
 #   nextdata-program-audiobook.trimmed.json         GET /_next/data/build-3afcd04f/listen/audiobooks/the-dictionary-of-lost-words-page.json
 #       (research copy; its pageProps re-wrapped as {"pageProps": ...})
 # Recorded for O1 (2026-10-19, OQ1 spike, buildId build-3afcd04f):
-#   nextdata-generic-107266790.json   GET /_next/data/build-3afcd04f/listen/programs/x/x/107266790.json (308 to the canonical page)
-#   nextdata-generic-106353760.json   GET /_next/data/build-3afcd04f/listen/programs/x/x/106353760.json (audiobook chapter: 308 to its book)
+#   nextdata-generic-107266790.json   GET /_next/data/build-3afcd04f/listen/programs/x/x/107266790.json (a 200 with __N_REDIRECT to the canonical path)
+#   nextdata-generic-106353760.json   GET /_next/data/build-3afcd04f/listen/programs/x/x/106353760.json (audiobook chapter: a 200 with __N_REDIRECT to its book)
 #   nextdata-generic-1-404.json       GET /_next/data/build-3afcd04f/listen/programs/x/x/1.json (404 {"notFound":true})
 # Recorded for O6 (2026-10-19), POST .../1/indexes/listen_prod_all/query, the objectID lookup O6 sends
 # (attributesToRetrieve with defaultThumbnail), pretty-printed:
@@ -39,8 +43,8 @@
 #                                     streaming window 28 days
 # Recorded for F4 (2026-10-19, buildId build-3afcd04f), If You're Listening, "The apocalyptic El Niño we
 # didn't see coming" (107267360, MP3, download window to 2200):
-#   nextdata-generic-107267360.json   GET /_next/data/build-3afcd04f/listen/programs/x/x/107267360.json (308 to the
-#                                     canonical page, spelled with upper-case %C3%B1)
+#   nextdata-generic-107267360.json   GET /_next/data/build-3afcd04f/listen/programs/x/x/107267360.json (a 200 with
+#                                     __N_REDIRECT to the canonical path, spelled with upper-case %C3%B1)
 #   nextdata-episode-nonascii-107267360.trimmed.json  GET .../if-youre-listening/the-apocalyptic-el-ni%c3%b1o-we-didn-t-see-coming/107267360.json
 #                                     (lower-case escapes: the upper-case spelling answers 307 with only x-nextjs-redirect;
 #                                     documentProps cut to the keys this module reads, heroImageWithCTAPrepared and
@@ -496,6 +500,18 @@ subtest 'no cached path (OQ1): the generic path, redirected by ABC to the canoni
 	is_deeply( [ map { $_->{url} } data_requests() ], [ data_url("/listen/programs/x/x/$SCIENCE"), data_url($SCIENCE_PATH) ], 'the generic path, then the redirect target (followed by API.pm)' );
 	is( getEpisodeMeta($SCIENCE)->{path}, $SCIENCE_PATH, 'the canonical path is cached' );
 	is( scalar( algolia_requests() ), 0, 'no Algolia request' );
+
+	# F6: what the header says of the recorded generic paths: page data (served 200) whose
+	# pageProps carry __N_REDIRECT, not an HTTP 308
+	for my $case (
+		[ $SCIENCE,    $SCIENCE_PATH ],
+		[ $CHAPTER,    "$BOOK_PATH/" ],
+		[ '107267360', '/listen/programs/if-youre-listening/the-apocalyptic-el-ni%C3%B1o-we-didn-t-see-coming/107267360' ],
+	) {
+		my ( $id, $target ) = @$case;
+		my $props = $JSON->decode( fixture("ondemand/nextdata-generic-$id.json") )->{pageProps};
+		is_deeply( [ @$props{qw(__N_REDIRECT __N_REDIRECT_STATUS)} ], [ $target, 308 ], "nextdata-generic-$id.json: __N_REDIRECT to $target in the page data" );
+	}
 };
 
 subtest 'generic path fails -> one Algolia objectID lookup -> its page -> the document' => sub {
@@ -558,14 +574,15 @@ subtest 'audio and audiosegment documents resolve like audioepisode; a document 
 	fresh();
 	serve_algolia( { hits => [] } );
 	my $r = answer( resolve_doc( edit_doc( sub { $_[0]->{id} = '999' } ) ), 'other id' );
-	is_deeply( $r, { error => $NOT_FOUND }, 'the cached path holds document 999: looked up instead (no hit: NOT_FOUND)' );
+	is_deeply( $r, { error => $NOT_FOUND }, 'the cached path holds document 999: the generic path (F6), then looked up (no hit: NOT_FOUND)' );
 	ok( !getEpisodeMeta($SCIENCE)->{renditions}, "... document 999's renditions are not cached for $SCIENCE" );
 };
 
-subtest 'audiobook chapter (#12 amendment): cached chapter path -> book page -> one Algolia lookup -> geo MP3' => sub {
+subtest 'audiobook chapter (#12 amendment): cached chapter path -> book page -> generic path (F6) -> one Algolia lookup -> geo MP3' => sub {
 	fresh();
 	setEpisodeMeta( $CHAPTER, { path => $CHAPTER_PATH } );
 	serve( $CHAPTER_PATH, fixture('ondemand/nextdata-generic-106353760.json') );
+	serve( "/listen/programs/x/x/$CHAPTER", fixture('ondemand/nextdata-generic-106353760.json') );
 	serve( $BOOK_PATH,    fixture('ondemand/nextdata-program-audiobook.trimmed.json') );
 	serve_algolia( fixture('ondemand/algolia-objectid-106353760.json') );
 
@@ -573,7 +590,11 @@ subtest 'audiobook chapter (#12 amendment): cached chapter path -> book page -> 
 	is_deeply( [ @$r{qw(url alternates failToken)} ], [ $CHAPTER_MP3, [], $GEO ], 'the geo MP3 with failToken EPISODE_GEO (not RESTRICTED: the book flag is not the chapter\'s)' );
 	is( $r->{meta}->{cover}, $CHAPTER_COVER, 'the metadata cover is the hit\'s defaultThumbnail (1x1, at 600 px), not the plugin icon (O6)' );
 	is( scalar( algolia_requests() ), 1, 'exactly one Algolia request' );
-	is_deeply( [ map { $_->{url} } data_requests() ], [ data_url($CHAPTER_PATH), data_url($BOOK_PATH) ], 'the chapter page redirected to the book; the canonicalURL is not fetched again' );
+	is_deeply(
+		[ map { $_->{url} } data_requests() ],
+		[ data_url($CHAPTER_PATH), data_url($BOOK_PATH), data_url("/listen/programs/x/x/$CHAPTER") ],
+		'the chapter page redirected to the book (no episode document); F6: so the generic path, which lands on the book (from the cache); the canonicalURL is not fetched again'
+	);
 
 	is_deeply(
 		getEpisodeMeta($CHAPTER),
@@ -808,6 +829,132 @@ subtest 'F4: the generic path fails too -> one Algolia lookup; over budget RATE_
 		'... one fallback only: the generic path is not tried again'
 	);
 	is( scalar( algolia_requests() ), 1, '... and one Algolia request' );
+};
+
+# ---- F6: the fallback from a failed cached path finds nothing -> the renditions cached earlier ----
+
+subtest 'F6: cached path fails, then the id chain finds nothing -> the renditions cached earlier (any age), else NOT_FOUND' => sub {
+	my $CACHED_MP3 = "$MEDIA/cached.mp3";
+	my %STALE      = ( renditions => [ { url => $CACHED_MP3, mime => 'audio/mpeg' } ], seenAt => $T - 86400 );
+	my $generic    = "/listen/programs/x/x/$SCIENCE";
+
+	# the cached path answers 404; the generic path and the lookup as each case says
+	my $setup = sub {
+		my (%with) = @_;
+		fresh();
+		setEpisodeMeta( $SCIENCE, { path => $STALE_PATH, title => 'From the episode list', %{ $with{meta} || {} } } );
+		route( data_url($STALE_PATH), code => 404, file => 'foundation/next-data-404.html', headers => $HTML_TYPE );
+		if   ( $with{generic} ) { serve( $generic, $with{generic} ) }
+		else                    { serve( $generic, fixture('ondemand/nextdata-generic-1-404.json'), code => 404 ) }
+		serve_algolia( $with{algolia} || { hits => [], nbHits => 0 } );
+		serve( $SCIENCE_PATH, $with{page} ) if $with{page};
+		return resolve_id($SCIENCE);
+	};
+
+	my @cases = (
+		[ 'generic 404, Algolia hits: [] (no hit)', [], [ $generic ], 1 ],
+		[ 'generic 404, a hit for another id', [ algolia => { hits => [ { objectID => 'coremedia://audioepisode/999', canonicalURL => "$SITE$SCIENCE_PATH" } ] } ], [ $generic ], 1 ],
+		[ 'generic 404, a hit with neither audio nor a page', [ algolia => { hits => [ { objectID => "coremedia://audioepisode/$SCIENCE" } ] } ], [ $generic ], 1 ],
+		[ 'the generic path serves a document that is not audio', [ generic => edit_doc( sub { $_[0]->{docType} = 'article'; $_[0]->{renditions} = [] } ) ], [ $generic ], 0 ],
+		[
+			'a second lookup needed (no document at the generic path, nor at the page the hit names)',
+			[
+				generic => { pageProps => { data => {} } },
+				algolia => { hits => [ { objectID => "coremedia://audioepisode/$SCIENCE", canonicalURL => "$SITE$SCIENCE_PATH" } ] },
+				page    => { pageProps => { data => {} } },
+			],
+			[ $generic, $SCIENCE_PATH ],
+			1,
+		],
+	);
+
+	for my $case (@cases) {
+		my ( $name, $with, $after, $lookups ) = @$case;
+
+		my $r = answer( $setup->( @$with, meta => \%STALE ), $name );
+		is_deeply( candidates($r), [$CACHED_MP3], "$name: plays cached.mp3" );
+		is( $r->{meta}->{title}, 'From the episode list', "$name: with the cached metadata" );
+		is( logged_like( WARN => qr/\Q$SCIENCE\E.*episode not found.*cached earlier/ ), 1, "$name: one WARN saying why" );
+		is_deeply( [ map { $_->{url} } data_requests() ], [ map { data_url($_) } $STALE_PATH, @$after ], "$name: the cached path, then the id chain" );
+		is( scalar( algolia_requests() ), $lookups, "$name: $lookups Algolia request(s)" );
+		is( scalar( Slim::Utils::Timers::pending() ), 0, "$name: answered before the deadline (no timer left)" );
+
+		# without cached renditions it is still NOT_FOUND (not LOAD_FAILED)
+		is_deeply( answer( $setup->(@$with), "$name, nothing cached" ), { error => $NOT_FOUND }, "$name, no cached renditions: NOT_FOUND" );
+		ok( logged_like( INFO => qr/\Q$SCIENCE\E.*episode not found/ ), "$name, no cached renditions: logged at INFO" );
+	}
+
+	# the cached renditions are chosen as always: closed windows answer EXPIRED
+	my $r = answer( $setup->( meta => { %STALE, downloadAvailableTo => $T - 3600 } ), 'closed window' );
+	is_deeply( $r, { error => $EXPIRED }, 'cached renditions whose window has closed: EXPIRED' );
+
+	# NOT_FOUND without a failed cached path is unchanged: a cached path that serves a document
+	# that isn't audio, and an episode with no cached path
+	fresh();
+	setEpisodeMeta( $SCIENCE, { %STALE, path => $SCIENCE_PATH } );
+	serve( $SCIENCE_PATH, edit_doc( sub { $_[0]->{docType} = 'article'; $_[0]->{renditions} = [] } ) );
+	is_deeply( answer( resolve_id($SCIENCE), 'the cached path works' ), { error => $NOT_FOUND }, 'the cached path works but is not audio: NOT_FOUND' );
+	is_deeply( [ map { $_->{url} } data_requests() ], [ data_url($SCIENCE_PATH) ], '... from that one request' );
+
+	fresh();
+	setEpisodeMeta( $SCIENCE, {%STALE} );
+	serve( $generic, fixture('ondemand/nextdata-generic-1-404.json'), code => 404 );
+	serve_algolia( { hits => [] } );
+	is_deeply( answer( resolve_id($SCIENCE), 'no cached path' ), { error => $NOT_FOUND }, 'no cached path, generic 404, no hit: NOT_FOUND' );
+};
+
+# ABC's 307 with only an x-nextjs-redirect header (no Location), as the SimpleAsyncHTTP stub fails
+# it like LMS ("Redirection without location", the response passed on): API.pm follows it (F6).
+sub nextjs_307 { ( code => 307, headers => { 'x-nextjs-redirect' => $_[0] } ) }
+
+subtest 'F6: a cached path that 307s (x-nextjs-redirect) to another page falls back like a failed one' => sub {
+	my $CACHED_MP3 = "$MEDIA/cached.mp3";
+	my %STALE      = ( renditions => [ { url => $CACHED_MP3, mime => 'audio/mpeg' } ], seenAt => $T - 86400 );
+	my $generic    = "/listen/programs/x/x/$SCIENCE";
+	my $PROGRAM    = '/listen/programs/scienceshow';
+
+	# the cached path 307s to $target (served by %pages); the generic path as given
+	my $setup = sub {
+		my (%with) = @_;
+		fresh();
+		setEpisodeMeta( $SCIENCE, { path => $STALE_PATH, title => 'From the episode list', %{ $with{meta} || {} } } );
+		route( data_url($STALE_PATH), nextjs_307( $with{target} ) );
+		route( data_url($PROGRAM), file => 'foundation/nextdata-program-scienceshow.trimmed.json', headers => $JSON_TYPE );
+		serve( '/listen/programs/scienceshow/other-episode/999', edit_doc( sub { $_[0]->{id} = '999' } ) );
+		if   ( $with{generic} ) { serve( $generic, $with{generic} ) }
+		else                    { serve( $generic, fixture('ondemand/nextdata-generic-1-404.json'), code => 404 ) }
+		serve( $SCIENCE_PATH, doc('nextdata-episode-scienceshow-mp3.trimmed.json') );
+		serve_algolia( { hits => [], nbHits => 0 } );
+		return resolve_id($SCIENCE);
+	};
+
+	# the review's case: cached renditions, the cached path 307s to the program page, generic 404, no hit
+	my $r = answer( $setup->( target => $PROGRAM, meta => \%STALE ), 'to the program page, nothing found' );
+	is_deeply( candidates($r), [$CACHED_MP3], 'to the program page, generic 404, hits: [] -> plays cached.mp3' );
+	is_deeply(
+		[ map { $_->{url} } data_requests() ],
+		[ data_url($STALE_PATH), data_url($PROGRAM), data_url($generic) ],
+		'... after the cached path (307 followed to the program page) and the generic path'
+	);
+	is( scalar( algolia_requests() ), 1, '... and one Algolia request' );
+	is( logged_like( WARN => qr/\Q$SCIENCE\E.*episode not found.*cached earlier/ ), 1, '... with one WARN saying why' );
+
+	# without cached renditions: NOT_FOUND
+	is_deeply( answer( $setup->( target => $PROGRAM ), 'to the program page, nothing cached' ), { error => $NOT_FOUND }, 'the same without cached renditions: NOT_FOUND' );
+
+	# the generic path finds the episode: it plays, and its canonical path replaces the cached one
+	for my $case ( [ 'the program page', $PROGRAM ], [ "another episode's page", '/listen/programs/scienceshow/other-episode/999' ] ) {
+		my ( $name, $target ) = @$case;
+		$r = answer( $setup->( target => $target, meta => \%STALE, generic => fixture('ondemand/nextdata-generic-107266790.json') ), $name );
+		is_deeply( candidates($r), [$SCIENCE_MP3], "to $name: the generic path finds the document, plays its MP3" );
+		is_deeply(
+			[ map { $_->{url} } data_requests() ],
+			[ data_url($STALE_PATH), data_url($target), data_url($generic), data_url($SCIENCE_PATH) ],
+			"to $name: the cached path (followed), then the generic path and its redirect"
+		);
+		is( scalar( algolia_requests() ), 0, "to $name: no Algolia request" );
+		is( getEpisodeMeta($SCIENCE)->{path}, $SCIENCE_PATH, "to $name: the corrected path is cached" );
+	}
 };
 
 subtest 'the 18 s deadline: one callback, the late result is cached' => sub {

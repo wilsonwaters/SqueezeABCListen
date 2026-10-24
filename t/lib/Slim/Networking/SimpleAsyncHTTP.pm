@@ -15,7 +15,13 @@ package Slim::Networking::SimpleAsyncHTTP;
 # method, URL, headers, body and params, and answered synchronously:
 #   { code => 200, content => '...', headers => { 'Content-Type' => '...' } }   # response
 #   { error => 'Timed out waiting for data' }                                 # transport error
-# A request with no matching route fails like a network error.
+# A request with no matching route fails like a network error. Neither passes onError a response
+# (a transport error before any headers; LMS passes one when it had read headers, which the stub
+# doesn't model).
+# F6: a 301/302/303/307 without a Location header fails as Slim::Networking::Async::HTTP fails it
+# ("Redirection without location", the response as onError's third argument), e.g. ABC's 307 with
+# only x-nextjs-redirect: { code => 307, headers => { 'x-nextjs-redirect' => '/listen/...' } }.
+# (With a Location LMS would follow it; the stub doesn't: route the target instead.)
 # A response with defer => 1 is not answered straight away: the request is recorded and waits
 # until the test calls completeDeferred(), like a slow server (deferred() lists what waits).
 
@@ -155,6 +161,13 @@ sub _respond {
 		# Slim::Networking::Async::HTTP reports non-2xx/3xx codes as errors (status line), and
 		# SimpleAsyncHTTP::onError doesn't fill in code/headers/content.
 		$self->{error} = "$code $mess";
+		return $self->{ecb}->( $self, $self->{error}, $res );
+	}
+
+	# F6: Async::HTTP follows a 301/302/303/307 only with a Location; without one it calls onError
+	# with this message, and SimpleAsyncHTTP::onError passes the response on.
+	if ( $code =~ /^30[1237]$/ && !defined $headers->header('Location') ) {
+		$self->{error} = 'Redirection without location';
 		return $self->{ecb}->( $self, $self->{error}, $res );
 	}
 

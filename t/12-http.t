@@ -2,7 +2,8 @@
 # Plugins::ABCListen::HTTP: explicit non-libwww User-Agent on every request, 15 s default timeout,
 # cache options passed through, JSON decoded whatever the Content-Type, form encoding, postJSON,
 # the headers option, header values never logged, and exactly one callback per request on every
-# path. All HTTP goes through the SimpleAsyncHTTP stub: no network.
+# path; F6: LMS's HTTP::Response as the error callback's third argument when there is one. All
+# HTTP goes through the SimpleAsyncHTTP stub: no network.
 
 use strict;
 use warnings;
@@ -365,6 +366,82 @@ subtest 'get: raw body' => sub {
 	route( $PLS, error => 'Timed out waiting for data' );
 	( $ok, $err ) = run_request( get => [$PLS], undef );
 	exactly_one( $ok, $err, 'err', 'raw get timeout' );
+};
+
+subtest "F6: the error callback gets LMS's response third (a 307 LMS can't follow, an HTTP error status)" => sub {
+	my $NEXT  = 'https://www.abc.net.au/_next/data/build-test/listen/programs/old-name.json';
+	my @calls = (
+		[ getJSON      => [$NEXT] ],
+		[ get          => [$NEXT] ],
+		[ postFormJSON => [ $NEXT, { a => 1 } ] ],
+		[ postJSON     => [ $NEXT, { a => 1 } ] ],
+	);
+
+	for my $call (@calls) {
+		my ( $fn, $leading ) = @$call;
+
+		for my $quiet ( 0, 1 ) {
+			my $name = $fn . ( $quiet ? ' (quiet)' : '' );
+
+			# ABC's 307 with only x-nextjs-redirect: LMS fails it ("Redirection without location")
+			resetStubs();
+			route( $NEXT, code => 307, headers => { 'x-nextjs-redirect' => '/listen/programs/new-name' } );
+			my ( $ok, $err ) = run_request( $fn => $leading, { quiet => $quiet } );
+			exactly_one( $ok, $err, 'err', "$name, 307" );
+			my @args = $err->args(0);
+			is( scalar @args, 3, "$name, 307: three arguments" );
+			my ( $message, $http, $response ) = @args;
+			is( $message, "HTTP request failed: Redirection without location ($NEXT)", "$name, 307: LMS's reason and the URL" );
+			ok( ref $http && $http->can('code'), "$name, 307: the HTTP object second" );
+			is( ref $response && $response->code, 307, "$name, 307: the response third, with its code" );
+			is( ref $response && $response->headers->header('X-Nextjs-Redirect'), '/listen/programs/new-name', "$name, 307: ... and its headers" );
+
+			# an HTTP error status: the response too
+			resetStubs();
+			route( $NEXT, code => 404, content => 'Not Found', headers => { 'Content-Type' => 'text/html' } );
+			( $ok, $err ) = run_request( $fn => $leading, { quiet => $quiet } );
+			exactly_one( $ok, $err, 'err', "$name, 404" );
+			@args = $err->args(0);
+			is( scalar @args, 3, "$name, 404: three arguments" );
+			like( $args[0], qr/\AHTTP request failed: 404 Not Found/, "$name, 404: message as before" );
+			is( ref $args[2] && $args[2]->code, 404, "$name, 404: the response third" );
+		}
+	}
+
+	# no response read (the stub's transport errors model one before any headers: it never passes
+	# a response with them; LMS does when it had read headers, e.g. a body timeout, and HTTP.pm then
+	# passes it on as above), or an answer LMS passed to the success callback: two arguments
+	my @two = (
+		[ 'a transport error before any headers', getJSON => [$NEXT],         { error => 'Timed out waiting for data' } ],
+		[ 'no route (no response read)',    get      => [$NEXT],              undef ],
+		[ 'invalid JSON',                   getJSON  => [$NEXT],              { code => 200, content => '<html></html>' } ],
+		[ 'a 308 (not JSON; code on $http)', getJSON => [$NEXT],              { code => 308, headers => { Location => '/listen/programs/new-name' }, content => '/listen/programs/new-name' } ],
+		[ 'an unencodable body',            postJSON => [ $NEXT, 'not a ref' ], { code => 200, content => '{}' } ],
+	);
+	for my $case (@two) {
+		my ( $name, $fn, $leading, $response ) = @$case;
+		resetStubs();
+		route( $NEXT, %$response ) if $response;
+		my ( $ok, $err ) = run_request( $fn => $leading, undef );
+		exactly_one( $ok, $err, 'err', $name );
+		is( scalar( my @args = $err->args(0) ), 2, "$name: no response to pass on, so two arguments" );
+	}
+
+	# LMS's onError passes $http->response whatever the error, once it had read headers: e.g. a
+	# timeout after LMS followed a redirect, with that 30x (Location included). The stub can't
+	# produce one, so call the error handler as SimpleAsyncHTTP::onError would.
+	resetStubs();
+	route( $NEXT, code => 200, content => '{}', defer => 1 );
+	my ( $ok, $err ) = run_request( getJSON => [$NEXT], undef );
+	my ($http) = map { $_->[0] } @Slim::Networking::SimpleAsyncHTTP::DEFERRED;
+	@Slim::Networking::SimpleAsyncHTTP::DEFERRED = ();
+	my $followed = Slim::Networking::SimpleAsyncHTTP::Response->new( 307, 'Temporary Redirect', Slim::Networking::SimpleAsyncHTTP::Headers->new( Location => '/listen/programs/new-name' ), '' );
+	$http->ecb->( $http, 'Timed out waiting for data', $followed );
+	exactly_one( $ok, $err, 'err', 'a transport error after a followed redirect' );
+	my @args = $err->args(0);
+	is( $args[0], "HTTP request failed: Timed out waiting for data ($NEXT)", 'a transport error after a followed redirect: the message as before' );
+	is( scalar @args, 3, '... and the response LMS passed, third' );
+	is( ref $args[2] && $args[2]->header('Location'), '/listen/programs/new-name', '... unchanged (the 307 LMS followed)' );
 };
 
 done_testing();

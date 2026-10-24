@@ -15,9 +15,12 @@ package Plugins::ABCListen::Episode;
 #       2. Else the episode document (API::nextData, 1 h cache): from the cached path, or, without
 #          one, from the generic path /listen/programs/x/x/<id>, which ABC redirects to the
 #          canonical page for any episode, segment or news audio id (OQ1, spiked 2026-10-19).
-#          F4: a cached path that fails (any error: a renamed page, a 307 LMS can't follow, a
-#          timeout) falls back once to the generic path, then step 3 as for any generic path;
-#          the document found caches its canonical path over the failed one.
+#          F4: a cached path that fails (any error: a renamed page, a redirect API.pm can't
+#          follow, a timeout) falls back once to the generic path, then step 3 as for any generic
+#          path; the document found caches its canonical path over the failed one. F6: so does a
+#          cached path that serves no document for this episode (no documentProps, or another
+#          id's), e.g. one that API.pm now follows through a 307 x-nextjs-redirect to the
+#          program page, or an audiobook chapter's, which redirects to its book.
 #       3. A page without an episode document (an audiobook chapter redirects to its book), or a
 #          failed generic path: ONE Algolia lookup by objectID. A hit with renditions is chosen
 #          from directly (dates.mediaDownload*/mediaStreaming* are the windows, the 1x1 crop of
@@ -25,9 +28,17 @@ package Plugins::ABCListen::Episode;
 #          EPISODE_NOT_FOUND.
 #     When that chain fails (the lookup, or the page a hit names), it answers from the cached
 #     renditions of any age if there are some, else with the API's token (LOAD_FAILED or
-#     RATE_LIMITED). Every request has a 6 s timeout, and an 18 s deadline answers before the
-#     handler's 20 s resolve timeout (from the cached renditions if any, else LOAD_FAILED).
-#     Whatever arrives later is still cached, never answered twice.
+#     RATE_LIMITED). F6: the cached renditions are also tried when the chain started from a
+#     cached path that failed (or served no document for this episode) and then found nothing (no
+#     search hit, a hit with neither audio nor a page, a document that isn't audio, or a second
+#     lookup needed); without them that is
+#     EPISODE_NOT_FOUND. Up to F4 those cases answered EPISODE_NOT_FOUND straight away, the cached
+#     renditions untried, though before F4 the failed cached path alone would have played them.
+#     NOT_FOUND from a chain that didn't start with a failed cached path is still answered
+#     straight away (e.g. the cached path serves a document that isn't audio).
+#     Every request has a 6 s timeout, and an 18 s deadline answers before the handler's 20 s
+#     resolve timeout (from the cached renditions if any, else LOAD_FAILED). Whatever arrives
+#     later is still cached, never answered twice.
 #     What is fetched is merged into the metadata cache (contract-3 keys; windows as epochs;
 #     renditions as { url, mime, bitrate, fileSize }, fileSize only when ABC gives one). A
 #     restricted or not yet released episode closes the cached windows (availableTo and
@@ -192,23 +203,22 @@ sub resolve {
 }
 
 # The episode document at $path. $kind 'cached': the path in the metadata cache; if it fails (any
-# error), fall back once to the id-based chain, the generic path (F4). 'generic': a guess; if it
-# fails, look the id up. undef: the page a search hit names; if it fails, that's the answer.
+# error) or (F6) serves no document for this episode, fall back once to the id-based chain, the
+# generic path (F4, _fallback), where finding nothing then tries the cached renditions before
+# NOT_FOUND (F6, _notFound). 'generic': a guess; if it fails, look the id up. undef: the page a
+# search hit names; if it fails, that's the answer.
 sub _fetch {
 	my ( $state, $path, $kind ) = @_;
 	$kind ||= '';
 
 	Plugins::ABCListen::API::nextData(
 		$path,
-		sub { _document( $state, $path, shift ) },
+		sub { _document( $state, $path, shift, $kind ) },
 		sub {
 			my $error = shift;
 			my $why   = "$path failed (" . _message($error) . ')';
 
-			if ( $kind eq 'cached' ) {
-				main::DEBUGLOG && $log->is_debug && $log->debug("Episode $state->{id}: the cached path $why; trying the generic path");
-				return _fetch( $state, sprintf( GENERIC_PATH, $state->{id} ), 'generic' );
-			}
+			return _fallback( $state, "the cached path $why" ) if $kind eq 'cached';
 			return _lookup( $state, $why ) if $kind eq 'generic';
 
 			_failed( $state, "the episode page $path", $error );
@@ -219,23 +229,41 @@ sub _fetch {
 	return;
 }
 
+# F4: the cached path failed; F6: or it served no document for this episode. Either way the path
+# that once served it no longer does: the generic path next (once), and if the chain then finds
+# nothing, the cached renditions (_notFound).
+sub _fallback {
+	my ( $state, $why ) = @_;
+
+	main::DEBUGLOG && $log->is_debug && $log->debug("Episode $state->{id}: $why; trying the generic path");
+	$state->{cachedPathFailed} = 1;
+
+	return _fetch( $state, sprintf( GENERIC_PATH, $state->{id} ), 'generic' );
+}
+
 sub _document {
-	my ( $state, $path, $pageProps ) = @_;
+	my ( $state, $path, $pageProps, $kind ) = @_;
 	my $id = $state->{id};
 
 	my $data = ref $pageProps eq 'HASH' && ref $pageProps->{data} eq 'HASH' ? $pageProps->{data} : {};
 	my $doc  = $data->{documentProps};
 
-	# e.g. an audiobook chapter, whose page redirects to its book
-	return _lookup( $state, "no episode document at $path" ) unless ref $doc eq 'HASH';
+	# not this episode's page: from the cached path (F6: e.g. a 307 to the program page that API.pm
+	# followed), fall back to the generic path; else (e.g. an audiobook chapter, whose page
+	# redirects to its book) look the id up
+	my $notHere = sub {
+		my $why = shift;
+		return ( $kind || '' ) eq 'cached' ? _fallback( $state, "the cached path: $why" ) : _lookup( $state, $why );
+	};
+
+	return $notHere->("no episode document at $path") unless ref $doc eq 'HASH';
 
 	my $docId = _digits( $doc->{id} );
-	return _lookup( $state, "the document at $path is $docId" ) if defined $docId && $docId ne $id;
+	return $notHere->("the document at $path is $docId") if defined $docId && $docId ne $id;
 
 	my $docType = _text( $doc->{docType} );
 	if ( !defined $docType || !$AUDIO_TYPE{$docType} ) {
-		main::INFOLOG && $log->is_info && $log->info( "Episode $id not found: $path is not audio (docType " . ( defined $docType ? $docType : 'none' ) . ')' );
-		return _answer( $state, { error => NOT_FOUND } );
+		return _notFound( $state, "$path is not audio (docType " . ( defined $docType ? $docType : 'none' ) . ')' );
 	}
 
 	_found( $state, _parseDocument($doc) );
@@ -247,10 +275,7 @@ sub _lookup {
 	my ( $state, $why ) = @_;
 	my $id = $state->{id};
 
-	if ( $state->{lookedUp}++ ) {
-		main::INFOLOG && $log->is_info && $log->info("Episode $id not found: $why");
-		return _answer( $state, { error => NOT_FOUND } );
-	}
+	return _notFound( $state, $why ) if $state->{lookedUp}++;
 
 	main::DEBUGLOG && $log->is_debug && $log->debug("Episode $id: $why; looking it up in ABC's search index");
 
@@ -277,8 +302,7 @@ sub _hit {
 	my ( $type, $hitId ) = ref $hit eq 'HASH' ? Plugins::ABCListen::API::coreMediaRef( $hit->{objectID} ) : ();
 
 	if ( !$type || !$AUDIO_TYPE{$type} || $hitId ne $id ) {
-		main::INFOLOG && $log->is_info && $log->info("Episode $id not found: no episode page and not in ABC's search index");
-		return _answer( $state, { error => NOT_FOUND } );
+		return _notFound( $state, "no episode page and not in ABC's search index" );
 	}
 
 	my $episode = _parseHit( $hit, $type );
@@ -288,7 +312,22 @@ sub _hit {
 
 	return _fetch( $state, $episode->{path} ) if defined $episode->{path};
 
-	main::INFOLOG && $log->is_info && $log->info("Episode $id not found: its search index entry has neither audio nor a page");
+	return _notFound( $state, 'its search index entry has neither audio nor a page' );
+}
+
+# The episode isn't there: no search hit, a hit with neither audio nor a page, a document that
+# isn't audio, or a second lookup needed. F6: if the chain started from a cached path that failed
+# or served no document for this episode (_fallback), that path once served the episode, so this
+# is answered like a failed request
+# (_failed): from the renditions cached earlier, any age, if there are some, else NOT_FOUND.
+sub _notFound {
+	my ( $state, $why ) = @_;
+
+	if ( $state->{cachedPathFailed} ) {
+		return _failed( $state, 'the cached path and the id chain', { error => NOT_FOUND, message => "episode not found: $why" } );
+	}
+
+	main::INFOLOG && $log->is_info && $log->info("Episode $state->{id} not found: $why");
 	return _answer( $state, { error => NOT_FOUND } );
 }
 
@@ -303,7 +342,9 @@ sub _found {
 	return;
 }
 
-# A request failed: the cached renditions, whatever their age, else the API's token.
+# A request failed, or (F6, _notFound) the fallback from a failed cached path found nothing: the
+# cached renditions, whatever their age, else the token (RATE_LIMITED or NOT_FOUND as given, any
+# other error LOAD_FAILED).
 sub _failed {
 	my ( $state, $what, $error ) = @_;
 	my $id = $state->{id};
@@ -321,7 +362,8 @@ sub _failed {
 		return _answer( $state, _result( $id, _choose( $entry, _now() ) ) );
 	}
 
-	my $token = ref $error eq 'HASH' && defined $error->{error} && $error->{error} eq RATE_LIMITED ? RATE_LIMITED : LOAD_FAILED;
+	my $given = ref $error eq 'HASH' && defined $error->{error} ? $error->{error} : '';
+	my $token = $given eq RATE_LIMITED || $given eq NOT_FOUND ? $given : LOAD_FAILED;
 
 	main::INFOLOG && $log->is_info && $log->info("Episode $id: $what failed ($message)");
 	return _answer( $state, { error => $token } );

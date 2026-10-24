@@ -3,7 +3,8 @@
 # building per function; siteConfig parse, 6 h cache, force and coalescing; nextData buildId
 # refresh (one refresh per 60 s, one retry only if the buildId changed) and __N_REDIRECT handling;
 # F4: page paths spelled as ABC serves them (lower-case, escapes lower-case, non-ASCII encoded), a
-# 307 that LMS can't follow, and HTTP 308 (legacy program paths) followed by its Location;
+# 307 that LMS can't follow, and HTTP 308 (legacy program paths) followed by its Location; F6: a
+# 307's x-nextjs-redirect (from the response HTTP.pm now passes on) followed once per call;
 # Algolia headers, cache, rolling budget, 401/403 re-discovery, 429, no-config and no-key logging;
 # coalescing with deferred responses; ttl / stale_ok / quiet; exactly one callback on every path.
 #
@@ -821,13 +822,15 @@ my $NONASCII_DOC   = 'ondemand/nextdata-episode-nonascii-107267360.trimmed.json'
 # The _next/data routes as ABC answers them (measured 2026-10-19): a path that isn't all lower-case
 # (an upper-case letter or %XX escape) gets a 307 whose only pointer is an x-nextjs-redirect header
 # to the lower-case path, with no Location. LMS's Async::HTTP fails that with "Redirection without
-# location". A lower-case path serves %pages (path => response; file => fixture), else a small page.
+# location" (so does the stub), and since F6 HTTP.pm passes the response on, so API.pm could follow
+# it: the tests check the URLs requested, so a path not asked for lower-case shows as an extra one.
+# A lower-case path serves %pages (path => response; file => fixture), else a small page.
 sub serve_like_abc {
 	my %pages = @_;
 
 	Slim::Networking::SimpleAsyncHTTP->addRoute( qr{^\Q$SITE/_next/data/$BUILD/\E}, sub {
 		my ($path) = $_[0] =~ m{^\Q$SITE/_next/data/$BUILD\E(/.*)\.json\z};
-		return { error => 'Redirection without location' } if $path ne lc $path;
+		return { code => 307, headers => { 'x-nextjs-redirect' => lc $path } } if $path ne lc $path;
 
 		my $page = $pages{$path} or return { content => qq({"pageProps":{"page":"$path"}}), headers => $JSON_TYPE };
 		my %response = ( headers => $JSON_TYPE, %$page );
@@ -908,20 +911,24 @@ subtest 'nextData (F4): __N_REDIRECT to an upper-case-escaped path (recorded gen
 	is( scalar requests(), 0, 'cached under the lower-case target' );
 };
 
-subtest 'nextData (F4): a 307 that LMS cannot follow (x-nextjs-redirect only, no Location) -> one LOAD_FAILED, no refresh, no retry' => sub {
-	# HTTP.pm hands its error callback the message and the SimpleAsyncHTTP object only: LMS passes
-	# the 307 response as a third argument, which HTTP.pm drops, and SimpleAsyncHTTP fills in
-	# headers only on success. So x-nextjs-redirect can't be read; a 307 that remains (to another
-	# page, say) is an error. Episode.pm falls back to the id-based lookup for episodes.
-	fresh();
-	serve_search();
-	route( data_url( $BUILD, '/listen/programs/renamed/some-episode/1' ), error => 'Redirection without location' );
-	prime();
+subtest 'nextData (F4, F6): a 307 without a target (no Location, no x-nextjs-redirect) -> one LOAD_FAILED, no refresh, no retry' => sub {
+	# F6 follows a 307's x-nextjs-redirect (below). Without one, or without the response (a
+	# transport-level "Redirection without location"), there is nothing to follow: an error, as in
+	# F4. Episode.pm falls back to the id-based lookup for episodes.
+	my $path = '/listen/programs/renamed/some-episode/1';
 
-	my ( $ok, $err ) = api( nextData => ['/listen/programs/renamed/some-episode/1'] );
-	my $e = one_err( $ok, $err, '307 without Location', $LOAD_FAILED, undef );
-	like( $e->{message}, qr/Redirection without location/, 'message: LMS\'s reason' );
-	is_deeply( [ urls() ], [ data_url( $BUILD, '/listen/programs/renamed/some-episode/1' ) ], 'one request: no buildId refresh, no retry' );
+	for my $case ( [ 'a 307 with neither header', code => 307 ], [ 'the error without a response', error => 'Redirection without location' ] ) {
+		my ( $name, %response ) = @$case;
+		fresh();
+		serve_search();
+		route( data_url( $BUILD, $path ), %response );
+		prime();
+
+		my ( $ok, $err ) = api( nextData => [$path] );
+		my $e = one_err( $ok, $err, $name, $LOAD_FAILED, undef );
+		like( $e->{message}, qr/Redirection without location/, "$name: message: LMS's reason" );
+		is_deeply( [ urls() ], [ data_url( $BUILD, $path ) ], "$name: one request: no buildId refresh, no retry" );
+	}
 };
 
 subtest 'nextData (F4): redirect loops and the 2-hop limit hold across spellings' => sub {
@@ -1076,6 +1083,156 @@ subtest 'nextData (F4): HTTP 308 shares the loop, 2-hop, off-site rules with __N
 	( $ok, $err ) = api( nextData => ['/radionational/programs/none'] );
 	one_err( $ok, $err, '308 without a target', $LOAD_FAILED, 308 );
 	is_deeply( [ urls() ], [ data_url( $BUILD, '/radionational/programs/none' ), $SEARCH ], '308 without a target: the buildId check, no retry (same buildId)' );
+};
+
+# F6: a 307 whose only pointer is an x-nextjs-redirect header, to another page. ABC's middleware
+# answers that way for spellings that aren't lower-case (above); a moved page would look the same.
+# (No such page was found live on 2026-10-24: every page-to-page redirect probed was a 308 with a
+# Location.) LMS fails it ("Redirection without location"), and HTTP.pm now passes the response
+# to the error callback, so API.pm can follow the header.
+sub nextjs_307 { { code => 307, headers => { 'x-nextjs-redirect' => $_[0] } } }
+
+subtest 'nextData (F6): a 307 with only x-nextjs-redirect to another page is followed (Programs, Collections pages)' => sub {
+	my $old = '/listen/programs/old-name';
+	my $new = '/listen/programs/new-name';
+
+	fresh();
+	serve_search();
+	serve_like_abc(
+		$old                                   => nextjs_307($new),
+		'/listen/programs/upper'               => nextjs_307('/listen/programs/New-Name/Episode-%C3%A9/1'),
+		'/listen/programs/relative'            => nextjs_307('new-name'),
+		'/listen/radionational/old-collection' => nextjs_307('/listen/radionational/new-collection'),
+	);
+	prime();
+
+	# as Programs->program calls it (ttl 6 h, stale_ok, timeout 8 s)
+	my ( $ok, $err ) = api( nextData => [$old], { ttl => 6 * 3600, stale_ok => 1, timeout => 8 } );
+	my ( $props, $info ) = one_ok( $ok, $err, 'a 307 to another program page' );
+	is( $props->{page}, $new, 'the page x-nextjs-redirect names' );
+	is( $info->{stale}, 0, 'not stale' );
+	is( $info->{at}, $T0, 'at: fetched now' );
+	is_deeply( [ urls() ], [ data_url( $BUILD, $old ), data_url( $BUILD, $new ) ], 'the old path, then the target: no buildId refresh, no retry' );
+	is( scalar( warns() ), 0, 'no WARN' );
+
+	clear_requests();
+	for my $path ( $old, $new ) {
+		( $ok, $err ) = api( nextData => [$path], { ttl => 600 } );
+		one_ok( $ok, $err, "again: $path" );
+	}
+	is( scalar requests(), 0, 'cached under the old path and the target' );
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/listen/programs/upper'] );
+	($props) = one_ok( $ok, $err, 'a 307 to a target with upper case and escapes' );
+	is_deeply(
+		[ urls() ],
+		[ data_url( $BUILD, '/listen/programs/upper' ), data_url( $BUILD, '/listen/programs/new-name/episode-%c3%a9/1' ) ],
+		'the target requested lower-case'
+	);
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/listen/programs/relative'] );
+	($props) = one_ok( $ok, $err, 'a 307 to a relative target' );
+	is( $props->{page}, $new, 'relative to the page' );
+
+	# as Collections->page calls it (ttl 1 h, stale_ok, timeout 8 s)
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/listen/radionational/old-collection'], { ttl => 3600, stale_ok => 1, timeout => 8 } );
+	($props) = one_ok( $ok, $err, 'a 307 to another collection page' );
+	is( $props->{page}, '/listen/radionational/new-collection', 'the collection page x-nextjs-redirect names' );
+};
+
+subtest 'nextData (F6): x-nextjs-redirect is followed once per call; the loop, 2-hop and off-site rules hold' => sub {
+	fresh();
+	serve_search();
+	serve_like_abc(
+		'/listen/programs/self'          => nextjs_307('/listen/programs/Self'),    # its own spelling
+		'/listen/programs/a'             => nextjs_307('/listen/programs/b'),
+		'/listen/programs/b'             => n_redirect('/listen/programs/A'),       # back to the first page
+		'/listen/programs/twice'         => nextjs_307('/listen/programs/twice-2'),
+		'/listen/programs/twice-2'       => nextjs_307('/listen/programs/twice-3'),
+		'/listen/programs/mixed'         => nextjs_307('/listen/programs/mixed-2'),
+		'/listen/programs/mixed-2'       => n_redirect('/listen/programs/mixed-3'),
+		'/radionational/programs/legacy' => http_redirect( 308, Location => '/listen/programs/legacy' ),
+		'/listen/programs/legacy'        => nextjs_307('/listen/programs/legacy-2'),
+		'/listen/programs/h1'            => n_redirect('/listen/programs/h2'),
+		'/listen/programs/h2'            => n_redirect('/listen/programs/h3'),
+		'/listen/programs/h3'            => nextjs_307('/listen/programs/h4'),
+		'/listen/programs/off'           => nextjs_307('https://www.example.com/listen/programs/off'),
+	);
+	prime();
+
+	my ( $ok, $err ) = api( nextData => ['/listen/programs/twice'] );
+	my $e = one_err( $ok, $err, 'a 307, then another 307', $LOAD_FAILED, 307 );
+	like( $e->{message}, qr{second x-nextjs-redirect: /listen/programs/twice -> /listen/programs/twice-2 -> /listen/programs/twice-3}, 'twice: message' );
+	is( scalar requests(), 2, 'twice: the second target is not fetched' );
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/listen/programs/mixed'] );
+	my ($props) = one_ok( $ok, $err, 'a 307, then a __N_REDIRECT' );
+	is( $props->{page}, '/listen/programs/mixed-3', 'mixed: 2 hops, the target' );
+	is( scalar requests(), 3, 'mixed: 3 requests' );
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/radionational/programs/legacy'] );
+	($props) = one_ok( $ok, $err, 'a 308 (Location), then a 307 (x-nextjs-redirect)' );
+	is( $props->{page}, '/listen/programs/legacy-2', 'the 308 is not an x-nextjs-redirect hop: the 307 is still followed' );
+	is( scalar requests(), 3, '308 then 307: 3 requests' );
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/listen/programs/self'] );
+	$e = one_err( $ok, $err, 'a 307 to its own spelling', $LOAD_FAILED, 307 );
+	like( $e->{message}, qr/Redirect loop/, 'self: a loop' );
+	is( scalar requests(), 1, 'self: 1 request' );
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/listen/programs/a'] );
+	$e = one_err( $ok, $err, '307 A -> __N_REDIRECT B -> A', $LOAD_FAILED, 200 );
+	like( $e->{message}, qr{Redirect loop: /listen/programs/a -> /listen/programs/b -> /listen/programs/a}, 'loop: message' );
+	is( scalar requests(), 2, 'loop: 2 requests' );
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/listen/programs/h1'] );
+	$e = one_err( $ok, $err, '__N_REDIRECT, __N_REDIRECT, then a 307: a 3rd hop', $LOAD_FAILED, 307 );
+	like( $e->{message}, qr/Too many redirects/, '3rd hop: message' );
+	is( scalar requests(), 3, '3rd hop: the 4th page is not fetched' );
+
+	clear_requests();
+	( $ok, $err ) = api( nextData => ['/listen/programs/off'] );
+	$e = one_err( $ok, $err, 'a 307 off the site', $LOAD_FAILED, 307 );
+	like( $e->{message}, qr/off the ABC site/, 'off-site: message' );
+	is( scalar requests(), 1, 'off-site: not followed' );
+};
+
+subtest '_redirectTarget (F4, F6): which unfollowed answers name a target' => sub {
+	my $headers  = sub { Slim::Networking::SimpleAsyncHTTP::Headers->new(@_) };
+	my $response = sub { my ( $code, @h ) = @_; Slim::Networking::SimpleAsyncHTTP::Response->new( $code, 'Message', $headers->(@h), '' ) };
+	my $answered = sub { my ( $code, @h ) = @_; bless { code => $code, headers => $headers->(@h) }, 'Slim::Networking::SimpleAsyncHTTP' };
+	my $failed   = bless {}, 'Slim::Networking::SimpleAsyncHTTP';    # as onError leaves it: no code, no headers
+
+	my @cases = (
+		[ '307, only x-nextjs-redirect (the response third)', $failed, $response->( 307, 'x-nextjs-redirect' => '/listen/b' ), [ '/listen/b', 307, 1 ] ],
+		[ '301, only x-nextjs-redirect',                      $failed, $response->( 301, 'X-Nextjs-Redirect' => '/listen/b' ), [ '/listen/b', 301, 1 ] ],
+		[ '302, only x-nextjs-redirect',                      $failed, $response->( 302, 'x-nextjs-redirect' => '/listen/b' ), [ '/listen/b', 302, 1 ] ],
+		[ '303, only x-nextjs-redirect',                      $failed, $response->( 303, 'x-nextjs-redirect' => '/listen/b' ), [ '/listen/b', 303, 1 ] ],
+		[ '307 with a Location: LMS followed it (or gave up): never again', $failed, $response->( 307, Location => '/listen/c', 'x-nextjs-redirect' => '/listen/b' ), [] ],
+		[ '307 without either header',                        $failed, $response->(307), [] ],
+		[ '307 with an empty x-nextjs-redirect',              $failed, $response->( 307, 'x-nextjs-redirect' => '' ), [] ],
+		[ 'a 404 response',                                   $failed, $response->( 404, 'x-nextjs-redirect' => '/listen/b' ), [] ],
+		[ 'a 308 response third (LMS answers 308 as a success)', $failed, $response->( 308, 'x-nextjs-redirect' => '/listen/b' ), [] ],
+		[ 'a transport error (no response)',                  $failed, undef, [] ],
+		[ 'nothing at all',                                   undef,   undef, [] ],
+		[ '308 not JSON: its Location (F4)',                  $answered->( 308, Location => '/listen/c', 'x-nextjs-redirect' => '/listen/b' ), undef, [ '/listen/c', 308, 0 ] ],
+		[ '308 not JSON: else its x-nextjs-redirect (F4)',    $answered->( 308, 'x-nextjs-redirect' => '/listen/b' ), undef, [ '/listen/b', 308, 0 ] ],
+		[ '308 without either header',                        $answered->(308), undef, [] ],
+		[ '200 not JSON',                                     $answered->( 200, Location => '/listen/c' ), undef, [] ],
+	);
+
+	for my $case (@cases) {
+		my ( $name, $http, $res, $expected ) = @$case;
+		is_deeply( [ Plugins::ABCListen::API::_redirectTarget( $http, $res ) ], $expected, $name );
+	}
 };
 
 # ---------------------------------------------------------------------------
