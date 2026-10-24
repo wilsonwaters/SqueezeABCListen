@@ -14,6 +14,8 @@
 # (named by network, as in the A–Z), Big Ideas' legacy and current documents merged by D8's rule
 # (ProgramIndex::mergeTwins), the 4 Mornings kept apart; D3's own queries reproduce the gaps; still
 # 2 queries per uncached search.
+# Review follow-ups: program hits without a title listed under their path, never merged; one id at
+# two paths listed once.
 #
 # Fixtures (t/data/discovery/, raw response bodies as served, the research {_fixture_note, data}
 # wrapper stripped; shapes unedited):
@@ -995,6 +997,36 @@ subtest 'D9: one program\'s two documents merged by D8\'s rule (Big Ideas once, 
 	);
 	is_deeply( names($programs), [ 'The Secret Keeper (Audio Books)', 'The Secret Keeper', 'RN Breakfast', 'Download This Show' ], 'repeated titles named by network only where the network tells them apart' );
 	ok( !( grep { exists $_->{passthrough}->[0]->{programType} } @$programs ), 'programType only used for the merge (rows unchanged from D3)' );
+};
+
+subtest 'programs (review): without a title listed, named by their path (programItem), never merged or dropped; one id at two paths once' => sub {
+	fresh();
+	my $hit = sub { my %f = @_; return { contentType => 'program', defaultThumbnail => {}, %f } };
+	serve(
+		programs => { content => JSON::PP::encode_json( { hits => [
+			$hit->( objectID => 'coremedia://program/911', title => 'Untitled Neighbour', canonicalURL => 'https://www.abc.net.au/listen/programs/neighbour/', infoSource => 'ABC Listen' ),
+			$hit->( objectID => 'coremedia://program/912', canonicalURL => 'https://www.abc.net.au/listen/programs/no-title/', infoSource => 'ABC Listen' ),
+			$hit->( objectID => 'coremedia://program/913', title => '   ', canonicalURL => 'https://www.abc.net.au/listen/programs/blank-title/' ),
+			$hit->( objectID => 'coremedia://program/914', canonicalURL => 'https://www.abc.net.au/listen/programs/no-title-either/', infoSource => 'ABC Listen' ),
+		] } ) },
+		episodes => { file => 'discovery/algolia-search-empty.synthetic.json' },
+	);
+	my $programs = group( items_of( search( { search => 'untitled' } ) ), 'Programs' )->{items};
+	is_deeply( ids($programs), [qw(911 912 913 914)], 'all four listed, in relevance order (none merged: no title, no twin)' );
+	is_deeply( names($programs), [ 'Untitled Neighbour', '/listen/programs/no-title', '/listen/programs/blank-title', '/listen/programs/no-title-either' ], 'an untitled program is named by its path, as programItem does' );
+	ok( !( grep { exists $_->{passthrough}->[0]->{title} } @$programs[ 1 .. 3 ] ), 'no title invented in the passthrough' );
+
+	# each id once (D3), also when its two hits have different paths (the path merge alone would keep both)
+	fresh();
+	serve(
+		programs => { content => JSON::PP::encode_json( { hits => [
+			$hit->( objectID => 'coremedia://program/921', title => 'One Show', canonicalURL => 'https://www.abc.net.au/listen/programs/one-show/' ),
+			$hit->( objectID => 'coremedia://program/921', title => 'One Show (old page)', canonicalURL => 'https://www.abc.net.au/radionational/programs/oneshow/' ),
+		] } ) },
+		episodes => { file => 'discovery/algolia-search-empty.synthetic.json' },
+	);
+	$programs = group( items_of( search( { search => 'one show' } ) ), 'Programs' )->{items};
+	is_deeply( [ map { "$_->{passthrough}->[0]->{id} $_->{passthrough}->[0]->{path}" } @$programs ], ['921 /listen/programs/one-show'], 'one id at two paths: listed once, the first hit' );
 };
 
 subtest 'D9: the rules are the A–Z\'s own (ProgramIndex::siteFilter, ProgramIndex::mergeTwins), not copies' => sub {

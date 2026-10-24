@@ -385,7 +385,7 @@ sub networkProgramPath {
 
 # Program refs -> $cb->(\@refs to list), in order: the program page paths, and the network-relative
 # paths whose page checks out. Synchronous when every decision is cached. A check whose
-# processing dies is listed (O8: _launchChecks); only a dying $cb (or launch) answers $fail
+# processing (or request) dies is listed (O8: _launchChecks); only a dying $cb answers $fail
 # (programs()' callback) with LOAD_FAILED.
 sub _checkPages {
 	my ( $fail, $refs, $cb ) = @_;
