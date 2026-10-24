@@ -2,8 +2,8 @@
 # The user and maintainer docs: README.md (its 16 sections, the install URL, the usage tour with
 # the real menu names, now playing, limitations, troubleshooting, compatibility, privacy,
 # self-test), the screenshots in docs/images, RELEASING.md, docs/official-repository.md,
-# CHANGELOG.md's [Unreleased] section, the description shared by strings.txt and repo.xml, and
-# every relative link and image in the docs.
+# CHANGELOG.md's newest section with content, the description shared by strings.txt and repo.xml,
+# and every relative link and image in the docs.
 
 use strict;
 use utf8;
@@ -369,16 +369,29 @@ subtest 'docs/official-repository.md' => sub {
 	ok( $repo{ABCListen}, 'repo.xml\'s plugin name is the ABCListen the check looks for' );
 };
 
-subtest 'CHANGELOG.md: a non-empty [Unreleased] section' => sub {
-	my $doc = slurp('CHANGELOG.md');
-	my ($unreleased) = $doc =~ /^## \[Unreleased\]\n(.*?)^## \[\d/ms;
-	ok( defined $unreleased && $unreleased =~ /\S/, '[Unreleased] has entries' );
-	like( $unreleased // '', qr/^### Added\n.*^### Changed\n.*^### Known limitations\n/ms, 'Added, Changed and Known limitations' );
-	like( $unreleased // '', qr/Chapters \(N\)/,               'audiobook chapters' );
-	like( $unreleased // '', qr/Segments \(N\).*Tracklist \(N\)/s, 'episode extras' );
-	like( $unreleased // '', qr/Latest episodes stays put/,     'Latest episodes after an unfollow' );
-	like( $unreleased // '', qr/Header line too long/,          'the install fix' );
-	like( $unreleased // '', qr/`scripts\/smoke\.sh/,           'the self-test' );
+# The newest section with content: [Unreleased] while it has entries, otherwise (right after a
+# release has moved them) the first "## [X.Y.Z] - YYYY-MM-DD" section. Returns its name and body.
+sub newestChangelogSection {
+	my $doc = shift;
+	my ($unreleased) = $doc =~ /^## \[Unreleased\]\n(.*?)(?=^## |^\[[^\]]+\]: |\z)/ms;
+	return ( '[Unreleased]', $unreleased ) if defined $unreleased && $unreleased =~ /\S/;
+	my ( $version, $released ) = $doc =~ /^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}\n(.*?)(?=^## |^\[[^\]]+\]: |\z)/ms;
+	return ( "[$version]", $released ) if defined $released && $released =~ /\S/;
+	return;
+}
+
+subtest 'CHANGELOG.md: the newest section with content' => sub {
+	my ( $name, $section ) = newestChangelogSection( slurp('CHANGELOG.md') );
+	ok( defined $name, '[Unreleased] or the newest release section has entries (not both empty)' );
+	$name //= '(none)';
+	note("checking $name");
+	ok( defined $section && $section =~ /\S/, "$name has entries" );
+	like( $section // '', qr/^### Added\n.*^### Changed\n.*^### Known limitations\n/ms, "$name: Added, Changed and Known limitations" );
+	like( $section // '', qr/Chapters \(N\)/,               "$name: audiobook chapters" );
+	like( $section // '', qr/Segments \(N\).*Tracklist \(N\)/s, "$name: episode extras" );
+	like( $section // '', qr/Latest episodes stays put/,     "$name: Latest episodes after an unfollow" );
+	like( $section // '', qr/Header line too long/,          "$name: the install fix" );
+	like( $section // '', qr/`scripts\/smoke\.sh/,           "$name: the self-test" );
 };
 
 subtest 'the plugin description: strings.txt and repo.xml agree' => sub {
