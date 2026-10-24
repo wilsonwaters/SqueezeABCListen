@@ -35,7 +35,7 @@ also the text of its GitHub Release (see [RELEASING.md](RELEASING.md)).
 
 - **All programs A–Z is more complete**: 736 programs instead of 709. AM and The World Today are now listed, as are
   programs that share their title with another, such as *Persuasion* the audiobook (Audiobooks → All audiobooks
-  A–Z now lists all 20 books) and the 14 regional "Mornings" programs.
+  A–Z now lists all 20 books) and the 14 programs called "Mornings".
 - Programs use ABC's current titles, such as "Radio National Breakfast" (was "RN Breakfast") and "If You're
   Listening". A Big Country, Radio National Breakfast and If You're Listening are now under Programs → By type →
   Podcasts.
@@ -44,6 +44,8 @@ also the text of its GitHub Release (see [RELEASING.md](RELEASING.md)).
   Following it again within that time changes nothing. A remote, app or script that repeats an Unfollow it reached
   through Latest episodes can no longer unfollow a different program.
 - The plugin's description in Settings → Manage Plugins now lists everything it does.
+- The note at the end of Audiobooks now reads "Most audiobooks play only in Australia.", since six of them play
+  anywhere.
 
 ### Fixed
 
@@ -54,6 +56,8 @@ also the text of its GitHub Release (see [RELEASING.md](RELEASING.md)).
   episode is only available in Australia" outside Australia, instead of a general playback error.
 - Settings page: saving the page from a skin that sends only one of the two settings no longer warns "Invalid value"
   about the other one. Screen readers now read each setting's description with it.
+- Older program links that ABC now redirects to a different page open again.
+- An episode whose saved ABC link has moved still plays, from the audio link saved earlier.
 
 ### Known limitations
 
@@ -65,10 +69,11 @@ also the text of its GitHub Release (see [RELEASING.md](RELEASING.md)).
   say they are no longer available. Comedy Showcase, Grass Roots and Desko, which ABC doesn't index at all, are
   only under Programs → By network.
 - Search doesn't yet find a few programs, such as "AM"; they are in Programs → All programs A–Z.
+- Episodes of triple j's Hottest 100 have no Follow row and no More from link yet.
 - A Latest episodes list still refreshes every 15 minutes, and changes when an unfollow's 30 minutes run out or a
   new program is followed. A menu position held open across one of those moments may open a different episode.
-- Carried over from 0.3.0: live streams are 56 kbps unless you choose ABC mediahub (Australia only, with an
-  automatic fallback); stations ABC streams only as HLS aren't listed; Program info, Recently played and Sport
+- Carried over from 0.3.0: live streams are 56 kbps unless you choose ABC mediahub (which may only work from
+  Australia, with an automatic fallback); stations ABC streams only as HLS aren't listed; Program info, Recently played and Sport
   event times use your LMS server's time zone; ABC lists only the newest 250 episodes of each program; Material
   skin's own search box doesn't list ABC listen.
 

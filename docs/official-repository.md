@@ -70,9 +70,9 @@ Check each of these before opening the pull request:
 ## Steps
 
 1. Fork <https://github.com/LMS-Community/lms-plugin-repository> on GitHub.
-2. In the fork, edit `include.json` and add our URL to the `"repositories"` list, keeping the
-   list's existing order (it is sorted) and formatting (keep a comma between entries, and none
-   after the last one, so the file stays valid JSON):
+2. In the fork, edit `include.json` and add our URL to the `"repositories"` list, in
+   alphabetical order (or at the end), keeping the file's formatting (a comma between entries,
+   none after the last one, so the file stays valid JSON):
 
    ```json
    "https://raw.githubusercontent.com/wilsonwaters/SqueezeABCListen/main/repo.xml",

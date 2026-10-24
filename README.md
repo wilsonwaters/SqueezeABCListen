@@ -12,8 +12,8 @@ episodes, the News, Sport, Kids listen and Audiobooks sections, search, and a li
 follow. Everything plays on your Squeezebox players, software players and LMS apps. No ABC account
 is needed.
 
-Version 1.0 is feature-complete for what ABC publishes on its website. See
-[CHANGELOG.md](CHANGELOG.md) for what each version contains.
+This guide describes the plugin as it is on the `main` branch, which becomes version 1.0. See
+[CHANGELOG.md](CHANGELOG.md) for what each released version contains.
 
 ## Features
 
@@ -149,8 +149,9 @@ play from their rows.
 
 ### Sport
 
-**Sport** lists the sport stations, then the events that are live or coming up, each with its
-time, and then ABC's sport collections and sport programs.
+**Sport** lists the sport stations, then ABC's "Live & Upcoming Events" (the events that are live
+or coming up, each with its time, when there are any), and then ABC's sport collections and sport
+programs.
 
 ### Kids listen
 
@@ -327,6 +328,7 @@ These come from what ABC publishes, or from LMS:
 - Song titles appear only where ABC publishes them. Some stations, such as Classic 2, publish no
   program information. Classical stations show the composer as the artist, as ABC does.
 - Schedule rows for programs that have no ABC program page can't be opened.
+- Episodes of triple j's Hottest 100 have no Follow row and no More from link yet.
 - Material's own search box doesn't list ABC listen; use **ABC listen → Search**.
 
 ## Troubleshooting
@@ -407,8 +409,10 @@ minute and says which part fails; see [Self-test](#self-test).
 - Your home state, the live stream quality and your followed programs are kept in LMS's own
   preferences, in the file `plugin/abclisten.prefs` in the LMS preferences folder. Nothing about
   your players or what you play is stored.
-- The plugin talks only to ABC's servers (for menus, streams, images and now-playing data) and to
-  ABC's search service (Algolia, which runs ABC listen's own search).
+- The plugin talks only to ABC's servers (for menus, images and now-playing data), the
+  content-delivery networks ABC streams its audio from (StreamGuys for the standard live streams,
+  Akamai for episodes and audiobooks, MediaHub Australia for the ABC mediahub quality setting),
+  and ABC's Algolia search service (which runs ABC listen's own search).
 - Nothing is sent to the plugin's author or to anyone else.
 
 ## Self-test
@@ -437,8 +441,11 @@ It prints one `PASS`, `FAIL` or `SKIP` line per check, then `SMOKE: <passed>/<ru
 
 > **Warning:** the test plays audio on the player you choose and replaces its queue. At the
 > end, also if it fails or you press Ctrl-C, it stops the player, clears the queue and switches
-> the player off again if it was off. It follows and unfollows one program, then puts your
-> followed programs back exactly as they were. Run it on a player nobody is listening to.
+> the player off again if it was off. If the player is synced with others, they stop too and
+> their shared queue is cleared. It follows and unfollows one program, then puts that program
+> back as it was in your followed programs (and the oldest follow too, if the plugin had to drop
+> it because 200 were followed). Changes someone else makes to the followed programs meanwhile
+> are kept. Run it on a player nobody is listening to.
 
 It needs bash 4 or later, `curl` and `jq` (on Debian, Ubuntu or Raspberry Pi OS:
 `sudo apt install curl jq`), on any computer that can reach your LMS:

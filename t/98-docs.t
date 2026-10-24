@@ -123,7 +123,7 @@ subtest 'README: disclaimer, requirements, compatibility, privacy' => sub {
 	my $p = $section{Privacy};
 	like( $p, qr/\*\*No ABC login or account\*\*, and the plugin stores no passwords or other credentials/, 'Privacy: no login, no credentials' );
 	like( $p, qr/home state, the live stream quality and your followed programs.*`plugin\/abclisten\.prefs`/s, 'Privacy: what is stored, and where' );
-	like( $p, qr/only to ABC's servers.*ABC's search service \(Algolia/s, 'Privacy: only ABC hosts and ABC\'s Algolia search' );
+	like( $p, qr/only to ABC's servers.*content-delivery networks ABC streams its audio from \(StreamGuys.*Akamai.*MediaHub Australia.*ABC's Algolia search service/s, 'Privacy: only ABC hosts, the CDNs ABC streams from, and ABC\'s Algolia search' );
 	like( $p, qr/Nothing is sent to the plugin's author/, 'Privacy: nothing goes to the author' );
 };
 
@@ -194,7 +194,14 @@ subtest 'README: now playing and limitations' => sub {
 	my $l = flat( $section{Limitations} );
 	like( $l, qr/\*\*Live streams are 56 kbps HE-AAC by default\.\*\*.*ABC mediahub AAC.*falls back/s, 'Limitations: 56 kbps, mediahub and its fallback' );
 	like( $l, qr/HLS aren't listed\*\*.*Sport Rapid, RLWC Rapid.*PlayHLS.*Kids listen time-zone\s+versions are hidden/s, 'Limitations: HLS-only stations, Kids listen time-zone versions' );
-	unlike( $readme, qr/PlayHLS plugin \+ ffmpeg|HLS option/i,                             'no HLS quality option is described' );
+	# there is no HLS option (L5 ships Standard and mediahub only): HLS is a limitation, never a feature
+	for my $part ( 'About', 'Features', 'Usage', 'Now playing', 'Compatibility' ) {
+		unlike( $section{$part}, qr/HLS/i, "$part: no HLS or PlayHLS claim" );
+	}
+	unlike( $readme, qr/HLS (?:option|setting|quality)|quality[^.\n]*HLS|PlayHLS plugin \+ ffmpeg/i, 'no HLS quality option anywhere' );
+	my %usage = subsections( $section{Usage} );
+	my @qualities = $usage{Settings} =~ /\*\*((?:Standard|ABC mediahub)[^*]*)\*\*/g;
+	is_deeply( \@qualities, [ map { en($_) } qw(LIVE_QUALITY_STANDARD LIVE_QUALITY_MEDIAHUB) ], 'Settings: exactly the two live stream qualities' );
 	like( $l, qr/\*\*Only the newest 250 episodes\*\*/,                                    'Limitations: newest 250 episodes' );
 	like( $l, qr/about\s+28 days; podcast \(MP3\) episodes stay/,                          'Limitations: catch-up AAC expiry, MP3 stays' );
 	like( $l, qr/Most audiobooks play only from an Australian internet\s+connection.*The Wind in the Willows, The Wonderful Wizard of Oz, Persuasion, My Brilliant Career,\s+Frankenstein and Animal Farm.*Bluey Listen Along/s, 'Limitations: Australia-only audiobooks, the six classics, restricted podcasts' );
@@ -235,7 +242,8 @@ subtest 'README: self-test' => sub {
 	( my $quoted = $section{'Self-test'} ) =~ s/^> ?//mg;    # the warning is a block quote
 	my $self = flat($quoted);
 	like( $self, qr/\*\*Warning:\*\* the test plays audio .* replaces its queue/s,       'warns that it plays audio and replaces the queue' );
-	like( $self, qr/puts your\s+followed programs back exactly as they were/,           'says the followed programs are restored' );
+	like( $self, qr/puts that program back as it was in your followed programs.*oldest follow too.*Changes someone else makes to the followed programs meanwhile are kept/, 'says how the followed programs are restored' );
+	like( $self, qr/synced with others, they stop too and their shared queue is cleared/, 'says synced players stop too' );
 	like( $self, qr/bash 4 or later, `curl` and `jq`/,                                    'requirements' );
 	like( $self, qr/`SMOKE: <passed>\/<run> passed`/,                                     'the summary line' );
 	like( $self, qr/`--skip-live` skips the three live-stream checks \(6, 7 and 15\)/,   '--skip-live' );
