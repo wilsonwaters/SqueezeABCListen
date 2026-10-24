@@ -5,8 +5,10 @@
 #            [--install-xml ABCListen/install.xml] [--file repo.xml | repo.xml]
 #   --version      X.Y.Z of the release
 #   --sha          SHA1 of the release zip (40 hex digits, any case; written lower-case)
-#   --url          download URL of the zip: https, ending in .zip (default:
-#                  https://github.com/wilsonwaters/SqueezeABCListen/releases/download/vV/ABCListen-V.zip).
+#   --url          download URL of the zip: https, ending in .zip. Default: the copy on the
+#                  release-assets branch, served by raw.githubusercontent.com,
+#                  https://raw.githubusercontent.com/wilsonwaters/SqueezeABCListen/release-assets/ABCListen-V.zip
+#                  (LMS 9.1.1 can't download GitHub Release assets; see RELEASING.md).
 #                  Plain http is accepted only for a loopback test server (127.0.0.1, localhost).
 #   --install-xml  plugin manifest whose targetApplication min/maxVersion become the entry's
 #                  minTarget/maxTarget (default: ABCListen/install.xml in this repository)
@@ -51,7 +53,7 @@ my $file    = $opt{file} // ( @ARGV ? $ARGV[0] : "$ROOT/repo.xml" );
 my $version = $opt{version};
 my $sha     = lc $opt{sha};
 my $url     = defined $opt{url} ? $opt{url}
-	: "https://github.com/wilsonwaters/SqueezeABCListen/releases/download/v$version/$PLUGIN-$version.zip";
+	: "https://raw.githubusercontent.com/wilsonwaters/SqueezeABCListen/release-assets/$PLUGIN-$version.zip";
 
 $version =~ /\A[0-9]+\.[0-9]+\.[0-9]+\z/ or fail("version '$version' is not of the form X.Y.Z");
 $sha =~ /\A[0-9a-f]{40}\z/               or fail("sha '$opt{sha}' is not 40 hex digits");

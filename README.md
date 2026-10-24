@@ -39,8 +39,8 @@ ABC; they are used here only to identify the stations. For the ABC's own apps an
    **ABC listen** and click **Apply**.
 4. LMS asks you to confirm installing a plugin from a third-party repository ("You are about to
    install: … Only install extensions from authors whom you trust. …"). Click **OK**.
-5. LMS downloads the plugin, checks it, and asks to restart. Click **Restart now**, or restart
-   LMS the way you normally do.
+5. LMS downloads the plugin (from raw.githubusercontent.com, like the repository file), checks
+   it, and asks to restart. Click **Restart now**, or restart LMS the way you normally do.
 6. Open **Radio → ABC listen** on any player or in the web interface.
 
 ## Updating
@@ -67,7 +67,9 @@ so a new version can take a little while to show up. The changes in each version
 - `scripts/lms-repo-install.sh` installs the plugin on an LMS from a repository URL without a
   browser (used for testing).
 - Releases are automated: see [RELEASING.md](RELEASING.md). Update [CHANGELOG.md](CHANGELOG.md)
-  first.
+  first. Each version's zip is attached to its GitHub Release and also committed to the
+  `release-assets` branch, which is where `repo.xml` points LMS: LMS 9.1.1 can't download
+  GitHub Release assets (the download redirect has a header line longer than LMS accepts).
 - Project planning and status live in [`ai-state/`](ai-state/PROGRESS.md).
 
 ## License
