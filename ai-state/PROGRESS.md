@@ -18,7 +18,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   from the public repo.xml on the testbed: downloaded + SHA1-verified, 0.3.0 installed, 10 top-level items, triple j
   played with song metadata; then uninstalled and dev link restored. #62 closed.
 - Next after R2: R3 (#17, amendment 2 posted) — v1.0.0 release, clean-profile install, final verification, pi14 checklist
-- #15 R2 smoke test + docs — PR #68 fixes pushed (ee38061: check-6 metadata rule, merge-based follow restore, docs) — focused re-review
+- #15 R2 smoke test + docs — PR #68 re-review APPROVE; last small fix round (home-state station row, favorites_title,
+  test gaps) in progress, then merge → R3
 - Queued (cap 3): then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
@@ -31,6 +32,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - 2026-10-20 ~03:00 UTC: usage limit again (SYS, D5 review, M4) + worker restart; stakeholder paused all work
   ("hold off"). 2026-10-23 22:59 UTC: resumed — global git identity reset to Wilson Waters again, testbed restarted,
   stale D5-review lock broken, main re-linked; SYS, D5 review and M4 resumed from saved state.
+- 2026-10-24 ~03:00–04:30 UTC: usage limit (R2 final fix round) + worker restart; global git identity reset again
+  (fixed), testbed restarted, R2 resumed.
 
 ## Last completions
 - O8/D9 review test gaps merged (PR #71, squash 4eeb267): tests only + one comment.
