@@ -47,6 +47,18 @@ package Plugins::ABCListen::ProgramIndex;
 #       Programs returns them (no programType). Every network failing too ->
 #       { error => 'PLUGIN_ABCLISTEN_LOAD_FAILED' }.
 #
+#   D9: the index's two query rules, public so Search (D3) applies them too, class methods or
+#   plain functions like the others:
+#   siteFilter() -> the parenthesised filter clause of the ABC listen sites, the FILTERS above
+#       without their 'contentType:program AND ': '(siteSegment:listen OR ... OR
+#       canonicalURI_fragments:pacific)'. Pure; combine it with a contentType clause.
+#   mergeTwins(\@refs) -> \@refs: D8's merge of one program's documents, the rule programs()
+#       applies to its hits (with distinct => 0): refs { path, title?, network?, programType?, ... }
+#       in their order, two with the same path, or twins by title and the path's last segment
+#       (_titleKey, _twins), become one: the better (_rank: a program page path first, then one
+#       with a programType, else the first) in the first one's place. No I/O; the refs
+#       themselves are kept (not copied); refs that aren't hashes or have no path are dropped.
+#
 #   Program ref (Algolia; contract 6 program shape plus programType), optional keys absent
 #   when unknown:
 #     { id          (digits, from API::coreMediaRef(objectID) 'coremedia://program/<id>'),
@@ -132,10 +144,11 @@ use constant PAGE_TIMEOUT    => 8;        # seconds per page check (a menu waits
 use constant UNCONFIRMED_TTL => 600;      # O8: a page check without an answer (listed) is cached this long
 
 # The ABC listen sites, as site segments and (D8) as canonical URL segments (see the header)
-use constant FILTERS => 'contentType:program AND (siteSegment:listen OR siteSegment:triplej OR siteSegment:kidslisten'
+use constant SITE_FILTER => '(siteSegment:listen OR siteSegment:triplej OR siteSegment:kidslisten'
 	. ' OR siteSegment:triplejunearthed OR siteSegment:pacific'
 	. ' OR canonicalURI_fragments:listen OR canonicalURI_fragments:triplej OR canonicalURI_fragments:kidslisten'
 	. ' OR canonicalURI_fragments:triplejunearthed OR canonicalURI_fragments:pacific)';
+use constant FILTERS => 'contentType:program AND ' . SITE_FILTER;
 
 my @ATTRIBUTES = qw(objectID title canonicalURL shortTeaserText description defaultThumbnail infoSource programType);
 
@@ -214,16 +227,36 @@ sub _refs {
 
 	my %networks = _networkPaths();
 
-	my ( %atPath, %atTitle, @refs );    # path -> index in @refs; title+slug key -> [indexes]
-	my ( $dropped, $twins ) = ( 0, 0 );
-	for my $hit (@hits) {
-		my $ref = _ref( $hit, \%networks );
-		if ( !$ref ) {
-			$dropped++;
-			next;
-		}
+	my @found = map { _ref( $_, \%networks ) } @hits;
+	my $dropped = grep { !$_ } @found;
 
-		# the same path: the same program; the same title and slug (D8): only a twin (_twins)
+	my ( $refs, $twins ) = _merge( [ grep {$_} @found ] );
+
+	main::DEBUGLOG && $dropped && $log->is_debug && $log->debug("Program index: $dropped hits without a program page skipped");
+	main::DEBUGLOG && $twins   && $log->is_debug && $log->debug("Program index: $twins hits of a program listed already merged");
+
+	return $refs;
+}
+
+# D9 (see the header): the index's site filter clause, for Search.
+sub siteFilter { SITE_FILTER }
+
+# D9 (see the header): D8's merge, for Search.
+sub mergeTwins {
+	shift if _isClass( $_[0] );
+	my ($refs) = _merge(shift);
+	return $refs;
+}
+
+# Program refs -> (\@refs merged, the number of refs merged into another), in order: the same path
+# is the same program; the same title and slug (D8) only a twin (_twins); of one program the better
+# ref (_rank), else the first, in the first one's place.
+sub _merge {
+	my $found = shift;
+
+	my ( %atPath, %atTitle, @refs );    # path -> index in @refs; title+slug key -> [indexes]
+	my $twins = 0;
+	for my $ref ( grep { ref $_ eq 'HASH' && defined $_->{path} && !ref $_->{path} } @{ ref $found eq 'ARRAY' ? $found : [] } ) {
 		my $i = $atPath{ $ref->{path} };
 		if ( !defined $i ) {
 			($i) = grep { _twins( $refs[$_], $ref ) } @{ $atTitle{ _titleKey($ref) } || [] };
@@ -234,7 +267,6 @@ sub _refs {
 			$i = $#refs;
 		}
 		else {
-			# D8: the same program twice: the better ref (_rank), else the first, in the first one's place
 			$twins++;
 			$refs[$i] = $ref if _rank($ref) > _rank( $refs[$i] );
 		}
@@ -248,10 +280,7 @@ sub _refs {
 		}
 	}
 
-	main::DEBUGLOG && $dropped && $log->is_debug && $log->debug("Program index: $dropped hits without a program page skipped");
-	main::DEBUGLOG && $twins   && $log->is_debug && $log->debug("Program index: $twins hits of a program listed already merged");
-
-	return \@refs;
+	return ( \@refs, $twins );
 }
 
 # D8: with distinct => 0 ABC's index has some programs twice: one document at a legacy path and
