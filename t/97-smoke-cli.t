@@ -119,6 +119,7 @@ sub fake_lms {
 	my $port  = $server->sockport;
 	my $log   = "$DIR/commands-$port.log";
 	my $state = "$DIR/followed-$port.json";
+	unlink $log, $state, "$state.waiting", "$state.go";    # a port can come round again: nothing left from an earlier fake
 
 	my $pid = fork // die "fork: $!";
 	if ( !$pid ) {
@@ -208,17 +209,15 @@ sub handle {
 		if ( ( $cmd->[1] // '' ) eq 'plugin.abclisten:followed' ) {
 			if ( ( $cmd->[2] // '' ) eq '?' && ( my $other = delete $self->{pre_change} ) ) {
 				# another client follows a program right after this read; the next menu request is
-				# answered late (the test interrupts smoke.sh meanwhile)
+				# held (see _hold)
 				my $snapshot = $JSON->decode( $JSON->encode( $self->{followed} ) );
 				push @{ $self->{followed} }, $other;
 				$self->_saveFollowed;
-				$self->{hang} = 2;
-				open( my $fh, '>', "$self->{statefile}.changed" ) or die;
-				close $fh;
+				$self->{hold} = 'items';
 				return { _p2 => $snapshot };
 			}
 			if ( ( $cmd->[2] // '' ) eq '?' ) {
-				Time::HiRes::sleep( delete $self->{hang_pref} ) if $self->{hang_pref};    # see hang_pref_after_follow
+				$self->_hold('pref');
 				return { _p2 => $self->{followed} };
 			}
 			return {} if $self->{ignore_pref_set};    # LMS answers, but the followed programs stay as they are
@@ -351,14 +350,9 @@ sub _followAction {
 			$_->{unfollowedAt} = 1800000000 for grep { $_->{path} eq $path } @{ $self->{followed} };
 		}
 		$self->_saveFollowed;
-		# after the follow, the next menu request (hang_after_follow) or the next read of the followed
-		# programs (hang_pref_after_follow) is answered late; the test interrupts smoke.sh meanwhile
-		if ( $op eq 'follow' && ( $self->{hang_after_follow} || $self->{hang_pref_after_follow} ) ) {
-			$self->{hang}      = $self->{hang_after_follow}      if $self->{hang_after_follow};
-			$self->{hang_pref} = $self->{hang_pref_after_follow} if $self->{hang_pref_after_follow};
-			open( my $fh, '>', "$self->{statefile}.followed" ) or die;
-			close $fh;
-		}
+		# after the follow, the next menu request (hold_after_follow => 'items') or the next read of
+		# the followed programs ('pref') is held (see _hold)
+		$self->{hold} = $self->{hold_after_follow} if $op eq 'follow' && $self->{hold_after_follow};
 		return [ { %{ _text( $op eq 'follow' ? "Following $title" : "No longer following $title" ) }, showBriefly => 1 } ];
 	} );
 }
@@ -424,13 +418,26 @@ sub _resolve {
 	return $item;
 }
 
+# The request the test asked to hold (hold => 'items' or 'pref', set by pre_change or
+# hold_after_follow): write "<statefile>.waiting", then answer only once the test has written
+# "<statefile>.go" (or after 20 s). The test sends SIGINT in between, so smoke.sh is always waiting
+# on this request when the signal comes.
+sub _hold {
+	my ( $self, $kind ) = @_;
+	return unless ( $self->{hold} // '' ) eq $kind;
+	delete $self->{hold};
+	open( my $fh, '>', "$self->{statefile}.waiting" ) or die;
+	close $fh;
+	my $deadline = Time::HiRes::time() + 20;
+	Time::HiRes::sleep(0.01) until -e "$self->{statefile}.go" || Time::HiRes::time() > $deadline;
+	return;
+}
+
 sub _items {
 	my ( $self, $cmd ) = @_;
 	my %p = map { /^([a-z_]+):(.*)\z/s ? ( $1 => $2 ) : () } @$cmd[ 4 .. $#$cmd ];
 
-	if ( $self->{hang} ) {    # answer the next menu request late (the test interrupts smoke.sh meanwhile)
-		Time::HiRes::sleep( delete $self->{hang} );
-	}
+	$self->_hold('items');
 	if ( $self->{slow_first_items} ) {    # the first menu request takes longer than curl waits
 		Time::HiRes::sleep( delete $self->{slow_first_items} );
 	}
@@ -469,6 +476,32 @@ sub _menuRow {
 package main;
 
 my @FULL = ( plugin => 1, state => 'enabled', radios => $RADIOS );
+
+# interrupted($url, $while_held): smoke.sh --skip-live against a fake LMS that holds a request (see
+# _hold); once it does, $while_held runs, smoke.sh gets SIGINT and the request is let go. Returns
+# (exit code, stderr, whether a request was held).
+sub interrupted {
+	my ( $url, $while_held ) = @_;
+	my $state = "$DIR/followed-" . ( $url =~ /:(\d+)\z/ )[0] . '.json';
+	my $pid   = fork // die "fork: $!";
+	if ( !$pid ) {
+		open( STDOUT, '>', "$state.out" ) or die;
+		open( STDERR, '>', "$state.err" ) or die;
+		$ENV{$_} = $FAST{$_} for keys %FAST;
+		exec( 'bash', $SCRIPT, $url, '00:00:00:00:00:01', '--skip-live' ) or die;
+	}
+	my $deadline = time + 20;
+	sleep 0.01 until -e "$state.waiting" || time > $deadline;
+	my $held = -e "$state.waiting";
+	$while_held->() if $held && $while_held;
+	kill 'INT', $pid;
+	open( my $go, '>', "$state.go" ) or die;
+	close $go;
+	waitpid( $pid, 0 );
+	my $code = $? >> 8;
+	my $err  = do { local ( @ARGV, $/ ) = "$state.err"; <> } // '';
+	return ( $code, $err, $held );
+}
 
 subtest '--help prints the usage and exits 0' => sub {
 	for my $flag ( '--help', '-h' ) {
@@ -838,25 +871,12 @@ subtest 'followed programs: an already-followed program, 200 followed, another c
 subtest 'interrupted during the follow check: the followed programs are put back' => sub {
 	# interrupted while smoke.sh opens My ABC listen after the follow, or (before it knows the
 	# followed program's path) while it reads the followed programs right after the follow
-	for my $when (qw(hang_after_follow hang_pref_after_follow)) {
-		my ( $url, $stop, $commands, $followed ) = fake_lms( @FULL, $when => 2 );
-		my $flag = "$DIR/followed-" . ( $url =~ /:(\d+)\z/ )[0] . '.json.followed';
-
-		my $pid = fork // die "fork: $!";
-		if ( !$pid ) {
-			open( STDOUT, '>', "$DIR/int.out" ) or die;
-			open( STDERR, '>', "$DIR/int.err" ) or die;
-			$ENV{$_} = $FAST{$_} for keys %FAST;
-			exec( 'bash', $SCRIPT, $url, '00:00:00:00:00:01', '--skip-live' ) or die;
-		}
-		my $deadline = time + 20;
-		sleep 0.1 until -e $flag || time > $deadline;
-		ok( -e $flag, "$when: the follow check followed a program" );
-		is( scalar @{ $followed->() }, 1, "$when: ... which is in the list now" );
-		kill 'INT', $pid;
-		waitpid( $pid, 0 );
-		is( $? >> 8, 130, "$when: exit 130" );
-		my $err = do { local ( @ARGV, $/ ) = "$DIR/int.err"; <> };
+	for my $kind (qw(items pref)) {
+		my $when = $kind eq 'items' ? 'opening My ABC listen after the follow' : 'reading the followed programs after the follow';
+		my ( $url, $stop, $commands, $followed ) = fake_lms( @FULL, hold_after_follow => $kind );
+		my ( $code, $err, $held ) = interrupted( $url, sub { is( scalar @{ $followed->() }, 1, "$when: the test's follow is in the list" ) } );
+		ok( $held, "$when: smoke.sh was waiting on that request when it got SIGINT" );
+		is( $code, 130, "$when: exit 130" );
 		like( $err, qr/smoke: interrupted/, "$when: says it was interrupted" );
 		is_deeply( $followed->(), [], "$when: the followed programs are back to []" );
 		my @c = $commands->();
@@ -868,21 +888,10 @@ subtest 'interrupted during the follow check: the followed programs are put back
 subtest 'interrupted before the test follows, while another client follows a program: nothing is written' => sub {
 	my $other = { path => '/listen/programs/other', title => 'Other', followedAt => 1700000099 };
 	my ( $url, $stop, $commands, $followed ) = fake_lms( @FULL, pre_change => $other );
-	my $flag = "$DIR/followed-" . ( $url =~ /:(\d+)\z/ )[0] . '.json.changed';
-
-	my $pid = fork // die "fork: $!";
-	if ( !$pid ) {
-		open( STDOUT, '>', "$DIR/p3.out" ) or die;
-		open( STDERR, '>', "$DIR/p3.err" ) or die;
-		$ENV{$_} = $FAST{$_} for keys %FAST;
-		exec( 'bash', $SCRIPT, $url, '00:00:00:00:00:01', '--skip-live' ) or die;
-	}
-	my $deadline = time + 20;
-	sleep 0.1 until -e $flag || time > $deadline;
-	ok( -e $flag, 'another client followed a program right after the test read the list' );
-	kill 'INT', $pid;
-	waitpid( $pid, 0 );
-	is( $? >> 8, 130, 'exit 130' );
+	my ( $code, $err, $held ) = interrupted( $url, sub { is_deeply( $followed->(), [$other], 'another client followed a program right after the test read the list' ) } );
+	ok( $held, 'smoke.sh was waiting on the next menu request when it got SIGINT' );
+	is( $code, 130, 'exit 130' );
+	like( $err, qr/smoke: interrupted/, 'says it was interrupted' );
 	is_deeply( $followed->(), [$other], 'the other client\'s follow is kept' );
 	ok( !( grep { $_->[1][0] eq 'pref' && ref $_->[1][2] } $commands->() ), 'the followed programs were not written' );
 	$stop->();
