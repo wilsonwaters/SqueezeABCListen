@@ -17,10 +17,10 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   (raw.githubusercontent.com); repair run on main succeeded; repo.xml → raw URL, same SHA1. Orchestrator install check
   from the public repo.xml on the testbed: downloaded + SHA1-verified, 0.3.0 installed, 10 top-level items, triple j
   played with song metadata; then uninstalled and dev link restored. #62 closed.
-- #56 D8 A–Z completeness — PR #65 in review (AM: siteSegment adelaide; Persuasion: Algolia distinct; 709 → 736 programs)
+- #48 O8 + #66 D9 (Hottest 100 follow row, resilient page checks; Search segment/distinct rules) — implementation
 - #15 R2 smoke test + docs + screenshots (amendment 2 posted) — implementation
-- #41 F6 F4 follow-ups — implementation
-- Queued (cap 3): O8 + D9 (after D8: both touch ProgramIndex/Search rules), then v0.3.0 (system verification → release), R2, R3
+- #41 F6 F4 follow-ups — PR #67 in review (foundation: HTTP.pm 3rd arg, API x-nextjs-redirect, stale renditions)
+- Queued (cap 3): then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
 - 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
@@ -34,6 +34,9 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   stale D5-review lock broken, main re-linked; SYS, D5 review and M4 resumed from saved state.
 
 ## Last completions
+- #56 D8 merged (PR #65, squash 9be5881): A–Z 709 → 736 (AM via URL site segment; distinct 0 + strict twin merge),
+  Audiobooks A–Z 20, last-good categories at the deadline, A–Z buckets for modifier/compat letters. Review APPROVE;
+  fixes verified (diff read + merged-tree check.sh 746 tests).
 - #52 M3 merged (PR #64, squash 5ff5484): partial-POST warning fixed, redirect family in log, aria-describedby.
 - #23 D5 merged (PR #58, squash da61cf4; orchestrator merged main into the branch to resolve t/10): audiobook Chapters,
   restricted-podcast Episodes (Bluey Listen Along), seenAt = fetch time (API info `at`), /radio/geo/ geo message.
