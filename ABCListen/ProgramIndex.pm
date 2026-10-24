@@ -32,8 +32,10 @@ package Plugins::ABCListen::ProgramIndex;
 #       7 days) when Algolia fails after that: such data is served as usual (fallback 0).
 #       Hits are mapped to program refs in Algolia's order, de-duplicated by path and (D8) by
 #       title (case-insensitive) with the path's last segment (one program at a legacy and a
-#       current path, see _sameProgram): of two, the one at a program page path is kept, then the
-#       one with a programType, else the first, in the first one's place (_rank). Hits without
+#       current path), the latter only when at most one has a programType (or both the same type
+#       key) and the networks are the same or one is missing (_twins): of two, the one at a
+#       program page path is kept, then the one with a programType, else the first, in the first
+#       one's place (_rank). Hits without
 #       a usable path are dropped (count logged at DEBUG), and network-relative paths are kept only
 #       when their page checks out (O7, below). nbHits > the hits returned (the index outgrew
 #       Algolia's 1000-hit cap) -> the hits returned, WARN logged once per run.
@@ -190,7 +192,7 @@ sub _refs {
 
 	my %networks = _networkPaths();
 
-	my ( %at, @refs );    # identity key (_sameProgram) -> index in @refs
+	my ( %atPath, %atTitle, @refs );    # path -> index in @refs; title+slug key -> [indexes]
 	my ( $dropped, $twins ) = ( 0, 0 );
 	for my $hit (@hits) {
 		my $ref = _ref( $hit, \%networks );
@@ -199,8 +201,11 @@ sub _refs {
 			next;
 		}
 
-		my @keys = _sameProgram($ref);
-		my ($i) = grep {defined} map { $at{$_} } @keys;
+		# the same path: the same program; the same title and slug (D8): only a twin (_twins)
+		my $i = $atPath{ $ref->{path} };
+		if ( !defined $i ) {
+			($i) = grep { _twins( $refs[$_], $ref ) } @{ $atTitle{ _titleKey($ref) } || [] };
+		}
 
 		if ( !defined $i ) {
 			push @refs, $ref;
@@ -211,7 +216,14 @@ sub _refs {
 			$twins++;
 			$refs[$i] = $ref if _rank($ref) > _rank( $refs[$i] );
 		}
-		$at{$_} = $i for @keys, _sameProgram( $refs[$i] );
+
+		for my $r ( $ref, $refs[$i] ) {
+			$atPath{ $r->{path} } = $i;
+			my $key = _titleKey($r);
+			next unless length $key;
+			my $list = $atTitle{$key} ||= [];
+			push @$list, $i unless grep { $_ == $i } @$list;
+		}
 	}
 
 	main::DEBUGLOG && $dropped && $log->is_debug && $log->debug("Program index: $dropped hits without a program page skipped");
@@ -220,17 +232,34 @@ sub _refs {
 	return \@refs;
 }
 
-# The identity keys of a ref: its path, and (D8) its title (lower case) with its path's last
-# segment. With distinct => 0 ABC's index has some programs twice: one document at a legacy path
-# and one at the current one ('Big Ideas' at /radionational/programs/bigideas and
-# /listen/programs/bigideas, the first without a programType), or at a network-relative and a
-# program path (/listen/classic/special-features, /listen/programs/special-features).
-sub _sameProgram {
+# D8: with distinct => 0 ABC's index has some programs twice: one document at a legacy path and
+# one at the current one ('Big Ideas' at /radionational/programs/bigideas and
+# /listen/programs/bigideas, the first without a programType or network), or at a
+# network-relative and a program path (/listen/classic/special-features,
+# /listen/programs/special-features). Such twins share their title (lower case) and their path's
+# last segment (_titleKey: '' without a title, so such refs never match); two refs with the same
+# path are always one program.
+sub _titleKey {
 	my $ref = shift;
-	my @keys = ("path\0$ref->{path}");
 	my ($slug) = $ref->{path} =~ m{/([^/]+)\z};
-	push @keys, 'title+slug' . "\0" . lc( $ref->{title} ) . "\0$slug" if defined $ref->{title} && defined $slug;
-	return @keys;
+	return defined $ref->{title} && defined $slug ? lc( $ref->{title} ) . "\0$slug" : '';
+}
+
+# Two refs with the same _titleKey are twins only when they can be one program: at most one has a
+# programType, or both have the same type key (an audiobook and a podcast of one title and slug,
+# /listen/audiobooks/the-secret-keeper and /listen/programs/the-secret-keeper, stay two), and the
+# networks are the same (case-insensitive) or one is missing (Mornings on two networks stay two).
+sub _twins {
+	my ( $x, $y ) = @_;
+	return 0 unless length _titleKey($x) && _titleKey($x) eq _titleKey($y);
+
+	if ( defined $x->{programType} && defined $y->{programType} ) {
+		return 0 unless typeKey( $x->{programType} ) eq typeKey( $y->{programType} );
+	}
+	if ( defined $x->{network} && defined $y->{network} ) {
+		return 0 unless lc $x->{network} eq lc $y->{network};
+	}
+	return 1;
 }
 
 # D8: which of two refs of one program is listed: a program page path (always listed; a

@@ -1315,8 +1315,8 @@ subtest 'D8: one program twice in the index (a legacy and the current path, or t
 		( my $bigIdeas = hit( title => 'Big Ideas', slug => 'bigideas', infoSource => 'ABC Radio National', programType => 'podcast' ) ),
 		hit( title => 'A Big Country', slug => 'abigcountry', programType => undef ),
 		( my $country = hit( title => 'A Big Country', slug => 'abigcountry', programType => 'podcast', infoSource => 'ABC Rural' ) ),
-		hit( title => 'Future Tense', canonicalURL => 'http://www.abc.net.au/radionational/programs/futuretense/', programType => 'podcast' ),
-		hit( title => 'future tense', slug => 'futuretense', programType => 'catch-up' ),
+		hit( title => 'Future Tense', canonicalURL => 'http://www.abc.net.au/radionational/programs/futuretense/', programType => 'podcast', infoSource => 'ABC Radio National' ),
+		hit( title => 'future tense', slug => 'futuretense', programType => 'PODCAST', infoSource => 'abc radio national' ),
 		hit( title => 'Mornings', slug => 'doublej-mornings' ),
 		hit( title => 'Mornings', canonicalURL => 'https://www.abc.net.au/triplej/programs/mornings/' ),
 		hit( title => 'Hack', canonicalURL => 'https://www.abc.net.au/triplej/programs/hack/' ),
@@ -1340,10 +1340,55 @@ subtest 'D8: one program twice in the index (a legacy and the current path, or t
 	is_deeply( [ @{ $items->[0] }{qw(id network programType)} ], [ $id, 'ABC Radio National', 'podcast' ], 'Big Ideas: the current path\'s ref (it has a programType; the legacy one has none)' );
 	($id) = $country->{objectID} =~ /([0-9]+)\z/;
 	is_deeply( [ @{ $items->[2] }{qw(id programType)} ], [ $id, 'podcast' ], 'A Big Country (the same path twice): the one with a programType' );
-	is( $items->[3]->{programType}, 'podcast', 'Future Tense: both typed -> the first (case-insensitive title)' );
+	is( $items->[3]->{programType}, 'podcast', 'Future Tense: both typed with the same type key, the same network (case-insensitive) -> the first' );
 	is( $items->[-2]->{programType}, 'music', 'Special Features: the program page (with a programType) ...' );
 	ok( !( grep { $_ eq '/listen/classic/special-features' } page_requests() ), '... so its network-relative twin needs no page check' );
 	ok( ( grep { $_->{message} =~ /5 hits of a program listed already merged/ } logged('DEBUG') ), 'the merged count logged at DEBUG' );
+};
+
+subtest 'D8: the same title and slug are twins only when they can be one program (types, networks); the same path always is' => sub {
+	fresh();
+	route_hits( [
+		# an audiobook and a podcast of one title and slug (a slug without -page, as 8 of the 20 books have)
+		hit( title => 'The Secret Keeper', canonicalURL => 'https://www.abc.net.au/listen/audiobooks/the-secret-keeper/', programType => 'audiobook', infoSource => 'Audio Books' ),
+		hit( title => 'The Secret Keeper', slug => 'the-secret-keeper', programType => 'podcast', infoSource => '' ),    # no network: only the types tell them apart
+		# two networks' Mornings at one slug (types alike or missing): two programs
+		hit( title => 'Mornings', canonicalURL => 'https://www.abc.net.au/triplej/programs/mornings/', programType => 'music', infoSource => 'triple j' ),
+		hit( title => 'Mornings', slug => 'mornings', programType => 'Music Playlists', infoSource => 'Double J' ),
+		hit( title => 'Mornings', canonicalURL => 'https://www.abc.net.au/kidslisten/programs/mornings/', programType => undef, infoSource => 'ABC Riverina' ),
+		# the Big Ideas legacy/current pair (no type and no network on the legacy one): one program
+		hit( title => 'Big Ideas', canonicalURL => 'http://www.abc.net.au/radionational/programs/bigideas/', infoSource => '', programType => undef ),
+		hit( title => 'Big Ideas', slug => 'bigideas', infoSource => 'ABC Radio National', programType => 'podcast' ),
+		# a legacy copy with the network but no type: one program
+		hit( title => 'Download This Show', canonicalURL => 'http://www.abc.net.au/radionational/programs/downloadthisshow/', infoSource => 'ABC Radio National', programType => undef ),
+		hit( title => 'Download This Show', slug => 'downloadthisshow', infoSource => 'ABC Radio National', programType => 'podcast' ),
+		# the same path: one program whatever the type, network or title
+		hit( title => 'RN Breakfast', slug => 'radionational-breakfast', infoSource => '', programType => 'catch-up' ),
+		hit( title => 'Radio National Breakfast', slug => 'radionational-breakfast', infoSource => 'ABC News Podcasts', programType => 'podcast' ),
+	] );
+
+	my $items = result_of( index_call() )->{items};
+	my @rows  = map { join ' | ', $_->{path}, $_->{title}, $_->{programType} // '-', $_->{network} // '-' } @$items;
+	is_deeply(
+		\@rows,
+		[
+			'/listen/audiobooks/the-secret-keeper | The Secret Keeper | audiobook | Audio Books',
+			'/listen/programs/the-secret-keeper | The Secret Keeper | podcast | -',
+			'/triplej/programs/mornings | Mornings | music | triple j',
+			'/listen/programs/mornings | Mornings | Music Playlists | Double J',
+			'/kidslisten/programs/mornings | Mornings | - | ABC Riverina',
+			'/listen/programs/bigideas | Big Ideas | podcast | ABC Radio National',
+			'/listen/programs/downloadthisshow | Download This Show | podcast | ABC Radio National',
+			'/listen/programs/radionational-breakfast | RN Breakfast | catch-up | -',
+		],
+		'audiobook vs podcast: two; Mornings on three networks: three; Big Ideas and Download This Show: one each (the current, typed copy); the same path: one (the first: both typed, both program pages)'
+	);
+	ok( ( grep { $_->{message} =~ /3 hits of a program listed already merged/ } logged('DEBUG') ), 'three merged' );
+
+	# All audiobooks A–Z keeps the book; the podcast stays a podcast
+	my ($books) = by_type('audiobook')->args(0);
+	is_deeply( [ map { $_->{passthrough}->[0]->{path} } @$books ], ['/listen/audiobooks/the-secret-keeper'], 'Audiobooks: The Secret Keeper (the book)' );
+	ok( ( grep { $_->{passthrough}->[0]->{path} eq '/listen/programs/the-secret-keeper' } @{ ( by_type('podcast')->args(0) )[0] } ), 'Podcasts: The Secret Keeper (the podcast)' );
 };
 
 subtest 'A–Z buckets (D8): modifier letters skipped (ʻokina), compatibility forms folded (fullwidth, ligatures, circled digits), ħ ŋ ə; the counts add up' => sub {

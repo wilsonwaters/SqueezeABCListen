@@ -841,6 +841,97 @@ subtest 'categories() (D8): building the list dies -> the static 18, called back
 	}
 };
 
+# D8: an hour later (past PAGE_TTL), ABC hangs on every page of the categories collection
+sub hang_categories {
+	advanceTime(3601);
+	Slim::Networking::SimpleAsyncHTTP->reset;
+	route_json( qr{collectionId=$CATEGORIES_ID&}, { collection => { pagination => { total => 0 }, items => [] } }, defer => 1 );
+}
+
+subtest 'categories() (D8): the cached walk at the deadline - at most 10 pages, an empty page ends it, each page id once, a walk that dies' => sub {
+	my @cards = @{ json_file($FULL_FIXTURE)->{collection}->{items} };
+
+	# at most CATEGORY_MAX_PAGES: a cached collection of 11 pages is not the whole collection
+	fresh();
+	my $podcasts = podcasts_page();
+	{
+		local $Plugins::ABCListen::Collections::CATEGORY_PAGE_SIZE = 1;
+		route_json( category_url( $_, 1 ), { collection => { pagination => { total => 11 }, items => [ $cards[$_] ] } } ) for 0 .. 10;
+		is( ( categories_of($podcasts)->args(0) )[1], 'collection+page', '11 pages of 1 card: the paging stops after 10' );
+		run( 'items', $CATEGORIES_ID, 10, 1 );    # the 11th page cached too (items(): the same request and cache entry)
+		is( scalar category_requests(), 11, '(all 11 pages cached)' );
+
+		hang_categories();
+		my $c = categories_of($podcasts);
+		advanceTime(3);
+		my ( $list, $source ) = $c->args(0);
+		is_deeply( [ $c->count, $source, ids_titles($list) ], [ 1, 'page', expected(@CATEGORIES) ], 'at the deadline: the cached walk stops after 10 pages, so not last-good: the page\'s 8' );
+		is_deeply( [ category_requests() ], [ category_url( 0, 1 ) ], '(the walk made no request)' );
+	}
+
+	# an empty page ends the cached walk, as it ends the paging
+	fresh();
+	$podcasts = podcasts_page();
+	{
+		local $Plugins::ABCListen::Collections::CATEGORY_PAGE_SIZE = 5;
+		route_json( category_url( 0, 5 ), { collection => { pagination => { total => 18 }, items => [ @cards[ 0 .. 4 ] ] } } );
+		route_json( category_url( 5, 5 ), { collection => { pagination => { total => 18 }, items => [] } } );
+		my ( $list, $source ) = categories_of($podcasts)->args(0);
+		is_deeply( [ $source, ids_titles($list) ], [ 'collection', expected( @ALL_CATEGORIES[ 0 .. 4 ] ) ], 'an empty second page ends the collection: its 5' );
+
+		hang_categories();
+		my ( $calls, $c ) = with_bff_count( sub { my $c = categories_of($podcasts); advanceTime(3); $c } );
+		( $list, $source ) = $c->args(0);
+		is_deeply( [ $c->count, $source, ids_titles($list) ], [ 1, 'last-good', expected( @ALL_CATEGORIES[ 0 .. 4 ] ) ], 'at the deadline: the cached 5 (the walk ends at the cached empty page)' );
+		is( $calls, 3, 'API::bff: the hanging first page, then the walk\'s 2 cached pages (the empty one read once)' );
+	}
+
+	# each page id once in the cached walk, also across pages
+	fresh();
+	$podcasts = podcasts_page();
+	{
+		local $Plugins::ABCListen::Collections::CATEGORY_PAGE_SIZE = 2;
+		my ( $news, $crime, $sport ) = @cards[ 0 .. 2 ];
+		my $again = { %$news, contentUri => 'coremedia://dynamiccollection/999', cardId => '999', cardTitle => 'News again' };
+		route_json( category_url( 0, 2 ), { collection => { pagination => { total => 4 }, items => [ $news, $crime ] } } );
+		route_json( category_url( 2, 2 ), { collection => { pagination => { total => 4 }, items => [ $again, $sport ] } } );
+		my $first = [ [ '104142082', 'News & Analysis' ], [ '104142226', 'True Crime' ], [ '104142200', 'Sport' ] ];
+		my ( $list, $source ) = categories_of($podcasts)->args(0);
+		is_deeply( [ $source, ids_titles($list) ], [ 'collection', $first ], 'the collection: News & Analysis once' );
+
+		hang_categories();
+		my $c = categories_of($podcasts);
+		advanceTime(3);
+		( $list, $source ) = $c->args(0);
+		is_deeply( [ $source, ids_titles($list) ], [ 'last-good', $first ], 'at the deadline (last-good): News & Analysis once too (the same page id on the second page dropped)' );
+	}
+
+	# the cached walk dies: the deadline still answers, once (the page's cards, else the static list)
+	my @static = $COL->staticCategories;
+	for my $case ( [ 'with the page\'s cards', undef, 'page' ], [ 'without page cards', { categories => [], categoriesId => $CATEGORIES_ID }, 'static' ] ) {
+		my ( $name, $input, $expected ) = @$case;
+		fresh();
+		$podcasts = $input || podcasts_page();
+		route_categories();
+		is( ( categories_of($podcasts)->args(0) )[1], 'collection', "$name: first open, the collection (cached)" );
+		hang_categories();
+		Slim::Utils::Log->resetMessages;
+
+		my $c;
+		{
+			no warnings 'redefine';
+			local *Plugins::ABCListen::Collections::_cachedCategories = sub { die "cache walk broke\n" };
+			$c = categories_of($podcasts);
+			ok( eval { advanceTime(3); 1 }, "$name: the deadline timer does not die" ) or diag $@;
+		}
+		is( $c->count, 1, "$name: one callback at the deadline" );
+		my ( $list, $source ) = $c->args(0);
+		is_deeply( [ $source, $list ], [ $expected, $expected eq 'static' ? \@static : $podcasts->{categories} ], "$name: $expected" );
+		ok( ( grep { $_->{level} eq 'ERROR' && $_->{message} =~ /reading the cached categories collection $CATEGORIES_ID failed: cache walk broke/ } Slim::Utils::Log->messages( category => 'plugin.abclisten' ) ), "$name: logged at ERROR" );
+		is( scalar Slim::Utils::Timers->pending, 0, "$name: no timer left" );
+	}
+};
+
 # ---------------------------------------------------------------------------
 # The Podcasts menu
 # ---------------------------------------------------------------------------
