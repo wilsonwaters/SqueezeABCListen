@@ -9,7 +9,7 @@ Phase 5/6 — v1.0.0 released (2026-10-24); final verification + pi14 checklist 
 - ondemand: O1 #12 · O2 #16 · O3 #18 · O4 #19 · O6 #30 · O7 #40 · O8 #48 (O7 follow-ups) · O9 #72 (Default-skin placeholder icons, after 1.0)
 - discovery: D1 #5 · D2 #6 · D3 #13 · D4 #22 · D5 #23 · D6 #44 (podcast A–Z groups) · D7 #51 (all categories) · D8 #56 (D7 follow-ups) · D9 #66 (search segments)
 - myabc: M1 #11 · M2 #20 · M3 #52 (settings/L5 follow-ups) · M4 #59 (Latest stale-id unfollow)
-- release: R1 #9 · R2 #15 · R3 #17 · R4 #62 (raw-hosted zips: LMS can't read GitHub's download redirect)
+- release: R1 #9 · R2 #15 · R3 #17 · R4 #62 (raw-hosted zips: LMS can't read GitHub's download redirect) · R5 #75 (push-refusal match)
 
 ## Currently in flight
 - #4 L2 program on air — PR #47 in review + runtime check
@@ -19,7 +19,12 @@ Phase 5/6 — v1.0.0 released (2026-10-24); final verification + pi14 checklist 
   played with song metadata; then uninstalled and dev link restored. #62 closed.
 - **v1.0.0 RELEASED** (PR #73 squash a6bf826; t/98 generalised first in #74): release v1.0.0 + asset; release-assets
   ABCListen-1.0.0.zip (sha1 7a39ccee…); repo.xml 1.0.0 → raw URL, by Wilson Waters. Pre-release smoke 15/15 on main.
-- #17 R3 phase 2 — release verification, clean-profile install from GitHub, final system verification, pi14 checklist
+- #17 R3 phase 2 DONE: release verified (asset = release-assets copy, sha1 7a39ccee…); clean-profile install from the raw
+  repo.xml → 1.0.0 enabled, smoke 15/15 (cold, 67 s), prefs only homeState/liveQuality/followed (+_ts_, _version), no
+  plugin log lines; 7 criteria: 1–6 PASS, 7 PARTIAL (no GitHub-native reviews — single-account repo; reviews were
+  review-agent dispatches recorded here and in the transcript; #61 #63 #64 #71 #73 #74 were orchestrator-reviewed: diff
+  read + merged-tree check.sh). Evidence + pi14 checklist posted on #17 (comments 6380815256, 6380828931).
+- Phase 6: final review agent vs brief (running); #75 R5 release-tooling fix (running); then HANDOFF.md + notify.
 - Queued (cap 3): then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
