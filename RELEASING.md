@@ -102,8 +102,11 @@ Real releases only run from `main`; a real run dispatched on another branch fail
    - A zip that is already there with the same content is left alone. One with different content
      is never replaced: the run fails.
    - The commit is made with `git commit-tree`, so the checkout isn't touched.
-   - A rejected push (the branch moved) is retried on the new tip up to 3 times. A refusal (403,
-     GH006, GH013) is not.
+   - A rejected push (the branch moved) is retried on the new tip up to 3 times. A refusal is
+     not: an HTTP 403 (`The requested URL returned error: 403`), `Permission to … denied`, a
+     refused workflow-file change, GH006 (branch protection) or GH013 (rulesets).
+     `scripts/push-refused.sh` tells the two apart, for this push and step 9's. A "403" inside a
+     commit SHA or a path is not a refusal.
 8. **Verify the download URL.** `scripts/verify-download.sh` downloads
    `https://raw.githubusercontent.com/wilsonwaters/SqueezeABCListen/release-assets/ABCListen-V.zip`
    the way LMS will (following redirects) and compares its SHA1 with the zip's.
@@ -122,7 +125,7 @@ Real releases only run from `main`; a real run dispatched on another branch fail
    `COMMIT_EMAIL`); change those two lines to commit as someone else. The push itself is made
    with `GITHUB_TOKEN`, i.e. by GitHub Actions (`github-actions[bot]`). If it is rejected because
    `main` moved, the workflow re-fetches `main`, re-applies the change and retries, up to 3
-   times, then fails.
+   times, then fails. A refusal (as in step 7) fails at once.
 
 The release and the `release-assets` copy are created, and the copy is downloaded and checked,
 before `repo.xml` is changed. So `repo.xml` never points at a file that doesn't exist or doesn't
@@ -146,9 +149,9 @@ are shown even when release `vV` already exists.
 - Every pull request that changes `.github/workflows/release.yml`, `ABCListen/install.xml`,
   `repo.xml`, `CHANGELOG.md`, `scripts/build.sh`, `scripts/check-package.sh`,
   `scripts/update-repo-xml.pl`, `scripts/changelog-section.sh`,
-  `scripts/publish-release-asset.sh` or `scripts/verify-download.sh` gets a dry run (the
-  **Build and release** job of the **Release** workflow). On a pull request the change is
-  applied to the pull request's merge commit.
+  `scripts/publish-release-asset.sh`, `scripts/push-refused.sh` or `scripts/verify-download.sh`
+  gets a dry run (the **Build and release** job of the **Release** workflow). On a pull request
+  the change is applied to the pull request's merge commit.
 - **Actions → Release → Run workflow** with *Dry run* ticked (or `"inputs":{"dry_run":"true"}`
   in the REST call) does a dry run on the chosen branch.
 
@@ -232,8 +235,8 @@ and checks the zip on every pull request anyway.
   Protecting `release-assets` against deletion and force pushes is fine (the workflow only adds
   commits), but not against pushes by GitHub Actions.
   A refused push (`GH006: Protected branch update failed` for branch protection, `GH013:
-  Repository rule violations found` for rulesets, or a 403) fails the run at once instead of
-  being retried.
+  Repository rule violations found` for rulesets, or an HTTP 403 such as `The requested URL
+  returned error: 403`) fails the run at once instead of being retried.
 - **Before the first release** the committed `repo.xml` has a placeholder `sha` of 40 zeros. A
   user who adds the repository in that window sees ABC listen 0.1.0, but LMS's SHA1 check
   rejects the download and nothing is installed. Run the first release soon after `repo.xml`
