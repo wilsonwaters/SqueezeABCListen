@@ -119,7 +119,7 @@ subtest 'triggers' => sub {
 	my @paths = ( $paths // '' ) =~ /^      - '([^']+)'$/mg;
 	is_deeply(
 		[ sort @paths ],
-		[ sort qw(.github/workflows/release.yml ABCListen/install.xml repo.xml CHANGELOG.md scripts/build.sh scripts/check-package.sh scripts/update-repo-xml.pl scripts/changelog-section.sh scripts/publish-release-asset.sh scripts/verify-download.sh) ],
+		[ sort qw(.github/workflows/release.yml ABCListen/install.xml repo.xml CHANGELOG.md scripts/build.sh scripts/check-package.sh scripts/update-repo-xml.pl scripts/changelog-section.sh scripts/publish-release-asset.sh scripts/push-refused.sh scripts/verify-download.sh) ],
 		'pull requests touching the release files get a dry run'
 	);
 	like( $yml, qr/DRY_RUN: \$\{\{ github\.event_name == 'pull_request' \|\| inputs\.dry_run == true \}\}/, 'pull requests and dispatch with dry_run are dry runs' );
@@ -421,9 +421,13 @@ subtest 'release-assets: published, then its raw URL verified, before repo.xml c
 	my @at    = map { index( $yml, "      - name: $_\n" ) } @order;
 	ok( !grep( { $_ < 0 } @at ) && join( ',', @at ) eq join( ',', sort { $a <=> $b } @at ), 'order: ' . join( ' -> ', @order ) );
 
-	my ($scriptRefused) = slurp('scripts/publish-release-asset.sh') =~ /^(refused\(\) \{.*\})$/m;
-	my ($stepRefused)   = ( $step{'Commit and push repo.xml'} // '' ) =~ /^ +(refused\(\) \{.*\})$/m;
-	is( $scriptRefused, $stepRefused, 'publish-release-asset.sh recognises a refused push exactly as the repo.xml push does' );
+	# one rule for a refused push, scripts/push-refused.sh, in both places (#75)
+	my $script = slurp('scripts/publish-release-asset.sh');
+	my $commit = $step{'Commit and push repo.xml'} // '';
+	like( $script, qr/^push_refused="\$\(dirname "\$\{BASH_SOURCE\[0\]\}"\)\/push-refused\.sh"$/m, 'publish-release-asset.sh uses scripts/push-refused.sh, next to it' );
+	like( $script, qr/^  if "\$push_refused" <<<"\$out"; then\n    die "push to \$branch refused/m,  '... to decide that a failed push to release-assets was refused' );
+	like( $commit, qr/^ +if scripts\/push-refused\.sh <<<"\$out"; then$/m,                        'so does the repo.xml push' );
+	unlike( $script . $commit, qr/refused\(\)|\*403\*|\*denied\*|\$\{1,,\}/,                     'neither has a rule of its own' );
 };
 
 # Runs the "Publish to release-assets" script in a throwaway checkout: a dry run pushes nothing;
@@ -441,8 +445,10 @@ subtest 'release-assets publish step, run against a git repository' => sub {
 	git( $tmp, 'init', '-q', $work );
 	git( $work, 'symbolic-ref', 'HEAD', 'refs/heads/main' );
 	make_path("$work/scripts");
-	spew( "$work/scripts/publish-release-asset.sh", slurp("$ROOT/scripts/publish-release-asset.sh") );
-	chmod 0755, "$work/scripts/publish-release-asset.sh";
+	for my $script (qw(publish-release-asset.sh push-refused.sh)) {
+		spew( "$work/scripts/$script", slurp("$ROOT/scripts/$script") );
+		chmod 0755, "$work/scripts/$script";
+	}
 	git( $work, 'add', '.' );
 	git( $work, 'commit', '-q', '-m', 'main' );
 	git( $work, 'push', '-q', $origin, 'main' );
@@ -489,27 +495,120 @@ subtest 'repo.xml commit: the repository owner, [skip ci], only repo.xml, retrie
 	unlike( $yml, qr/persist-credentials:\s*false/,                'checkout keeps GITHUB_TOKEN for the push' );
 };
 
-subtest 'a refused push is recognised in any case (403, denied, GH006 protected branch, GH013 rulesets)' => sub {
+# scripts/push-refused.sh: the one rule both pushes (release-assets and repo.xml) use. Only a real
+# refusal counts; a "403" inside a SHA, a path or a port number is a rejected push, retried (#75).
+subtest 'a refused push is recognised (HTTP 403, permission, workflows, GH006, GH013), a "403" in a SHA or path is not' => sub {
 	my $commit = $step{'Commit and push repo.xml'} // '';
-	my ($refused) = $commit =~ /^ +(refused\(\) \{.*\})$/m;
-	ok( $refused, 'a one-line refused() helper' ) or return;
-	like( $commit, qr/if refused "\$out"; then\n\s+echo "::error::push to main refused/, 'a refusal fails the step instead of retrying' );
-	like( $refused, qr/local o="\$\{1,,\}"/,      'it lower-cases the output first' );
-	unlike( $commit, qr/"\$out" == \*/,            'no case-sensitive match on the raw output left over' );
+	like( $commit, qr/if scripts\/push-refused\.sh <<<"\$out"; then\n\s+echo "::error::push to main refused/, 'a refusal fails the step instead of retrying' );
+	ok( -x 'scripts/push-refused.sh', 'scripts/push-refused.sh is executable' ) or return;
 	my @cases = (
 		[ 1, "remote: error: GH006: Protected branch update failed for refs/heads/main.\nremote: error: Changes must be made through a pull request." ],
+		[ 1, " ! [remote rejected] HEAD -> main (protected branch hook declined)" ],
 		[ 1, "remote: error: GH013: Repository rule violations found for refs/heads/main.\nremote: - Changes must be made through a pull request." ],
 		[ 1, "remote: error: gh013: repository rule violations found" ],
 		[ 1, "remote: Permission to wilsonwaters/SqueezeABCListen.git denied to github-actions[bot].\nfatal: unable to access 'https://github.com/wilsonwaters/SqueezeABCListen/': The requested URL returned error: 403" ],
+		[ 1, "fatal: unable to access 'https://github.com/wilsonwaters/SqueezeABCListen/': The requested URL returned error: 403" ],
+		[ 1, "error: RPC failed; HTTP 403 curl 22 The requested URL returned error: 403" ],
+		[ 1, "< HTTP/2 403" ],
 		[ 1, "remote: PERMISSION DENIED" ],
+		[ 1, "git\@github.com: Permission denied (publickey)." ],
+		[ 1, " ! [remote rejected] HEAD -> main (refusing to allow a GitHub App to create or update workflow `.github/workflows/ci.yml` without `workflows` permission)" ],
 		[ 0, " ! [rejected]        HEAD -> main (fetch first)\nerror: failed to push some refs to 'https://github.com/wilsonwaters/SqueezeABCListen'\nhint: Updates were rejected because the remote contains work that you do not\nhint: have locally." ],
 		[ 0, " ! [rejected]        HEAD -> main (non-fast-forward)" ],
+		[ 0, " ! [remote rejected] 86f98138c2d4e6f8a1b3c5d7e9f0a2b4f8a40345 -> release-assets (pre-receive hook declined)\nerror: failed to push some refs to 'https://github.com/wilsonwaters/SqueezeABCListen'" ],
+		[ 0, "remote: error: cannot lock ref 'refs/heads/main': is at 4031e5c7a9b2d4f6e8c0a1b3d5f7e9c2b4d6f8a0 but expected 86f98138c2d4e6f8a1b3c5d7e9f0a2b4f8a40345" ],
+		[ 0, "remote: error: Unable to create '/srv/git/403/origin.git/refs/heads/main.lock': File exists." ],
+		[ 0, "To /tmp/Ab403xYz12/origin.git\n ! [rejected]        HEAD -> main (fetch first)" ],
+		[ 0, "To http://127.0.0.1:40312/origin.git\n ! [rejected]        HEAD -> main (fetch first)" ],
+		[ 0, " ! [rejected]        HEAD -> access-denied (fetch first)" ],
+		[ 0, "" ],
 	);
 	for my $case (@cases) {
 		my ( $want, $output ) = @$case;
-		my ($rc) = run( [ 'bash', '-c', "$refused\nrefused \"\$1\"", 'refused', $output ] );
-		is( $rc == 0 ? 1 : 0, $want, ( $want ? 'refused: ' : 'retried: ' ) . ( split /\n/, $output )[0] );
+		my ($rc) = run( [ 'bash', '-c', 'scripts/push-refused.sh <<<"$1"', 'push-refused', $output ] );
+		is( $rc, $want ? 0 : 1, ( $want ? 'refused: ' : 'retried: ' ) . ( ( split /\n/, $output )[0] // '(no output)' ) );
 	}
+	is( ( run( [ 'scripts/push-refused.sh', 'output' ] ) )[0], 2, 'an argument: usage error (the output comes on stdin)' );
+};
+
+# Runs the "Commit and push repo.xml" script against a throwaway origin. Its pre-receive hook
+# first rejects the push the way a moved main does, naming SHAs and a path with "403" in them:
+# the step retries on the new main (#75). Then it refuses the next push the way GitHub refuses a
+# read-only token: the step fails at once.
+subtest 'repo.xml push, run against a git repository: a rejected push is retried, a refused one is not' => sub {
+	runnable('Commit and push repo.xml') or return;
+	if ( !grep { -x "$_/xmllint" } split /:/, $ENV{PATH} ) {
+		# CI must run this; locally it is skipped with a notice
+		fail('not installed: xmllint') if $ENV{CI};
+		diag('skipping the run of "Commit and push repo.xml": not installed: xmllint');
+		return;
+	}
+	my $tmp    = tempdir( CLEANUP => 1 );
+	my $origin = "$tmp/origin.git";
+	my $work   = "$tmp/work";
+	my $co     = "$tmp/checkout";
+	git( $tmp, 'init', '-q', '--bare', $origin );
+	git( $origin, 'symbolic-ref', 'HEAD', 'refs/heads/main' );
+	git( $tmp, 'init', '-q', $work );
+	git( $work, 'symbolic-ref', 'HEAD', 'refs/heads/main' );
+	make_path("$work/scripts");
+	for my $script (qw(update-repo-xml.pl push-refused.sh)) {
+		spew( "$work/scripts/$script", slurp("$ROOT/scripts/$script") );
+		chmod 0755, "$work/scripts/$script";
+	}
+	spew( "$work/repo.xml", slurp("$ROOT/repo.xml") );
+	git( $work, 'add', '.' );
+	git( $work, 'commit', '-q', '-m', 'main' );
+	git( $work, 'push', '-q', $origin, 'main' );
+	git( $tmp, 'clone', '-q', $origin, $co );
+	# what main moves on to while the release runs; the hook puts it there
+	spew( "$work/README.md", "moved on\n" );
+	git( $work, 'add', 'README.md' );
+	git( $work, 'commit', '-q', '-m', 'moved on' );
+	my $moved = git( $work, 'rev-parse', 'HEAD' );
+	git( $work, 'push', '-q', $origin, "$moved:refs/test/moved" );
+
+	my $installXml = spew( "$tmp/install.xml", slurp("$ROOT/ABCListen/install.xml") );
+	my $sha        = 'da39a3ee5e6b4b0d3255bfef95601890afd80709';
+	# repo.xml in the checkout as "Update repo.xml" leaves it for version $v; the step's env
+	my $updated = sub {
+		my $v   = shift;
+		my $url = "https://raw.githubusercontent.com/wilsonwaters/SqueezeABCListen/release-assets/ABCListen-$v.zip";
+		my ( $rc, $out ) = run( [ 'scripts/update-repo-xml.pl', '--version', $v, '--sha', $sha, '--url', $url, '--install-xml', $installXml ], cwd => $co );
+		die "update-repo-xml.pl failed: $out" if $rc;
+		return ( V => $v, SHA => $sha, ZIP_URL => $url, INSTALL_XML => $installXml, COMMIT_NAME => 'Wilson Waters', COMMIT_EMAIL => 'wilsonwaters@users.noreply.github.com' );
+	};
+	my $hook = sub {
+		spew( "$origin/hooks/pre-receive", "#!/bin/sh\necho x >> '$tmp/pushes'\n$_[0]\n" );
+		chmod 0755, "$origin/hooks/pre-receive";
+		unlink "$tmp/pushes";
+	};
+	my $pushes = sub { return -e "$tmp/pushes" ? scalar( () = slurp("$tmp/pushes") =~ /x/g ) : 0 };
+
+	my @sha403 = qw(86f98138c2d4e6f8a1b3c5d7e9f0a2b4f8a40345 4031e5c7a9b2d4f6e8c0a1b3d5f7e9c2b4d6f8a0);
+	$hook->(
+		qq{if [ "\$(wc -l < '$tmp/pushes')" -eq 1 ]; then env -u GIT_QUARANTINE_PATH -u GIT_OBJECT_DIRECTORY -u GIT_ALTERNATE_OBJECT_DIRECTORIES git update-ref refs/heads/main $moved; }
+		  . qq{echo "error: cannot lock ref 'refs/heads/main': is at $sha403[0] but expected $sha403[1]" >&2; }
+		  . qq{echo "error: Unable to create '/srv/git/403/origin.git/refs/heads/main.lock': File exists." >&2; exit 1; fi}
+	);
+	my ( $rc, $out ) = runStep( 'Commit and push repo.xml', $co, $updated->('1.0.1') );
+	is( $rc, 0, 'main moved: the step succeeds' ) or diag $out;
+	like( $out, qr/is at $sha403[0] but expected $sha403[1]/, 'the rejection names SHAs with "403" in them' );
+	like( $out, qr{Unable to create '/srv/git/403/},          'and a path with "403" in it' );
+	unlike( $out, qr/refused/, 'it is not taken for a refusal' );
+	like( $out, qr/push rejected \(main moved\?\); re-applying on the latest main, retry 1 of 3/, 'but retried' );
+	is( $pushes->(), 2, 'two pushes' );
+	is( git( $origin, 'log', '-1', '--format=%P|%s', 'main' ), "$moved|Release v1.0.1: update repo.xml [skip ci]", 'the repo.xml commit is on the moved main' );
+	like( git( $origin, 'show', 'main:repo.xml' ), qr/<plugin name="ABCListen" version="1\.0\.1"/, 'with the new version' );
+
+	$hook->(q{echo 'Permission to wilsonwaters/SqueezeABCListen.git denied to github-actions[bot].' >&2; exit 1});
+	my $main = git( $origin, 'rev-parse', 'main' );
+	( $rc, $out ) = runStep( 'Commit and push repo.xml', $co, $updated->('1.0.2') );
+	is( $rc, 1, 'read-only token: the step fails' );
+	like( $out, qr/::error::push to main refused/, 'as a refusal' );
+	unlike( $out, qr/push rejected/, 'not retried' );
+	is( $pushes->(), 1, 'one push' );
+	is( git( $origin, 'rev-parse', 'main' ), $main, 'main unchanged' );
 };
 
 # Runs the "Update repo.xml" script (pull request path: no fetch of main) in a throwaway checkout

@@ -38,6 +38,7 @@ on:
       - 'scripts/update-repo-xml.pl'
       - 'scripts/changelog-section.sh'
       - 'scripts/publish-release-asset.sh'
+      - 'scripts/push-refused.sh'
       - 'scripts/verify-download.sh'
 
 # Read-only by default; only the release job, which creates the release and pushes the
@@ -418,13 +419,14 @@ jobs:
       # Only repo.xml is committed, authored and committed as COMMIT_NAME/COMMIT_EMAIL (workflow
       # env above). It is pushed with GITHUB_TOKEN, so it doesn't start another workflow run;
       # [skip ci] is an extra guard. A rejected (non-fast-forward) push is re-applied on the
-      # latest main and retried up to 3 times. A refusal is not retried: a read-only token (403,
-      # "Permission ... denied"), branch protection ("GH006: Protected branch update failed") or
-      # a ruleset ("GH013: Repository rule violations found"), matched case-insensitively.
+      # latest main and retried up to 3 times. A refusal is not retried: a read-only token (an
+      # HTTP 403 such as "The requested URL returned error: 403", "Permission ... denied"),
+      # branch protection ("GH006: Protected branch update failed") or a ruleset ("GH013:
+      # Repository rule violations found"). scripts/push-refused.sh decides, by the same rule as
+      # for the release-assets push; a "403" inside a commit SHA or a path is not a refusal.
       - name: Commit and push repo.xml
         if: env.ACTION != 'none' && env.DRY_RUN != 'true'
         run: |
-          refused() { local o="${1,,}"; [[ "$o" == *403* || "$o" == *denied* || "$o" == *"protected branch"* || "$o" == *gh006* || "$o" == *gh013* ]]; }
           git config user.name "$COMMIT_NAME"
           git config user.email "$COMMIT_EMAIL"
           for attempt in 1 2 3 4; do
@@ -445,7 +447,7 @@ jobs:
               exit 0
             fi
             echo "$out"
-            if refused "$out"; then
+            if scripts/push-refused.sh <<<"$out"; then
               echo "::error::push to main refused. See RELEASING.md, Prerequisites: GITHUB_TOKEN needs Read and write, and branch protection and rulesets must let GitHub Actions (github-actions[bot]) push repo.xml. Re-run the workflow afterwards; it repairs repo.xml from the existing release."
               exit 1
             fi

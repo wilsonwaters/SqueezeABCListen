@@ -16,7 +16,8 @@
 # are made with git commit-tree, so the working tree and index are not touched. Author and
 # committer are the configured git identity (user.name/user.email); the message is
 # "Add ABCListen-X.Y.Z.zip". A rejected push (the branch moved) is retried on the new tip up to 3
-# times. A refusal (403, "denied", GH006 protected branch, GH013 rulesets) is not.
+# times. A refusal (an HTTP 403, "Permission to ... denied", GH006 protected branch, GH013
+# rulesets) is not; scripts/push-refused.sh, next to this script, tells the two apart.
 # Exit codes: 0 published or already there, 1 failure, 2 usage error. Needs git.
 set -euo pipefail
 
@@ -49,6 +50,9 @@ name="$(basename "$zip")"
 [[ "$name" =~ ^ABCListen-[0-9]+\.[0-9]+\.[0-9]+\.zip$ ]] || die "$name is not named ABCListen-X.Y.Z.zip"
 [[ -f "$zip" ]] || die "$zip not found"
 git rev-parse --git-dir >/dev/null 2>&1 || die "not inside a git repository"
+# the rule for a refused push, shared with the repo.xml push of the Release workflow
+push_refused="$(dirname "${BASH_SOURCE[0]}")/push-refused.sh"
+[[ -x "$push_refused" ]] || die "$push_refused not found; it tells a refused push from a rejected one"
 
 blob="$(git hash-object -w -- "$zip")"
 remote_ref="refs/remotes/$remote/$branch"
@@ -112,8 +116,6 @@ show() {
   git --no-pager ls-tree -l "$1"
 }
 
-refused() { local o="${1,,}"; [[ "$o" == *403* || "$o" == *denied* || "$o" == *"protected branch"* || "$o" == *gh006* || "$o" == *gh013* ]]; }
-
 for attempt in 1 2 3 4; do
   tip="$(fetch_tip)"
   make_commit "$tip"
@@ -135,7 +137,7 @@ for attempt in 1 2 3 4; do
     exit 0
   fi
   echo "$out"
-  if refused "$out"; then
+  if "$push_refused" <<<"$out"; then
     die "push to $branch refused. GITHUB_TOKEN needs contents: write, and branch protection and rulesets must let GitHub Actions create and push $branch (RELEASING.md, Prerequisites)"
   fi
   [[ $attempt -eq 4 ]] && break

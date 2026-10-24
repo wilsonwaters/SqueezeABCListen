@@ -2,8 +2,10 @@
 # The release-assets branch LMS downloads the plugin from (repo.xml's <url>, #62):
 # scripts/publish-release-asset.sh against throwaway git repositories (orphan branch with a
 # README, one commit per zip as the configured identity, never replaces a zip, dry run, retries
-# and refusals), and scripts/verify-download.sh against a local HTTP server (SHA1, retries until
-# the file is served, redirects, and the 8,192-byte header line limit of LMS 9.1.1's Net::HTTP).
+# and refusals, including an HTTP 403 from a local server and a rejection whose output has "403"
+# in SHAs and a path, #75), and scripts/verify-download.sh against that local HTTP server (SHA1,
+# retries until the file is served, redirects, and the 8,192-byte header line limit of LMS
+# 9.1.1's Net::HTTP). Commit dates are fixed, so every commit SHA is the same on every run.
 
 use strict;
 use warnings;
@@ -71,6 +73,8 @@ my $gitHome = tempdir( CLEANUP => 1 );
 $ENV{$_} = $gitHome for qw(HOME XDG_CONFIG_HOME);
 $ENV{GIT_CONFIG_NOSYSTEM} = 1;
 delete @ENV{qw(GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL GIT_DIR GIT_WORK_TREE)};
+# fixed dates: the commits, and so the SHAs in the push output, are the same on every run
+$ENV{$_} = '2026-10-24T00:00:00+00:00' for qw(GIT_AUTHOR_DATE GIT_COMMITTER_DATE);
 
 # a bare "origin" with a main branch, and a clone set up as the workflow sets up its checkout
 my $tmp    = tempdir( CLEANUP => 1 );
@@ -103,6 +107,7 @@ my %zip = (
 	'0.4.0'     => spew( "$tmp/zips/a/ABCListen-0.4.0.zip", "PK zip 0.4.0" ),
 	'0.5.0'     => spew( "$tmp/zips/a/ABCListen-0.5.0.zip", "PK zip 0.5.0" ),
 	'0.6.0'     => spew( "$tmp/zips/a/ABCListen-0.6.0.zip", "PK zip 0.6.0" ),
+	'0.7.0'     => spew( "$tmp/zips/a/ABCListen-0.7.0.zip", "PK zip 0.7.0" ),
 );
 
 sub publish { my ( $dir, @args ) = @_; return run( [ $PUBLISH, @args ], cwd => $dir ) }
@@ -183,52 +188,11 @@ subtest 'next release: one commit on top, from a checkout that never fetched the
 	is( git( $co, 'status', '--porcelain' ), '', 'the working tree and index are untouched' );
 };
 
-# pre-receive hook in origin: writes a line per push to $count, then runs $body
-sub hook {
-	my ($body) = @_;
-	my $hook = "$origin/hooks/pre-receive";
-	if ( !defined $body ) { unlink $hook; return }
-	spew( $hook, "#!/bin/sh\necho x >> '$tmp/pushes'\n$body\n" );
-	chmod 0755, $hook;
-	unlink "$tmp/pushes";
-}
-sub pushes { return -e "$tmp/pushes" ? scalar( () = slurp("$tmp/pushes") =~ /x/g ) : 0 }
-
-subtest 'a refused push (rulesets, protection, 403) is not retried' => sub {
-	hook(q{echo 'remote: error: GH013: Repository rule violations found for refs/heads/release-assets.' >&2; exit 1});
-	my ( $rc, $out ) = publish( $co, $zip{'0.5.0'} );
-	is( $rc, 1, 'exit 1' );
-	like( $out, qr/push to release-assets refused/, 'says the push was refused' );
-	is( pushes(), 1, 'one push, no retry' );
-	is( tip(), $second, 'release-assets unchanged' );
-	hook(undef);
-};
-
-# The first push is rejected after someone else moved the branch (another zip added); the retry
-# must build on the new tip and keep that zip.
-subtest 'a rejected push is retried on the new tip' => sub {
-	my $other = "$tmp/other";
-	checkout($other);
-	my ( $rc, $out ) = publish( $other, '--dry-run', $zip{'0.6.0'} );
-	my ($moved) = $out =~ /^commit ([0-9a-f]{40})$/m;
-	ok( $moved, 'a commit adding 0.6.0 on the current tip' ) or return diag $out;
-	git( $other, 'push', '-q', $origin, "$moved:refs/test/moved" );
-
-	hook(qq{if [ "\$(wc -l < '$tmp/pushes')" -eq 1 ]; then env -u GIT_QUARANTINE_PATH -u GIT_OBJECT_DIRECTORY -u GIT_ALTERNATE_OBJECT_DIRECTORIES git update-ref refs/heads/release-assets $moved; echo 'rejected: branch moved' >&2; exit 1; fi});
-	( $rc, $out ) = publish( $co, $zip{'0.5.0'} );
-	is( $rc, 0, 'exit 0' ) or diag $out;
-	like( $out, qr/push rejected \(release-assets moved\?\); retrying on its new tip, retry 1 of 3/, 'retried' );
-	is( pushes(), 2, 'two pushes' );
-	my $tip = tip();
-	is( git( $origin, 'log', '-1', '--format=%P', $tip ), $moved, 'built on the moved tip' );
-	is_deeply( files($tip), [ map( {"ABCListen-$_.zip"} qw(0.3.0 0.4.0 0.5.0 0.6.0) ), 'README.md' ], 'keeps the zip added meanwhile' );
-	hook(undef);
-};
-
-# ---- verify-download.sh against a local HTTP server ----
+# ---- a local HTTP server: downloads for verify-download.sh, and a push answered with a 403 ----
 
 # GET /<case>/<file>: ok (200), later (404 twice, then 200), redirect (302 to ok), long (302 with
-# a 9,243-character Content-Security-Policy line, as GitHub's release download sends), missing.
+# a 9,243-character Content-Security-Policy line, as GitHub's release download sends), forbidden
+# (403, as GitHub answers a push made with a read-only token), missing.
 my $BODY   = "PK the zip\0\x01";
 my $SHA1   = do { my ( undef, $o ) = run( [ 'sh', '-c', 'sha1sum "$1"', 'sh', spew( "$tmp/body", $BODY ) ] ); ( split ' ', $o )[0] };
 my $server = IO::Socket::INET->new( LocalAddr => '127.0.0.1', LocalPort => 0, Listen => 10, ReuseAddr => 1, Proto => 'tcp' ) or die "listen: $!";
@@ -255,6 +219,9 @@ if ( !$pid ) {
 			@headers = ("Location: http://127.0.0.1:$port/ok/ABCListen-1.0.0.zip");
 			push @headers, 'Content-Security-Policy: ' . ( 'x' x ( 9243 - 25 ) ) if $case eq 'long';
 		}
+		elsif ( $case eq 'forbidden' ) {
+			( $status, $body ) = ( '403 Forbidden', "forbidden\n" );
+		}
 		print {$c} join( "\r\n", "HTTP/1.1 $status", 'Connection: close', 'Content-Length: ' . length($body), @headers, '', $body );
 		close $c;
 	}
@@ -264,16 +231,98 @@ close $server;
 END { kill 'TERM', $pid if $pid }
 
 sub hits { my %h = -e "$tmp/hits" ? ( slurp("$tmp/hits") =~ /^(\w+) (\d+)$/mg ) : (); return $h{ $_[0] } // 0 }
-# the local server is reached directly, never through a proxy the environment may set
-sub verify {
-	local %ENV = %ENV;
+# the local server is reached directly, never through a proxy the environment may set (call it
+# after local %ENV)
+sub direct {
 	delete @ENV{qw(http_proxy HTTP_PROXY https_proxy HTTPS_PROXY all_proxy ALL_PROXY)};
 	$ENV{$_} = '127.0.0.1,localhost' for qw(no_proxy NO_PROXY);
+}
+my $URL = "http://127.0.0.1:$port";
+
+# ---- publish-release-asset.sh: refusals and retries ----
+
+# pre-receive hook in origin: writes a line per push to $count, then runs $body
+sub hook {
+	my ($body) = @_;
+	my $hook = "$origin/hooks/pre-receive";
+	if ( !defined $body ) { unlink $hook; return }
+	spew( $hook, "#!/bin/sh\necho x >> '$tmp/pushes'\n$body\n" );
+	chmod 0755, $hook;
+	unlink "$tmp/pushes";
+}
+sub pushes { return -e "$tmp/pushes" ? scalar( () = slurp("$tmp/pushes") =~ /x/g ) : 0 }
+
+subtest 'a refused push (GH013 rulesets) is not retried' => sub {
+	hook(q{echo 'remote: error: GH013: Repository rule violations found for refs/heads/release-assets.' >&2; exit 1});
+	my ( $rc, $out ) = publish( $co, $zip{'0.5.0'} );
+	is( $rc, 1, 'exit 1' );
+	like( $out, qr/push to release-assets refused/, 'says the push was refused' );
+	is( pushes(), 1, 'one push, no retry' );
+	is( tip(), $second, 'release-assets unchanged' );
+	hook(undef);
+};
+
+# A read-only GITHUB_TOKEN: GitHub answers the push with HTTP 403. This checkout fetches from
+# origin as usual, but pushes to the local server, which answers every request with a 403; git
+# itself reports it ("The requested URL returned error: 403"), and that line is the only sign.
+subtest 'an HTTP 403 on push is a refusal: not retried' => sub {
+	my $readonly = checkout("$tmp/readonly");
+	git( $readonly, 'config', 'remote.origin.pushurl', "$URL/forbidden/origin.git" );
+	local %ENV = %ENV;
+	direct();
+	$ENV{GIT_TERMINAL_PROMPT} = 0;
+	my ( $rc, $out ) = publish( $readonly, $zip{'0.7.0'} );
+	is( $rc, 1, 'exit 1' );
+	like( $out, qr/^fatal: unable to access '\Q$URL\E\/forbidden\/origin\.git\/': The requested URL returned error: 403$/m, 'git reports the HTTP 403' );
+	unlike( $out, qr/permission|denied|protected branch|gh0(?:06|13)/i, 'and nothing else that says refused' );
+	like( $out, qr/push to release-assets refused/, 'taken for a refusal' );
+	unlike( $out, qr/retrying/, 'not retried' );
+	is( hits('forbidden'), 1, 'one push' );
+	is( tip(), $second, 'release-assets unchanged' );
+};
+
+# The first push is rejected after someone else moved the branch (another zip added); the retry
+# must build on the new tip and keep that zip. The rejection names fixed fake SHAs and a path that
+# have "403" in them: on CI a rejected commit 86f98138…f8a40345 was once taken for a 403 refusal
+# and not retried (#75).
+my @SHA403 = qw(86f98138c2d4e6f8a1b3c5d7e9f0a2b4f8a40345 4031e5c7a9b2d4f6e8c0a1b3d5f7e9c2b4d6f8a0);
+my $PATH403 = '/srv/git/403/origin.git/refs/heads/release-assets.lock';
+subtest 'a rejected push is retried on the new tip, even with "403" in its SHAs and paths' => sub {
+	like( $_, qr/\A(?=[0-9a-f]{40}\z).*403/, "fake SHA $_ has \"403\" in it" ) for @SHA403;
+	my $other = "$tmp/other";
+	checkout($other);
+	my ( $rc, $out ) = publish( $other, '--dry-run', $zip{'0.6.0'} );
+	my ($moved) = $out =~ /^commit ([0-9a-f]{40})$/m;
+	ok( $moved, 'a commit adding 0.6.0 on the current tip' ) or return diag $out;
+	git( $other, 'push', '-q', $origin, "$moved:refs/test/moved" );
+
+	hook(
+		qq{if [ "\$(wc -l < '$tmp/pushes')" -eq 1 ]; then env -u GIT_QUARANTINE_PATH -u GIT_OBJECT_DIRECTORY -u GIT_ALTERNATE_OBJECT_DIRECTORIES git update-ref refs/heads/release-assets $moved; }
+		  . qq{echo "error: cannot lock ref 'refs/heads/release-assets': is at $SHA403[0] but expected $SHA403[1]" >&2; }
+		  . qq{echo "error: Unable to create '$PATH403': File exists." >&2; exit 1; fi}
+	);
+	( $rc, $out ) = publish( $co, $zip{'0.5.0'} );
+	is( $rc, 0, 'exit 0' ) or diag $out;
+	like( $out, qr/^remote: error: cannot lock ref 'refs\/heads\/release-assets': is at $SHA403[0] but expected $SHA403[1] *$/m, 'the rejection names SHAs with "403" in them' );
+	like( $out, qr/^remote: error: Unable to create '\Q$PATH403\E': File exists\. *$/m,                                          'and a path with "403" in it' );
+	unlike( $out, qr/refused/, 'not taken for a refusal' );
+	like( $out, qr/push rejected \(release-assets moved\?\); retrying on its new tip, retry 1 of 3/, 'retried' );
+	is( pushes(), 2, 'two pushes' );
+	my $tip = tip();
+	is( git( $origin, 'log', '-1', '--format=%P', $tip ), $moved, 'built on the moved tip' );
+	is_deeply( files($tip), [ map( {"ABCListen-$_.zip"} qw(0.3.0 0.4.0 0.5.0 0.6.0) ), 'README.md' ], 'keeps the zip added meanwhile' );
+	hook(undef);
+};
+
+# ---- verify-download.sh against the local HTTP server ----
+
+sub verify {
+	local %ENV = %ENV;
+	direct();
 	my $start = time;
 	my ( $rc, $out ) = run( [ $VERIFY, @_ ] );
 	return ( $rc, $out, time - $start );
 }
-my $URL = "http://127.0.0.1:$port";
 
 subtest 'verify-download.sh: usage' => sub {
 	is( ( verify("$URL/ok/ABCListen-1.0.0.zip") )[0], 2, 'no SHA1: usage error' );
