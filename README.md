@@ -281,7 +281,7 @@ the cover art, updated at every song change (the plugin checks ABC's song data e
 2 minutes, and at the end of each song). Between songs, Now Playing shows the program.
 **Song Info** also has **Recently played**, the last ten songs with their times.
 
-![Now Playing in the Material web interface while Double J plays: the song title (New Shoes), the artist (Sharon Jones & the Dap-Kings), the program and station (Live at the Wireless · Double J) and the song's artwork](docs/images/material-now-playing.png)
+![Now Playing in the Material web interface while triple j plays: the song title (Adeline), the artist (Old Mervs), the program and station (Weekends · triple j) and the album cover](docs/images/material-now-playing.png)
 
 **Episodes** show the episode's title, the program, the episode's artwork and its duration, and
 can be sought. **Song Info** for an episode has **Episode notes**, **More from** *program*, its

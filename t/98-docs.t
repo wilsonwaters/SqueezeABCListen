@@ -281,7 +281,7 @@ subtest 'README screenshots: at least 9 PNGs in docs/images, each <= 200 KB, 1.8
 		'default-program-episodes.png'   => qr/program's page/,
 		'default-search-results.png'     => qr/Search results/,
 		'default-settings.png'           => qr/settings page/,
-		'material-now-playing.png'       => qr/Now Playing in the Material web interface while Double J plays: the song title .*the artist .*artwork/,
+		'material-now-playing.png'       => qr/Now Playing in the Material web interface while [^:]+ plays: the song title .*the artist .*(?:cover|artwork)/,
 	);
 	for my $shot ( sort keys %want ) {
 		like( $alt{"docs/images/$shot"} // '', $want{$shot}, "a screenshot docs/images/$shot" );
