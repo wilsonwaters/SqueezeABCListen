@@ -1307,7 +1307,7 @@ subtest 'D8: All audiobooks A–Z (programsByType audiobook) lists all 20 audiob
 	is( count_sum($types), 31, 'By type: the counts add up to the 31 programs' );
 };
 
-subtest 'D8: one program twice in the index (a legacy and the current path, or the same path) -> one ref: the one with a programType, else the first, in the first one\'s place' => sub {
+subtest 'D8: one program twice in the index (a legacy and the current path, or the same path) -> one ref: the one at a program page, then the one with a programType, else the first, in the first one\'s place' => sub {
 	fresh();
 	route_hits( [
 		hit( title => 'Big Ideas', canonicalURL => 'http://www.abc.net.au/radionational/programs/bigideas/', infoSource => '', programType => undef ),
@@ -1323,23 +1323,27 @@ subtest 'D8: one program twice in the index (a legacy and the current path, or t
 		hit( title => 'Hack Live', slug => 'hack' ),
 		network_hit( '/listen/classic/special-features', title => 'Special Features', programType => undef ),
 		hit( title => 'Special Features', slug => 'special-features', programType => 'music' ),
+		network_hit( '/triplej/x-show', title => 'X Show', programType => 'music' ),
+		hit( title => 'X Show', canonicalURL => 'https://www.abc.net.au/triplej/programs/x-show/', programType => undef ),
 	] );
 	route( qr{\A\Q$NEXT\E/}, code => 404 );
 
 	my $items = result_of( index_call() )->{items};
 	is_deeply(
 		[ map { $_->{path} } @$items ],
-		[ '/listen/programs/bigideas', '/listen/programs/other-1', '/listen/programs/abigcountry', '/radionational/programs/futuretense', '/listen/programs/doublej-mornings', '/triplej/programs/mornings', '/triplej/programs/hack', '/listen/programs/hack', '/listen/programs/special-features' ],
-		'9 refs: each twin once, in the first one\'s place; same title on other slugs, or the same slug with another title: not twins'
+		[ '/listen/programs/bigideas', '/listen/programs/other-1', '/listen/programs/abigcountry', '/radionational/programs/futuretense', '/listen/programs/doublej-mornings', '/triplej/programs/mornings', '/triplej/programs/hack', '/listen/programs/hack', '/listen/programs/special-features', '/triplej/programs/x-show' ],
+		'10 refs: each twin once, in the first one\'s place; same title on other slugs, or the same slug with another title: not twins'
 	);
+	ok( !exists $items->[-1]->{programType}, 'X Show: the program page wins over a network-relative path with a programType (always listed, no page check)' );
+	ok( !( grep { $_ eq '/triplej/x-show' } page_requests() ), '(no page check for its twin)' );
 	my ($id) = $bigIdeas->{objectID} =~ /([0-9]+)\z/;
 	is_deeply( [ @{ $items->[0] }{qw(id network programType)} ], [ $id, 'ABC Radio National', 'podcast' ], 'Big Ideas: the current path\'s ref (it has a programType; the legacy one has none)' );
 	($id) = $country->{objectID} =~ /([0-9]+)\z/;
 	is_deeply( [ @{ $items->[2] }{qw(id programType)} ], [ $id, 'podcast' ], 'A Big Country (the same path twice): the one with a programType' );
 	is( $items->[3]->{programType}, 'podcast', 'Future Tense: both typed -> the first (case-insensitive title)' );
-	is( $items->[-1]->{programType}, 'music', 'Special Features: the program page (with a programType) ...' );
+	is( $items->[-2]->{programType}, 'music', 'Special Features: the program page (with a programType) ...' );
 	ok( !( grep { $_ eq '/listen/classic/special-features' } page_requests() ), '... so its network-relative twin needs no page check' );
-	ok( ( grep { $_->{message} =~ /4 hits of a program listed already merged/ } logged('DEBUG') ), 'the merged count logged at DEBUG' );
+	ok( ( grep { $_->{message} =~ /5 hits of a program listed already merged/ } logged('DEBUG') ), 'the merged count logged at DEBUG' );
 };
 
 subtest 'A–Z buckets (D8): modifier letters skipped (ʻokina), compatibility forms folded (fullwidth, ligatures, circled digits), ħ ŋ ə; the counts add up' => sub {

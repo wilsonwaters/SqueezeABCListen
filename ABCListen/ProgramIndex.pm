@@ -32,8 +32,8 @@ package Plugins::ABCListen::ProgramIndex;
 #       7 days) when Algolia fails after that: such data is served as usual (fallback 0).
 #       Hits are mapped to program refs in Algolia's order, de-duplicated by path and (D8) by
 #       title (case-insensitive) with the path's last segment (one program at a legacy and a
-#       current path, see _sameProgram): of two, the one with a programType is kept, else the
-#       first, in the first one's place. Hits without
+#       current path, see _sameProgram): of two, the one at a program page path is kept, then the
+#       one with a programType, else the first, in the first one's place (_rank). Hits without
 #       a usable path are dropped (count logged at DEBUG), and network-relative paths are kept only
 #       when their page checks out (O7, below). nbHits > the hits returned (the index outgrew
 #       Algolia's 1000-hit cap) -> the hits returned, WARN logged once per run.
@@ -207,9 +207,9 @@ sub _refs {
 			$i = $#refs;
 		}
 		else {
-			# D8: the same program twice; the one with a programType, else the first, in the first one's place
+			# D8: the same program twice: the better ref (_rank), else the first, in the first one's place
 			$twins++;
-			$refs[$i] = $ref if !defined $refs[$i]->{programType} && defined $ref->{programType};
+			$refs[$i] = $ref if _rank($ref) > _rank( $refs[$i] );
 		}
 		$at{$_} = $i for @keys, _sameProgram( $refs[$i] );
 	}
@@ -231,6 +231,13 @@ sub _sameProgram {
 	my ($slug) = $ref->{path} =~ m{/([^/]+)\z};
 	push @keys, 'title+slug' . "\0" . lc( $ref->{title} ) . "\0$slug" if defined $ref->{title} && defined $slug;
 	return @keys;
+}
+
+# D8: which of two refs of one program is listed: a program page path (always listed; a
+# network-relative path needs its page check) first, then one with a programType (By type).
+sub _rank {
+	my $ref = shift;
+	return ( _isProgramPath( $ref->{path} ) ? 2 : 0 ) + ( defined $ref->{programType} ? 1 : 0 );
 }
 
 # One Algolia hit -> a program ref, or undef without a program page or network-relative path
