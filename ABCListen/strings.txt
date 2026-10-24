@@ -10,7 +10,7 @@ PLUGIN_ABCLISTEN
 	EN	ABC listen
 
 PLUGIN_ABCLISTEN_DESC
-	EN	Listen to ABC radio in Lyrion: ABC listen live stations, programs and episodes from the Australian Broadcasting Corporation. Unofficial plugin, not affiliated with or endorsed by the ABC.
+	EN	Unofficial plugin for ABC listen (Australian Broadcasting Corporation radio): all live ABC radio stations with what's on air, now-playing songs and schedules, plus podcasts, programs and episodes with their segments and tracklists, audiobooks with their chapters, the Home, News, Sport and Kids listen sections, search and followed programs. Not affiliated with or endorsed by the ABC.
 
 PLUGIN_ABCLISTEN_ERROR
 	EN	Sorry, part of the ABC listen menu could not be loaded. Please try again later.
@@ -390,7 +390,7 @@ PLUGIN_ABCLISTEN_AUDIOBOOKS_AZ
 	EN	All audiobooks A–Z
 
 PLUGIN_ABCLISTEN_AUDIOBOOKS_AU_ONLY
-	EN	Audiobooks play only in Australia.
+	EN	Most audiobooks play only in Australia.
 
 # === D7 === All podcast categories; A–Z Other row
 

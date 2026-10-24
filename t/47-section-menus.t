@@ -517,7 +517,7 @@ subtest 'Audiobooks: the 9 sub-collections, All audiobooks A–Z (O3), the AU-on
 	my $items = section('audiobooks');
 
 	is_deeply( names($items), [ @AUDIOBOOK_TITLES, $AZ, $AU_ONLY ], 'sub-collections in page order, then A–Z, then the note' );
-	is( $AU_ONLY, 'Audiobooks play only in Australia.', 'the note\'s text' );
+	is( $AU_ONLY, 'Most audiobooks play only in Australia.', 'the note\'s text' );
 	is_deeply( $items->[-1], { name => $AU_ONLY, type => 'text' }, 'the note is a text row (no action)' );
 	is( $items->[0]->{passthrough}->[0]->{id}, '105672994', 'Most Popular = 105672994 (paged with collection/x, no rootMetaCollectionId)' );
 

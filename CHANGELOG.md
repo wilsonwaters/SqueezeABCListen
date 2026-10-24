@@ -8,6 +8,82 @@ also the text of its GitHub Release (see [RELEASING.md](RELEASING.md)).
 
 ## [Unreleased]
 
+### Added
+
+- **Audiobook chapters**: every audiobook's menu has **Chapters (N)**, the book in reading order ("1. Prologue:
+  February 1886", "2. PART ONE: 1887 - 1896", …), however you reach the book: Audiobooks, Kids listen → Books for
+  Kids, Home, Search, Programs → By type → Audiobooks or My ABC listen. A chapter plays from its row; playing the
+  Chapters list itself plays or queues the whole book in order.
+- **Episodes for restricted podcasts**: ABC's website lists no episodes for Bluey Listen Along, Bluey Book Reads,
+  Midsomer Murders Mayhem, Odd Squadcast and In Concert. They now have **Episodes (N)**, newest first, like any
+  other podcast. A program with nothing to list says "No episodes available".
+- **More in episode menus**: an episode now shows its presenters ("Presented by …"), **Segments (N)** for programs
+  in parts such as The Science Show (each segment plays on its own, with its own title and duration),
+  **Tracklist (N)** for music programs ("00:55 · Rossini, Gioachino – The Barber of Seville: Overture"; talk
+  programs say "No tracklist"), and **More from** *program*, which opens the episode's program from anywhere,
+  including Search results and Home.
+- **Song info for episodes**: while an episode or a segment plays, Song Info (Material: More) has the episode notes,
+  More from *program* and the tracklist, before the program's Follow row.
+- **Hottest 100 episodes** now have "More from Hottest 100", in their menu and in song info, and song info has the
+  Follow row: following there adds Hottest 100 to My ABC listen, the same as following it from Programs.
+- **User guide**: the README now walks through every menu, with screenshots of the Default and Material web
+  interfaces, and covers now playing, limitations, troubleshooting, compatibility and privacy.
+- **Self-test**: `scripts/smoke.sh http://<your-lms>:9000 <player-mac>` checks the plugin on your own server in
+  about a minute (15 checks: menus, live stations, an episode with a seek, search, follow). See the README's
+  Self-test section; it plays audio on the player you choose.
+- A guide to getting the plugin listed in the official LMS plugin repository (`docs/official-repository.md`).
+
+### Changed
+
+- **All programs A–Z is more complete**: 736 programs instead of 709. AM and The World Today are now listed, as are
+  programs that share their title with another, such as *Persuasion* the audiobook (Audiobooks → All audiobooks
+  A–Z now lists all 20 books) and the 14 programs called "Mornings".
+- Programs use ABC's current titles, such as "Radio National Breakfast" (was "RN Breakfast") and "If You're
+  Listening". A Big Country, Radio National Breakfast and If You're Listening are now under Programs → By type →
+  Podcasts.
+- **Search finds more programs**: programs such as AM and The World Today, and both programs when two share a title
+  (for example *Persuasion* the audiobook and the podcast). Repeated titles are named "*title* (*network*)", as in
+  All programs A–Z.
+- **Program lists cope better when ABC is slow or blocks a request.** While ABC's pages don't answer, All programs
+  A–Z, By type and All podcasts A–Z wait for ABC at most once every 10 minutes instead of every time they are
+  opened, a blocked request no longer hides Hottest 100 for a day, and one bad program page no longer turns the
+  whole list into an error.
+- **Latest episodes stays put after an unfollow**: an unfollowed program's episodes stay in My ABC listen → Latest
+  episodes, in the same places, for up to 30 minutes (as the program does in Followed programs), then leave.
+  Following it again within that time changes nothing. A remote, app or script that repeats an Unfollow it reached
+  through Latest episodes can no longer unfollow a different program.
+- The plugin's description in Settings → Manage Plugins now lists everything it does.
+- The note at the end of Audiobooks now reads "Most audiobooks play only in Australia.", since six of them play
+  anywhere.
+
+### Fixed
+
+- **Installing from the repository URL works on LMS 9.1.1.** LMS 9.1.1 couldn't download the plugin from GitHub's
+  release download link ("unable to download ABCListen … Header line too long" in the server log). `repo.xml` now
+  points LMS at a copy of each release zip on raw.githubusercontent.com; v0.3.0 has been republished that way.
+- Audiobook chapters stored on ABC's other Australia-only address (such as The Secret Keeper's) now say "This
+  episode is only available in Australia" outside Australia, instead of a general playback error.
+- Settings page: saving the page from a skin that sends only one of the two settings no longer warns "Invalid value"
+  about the other one. Screen readers now read each setting's description with it.
+- Older program links that ABC now redirects to a different page open again.
+- An episode whose saved ABC link has moved still plays, from the audio link saved earlier.
+
+### Known limitations
+
+- Most audiobooks, the Bluey podcasts and the other restricted podcasts play only from an Australian internet
+  connection; elsewhere they say "This episode is only available in Australia". Six classics play anywhere: The
+  Wind in the Willows, The Wonderful Wizard of Oz, Persuasion, My Brilliant Career, Frankenstein and Animal Farm.
+- ABC's index still lists some programs that have stopped. About 15 of them (several regional Mornings, Saturday
+  Breakfast and some weekend afternoon shows) have no episode newer than 2019–2024, and their newest episodes may
+  say they are no longer available. Comedy Showcase, Grass Roots and Desko, which ABC doesn't index at all, are
+  only under Programs → By network.
+- A Latest episodes list still refreshes every 15 minutes, and changes when an unfollow's 30 minutes run out or a
+  new program is followed. A menu position held open across one of those moments may open a different episode.
+- Carried over from 0.3.0: live streams are 56 kbps unless you choose ABC mediahub (which may only work from
+  Australia, with an automatic fallback); stations ABC streams only as HLS aren't listed; Program info, Recently
+  played and Sport event times use your LMS server's time zone; ABC lists only the newest 250 episodes of each
+  program; Material skin's own search box doesn't list ABC listen.
+
 ## [0.3.0] - 2026-10-23
 
 ### Added
