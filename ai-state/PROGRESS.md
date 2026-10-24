@@ -13,15 +13,14 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 
 ## Currently in flight
 - #4 L2 program on air — PR #47 in review + runtime check
-- **v0.3.0 released** (bump 54320bb → workflow run 40040776497 success; repo.xml 6a934a7; asset sha1 132f345c…).
-  **Install from GitHub FAILS on LMS 9.1.1**: GitHub's releases/download 302 now has a 9,243-char CSP header; LMS's
-  Net::HTTP limit is 8,192 ("Header line too long"). v0.2.0's install passed on 10-19, so GitHub changed it. → R4 (#62):
-  serve zips from raw.githubusercontent.com (orphan branch release-assets), repair v0.3.0, re-check the install.
-- #62 R4 raw-hosted release zips — PR #63 merged (squash 884d4c9; orchestrator read the workflow diff: no force-push,
-  zips never replaced, identity Wilson Waters); repair run dispatched on main for v0.3.0, then install check
+- **v0.3.0 released and installable**: R4 (#63, squash 884d4c9) moved the zip to the orphan branch release-assets
+  (raw.githubusercontent.com); repair run on main succeeded; repo.xml → raw URL, same SHA1. Orchestrator install check
+  from the public repo.xml on the testbed: downloaded + SHA1-verified, 0.3.0 installed, 10 top-level items, triple j
+  played with song metadata; then uninstalled and dev link restored. #62 closed.
 - #56 D8 A–Z completeness (AM, Persuasion) + D7 follow-ups — implementation
-- #52 M3 settings/live-quality follow-ups — implementation
-- Queued (cap 3): O8, F6, then v0.3.0 (system verification → release), R2, R3
+- #15 R2 smoke test + docs + screenshots (amendment 2 posted) — implementation
+- #41 F6 F4 follow-ups — implementation
+- Queued (cap 3): O8 (after D8: both touch ProgramIndex), then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
 - 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
@@ -35,6 +34,7 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   stale D5-review lock broken, main re-linked; SYS, D5 review and M4 resumed from saved state.
 
 ## Last completions
+- #52 M3 merged (PR #64, squash 5ff5484): partial-POST warning fixed, redirect family in log, aria-describedby.
 - #23 D5 merged (PR #58, squash da61cf4; orchestrator merged main into the branch to resolve t/10): audiobook Chapters,
   restricted-podcast Episodes (Bluey Listen Along), seenAt = fetch time (API info `at`), /radio/geo/ geo message.
   Review REQUEST_CHANGES → fixes → re-review APPROVE.
