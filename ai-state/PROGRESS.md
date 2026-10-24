@@ -7,7 +7,7 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 - foundation: F1 #1 · F2 #3 · F3 #7 · F4 #34 (bug) · F5 #37 (cardRef names) · F6 #41 (F4 follow-ups)
 - live: L1 #2 · L2 #4 · L3 #8 · L4 #10 · L5 #14
 - ondemand: O1 #12 · O2 #16 · O3 #18 · O4 #19 · O6 #30 · O7 #40 · O8 #48 (O7 follow-ups)
-- discovery: D1 #5 · D2 #6 · D3 #13 · D4 #22 · D5 #23 · D6 #44 (podcast A–Z groups) · D7 #51 (all categories) · D8 #56 (D7 follow-ups)
+- discovery: D1 #5 · D2 #6 · D3 #13 · D4 #22 · D5 #23 · D6 #44 (podcast A–Z groups) · D7 #51 (all categories) · D8 #56 (D7 follow-ups) · D9 #66 (search segments)
 - myabc: M1 #11 · M2 #20 · M3 #52 (settings/L5 follow-ups) · M4 #59 (Latest stale-id unfollow)
 - release: R1 #9 · R2 #15 · R3 #17 · R4 #62 (raw-hosted zips: LMS can't read GitHub's download redirect)
 
@@ -17,10 +17,10 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   (raw.githubusercontent.com); repair run on main succeeded; repo.xml → raw URL, same SHA1. Orchestrator install check
   from the public repo.xml on the testbed: downloaded + SHA1-verified, 0.3.0 installed, 10 top-level items, triple j
   played with song metadata; then uninstalled and dev link restored. #62 closed.
-- #56 D8 A–Z completeness (AM, Persuasion) + D7 follow-ups — implementation
+- #56 D8 A–Z completeness — PR #65 in review (AM: siteSegment adelaide; Persuasion: Algolia distinct; 709 → 736 programs)
 - #15 R2 smoke test + docs + screenshots (amendment 2 posted) — implementation
 - #41 F6 F4 follow-ups — implementation
-- Queued (cap 3): O8 (after D8: both touch ProgramIndex), then v0.3.0 (system verification → release), R2, R3
+- Queued (cap 3): O8 + D9 (after D8: both touch ProgramIndex/Search rules), then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
 - 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
