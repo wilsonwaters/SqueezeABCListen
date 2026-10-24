@@ -2,8 +2,8 @@
 # The user and maintainer docs: README.md (its 16 sections, the install URL, the usage tour with
 # the real menu names, now playing, limitations, troubleshooting, compatibility, privacy,
 # self-test), the screenshots in docs/images, RELEASING.md, docs/official-repository.md,
-# CHANGELOG.md's newest section with content, the description shared by strings.txt and repo.xml,
-# and every relative link and image in the docs.
+# CHANGELOG.md (its newest section with content, and the 1.0.0 entries), the description shared by
+# strings.txt and repo.xml, and every relative link and image in the docs.
 
 use strict;
 use utf8;
@@ -369,29 +369,59 @@ subtest 'docs/official-repository.md' => sub {
 	ok( $repo{ABCListen}, 'repo.xml\'s plugin name is the ABCListen the check looks for' );
 };
 
-# The newest section with content: [Unreleased] while it has entries, otherwise (right after a
-# release has moved them) the first "## [X.Y.Z] - YYYY-MM-DD" section. Returns its name and body.
-sub newestChangelogSection {
+# CHANGELOG.md's "## [...]" sections in file order: { name => 'Unreleased' or 'X.Y.Z', released =>
+# true for a "## [X.Y.Z] - YYYY-MM-DD" heading, body => the text up to the next section or the
+# link references at the bottom }
+sub changelogSections {
 	my $doc = shift;
-	my ($unreleased) = $doc =~ /^## \[Unreleased\]\n(.*?)(?=^## |^\[[^\]]+\]: |\z)/ms;
-	return ( '[Unreleased]', $unreleased ) if defined $unreleased && $unreleased =~ /\S/;
-	my ( $version, $released ) = $doc =~ /^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}\n(.*?)(?=^## |^\[[^\]]+\]: |\z)/ms;
-	return ( "[$version]", $released ) if defined $released && $released =~ /\S/;
+	my @sections;
+	while ( $doc =~ /^## \[([^\]]+)\]([^\n]*)\n(.*?)(?=^## |^\[[^\]]+\]: |\z)/msg ) {
+		my ( $name, $rest, $body ) = ( $1, $2, $3 );
+		push @sections, { name => $name, body => $body, released => ( $name =~ /\A\d+\.\d+\.\d+\z/ && $rest =~ /\A - \d{4}-\d{2}-\d{2}\z/ ) };
+	}
+	return @sections;
+}
+
+# The newest section with content: [Unreleased] while it has entries, otherwise (right after a
+# release has moved them) the first release section. Nothing when both are empty.
+sub newestChangelogSection {
+	my @sections = @_;
+	my ($unreleased) = grep { $_->{name} eq 'Unreleased' } @sections;
+	return $unreleased if $unreleased && $unreleased->{body} =~ /\S/;
+	my ($released) = grep { $_->{released} } @sections;
+	return $released if $released && $released->{body} =~ /\S/;
 	return;
 }
 
+# The text of every section from the top ([Unreleased]) down to and including [1.0.0], or down to
+# and including the first release section while there is no [1.0.0] yet. Also its range's name.
+sub changelogUpTo100 {
+	my @sections = @_;
+	my ($last) = grep { $sections[$_]{name} eq '1.0.0' } 0 .. $#sections;
+	($last) = grep { $sections[$_]{released} } 0 .. $#sections unless defined $last;
+	return unless defined $last;
+	return ( join( '', map { $_->{body} } @sections[ 0 .. $last ] ), "[$sections[0]{name}] … [$sections[$last]{name}]" );
+}
+
 subtest 'CHANGELOG.md: the newest section with content' => sub {
-	my ( $name, $section ) = newestChangelogSection( slurp('CHANGELOG.md') );
-	ok( defined $name, '[Unreleased] or the newest release section has entries (not both empty)' );
-	$name //= '(none)';
-	note("checking $name");
-	ok( defined $section && $section =~ /\S/, "$name has entries" );
-	like( $section // '', qr/^### Added\n.*^### Changed\n.*^### Known limitations\n/ms, "$name: Added, Changed and Known limitations" );
-	like( $section // '', qr/Chapters \(N\)/,               "$name: audiobook chapters" );
-	like( $section // '', qr/Segments \(N\).*Tracklist \(N\)/s, "$name: episode extras" );
-	like( $section // '', qr/Latest episodes stays put/,     "$name: Latest episodes after an unfollow" );
-	like( $section // '', qr/Header line too long/,          "$name: the install fix" );
-	like( $section // '', qr/`scripts\/smoke\.sh/,           "$name: the self-test" );
+	my $newest = newestChangelogSection( changelogSections( slurp('CHANGELOG.md') ) );
+	ok( $newest, '[Unreleased] or the newest release section has entries (not both empty)' );
+	my $name = $newest ? "[$newest->{name}]" : '(none)';
+	like( $newest ? $newest->{body} : '', qr/^### \S/m, "$name has a subsection heading" );
+	like( $newest ? $newest->{body} : '', qr/^- \S/m,   "$name has a bullet" );
+};
+
+subtest 'CHANGELOG.md: the 1.0.0 entries, from [Unreleased] down to [1.0.0]' => sub {
+	my ( $text, $range ) = changelogUpTo100( changelogSections( slurp('CHANGELOG.md') ) );
+	ok( defined $text, 'has a release section to end the range at' );
+	$range //= '(none)';
+	note("checking $range");
+	like( $text // '', qr/^### Added\n.*^### Changed\n.*^### Known limitations\n/ms, "$range: Added, Changed and Known limitations" );
+	like( $text // '', qr/Chapters \(N\)/,               "$range: audiobook chapters" );
+	like( $text // '', qr/Segments \(N\).*Tracklist \(N\)/s, "$range: episode extras" );
+	like( $text // '', qr/Latest episodes stays put/,     "$range: Latest episodes after an unfollow" );
+	like( $text // '', qr/Header line too long/,          "$range: the install fix" );
+	like( $text // '', qr/`scripts\/smoke\.sh/,           "$range: the self-test" );
 };
 
 subtest 'the plugin description: strings.txt and repo.xml agree' => sub {
