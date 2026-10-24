@@ -9,7 +9,8 @@
 # at most 200; the cap of 200 (the oldest becomes a tombstone, INFO log); a fresh array on every
 # set; corrupt-pref handling; persistence across a stub "restart" (the value round-tripped as LMS's
 # prefs file would), tombstones included; each write re-reading the list; programPathFor's table
-# (the same table as O4's "More from").
+# (the same table as O4's "More from"), and (O8) its network-relative episode paths (Hottest 100 ->
+# /triplej/hottest-100, the path the A-Z lists, so both follows are one entry).
 
 use strict;
 use warnings;
@@ -469,6 +470,32 @@ subtest 'programPathFor: the program of an episode path (same table as O4)' => s
 		my ( $in, $want, $label ) = @$row;
 		is( $F->programPathFor($in), $want, ( $label || ( defined $in ? $in : 'undef' ) ) . ' -> ' . ( defined $want ? $want : 'undef' ) );
 	}
+};
+
+subtest 'programPathFor (O8): episodes of a network-relative program (Hottest 100) -> the path the A-Z lists it under' => sub {
+	my @table = (
+		[ '/triplej/hottest-100/hottest-100-25---1/106246016',                               '/triplej/hottest-100', 'a Hottest 100 episode' ],
+		[ 'https://www.abc.net.au/triplej/hottest-100/hottest-100-50---26/106246024',        '/triplej/hottest-100', 'an absolute URL' ],
+		[ '/listen/doublej/summer-mornings/summer-mornings-1-jan/107000001',                 '/listen/doublej/summer-mornings', 'under /listen/doublej' ],
+		[ '/triplej/programs/hottest-100/hottest-100-25---1/106246016',                      '/triplej/programs/hottest-100', 'the /programs/ rule first, unchanged' ],
+		[ '/triplej/hottest-100',                                                            undef, 'the program path itself' ],
+		[ '/triplej/hottest-100/hottest-100-25---1',                                         undef, 'no episode id' ],
+		[ '/listen/radionational/archived/summerschool/chas-licciardello/7099490',           undef, 'an archived program\'s page' ],
+		[ '/listen/radionational/robyn-williams/2913842',                                    undef, 'a presenter page' ],
+		[ '/listen/notanetwork/a-show/an-episode/1',                                         undef, 'under no network' ],
+	);
+	for my $row (@table) {
+		my ( $in, $want, $label ) = @$row;
+		is( $F->programPathFor($in), $want, "$label -> " . ( defined $want ? $want : 'undef' ) );
+	}
+
+	# following from an episode and from the A-Z row: one entry
+	fresh();
+	my $path = $F->programPathFor('/triplej/hottest-100/hottest-100-25---1/106246016');
+	$F->follow( { title => 'Hottest 100', path => $path } );
+	ok( $F->isFollowed('/triplej/hottest-100'), 'followed from an episode: the A-Z row\'s path (/triplej/hottest-100) is followed' );
+	is_deeply( [ map { $_->{path} } $F->list ], ['/triplej/hottest-100'], '... one entry' );
+	ok( !$F->isFollowed('/triplej/programs/hottest-100'), '... under the canonical path, not the 308 target' );
 };
 
 done_testing();

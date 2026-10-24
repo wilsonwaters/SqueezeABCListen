@@ -15,6 +15,12 @@
 # audiobooks incl. Persuasion; the O3 params reproduce both gaps), one program twice (legacy and
 # current path, the same path) merged, and the A–Z bucket rule's modifier letters (ʻokina),
 # compatibility forms (fullwidth, ligatures, circled digits) and ħ ŋ ə.
+# O8: a page check without an answer (timeout, 5xx, 429, 403) listed and cached 10 min (a call
+# within that makes no page check, also during an outage of deferred timeouts), a check that dies
+# (its processing or its request) listed, uncached, WARN, the others carrying on and one callback,
+# the network list pages (/triplej/programs, /<network>/audiobooks) never checked, and
+# networkProgramPath (the episode path -> network-relative program path table; the recorded Hottest
+# 100 episodes -> the path the index lists).
 #
 # Fixtures in t/data/ondemand/:
 #   algolia-programs-list.json   raw response body of ai-state/research/abc-samples/algolia-programs-list.json
@@ -822,7 +828,8 @@ subtest 'O7, page checks: a program page with audio episodes is listed; anything
 	is_deeply( [ @after[ @before .. $#after ] ], \@transient, 'an hour later: only the 500, the timeout and the 429 are requested again' );
 	is_deeply( listed_paths($c), [ '/listen/programs/plain', map { $_->[2] ? $_->[0] : () } @cases ], 'the same list' );
 
-	# now they answer: decided like the others
+	# now they answer (after O8's 10 min cache of the unconfirmed decisions): decided like the others
+	setTime( $T0 + 3600 + 601 );
 	Slim::Networking::SimpleAsyncHTTP->reset;
 	route( "$SITE/listen/search", file => 'foundation/listen-search.trimmed.html', headers => { 'Content-Type' => 'text/html' } );
 	route( page_url('/listen/jazz/down'), page_json( hero => 7, items => ['video'] ) );
@@ -844,7 +851,7 @@ subtest 'O7, page checks: a program page with audio episodes is listed; anything
 	is( ( grep { $_->{message} =~ /has no programs/ } logged('WARN') ), 1, 'WARN, as for no usable hit' );
 };
 
-subtest 'O7, page checks: at most 4 in flight; callers share requests; one callback each; a check that dies -> LOAD_FAILED once' => sub {
+subtest 'O7, page checks: at most 4 in flight; callers share requests; one callback each; a check that dies -> listed (O8), once' => sub {
 	fresh();
 	my @paths = map {"/triplej/slow-$_"} 1 .. 6;
 	route_hits( [ map { network_hit($_) } @paths ] );
@@ -866,6 +873,7 @@ subtest 'O7, page checks: at most 4 in flight; callers share requests; one callb
 	my $c = index_call();
 	is( $c->count, 1, 'every decision cached: answered synchronously' );
 
+	# O8: a check that dies no longer fails the index (see the O8 subtests below)
 	fresh();
 	route_hits( [ network_hit('/triplej/hottest-100') ] );
 	route_real_pages();
@@ -874,9 +882,9 @@ subtest 'O7, page checks: at most 4 in flight; callers share requests; one callb
 		local *Plugins::ABCListen::ProgramIndex::_isAudioProgram = sub { die "page check broke\n" };
 		$c = index_call();
 		is( $c->count, 1, 'a check dies: one callback' );
-		is_deeply( result_of($c), { error => 'PLUGIN_ABCLISTEN_LOAD_FAILED' }, 'a check dies: LOAD_FAILED' );
+		is_deeply( listed_paths($c), ['/triplej/hottest-100'], 'a check dies (O8): listed, not LOAD_FAILED' );
 	}
-	ok( ( grep { $_->{message} =~ /page check broke/ } logged('ERROR') ), 'a check dies: logged at ERROR' );
+	ok( ( grep { $_->{message} =~ /page check broke/ } logged('WARN') ), 'a check dies: logged at WARN' );
 
 	fresh();
 	route_hits( [ network_hit('/triplej/hottest-100') ] );
@@ -884,6 +892,209 @@ subtest 'O7, page checks: at most 4 in flight; callers share requests; one callb
 	my $calls = 0;
 	ok( eval { $PI->programs( sub { $calls++; die "consumer broke\n" } ); 1 }, 'after the checks, a dying consumer: the die does not reach the caller' ) or diag $@;
 	is( $calls, 1, 'after the checks, a dying consumer: called once' );
+};
+
+# ---------------------------------------------------------------------------
+# O8: outage-resilient page checks, network list pages, networkProgramPath
+# ---------------------------------------------------------------------------
+
+sub decision_entry { Slim::Utils::Cache->new('abclisten')->get( 'program-index-page:' . shift ) }
+
+subtest 'O8: no answer (timeout, 500, 429, 403) -> listed for 10 min: a second call within that makes no page check; then checked again; a 404 stays left out 24 h' => sub {
+	fresh();
+	my @transient = ( '/triplej/slow', '/listen/jazz/down', '/kidslisten/busy', '/listen/doublej/blocked' );
+	route_hits( [ hit( slug => 'plain' ), ( map { network_hit($_) } @transient, '/listen/country/gone' ) ] );
+	route( page_url('/triplej/slow'),           error => 'Timed out waiting for data' );
+	route( page_url('/listen/jazz/down'),       code  => 500 );
+	route( page_url('/kidslisten/busy'),        code  => 429 );
+	route( page_url('/listen/doublej/blocked'), code  => 403 );
+	route( page_url('/listen/country/gone'),    code  => 404 );
+
+	my $c = index_call();
+	is( $c->count, 1, 'one callback' );
+	is_deeply( listed_paths($c), [ '/listen/programs/plain', @transient ], 'the timeout, the 500, the 429 and the 403 listed; the 404 left out' );
+	is_deeply( [ page_requests() ], [ @transient, '/listen/country/gone' ], 'each page checked once' );
+	is_deeply( decision_entry('/listen/doublej/blocked'), { listed => 1, unconfirmed => 1 }, 'the 403 (a CDN block, say) is no answer: listed, unconfirmed (not left out for a day)' );
+	is_deeply( decision_entry('/triplej/slow'), { listed => 1, unconfirmed => 1 }, 'the timeout: listed, unconfirmed' );
+	is_deeply( decision_entry('/listen/country/gone'), { listed => 0 }, 'the 404: left out' );
+	is( scalar( debug_logged(qr/couldn't check .*; listed/) ), 4, 'the 4 unchecked logged at DEBUG' );
+	is( scalar( logged('WARN') ) + scalar( logged('ERROR') ), 0, 'nothing at WARN or ERROR' );
+
+	# within 10 min (A–Z, then By type, then Podcasts A–Z, say): no page check, no wait
+	for my $later ( 60, 300, 599 ) {
+		setTime( $T0 + $later );
+		my @before = requests();
+		$c = index_call();
+		is( $c->count, 1, "${later} s later: answered synchronously (no wait for page checks)" );
+		is( scalar requests(), scalar @before, "${later} s later: no new page check (no request at all)" );
+		is_deeply( listed_paths($c), [ '/listen/programs/plain', @transient ], "${later} s later: the same list" );
+	}
+
+	# after 10 min: the 4 unconfirmed pages are checked again; the 404 is not (24 h)
+	setTime( $T0 + 601 );
+	my @before = page_requests();
+	$c = index_call();
+	my @after = page_requests();
+	is_deeply( [ @after[ @before .. $#after ] ], \@transient, 'after 10 min: only the 4 unconfirmed pages are checked again' );
+	is_deeply( listed_paths($c), [ '/listen/programs/plain', @transient ], 'still no answer: listed again' );
+
+	# once they answer: decided as usual (cached 24 h)
+	setTime( $T0 + 1202 );
+	Slim::Networking::SimpleAsyncHTTP->reset;
+	route( "$SITE/listen/search", file => 'foundation/listen-search.trimmed.html', headers => { 'Content-Type' => 'text/html' } );
+	route( page_url('/listen/doublej/blocked'), page_json( hero => 11, items => ['video'] ) );
+	route( page_url($_), page_json( hero => 12, items => ['audioepisode'] ) ) for @transient[ 0 .. 2 ];
+	$c = index_call();
+	is_deeply( listed_paths($c), [ '/listen/programs/plain', @transient[ 0 .. 2 ] ], 'answered: the once-blocked page (video only) left out, the other three listed' );
+	is_deeply( decision_entry('/listen/doublej/blocked'), { listed => 0 }, '... the answers cached as usual' );
+	is_deeply( decision_entry('/triplej/slow'), { listed => 1 }, '... (confirmed)' );
+};
+
+subtest 'O8: during an outage the page checks are waited for once, not on every call (deferred timeouts)' => sub {
+	fresh();
+	my @paths = map {"/triplej/outage-$_"} 1 .. 6;
+	route_hits( [ map { network_hit($_) } @paths ] );
+	route( page_url($_), page_json( hero => 9, items => ['audioepisode'] ), defer => 1 ) for @paths;
+
+	my $first = index_call();
+	is( $first->count, 0, 'the first call waits for the checks' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred( error => 'Timed out waiting for data' );
+	is( $first->count, 0, '... a first round of 4 timeouts' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred( error => 'Timed out waiting for data' );
+	is( $first->count, 1, '... a second round of 2, then answered once' );
+	is_deeply( listed_paths($first), \@paths, '... every program listed (no answer)' );
+
+	setTime( $T0 + 120 );
+	my $second = index_call();
+	is( $second->count, 1, 'two minutes later: answered at once' );
+	is( scalar( Slim::Networking::SimpleAsyncHTTP->deferred ), 0, '... with no page check waiting' );
+	is( scalar page_requests(), 6, '... and no new request' );
+	is_deeply( listed_paths($second), \@paths, '... the same list' );
+};
+
+subtest 'O8: a check that dies (1 of 3) -> listed, not cached, WARN; the other checks carry on; one callback' => sub {
+	fresh();
+	my @paths = ( '/triplej/audio-show', '/listen/jazz/video-show', '/kidslisten/broken-show' );
+	route_hits( [ map { network_hit($_) } @paths ] );
+	route( page_url('/triplej/audio-show'),     page_json( hero => 31, items => ['audioepisode'] ), defer => 1 );
+	route( page_url('/listen/jazz/video-show'), page_json( hero => 32, items => ['video'] ),        defer => 1 );
+	route( page_url('/kidslisten/broken-show'), page_json( hero => 33, items => ['audioepisode'] ), defer => 1 );
+
+	my $real  = \&Plugins::ABCListen::ProgramIndex::_isAudioProgram;
+	my $broke = 0;
+	no warnings 'redefine';
+	local *Plugins::ABCListen::ProgramIndex::_isAudioProgram = sub {
+		my $props = shift;
+		my $hero  = ref $props eq 'HASH' && ref $props->{heroImageWithCTAPrepared} eq 'HASH' ? $props->{heroImageWithCTAPrepared}->{uri} || '' : '';
+		if ( $hero eq 'coremedia://program/33' ) { $broke++; die "page check broke\n" }
+		return $real->($props);
+	};
+
+	my $c = index_call();
+	is( $c->count, 0, 'waiting for the 3 checks' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is( $c->count, 1, 'one callback, once every check is in' );
+	ok( !exists result_of($c)->{error}, 'the index loads (no LOAD_FAILED)' );
+	is( result_of($c)->{fallback}, 0, '... from the index (fallback 0)' );
+	is_deeply( listed_paths($c), [ '/triplej/audio-show', '/kidslisten/broken-show' ], 'the audio page listed, the video page left out, the dying check listed' );
+	is( $broke, 1, 'the dying check ran once' );
+	ok( ( grep { $_->{message} =~ m{checking /kidslisten/broken-show failed \(page check broke\); listed} } logged('WARN') ), 'logged at WARN' );
+	is( scalar logged('ERROR'), 0, 'nothing at ERROR' );
+	is( decision_entry('/kidslisten/broken-show'), undef, 'the dying check is not cached' );
+	is_deeply( [ map { decision_entry($_) } @paths[ 0, 1 ] ], [ { listed => 1 }, { listed => 0 } ], 'the other two are' );
+
+	# the next call checks it again (only it)
+	my @before = page_requests();
+	$c = index_call();
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	my @after = page_requests();
+	is_deeply( [ @after[ @before .. $#after ] ], ['/kidslisten/broken-show'], 'the next call checks only the dying one again' );
+	is( $broke, 2, '... which dies again' );
+	is( $c->count, 1, '... answered once' );
+	is_deeply( listed_paths($c), [ '/triplej/audio-show', '/kidslisten/broken-show' ], '... with the same list' );
+
+	# a check whose request dies (synchronously): the same
+	fresh();
+	route_hits( [ map { network_hit($_) } @paths ] );
+	route( page_url('/triplej/audio-show'),     page_json( hero => 31, items => ['audioepisode'] ) );
+	route( page_url('/listen/jazz/video-show'), page_json( hero => 32, items => ['video'] ) );
+	my $nextData = \&Plugins::ABCListen::API::nextData;
+	local *Plugins::ABCListen::API::nextData = sub { die "nextData broke\n" if $_[0] eq '/kidslisten/broken-show'; goto &$nextData };
+	$c = index_call();
+	is( $c->count, 1, 'a request that dies: one callback' );
+	is_deeply( listed_paths($c), [ '/triplej/audio-show', '/kidslisten/broken-show' ], '... the index loads, the dying one listed' );
+	ok( ( grep { $_->{message} =~ m{checking /kidslisten/broken-show failed \(nextData broke\); listed} } logged('WARN') ), '... logged at WARN' );
+	is( decision_entry('/kidslisten/broken-show'), undef, '... not cached' );
+
+	# a request that answers and then dies: the check settles once (its answer)
+	fresh();
+	route_hits( [ map { network_hit($_) } @paths ] );
+	route( page_url($_), page_json( hero => 41, items => ['audioepisode'] ) ) for @paths;
+	local *Plugins::ABCListen::API::nextData = sub { my @args = @_; $nextData->(@args); die "late die\n" if $args[0] eq '/listen/jazz/video-show'; return };
+	$c = index_call();
+	is( $c->count, 1, 'a request that answers, then dies: one callback' );
+	is_deeply( listed_paths($c), \@paths, '... each path decided once by its answer (3 listed)' );
+	is_deeply( decision_entry('/listen/jazz/video-show'), { listed => 1 }, '... and cached (the late die ignored)' );
+	is( scalar( grep { $_->{message} =~ /late die/ } logged('WARN') ), 0, '... nothing logged for it' );
+};
+
+subtest 'O8: network list pages (/triplej/programs, /<network>/audiobooks) are not network-relative program paths: never checked' => sub {
+	fresh();
+	route_hits( [ map { network_hit($_) } '/triplej/programs', '/kidslisten/audiobooks', '/listen/radionational/programs', '/triplej/hottest-100' ] );
+	route_real_pages();
+
+	my $c = index_call();
+	is( $c->count, 1, 'one callback' );
+	is_deeply( listed_paths($c), ['/triplej/hottest-100'], 'only Hottest 100 listed' );
+	is_deeply( [ page_requests() ], [ '/triplej/hottest-100', '/triplej/programs/hottest-100' ], 'only Hottest 100\'s page checked (none of the 3 list pages)' );
+	ok( scalar( debug_logged(qr/3 hits without a program page skipped/) ), 'the 3 list pages skipped like other non-program pages (DEBUG)' );
+
+	my %networks = Plugins::ABCListen::ProgramIndex::_networkPaths();
+	ok( !Plugins::ABCListen::ProgramIndex::_isNetworkRelative( $_, \%networks ), "$_: not network-relative" )
+		for '/triplej/programs', '/triplej/audiobooks', '/listen/radionational/programs', '/kidslisten/audiobooks', '/pacific/programs';
+	ok( Plugins::ABCListen::ProgramIndex::_isNetworkRelative( $_, \%networks ), "$_: network-relative" )
+		for '/triplej/hottest-100', '/listen/doublej/summer-mornings', '/triplej/programs-of-the-year';
+};
+
+subtest 'O8: networkProgramPath - the network-relative program path of an episode path (pure)' => sub {
+	fresh();
+	my @table = (
+		[ '/triplej/hottest-100/hottest-100-25---1/106246016',                         '/triplej/hottest-100', 'a Hottest 100 episode' ],
+		[ 'https://www.abc.net.au/triplej/hottest-100/hottest-100-50---26/106246024/', '/triplej/hottest-100', 'an absolute URL with a trailing /' ],
+		[ 'https://abc.net.au/triplej/hottest-100/hottest-100-50---26/106246024?x=1',  '/triplej/hottest-100', 'abc.net.au, a query' ],
+		[ '/listen/doublej/summer-mornings/summer-mornings-1-jan/107000001',           '/listen/doublej/summer-mornings', 'a network of two segments (/listen/doublej)' ],
+		[ '/kidslisten/some-show/an-episode/107000002',                                '/kidslisten/some-show', 'ABC Kids listen' ],
+		[ '/triplej/hottest-100',                                                      undef, 'the program path itself (not an episode path)' ],
+		[ '/triplej/hottest-100/hottest-100-25---1',                                   undef, 'no id' ],
+		[ '/triplej/hottest-100/x/not-an-id',                                          undef, 'a last segment that is not an id' ],
+		[ '/triplej/hottest-100/x/y/106246016',                                        undef, 'deeper than <program>/<episode>/<id>' ],
+		[ '/triplej/programs/hack/107400001',                                          undef, 'a network list page (/triplej/programs)' ],
+		[ '/kidslisten/audiobooks/a-book/107400002',                                   undef, 'a network list page (/kidslisten/audiobooks)' ],
+		[ '/listen/programs/scienceshow/trees/107266790',                              undef, 'a program page path (/listen is no network; Follow\'s own rule)' ],
+		[ '/listen/radionational/archived/summerschool/chas-licciardello/7099490',     undef, 'an archived program\'s page (too deep)' ],
+		[ '/listen/radionational/robyn-williams/2913842',                              undef, 'a presenter page (too shallow)' ],
+		[ '/listen/radionational/countdown/top100books/1-100',                         undef, 'a countdown page (no id)' ],
+		[ '/listen/notanetwork/x/y/1',                                                 undef, 'under no network' ],
+		[ '/news/2026-10-19/a-news-story/107600001',                                   undef, 'news' ],
+		[ 'https://example.com/triplej/hottest-100/x/1',                               undef, 'another host' ],
+		[ '',                                                                          undef, 'empty' ],
+		[ undef,                                                                       undef, 'undef' ],
+		[ ['/triplej/hottest-100/x/1'],                                                undef, 'a reference' ],
+	);
+	for my $row (@table) {
+		my ( $in, $want, $label ) = @$row;
+		is( $PI->networkProgramPath($in), $want, "$label -> " . ( defined $want ? $want : 'undef' ) );
+	}
+	is( Plugins::ABCListen::ProgramIndex::networkProgramPath('/triplej/hottest-100/x/1'), '/triplej/hottest-100', 'a plain function call' );
+	is( scalar requests(), 0, 'no request' );
+
+	# the recorded Hottest 100 episodes map to the path the index lists Hottest 100 under
+	route( $ALGOLIA, file => 'ondemand/algolia-programs-network-paths.trimmed.json', headers => $JSON_TYPE );
+	route_real_pages();
+	my @links = map { $_->{articleLink} } @{ JSON::PP::decode_json( fixture('ondemand/bff-episodesWithSegments-hottest-100.trimmed.json') )->{collection}->{items} };
+	is( scalar @links, 2, 'the 2 recorded Hottest 100 episodes' );
+	is_deeply( [ map { $PI->networkProgramPath($_) } @links ], [ ('/triplej/hottest-100') x 2 ], '... map to /triplej/hottest-100' );
+	is_deeply( listed_paths( index_call() ), ['/triplej/hottest-100'], '... the path the index lists (not the 308 target)' );
 };
 
 # ---------------------------------------------------------------------------

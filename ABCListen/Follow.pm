@@ -49,10 +49,15 @@ package Plugins::ABCListen::Follow;
 #       episode path up to and including the segment after the first /programs/ or /audiobooks/
 #       segment: '/listen/programs/scienceshow/<slug>/107266790' -> '/listen/programs/scienceshow',
 #       '/triplej/programs/<prog>/...' -> '/triplej/programs/<prog>',
-#       '/listen/audiobooks/<book>/...' -> '/listen/audiobooks/<book>'. undef when there is no such
-#       segment, or nothing after it. (O4 derives "More from" the same way, from the same table.)
+#       '/listen/audiobooks/<book>/...' -> '/listen/audiobooks/<book>'. Without such a segment
+#       (O8), the network-relative program path of the episode path, by the program index's rule
+#       (ProgramIndex::networkProgramPath): '/triplej/hottest-100/<slug>/106246016' ->
+#       '/triplej/hottest-100', the path the A-Z lists Hottest 100 under (not its 308 target), so a
+#       follow from song info and one from the program menu are the same entry. undef otherwise
+#       (no such segment or nothing after it, and no network-relative episode path). (O4 derives
+#       "More from" the same way, from the same table.)
 #
-# Owned by the myabc stream (M2).
+# Owned by the myabc stream (M2; O8 added the network-relative episode paths to programPathFor).
 
 use strict;
 use warnings;
@@ -61,6 +66,7 @@ use Slim::Utils::Log;
 use Slim::Utils::Prefs;
 
 use Plugins::ABCListen::API;
+use Plugins::ABCListen::ProgramIndex;
 
 use constant PREF         => 'followed';
 use constant MAX_FOLLOWED => 200;
@@ -156,7 +162,10 @@ sub programPathFor {
 	return undef unless defined $path;
 
 	my ($program) = $path =~ m{\A((?:/[^/]+)*?/(?:programs|audiobooks)/[^/]+)(?:/|\z)};
-	return $program;
+	return $program if defined $program;
+
+	# O8: an episode of a network-relative program (Hottest 100)
+	return Plugins::ABCListen::ProgramIndex::networkProgramPath($path);
 }
 
 # ---------------------------------------------------------------------------

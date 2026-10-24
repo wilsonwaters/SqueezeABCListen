@@ -61,8 +61,9 @@ package Plugins::ABCListen::ProgramIndex;
 #       ('/listen/programs/scienceshow', '/triplej/programs/hack', '/listen/audiobooks/animal-farm-page');
 #     - or (O7) a network-relative program path '<network>/<slug>', <network> being a
 #       Programs::networks() sitePath without its '/programs' ('/triplej/hottest-100',
-#       '/listen/doublej/summer-mornings'). Every hit is contentType:program (the filter). ABC
-#       308-redirects some of these to their program page ('/triplej/hottest-100' ->
+#       '/listen/doublej/summer-mornings'), <slug> not 'programs' or 'audiobooks' (O8: those are
+#       the network's list pages, '/triplej/programs'). Every hit is contentType:program (the
+#       filter). ABC 308-redirects some of these to their program page ('/triplej/hottest-100' ->
 #       '/triplej/programs/hottest-100'), others to a video-only page ('/triplej/like-a-version')
 #       or answers 404, so each one's page is checked first (see "Page check").
 #   Other hits (network and news pages, episode pages, other hosts, no canonicalURL) are not
@@ -76,24 +77,41 @@ package Plugins::ABCListen::ProgramIndex;
 #     - listed when the page is a program page (heroImageWithCTAPrepared.uri coremedia://program/<id>)
 #       with audio episodes (a programCollectionPrepared item whose docType, or contentUri type, is
 #       audioepisode, audio or audiosegment); else left out;
-#     - an error with an HTTP status below 500, except RATE_LIMITED (404: no such page; a redirect
-#       loop or off-site target; no page data) -> left out;
-#     - no answer (a transport error, 5xx, RATE_LIMITED/429) -> listed, the decision NOT cached
-#       (checked again on the next call).
+#     - an error with an HTTP status below 500, except 403 and RATE_LIMITED (404: no such page; a
+#       redirect loop or off-site target; no page data) -> left out;
+#     - no answer (a transport error, 5xx, RATE_LIMITED/429, and (O8) 403, e.g. a CDN block) ->
+#       listed, unconfirmed: that decision is cached only UNCONFIRMED_TTL (10 min, O8), so during an
+#       ABC outage the A–Z, By type and Podcasts A–Z don't wait for the page checks again on every
+#       call; the page is checked again after that;
+#     - (O8) a check whose processing dies (or whose request dies) -> listed, NOT cached (checked
+#       again on the next call), logged at WARN; the other checks carry on and the index answers
+#       as usual, once.
 #     Decisions are cached 24 h, as the index (Slim::Utils::Cache 'program-index-page:<path>'), so
 #     later calls, cache hits included, answer synchronously. Left out and unchecked pages are
 #     logged at DEBUG.
+#
+#   networkProgramPath($episodePath) -> '<network>/<slug>' | undef            (O8; Follow uses it)
+#       Pure. The network-relative program path (as the index lists it, see "A usable path") of an
+#       episode or segment path '<network>/<slug>/<episode slug>/<digits id>':
+#       '/triplej/hottest-100/hottest-100-25---1/106246016' -> '/triplej/hottest-100' (ABC's
+#       canonical path, which the index keeps, not its 308 target '/triplej/programs/hottest-100').
+#       Takes any spelling API::sitePath takes. undef for anything else: program page paths
+#       ('/triplej/programs/hack/...' is Follow's own rule), a network's list pages
+#       ('/triplej/programs/<x>/<id>'), deeper or shallower paths under a network
+#       ('/listen/radionational/archived/<program>/<slug>/<id>', presenter pages
+#       '/listen/radionational/<name>/<id>'), a last segment that is not an id, other hosts.
 #
 #   typeKey($programType) -> 'podcast' | 'catchup' | 'music' | 'news' | 'audiobook' | 'other'
 #       Pure (case-insensitive, trimmed): podcast -> podcast; catch-up -> catchup; music and
 #       'Music Playlists' -> music; news-briefing -> news; audiobook -> audiobook; undef, '' and
 #       any other value -> other (a value not in this table is logged at DEBUG, once per value).
 #
-#   Both work as class methods (Plugins::ABCListen::ProgramIndex->programs($cb)) or as plain
-#   functions (Plugins::ABCListen::ProgramIndex::programs($cb)).
+#   All of them work as class methods (Plugins::ABCListen::ProgramIndex->programs($cb)) or as
+#   plain functions (Plugins::ABCListen::ProgramIndex::programs($cb)).
 #
 # Owned by the ondemand stream (O3; O7 added the page check; D8 the filter's URL segments,
-# distinct => 0 and the merge of one program's two documents).
+# distinct => 0 and the merge of one program's two documents; O8 networkProgramPath, the network
+# list pages left out, the short cache of unconfirmed checks, 403 and dying checks).
 
 use strict;
 use warnings;
@@ -105,12 +123,13 @@ use Plugins::ABCListen::API;
 use Plugins::ABCListen::Programs;
 use Plugins::ABCListen::Util qw(CACHE_NAMESPACE decodeEntities);
 
-use constant LOAD_FAILED   => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
-use constant RATE_LIMITED  => 'PLUGIN_ABCLISTEN_RATE_LIMITED';
-use constant INDEX_TTL     => 86400;    # one Algolia query a day; page check decisions as long
-use constant HITS_PER_PAGE => 1000;     # Algolia's cap; no paging past it
-use constant MAX_IN_FLIGHT => 4;        # network lists (fallback) or page checks loading at once
-use constant PAGE_TIMEOUT  => 8;        # seconds per page check (a menu waits for it, as in Programs)
+use constant LOAD_FAILED     => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
+use constant RATE_LIMITED    => 'PLUGIN_ABCLISTEN_RATE_LIMITED';
+use constant INDEX_TTL       => 86400;    # one Algolia query a day; page check decisions as long
+use constant HITS_PER_PAGE   => 1000;     # Algolia's cap; no paging past it
+use constant MAX_IN_FLIGHT   => 4;        # network lists (fallback) or page checks loading at once
+use constant PAGE_TIMEOUT    => 8;        # seconds per page check (a menu waits for it, as in Programs)
+use constant UNCONFIRMED_TTL => 600;      # O8: a page check without an answer (listed) is cached this long
 
 # The ABC listen sites, as site segments and (D8) as canonical URL segments (see the header)
 use constant FILTERS => 'contentType:program AND (siteSegment:listen OR siteSegment:triplej OR siteSegment:kidslisten'
@@ -130,6 +149,9 @@ my %TYPE_KEY = (
 );
 
 my %AUDIO_DOC = map { $_ => 1 } qw(audioepisode audio audiosegment);
+
+# O8: '<network>/<slug>' with one of these slugs is a network's list page, not a program
+my %LIST_SLUG = map { $_ => 1 } qw(programs audiobooks);
 
 my $log = logger('plugin.abclisten');
 
@@ -310,10 +332,22 @@ sub _networkPaths {
 	return map { defined $_->{sitePath} && $_->{sitePath} =~ m{\A(/.+)/programs\z} ? ( $1 => 1 ) : () } Plugins::ABCListen::Programs::networks();
 }
 
-# A network-relative program path: '<network>/<slug>'.
+# A network-relative program path: '<network>/<slug>', the slug not a list page's (O8:
+# '/triplej/programs' and '/<network>/audiobooks' are the network's lists, never programs).
 sub _isNetworkRelative {
 	my ( $path, $networks ) = @_;
-	return $path =~ m{\A(/.+)/[^/]+\z} && $networks->{$1} ? 1 : 0;
+	return $path =~ m{\A(/.+)/([^/]+)\z} && $networks->{$1} && !$LIST_SLUG{$2} ? 1 : 0;
+}
+
+# O8 (see the header): the network-relative program path of an episode path
+# '<network>/<slug>/<episode slug>/<digits>', by the index's own rule (_isNetworkRelative).
+sub networkProgramPath {
+	shift if _isClass( $_[0] );
+	my $path = Plugins::ABCListen::API::sitePath(shift);
+	return undef unless defined $path;
+
+	my ($program) = $path =~ m{\A(/.+)/[^/]+/[0-9]+\z};
+	return defined $program && _isNetworkRelative( $program, { _networkPaths() } ) ? $program : undef;
 }
 
 # ---------------------------------------------------------------------------
@@ -322,7 +356,8 @@ sub _isNetworkRelative {
 
 # Program refs -> $cb->(\@refs to list), in order: the program page paths, and the network-relative
 # paths whose page checks out. Synchronous when every decision is cached. A check whose
-# processing dies answers $fail (programs()' callback) with LOAD_FAILED.
+# processing dies is listed (O8: _launchChecks); only a dying $cb (or launch) answers $fail
+# (programs()' callback) with LOAD_FAILED.
 sub _checkPages {
 	my ( $fail, $refs, $cb ) = @_;
 
@@ -342,6 +377,8 @@ sub _checkPages {
 }
 
 # Start page checks until MAX_IN_FLIGHT are loading (callbacks may come back synchronously).
+# Each check settles once (the first of its callbacks, or its request dying); O8: a decision
+# that dies lists the program, uncached, and the other checks carry on.
 sub _launchChecks {
 	my $state = shift;
 
@@ -349,20 +386,40 @@ sub _launchChecks {
 		my $path = $state->{paths}->[ $state->{next}++ ];
 		$state->{active}++;
 
-		my $checked = sub {
-			$state->{listed}->{$path} = shift;
-			$state->{active}--;
+		my $settled = 0;
+		my $settle  = sub {
+			my $decide = shift;
+			return if $settled++;
 
-			return $state->{finish}->() if ++$state->{done} == @{ $state->{paths} };
-			_launchChecks($state);
+			my $listed;
+			eval { $listed = $decide->(); 1 } or do {
+				my $why = $@ || 'unknown error';
+				chomp $why;
+				$log->warn("Program index: checking $path failed ($why); listed");
+				$listed = 1;
+			};
+
+			_guard( $state->{fail}, sub {
+				$state->{listed}->{$path} = $listed;
+				$state->{active}--;
+
+				return $state->{finish}->() if ++$state->{done} == @{ $state->{paths} };
+				_launchChecks($state);
+			} );
 		};
 
-		Plugins::ABCListen::API::nextData(
-			$path,
-			sub { my $props = shift; _guard( $state->{fail}, sub { $checked->( _pageDecision( $path, $props ) ) } ) },
-			sub { my $error = shift; _guard( $state->{fail}, sub { $checked->( _errorDecision( $path, $error ) ) } ) },
-			{ stale_ok => 1, quiet => 1, timeout => PAGE_TIMEOUT },
-		);
+		eval {
+			Plugins::ABCListen::API::nextData(
+				$path,
+				sub { my $props = shift; $settle->( sub { _pageDecision( $path, $props ) } ) },
+				sub { my $error = shift; $settle->( sub { _errorDecision( $path, $error ) } ) },
+				{ stale_ok => 1, quiet => 1, timeout => PAGE_TIMEOUT },
+			);
+			1;
+		} or do {
+			my $why = $@ || 'unknown error';
+			$settle->( sub { die $why } );
+		};
 	}
 
 	return;
@@ -380,8 +437,8 @@ sub _pageDecision {
 }
 
 # A failed page check -> 0 (left out, cached) when ABC answered (404, a redirect loop, no page
-# data, ...); 1 (listed, not cached: checked again next time) without an answer (a transport
-# error, 5xx, 429).
+# data, ...); 1 (listed, unconfirmed: cached UNCONFIRMED_TTL, then checked again) without an
+# answer (a transport error, 5xx, 429; O8: 403, which a CDN block answers).
 sub _errorDecision {
 	my ( $path, $error ) = @_;
 	$error = {} unless ref $error eq 'HASH';
@@ -389,8 +446,9 @@ sub _errorDecision {
 	my $status  = $error->{status};
 	my $message = defined $error->{message} ? $error->{message} : 'error';
 
-	if ( !defined $status || $status !~ /\A[0-9]+\z/ || $status >= 500 || ( $error->{error} || '' ) eq RATE_LIMITED ) {
+	if ( !defined $status || $status !~ /\A[0-9]+\z/ || $status >= 500 || $status == 403 || ( $error->{error} || '' ) eq RATE_LIMITED ) {
 		main::DEBUGLOG && $log->is_debug && $log->debug("Program index: couldn't check $path ($message); listed");
+		_remember( $path, 1, 1 );    # unconfirmed
 		return 1;
 	}
 
@@ -432,9 +490,11 @@ sub _cachedDecision {
 	return ref $entry eq 'HASH' && defined $entry->{listed} ? ( $entry->{listed} ? 1 : 0 ) : undef;
 }
 
+# Cache a decision INDEX_TTL, or (O8) an unconfirmed one (a check without an answer) UNCONFIRMED_TTL.
 sub _remember {
-	my ( $path, $listed ) = @_;
-	eval { _cache()->set( _decisionKey($path), { listed => $listed }, INDEX_TTL ); 1 }
+	my ( $path, $listed, $unconfirmed ) = @_;
+	my $entry = $unconfirmed ? { listed => $listed, unconfirmed => 1 } : { listed => $listed };
+	eval { _cache()->set( _decisionKey($path), $entry, $unconfirmed ? UNCONFIRMED_TTL : INDEX_TTL ); 1 }
 		or $log->error( "Program index: caching the page check of $path failed: " . ( $@ || 'unknown error' ) );
 	return;
 }
