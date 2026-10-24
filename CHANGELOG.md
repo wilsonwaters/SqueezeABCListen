@@ -24,6 +24,8 @@ also the text of its GitHub Release (see [RELEASING.md](RELEASING.md)).
   including Search results and Home.
 - **Song info for episodes**: while an episode or a segment plays, Song Info (Material: More) has the episode notes,
   More from *program* and the tracklist, before the program's Follow row.
+- **Hottest 100 episodes** now have "More from Hottest 100", in their menu and in song info, and song info has the
+  Follow row: following there adds Hottest 100 to My ABC listen, the same as following it from Programs.
 - **User guide**: the README now walks through every menu, with screenshots of the Default and Material web
   interfaces, and covers now playing, limitations, troubleshooting, compatibility and privacy.
 - **Self-test**: `scripts/smoke.sh http://<your-lms>:9000 <player-mac>` checks the plugin on your own server in
@@ -39,6 +41,13 @@ also the text of its GitHub Release (see [RELEASING.md](RELEASING.md)).
 - Programs use ABC's current titles, such as "Radio National Breakfast" (was "RN Breakfast") and "If You're
   Listening". A Big Country, Radio National Breakfast and If You're Listening are now under Programs → By type →
   Podcasts.
+- **Search finds more programs**: programs such as AM and The World Today, and both programs when two share a title
+  (for example *Persuasion* the audiobook and the podcast). Repeated titles are named "*title* (*network*)", as in
+  All programs A–Z.
+- **Program lists cope better when ABC is slow or blocks a request.** While ABC's pages don't answer, All programs
+  A–Z, By type and All podcasts A–Z wait for ABC at most once every 10 minutes instead of every time they are
+  opened, a blocked request no longer hides Hottest 100 for a day, and one bad program page no longer turns the
+  whole list into an error.
 - **Latest episodes stays put after an unfollow**: an unfollowed program's episodes stay in My ABC listen → Latest
   episodes, in the same places, for up to 30 minutes (as the program does in Followed programs), then leave.
   Following it again within that time changes nothing. A remote, app or script that repeats an Unfollow it reached
@@ -68,14 +77,12 @@ also the text of its GitHub Release (see [RELEASING.md](RELEASING.md)).
   Breakfast and some weekend afternoon shows) have no episode newer than 2019–2024, and their newest episodes may
   say they are no longer available. Comedy Showcase, Grass Roots and Desko, which ABC doesn't index at all, are
   only under Programs → By network.
-- Search doesn't yet find a few programs, such as "AM"; they are in Programs → All programs A–Z.
-- Episodes of triple j's Hottest 100 have no Follow row and no More from link yet.
 - A Latest episodes list still refreshes every 15 minutes, and changes when an unfollow's 30 minutes run out or a
   new program is followed. A menu position held open across one of those moments may open a different episode.
 - Carried over from 0.3.0: live streams are 56 kbps unless you choose ABC mediahub (which may only work from
-  Australia, with an automatic fallback); stations ABC streams only as HLS aren't listed; Program info, Recently played and Sport
-  event times use your LMS server's time zone; ABC lists only the newest 250 episodes of each program; Material
-  skin's own search box doesn't list ABC listen.
+  Australia, with an automatic fallback); stations ABC streams only as HLS aren't listed; Program info, Recently
+  played and Sport event times use your LMS server's time zone; ABC lists only the newest 250 episodes of each
+  program; Material skin's own search box doesn't list ABC listen.
 
 ## [0.3.0] - 2026-10-23
 

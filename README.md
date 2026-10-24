@@ -188,8 +188,8 @@ Material) queues every chapter in order.
 - **By network**: Radio National, triple j, Double J, ABC Classic and the other networks, each
   with its programs, A–Z.
 - **All programs A–Z**: every program and podcast in ABC's index (more than 700), grouped by
-  first letter ("A (97)"). Programs that share a title, such as the regional "Mornings" programs,
-  are each listed.
+  first letter ("A (98)"). Programs that share a title, such as the regional "Mornings" programs,
+  are each listed, named "*title* (*network*)".
 - **By type**: **Podcasts**, **Catch-up radio**, **Music**, **News briefings**, **Audiobooks** and
   **Other**.
 
@@ -220,6 +220,7 @@ seek controls.
 
 **Search** asks for a word or phrase and answers with **Programs (N)** and **Episodes (N)**. Open
 either to see the results; programs open their episode list and episodes play from their row.
+Programs that share a title are each listed, named "*title* (*network*)", as in All programs A–Z.
 
 ABC listen also answers LMS's own search, the global search that Squeezebox Touch, Radio and
 Controller players and some LMS apps offer in their Search menu: it lists an **ABC listen** entry
@@ -257,7 +258,7 @@ Open **Settings → Advanced → ABC listen**
     streams. If one can't be played, the plugin falls back to the standard stream by itself,
     after a short delay.
 
-![The ABC listen settings page in the Default web interface's settings window: Home state (Not set) and Live stream quality (Standard: 56 kbps, works everywhere)](docs/images/default-settings.png)
+![The ABC listen settings page in the Default web interface's settings window, under Advanced: Home state (Not set) and Live stream quality (Standard: 56 kbps, works everywhere)](docs/images/default-settings.png)
 
 ### Favourites
 
@@ -304,8 +305,6 @@ These come from what ABC publishes, or from LMS:
   "Mornings" programs and some weekend shows. Their newest episodes can be years old and may say
   they are no longer available. A few programs that ABC doesn't index at all (Comedy Showcase,
   Grass Roots, Desko) are only under **Programs → By network**.
-- **Search doesn't find every program yet**: a few programs, such as "AM", aren't in the
-  results. Find them under **Programs → All programs A–Z**.
 - **Catch-up radio expires.** ABC keeps catch-up (AAC) episodes of broadcast programs for about
   28 days; podcast (MP3) episodes stay. Some expired episodes are still listed and say "This
   episode isn't available to play. ABC offers it for a limited time only." when played.
@@ -328,7 +327,6 @@ These come from what ABC publishes, or from LMS:
 - Song titles appear only where ABC publishes them. Some stations, such as Classic 2, publish no
   program information. Classical stations show the composer as the artist, as ABC does.
 - Schedule rows for programs that have no ABC program page can't be opened.
-- Episodes of triple j's Hottest 100 have no Follow row and no More from link yet.
 - Material's own search box doesn't list ABC listen; use **ABC listen → Search**.
 
 ## Troubleshooting

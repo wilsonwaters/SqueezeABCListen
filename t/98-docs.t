@@ -213,7 +213,6 @@ subtest 'README: now playing and limitations' => sub {
 	like( $l, qr/Schedule rows for programs that have no ABC program page/,                'Limitations: schedule rows without a program page' );
 	like( $l, qr/Material's own search box/,                                                'Limitations: Material search box' );
 	like( $l, qr/programs that have stopped.*Comedy Showcase,\s+Grass Roots, Desko/s,       'Limitations: stopped programs, unindexed programs' );
-	like( $l, qr/such as "AM"/,                                                             'Limitations: search misses a few programs' );
 	like( $l, qr/"\Q${\ en('EPISODE_EXPIRED')}\E"/,                                       'Limitations: the expired message, word for word' );
 	like( $l, qr/"\Q${\ en('EPISODE_GEO')}\E"/,                                           'Limitations: the Australia-only message, word for word' );
 };
