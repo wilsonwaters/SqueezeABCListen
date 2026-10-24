@@ -1430,4 +1430,35 @@ subtest 'A–Z buckets (D8): modifier letters skipped (ʻokina), compatibility f
 	is( scalar @{ items_of( open_item( row_for( $letters, 'f' ) ) ) }, 5, 'F: its 5 programs' );
 };
 
+subtest 'D9: siteFilter and mergeTwins, the index\'s query rules made public for Search' => sub {
+	is( $PI->siteFilter, "($SITES OR canonicalURI_fragments:listen OR canonicalURI_fragments:triplej OR canonicalURI_fragments:kidslisten OR canonicalURI_fragments:triplejunearthed OR canonicalURI_fragments:pacific)", 'siteFilter: the site and URL segment terms' );
+	is( 'contentType:program AND ' . Plugins::ABCListen::ProgramIndex::siteFilter(), $FILTERS, '... the index\'s own filter without its contentType clause (plain call too)' );
+
+	my @refs = (
+		{ path => '/radionational/programs/bigideas', title => 'Big Ideas' },
+		{ path => '/listen/programs/other', title => 'Other' },
+		{ path => '/listen/programs/bigideas', title => 'Big Ideas', network => 'ABC Radio National', programType => 'podcast' },
+		{ path => '/listen/audiobooks/the-secret-keeper', title => 'The Secret Keeper', programType => 'audiobook' },
+		{ path => '/listen/programs/the-secret-keeper', title => 'The Secret Keeper', programType => 'podcast' },
+		{ path => '/listen/programs/other', title => 'Other again' },
+		'not a hash',
+		{ title => 'no path' },
+	);
+	my $merged = $PI->mergeTwins( \@refs );
+	is_deeply(
+		[ map { "$_->{path} $_->{title}" } @$merged ],
+		[ '/listen/programs/bigideas Big Ideas', '/listen/programs/other Other', '/listen/audiobooks/the-secret-keeper The Secret Keeper', '/listen/programs/the-secret-keeper The Secret Keeper' ],
+		'D8\'s rule: legacy and current merged (the current in the first one\'s place), the same path once (the first), a book and a podcast kept apart; non-hashes and pathless refs dropped'
+	);
+	is( $merged->[0], $refs[2], 'the refs themselves (not copies)' );
+	is_deeply( Plugins::ABCListen::ProgramIndex::mergeTwins( [] ), [], 'an empty list (plain call)' );
+	is_deeply( $PI->mergeTwins(undef), [], 'not a list: an empty list' );
+
+	# the index merges its hits with the same rule
+	fresh();
+	route_d8_index();
+	my @expected = map { $_->{path} } @{ $PI->mergeTwins( [ map { { path => Plugins::ABCListen::API::sitePath( $_->{canonicalURL} ), title => $_->{title}, programType => $_->{programType}, ( length( $_->{infoSource} // '' ) ? ( network => $_->{infoSource} ) : () ) } } grep { $_->{siteSegment} !~ /\A(?:abckids|takeover)\z/ } @{ JSON::PP::decode_json( fixture($D8_FIXTURE) )->{hits} } ] ) };
+	is_deeply( listed_paths( index_call() ), \@expected, 'programs() lists what mergeTwins gives for its hits (31 programs)' );
+};
+
 done_testing();

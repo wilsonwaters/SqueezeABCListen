@@ -13,13 +13,21 @@ package Plugins::ABCListen::Search;
 #   - Normalised: UTF-8 bytes decoded, trimmed, whitespace collapsed, lower-cased, cut to 100
 #     characters, so "Science  Show" and "science show" are one query and one cache entry.
 #     Empty -> no request; one text item "No results for ''" (PLUGIN_ABCLISTEN_NO_RESULTS).
-#   - Two API::algolia queries, started together, both with the DQ3 site segments (listen,
+#   - Two API::algolia queries, started together, both filtered to the ABC listen sites (listen,
 #     triplej, kidslisten, triplejunearthed, pacific) and opts ttl 3600: API.pm caches each result
 #     by its canonical params, so a repeated normalised query costs no Algolia request (and still
 #     works when the hourly budget is used up). Two queries because one combined query ranks
 #     programs out of its top hits (#13 Notes):
-#       programs  hitsPerPage 20  contentType:program
+#       programs  hitsPerPage 20  contentType:program                                 distinct 0
 #       episodes  hitsPerPage 40  contentType:audioepisode OR audio OR audiosegment
+#     D9: the site clause is ProgramIndex::siteFilter() (D8's A–Z rule): a hit's siteSegment, or
+#     (canonicalURI_fragments) a segment of its URL, names an ABC listen site, so programs ABC
+#     files under another site segment are found (AM and The World Today: siteSegment adelaide,
+#     /listen/programs/...), and so are their episodes. The programs query sets distinct 0 (the
+#     index otherwise keeps one hit per title, hiding e.g. the audiobook Persuasion behind the
+#     podcast; the program rows merge one program's two documents, below). The episodes query
+#     keeps the index's distinct: D8's merge (title and path slug) has nothing to merge two copies
+#     of one episode by (an episode path ends in its id), so distinct 0 could list one twice.
 #     The text only ever goes in 'query' (JSON-encoded), never into 'filters'.
 #   - $cb is called exactly once, after both queries have answered (cached answers come back
 #     synchronously), with { items => [...] }:
@@ -32,9 +40,13 @@ package Plugins::ABCListen::Search;
 #
 # Hits, in relevance order, each id once; names from `title`, never `_highlightResult` (<em>):
 #   program  objectID coremedia://program/<digits>, else skipped -> OnDemand->programItem
-#            { title, path (canonicalURL; programItem skips a hit without a www.abc.net.au page),
+#            { title, path (canonicalURL; a hit without a www.abc.net.au page is skipped),
 #              id, image (defaultThumbnail 1x1), description (shortTeaserText, else description),
-#              network (infoSource) }.
+#              network (infoSource) }. D9: with distinct 0, one program's two documents (a legacy
+#            and the current path, or the same path twice) are merged by D8's rule,
+#            ProgramIndex::mergeTwins (programType retrieved for it, not passed on), and rows whose
+#            titles repeat are named "<title> (<network>)" as in the A–Z (OnDemand::_nameRepeats):
+#            "Persuasion (Audio Books)", "Persuasion (ABC Listen)".
 #   episode  objectID coremedia://<audioepisode|audio|audiosegment>/<digits>, else skipped. Hidden
 #            when mediaDownloadStatus and mediaStreamingStatus are both EXPIRED or NONE (DQ4;
 #            PENDING and missing statuses are kept: the MP3 of an AVAILABLE/EXPIRED hit is
@@ -70,6 +82,7 @@ use Slim::Utils::Strings qw(cstring);
 
 use Plugins::ABCListen::API;
 use Plugins::ABCListen::OnDemand;
+use Plugins::ABCListen::ProgramIndex;
 use Plugins::ABCListen::Util;
 
 use constant MAX_QUERY    => 100;     # characters
@@ -81,25 +94,27 @@ use constant OPEN_END     => 4_102_444_800;    # an open window end in the episo
 use constant LOAD_FAILED  => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
 use constant RATE_LIMITED => 'PLUGIN_ABCLISTEN_RATE_LIMITED';
 
-use constant SITE_SEGMENTS => '(siteSegment:listen OR siteSegment:triplej OR siteSegment:kidslisten OR siteSegment:triplejunearthed OR siteSegment:pacific)';
+# D9: the ABC listen sites as the A–Z filters them (site segments or URL segments)
+my $SITES = Plugins::ABCListen::ProgramIndex::siteFilter();
 
 my @ATTRIBUTES = qw(objectID title canonicalURL contentType defaultThumbnail programDefaultThumbnail infoSource
 	shortTeaserText description teaserText synopsis programTitle programID duration dates mediaRenditions
-	mediaDownloadStatus mediaStreamingStatus);
+	mediaDownloadStatus mediaStreamingStatus programType);
 
 # The two queries, in result-menu order.
 my @GROUPS = (
 	{
 		key     => 'programs',
 		hits    => PROGRAM_HITS,
-		filters => 'contentType:program AND ' . SITE_SEGMENTS,
+		filters => "contentType:program AND $SITES",
+		params  => { distinct => 0 },    # D9: every program, also those sharing a title
 		token   => 'PLUGIN_ABCLISTEN_SEARCH_PROGRAMS',
 		rows    => \&_programRows,
 	},
 	{
 		key     => 'episodes',
 		hits    => EPISODE_HITS,
-		filters => '(contentType:audioepisode OR contentType:audio OR contentType:audiosegment) AND ' . SITE_SEGMENTS,
+		filters => "(contentType:audioepisode OR contentType:audio OR contentType:audiosegment) AND $SITES",
 		token   => 'PLUGIN_ABCLISTEN_SEARCH_EPISODES',
 		rows    => \&_episodeRows,
 	},
@@ -210,6 +225,7 @@ sub _query {
 				hitsPerPage          => $group->{hits},
 				filters              => $group->{filters},
 				attributesToRetrieve => [@ATTRIBUTES],
+				%{ $group->{params} || {} },
 			},
 			sub { $settle->( { data  => $_[0] } ) },
 			sub { $settle->( { error => $_[0] } ) },
@@ -265,28 +281,40 @@ sub _resultItems {
 	return \@items;
 }
 
+# Program hits -> programItem rows: each id once, one program's documents merged (D9: D8's rule,
+# ProgramIndex::mergeTwins), repeated titles named by network (OnDemand::_nameRepeats).
 sub _programRows {
 	my ( $client, @hits ) = @_;
-	my ( @rows, %seen );
+	my ( @refs, %seen );
 
 	for my $hit (@hits) {
 		my ( $type, $id ) = Plugins::ABCListen::API::coreMediaRef( $hit->{objectID} );
 		next unless $type && $type eq 'program' && !$seen{$id};
 
-		my $item = Plugins::ABCListen::OnDemand->programItem( $client, _defined(
+		my $path = Plugins::ABCListen::API::sitePath( $hit->{canonicalURL} );
+		next unless defined $path;    # programItem's rule: a page on www.abc.net.au
+
+		$seen{$id} = 1;
+		push @refs, _defined(
 			title       => _text( $hit->{title} ),
-			path        => Plugins::ABCListen::API::sitePath( $hit->{canonicalURL} ),
+			path        => $path,
 			id          => $id,
 			image       => _thumbnail( $hit->{defaultThumbnail} ),
 			description => _first( _text( $hit->{shortTeaserText} ), _text( $hit->{description} ) ),
 			network     => _text( $hit->{infoSource} ),
-		) ) or next;
+			programType => _text( $hit->{programType} ),
+		);
+	}
 
-		$seen{$id} = 1;
+	my @rows;
+	for my $ref ( @{ Plugins::ABCListen::ProgramIndex::mergeTwins( \@refs ) } ) {
+		my %program = %$ref;
+		delete $program{programType};    # only for the merge: the rows stay O2's program rows
+		my $item = Plugins::ABCListen::OnDemand->programItem( $client, \%program ) or next;
 		push @rows, $item;
 	}
 
-	return \@rows;
+	return Plugins::ABCListen::OnDemand::_nameRepeats( \@rows );
 }
 
 sub _episodeRows {

@@ -157,7 +157,8 @@ package Plugins::ABCListen::OnDemand;
 # O3's section (programsByType's core moved to _byType; _letterRows/_bucketRows are shared with
 # All programs A–Z, whose menus are unchanged). D7 changed _bucket (Latin letters NFD leaves alone,
 # the Other row) and _letterRows (the Other row), for both A–Z lists; D8 changed _bucket
-# (modifier letters, compatibility forms, ħ ŋ ə).
+# (modifier letters, compatibility forms, ħ ŋ ə). D9 moved _programRows' repeated-title naming
+# into _nameRepeats, unchanged, so Search names its program rows the same way.
 
 use strict;
 use warnings;
@@ -491,21 +492,30 @@ sub _programRows {
 
 	my @items = grep {defined} map { __PACKAGE__->programItem( $client, $_ ) } @sorted;
 
+	return _nameRepeats( \@items );
+}
+
+# programItem rows whose titles repeat in the list -> name and line1 "<title> (<network>)", unless
+# the network (line2) is missing or repeats too; changes the rows in place and returns them.
+# O3-internal: Search (D9) names its program rows the same way.
+sub _nameRepeats {
+	my $items = shift;
+
 	my ( %titles, %networks );
-	for my $item (@items) {
+	for my $item (@$items) {
 		my $title = lc $item->{name};
 		$titles{$title}++;
 		$networks{$title}{ lc $item->{line2} }++ if _hasText( $item->{line2} );
 	}
 
-	for my $item (@items) {
+	for my $item (@$items) {
 		my $title   = lc $item->{name};
 		my $network = $item->{line2};
 		next unless $titles{$title} > 1 && _hasText($network) && $networks{$title}{ lc $network } == 1;
 		$item->{name} = $item->{line1} = "$item->{name} ($network)";
 	}
 
-	return \@items;
+	return $items;
 }
 
 # The title a program row shows (programItem: the title, else the path).

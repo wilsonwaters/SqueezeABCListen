@@ -8,6 +8,12 @@
 # no results / only programs / only episodes; missing thumbnails, malformed objectIDs, duplicates,
 # highlight markup; RATE_LIMITED, LOAD_FAILED and partial failures; empty queries; exactly one
 # feed callback on every path, also with responses arriving in either order.
+# D9: both queries filtered by the A–Z's site rule (site or URL segments, ProgramIndex::siteFilter)
+# and the programs query with distinct 0, against a fake of ABC's index (D8's recorded program
+# hits): "AM" lists AM (siteSegment adelaide) and its episode, "persuasion" both Persuasions
+# (named by network, as in the A–Z), Big Ideas' legacy and current documents merged by D8's rule
+# (ProgramIndex::mergeTwins), the 4 Mornings kept apart; D3's own queries reproduce the gaps; still
+# 2 queries per uncached search.
 #
 # Fixtures (t/data/discovery/, raw response bodies as served, the research {_fixture_note, data}
 # wrapper stripped; shapes unedited):
@@ -45,6 +51,7 @@ use Plugins::ABCListen::API;
 use Plugins::ABCListen::Episode;
 use Plugins::ABCListen::OnDemand;
 use Plugins::ABCListen::Plugin;
+use Plugins::ABCListen::ProgramIndex;
 use Plugins::ABCListen::Search;
 use Plugins::ABCListen::Util;
 
@@ -66,12 +73,16 @@ my $OPEN_END     = 4_102_444_800;    # an open window end in the episode meta ca
 my $LOAD_FAILED  = string('PLUGIN_ABCLISTEN_LOAD_FAILED');
 my $RATE_LIMITED = string('PLUGIN_ABCLISTEN_RATE_LIMITED');
 
-my $SEGMENTS = '(siteSegment:listen OR siteSegment:triplej OR siteSegment:kidslisten OR siteSegment:triplejunearthed OR siteSegment:pacific)';
+my $D3_SEGMENTS = '(siteSegment:listen OR siteSegment:triplej OR siteSegment:kidslisten OR siteSegment:triplejunearthed OR siteSegment:pacific)';
+# D9: the A–Z's site rule (D8): the site segments or a URL segment naming an ABC listen site
+my $SEGMENTS = '(siteSegment:listen OR siteSegment:triplej OR siteSegment:kidslisten OR siteSegment:triplejunearthed OR siteSegment:pacific'
+	. ' OR canonicalURI_fragments:listen OR canonicalURI_fragments:triplej OR canonicalURI_fragments:kidslisten'
+	. ' OR canonicalURI_fragments:triplejunearthed OR canonicalURI_fragments:pacific)';
 my $PROGRAM_FILTER = "contentType:program AND $SEGMENTS";
 my $EPISODE_FILTER = "(contentType:audioepisode OR contentType:audio OR contentType:audiosegment) AND $SEGMENTS";
 my @ATTRIBUTES = qw(objectID title canonicalURL contentType defaultThumbnail programDefaultThumbnail infoSource
 	shortTeaserText description teaserText synopsis programTitle programID duration dates mediaRenditions
-	mediaDownloadStatus mediaStreamingStatus);
+	mediaDownloadStatus mediaStreamingStatus programType);
 
 Slim::Utils::Log->addLogCategory( { category => 'plugin.abclisten', defaultLevel => 'WARN', description => 'PLUGIN_ABCLISTEN' } );
 
@@ -221,15 +232,16 @@ subtest 'two Algolia queries: exact bodies (filters, hitsPerPage 20/40, attribut
 	my %body = map { group_of( $_->{body} ) => JSON::PP::decode_json( $_->{body} ) } @posts;
 	is_deeply(
 		$body{programs},
-		{ query => 'science show', hitsPerPage => 20, filters => $PROGRAM_FILTER, attributesToRetrieve => \@ATTRIBUTES },
-		'programs: query, hitsPerPage 20, contentType:program AND the DQ3 site segments, attributesToRetrieve'
+		{ query => 'science show', hitsPerPage => 20, distinct => 0, filters => $PROGRAM_FILTER, attributesToRetrieve => \@ATTRIBUTES },
+		'programs: query, hitsPerPage 20, distinct 0 (D9), contentType:program AND the ABC listen sites (D9: site or URL segments), attributesToRetrieve'
 	);
 	is_deeply(
 		$body{episodes},
 		{ query => 'science show', hitsPerPage => 40, filters => $EPISODE_FILTER, attributesToRetrieve => \@ATTRIBUTES },
-		'episodes: query, hitsPerPage 40, the three audio content types AND the site segments, attributesToRetrieve'
+		'episodes: query, hitsPerPage 40, the three audio content types AND the ABC listen sites (D9: site or URL segments), attributesToRetrieve; the index\'s distinct'
 	);
 	like( $posts[0]->{body}, qr/"hitsPerPage":(?:20|40)[,}]/, 'hitsPerPage sent as a JSON number' );
+	like( ( grep { group_of( $_->{body} ) eq 'programs' } @posts )[0]->{body}, qr/"distinct":0[,}]/, 'distinct sent as the JSON number 0' );
 	is( $posts[0]->{headers}->header('X-Algolia-API-Key'), 'testsearchkey', 'the key discovered from the search page (API.pm)' );
 };
 
@@ -805,6 +817,204 @@ subtest 'exactly one callback when building the results dies, or LMS\'s callback
 		is( $c->count, 1, 'API::algolia dies: one callback' );
 		is_deeply( items_of($c), [ text_item($LOAD_FAILED) ], '... LOAD_FAILED' );
 	}
+};
+
+# ---------------------------------------------------------------------------
+# D9: programs filed under other site segments (AM) or sharing a title (Persuasion)
+# ---------------------------------------------------------------------------
+
+# A fake of ABC's index, answering both queries as ABC's index does (D8, t/34's fake): a hit
+# matches when its siteSegment, or one of its canonicalURI_fragments, is named in the filter, and
+# every word of the query starts a word of its title (or, for episodes, its programTitle); then,
+# unless the query sets distinct to 0, only the first hit of each title (the index's distinct).
+# Programs: the 34 recorded hits of t/data/ondemand/algolia-programs-d8.trimmed.json (D8,
+# 2026-10-23: AM and The World Today under siteSegment adelaide, both Persuasions, Big Ideas at its
+# legacy and current path, 4 Mornings, ...). Episodes: @D9_EPISODES (synthetic, shaped like the
+# recorded audiosegment hits of algolia-listen_prod_all-query.json).
+my $D9_PROGRAMS = 'ondemand/algolia-programs-d8.trimmed.json';
+
+sub d9_episode {
+	my ( $id, $title, $program, $path, $segment ) = @_;
+	return {
+		objectID               => "coremedia://audioepisode/$id",
+		title                  => $title,
+		programTitle           => $program,
+		canonicalURL           => "https://www.abc.net.au$path/$id",
+		canonicalURI_fragments => [ grep {length} split m{/}, "$path/$id" ],
+		siteSegment            => $segment,
+		contentType            => 'audioepisode',
+		duration               => 1200,
+		dates                  => { publicationDate => '2026-10-23T22:00:00+00:00' },
+		mediaDownloadStatus    => 'AVAILABLE',
+		mediaStreamingStatus   => 'AVAILABLE',
+	};
+}
+
+my @D9_EPISODES = (
+	d9_episode( 107300001, 'AM: the morning news', 'AM', '/listen/programs/am/am-24-october', 'adelaide' ),
+	d9_episode( 107300002, 'Persuasion: chapter 1', 'Persuasion', '/listen/audiobooks/persuasion-page/chapter-1', 'listen' ),
+);
+
+sub d9_matches {
+	my ( $query, @texts ) = @_;
+	my @words = map {lc} grep {length} split /\s+/, $query;
+	my @have  = map { lc } map { split /[^\w']+/, $_ } grep {defined} @texts;
+	for my $w (@words) {
+		return 0 unless grep { index( $_, $w ) == 0 } @have;
+	}
+	return 1;
+}
+
+sub d9_answer {
+	my $params  = shift;
+	my $filters = defined $params->{filters} ? $params->{filters} : '';
+	my $episode = $filters !~ /\AcontentType:program /;
+	my @hits    = $episode ? @D9_EPISODES : @{ JSON::PP::decode_json( fixture($D9_PROGRAMS) )->{hits} };
+
+	my %segment  = map { $_ => 1 } $filters =~ /\bsiteSegment:([\w.-]+)/g;
+	my %fragment = map { $_ => 1 } $filters =~ /\bcanonicalURI_fragments:([\w.-]+)/g;
+
+	@hits = grep {
+		my $hit = $_;
+		( $segment{ defined $hit->{siteSegment} ? $hit->{siteSegment} : '' } || grep { $fragment{$_} } @{ $hit->{canonicalURI_fragments} || [] } )
+			&& d9_matches( $params->{query}, $hit->{title}, $episode ? $hit->{programTitle} : () );
+	} @hits;
+
+	if ( !( exists $params->{distinct} && !$params->{distinct} ) ) {
+		my %seen;
+		@hits = grep { !$seen{ $_->{title} }++ } @hits;
+	}
+
+	# only the attributes asked for (and objectID), as Algolia answers; all without attributesToRetrieve
+	my %want = map { $_ => 1 } 'objectID', @{ $params->{attributesToRetrieve} || [] };
+	my @page = map { my $hit = $_; +{ map { $_ => $hit->{$_} } grep { !$params->{attributesToRetrieve} || $want{$_} } keys %$hit } } grep {defined} @hits[ 0 .. $params->{hitsPerPage} - 1 ];
+
+	return { hits => \@page, nbHits => scalar @hits, page => 0, nbPages => 1, hitsPerPage => $params->{hitsPerPage} };
+}
+
+sub serve_d9_index {
+	Slim::Networking::SimpleAsyncHTTP->addRoute( $ALGOLIA, sub {
+		my ( $url, $method, $body ) = @_;
+		return { content => JSON::PP::encode_json( d9_answer( JSON::PP::decode_json($body) ) ), headers => $JSON_TYPE };
+	} );
+}
+
+sub program_paths { [ map { $_->{passthrough}->[0]->{path} } @{ $_[0] || [] } ] }
+
+subtest 'D9: the cause, on the fake index - D3\'s queries miss AM (siteSegment adelaide) and the audiobook Persuasion (distinct)' => sub {
+	my $d3 = sub { d9_answer( { query => $_[0], hitsPerPage => 20, filters => "contentType:program AND $D3_SEGMENTS" } ) };
+	is_deeply( $d3->('am')->{hits}, [], 'D3 filter, "am": no AM' );
+	is_deeply( [ map { $_->{canonicalURL} } @{ $d3->('persuasion')->{hits} } ], ['https://www.abc.net.au/listen/programs/persuasion/'], 'D3 (distinct on), "persuasion": only the podcast' );
+	is_deeply( [ map { $_->{canonicalURL} } @{ $d3->('big ideas')->{hits} } ], ['http://www.abc.net.au/radionational/programs/bigideas/'], 'D3, "big ideas": only the legacy document (the first of the title)' );
+	is_deeply( d9_answer( { query => 'am', hitsPerPage => 40, filters => "(contentType:audioepisode OR contentType:audio OR contentType:audiosegment) AND $D3_SEGMENTS" } )->{hits}, [], 'D3 episodes filter, "am": no AM episode either' );
+};
+
+subtest 'D9: Search "AM" lists the AM program (and its episode), filed under siteSegment adelaide; 2 queries, cached' => sub {
+	fresh();
+	serve_d9_index();
+
+	my $c = search( { search => 'AM' } );
+	is( $c->count, 1, 'one callback' );
+	my $items = items_of($c);
+	is_deeply( names($items), [ 'Programs (1)', 'Episodes (1)' ], 'Programs (1), Episodes (1)' );
+
+	my $programs = group( $items, 'Programs' )->{items};
+	is_deeply( names($programs), ['AM'], 'Programs: AM' );
+	my ($hit) = grep { $_->{title} eq 'AM' } @{ JSON::PP::decode_json( fixture($D9_PROGRAMS) )->{hits} };
+	is_deeply(
+		$programs->[0],
+		Plugins::ABCListen::OnDemand->programItem( undef, {
+			title       => 'AM',
+			path        => '/listen/programs/am',
+			id          => '8437680',
+			image       => $hit->{defaultThumbnail}->{'1x1'},
+			description => "AM is Australia's most informative morning current affairs program.",
+			network     => 'ABC News Podcasts',
+		} ),
+		'AM: the programItem row for /listen/programs/am (no programType passed on)'
+	);
+	is_deeply( ids( group( $items, 'Episodes' )->{items} ), ['107300001'], 'Episodes: the AM episode (siteSegment adelaide, a /listen/ URL)' );
+
+	is( scalar algolia_requests(), 2, 'two Algolia queries (D3\'s budget)' );
+	search( { search => 'am' } );
+	search( { search => ' AM ' } );
+	is( scalar algolia_requests(), 2, 'repeated: from the 1 h cache, no new query' );
+	is( scalar errors_logged() + scalar warnings_logged(), 0, 'nothing at WARN or ERROR' );
+};
+
+subtest 'D9: Search "persuasion" lists both programs called Persuasion (the audiobook and the podcast), named by network' => sub {
+	fresh();
+	serve_d9_index();
+
+	my $items    = items_of( search( { search => 'persuasion' } ) );
+	my $programs = group( $items, 'Programs' )->{items};
+	is( scalar @$programs, 2, 'Programs (2): two hits called Persuasion, both listed' );
+	is_deeply( program_paths($programs), [ '/listen/programs/persuasion', '/listen/audiobooks/persuasion-page' ], 'the podcast and the audiobook, in relevance order' );
+	is_deeply( names($programs), [ 'Persuasion (ABC Listen)', 'Persuasion (Audio Books)' ], 'named "<title> (<network>)" as in the A–Z' );
+	is_deeply( [ map { $_->{line1} } @$programs ], names($programs), 'line1 as name' );
+	is_deeply( [ map { $_->{line2} } @$programs ], [ 'ABC Listen', 'Audio Books' ], 'line2: the networks' );
+	is_deeply( [ map { $_->{passthrough}->[0]->{title} } @$programs ], [ 'Persuasion', 'Persuasion' ], 'the programs keep their title (the menu header)' );
+	is_deeply( ids( group( $items, 'Episodes' )->{items} ), ['107300002'], 'Episodes: the chapter' );
+};
+
+subtest 'D9: one program\'s two documents merged by D8\'s rule (Big Ideas once, at its current path); other same-title programs kept apart' => sub {
+	fresh();
+	serve_d9_index();
+
+	my $programs = group( items_of( search( { search => 'big ideas' } ) ), 'Programs' )->{items};
+	is_deeply( program_paths($programs), ['/listen/programs/bigideas'], 'Big Ideas once, at /listen/programs/bigideas (not the legacy /radionational/ page)' );
+	is( $programs->[0]->{name}, 'Big Ideas', '... named Big Ideas (no repeat left)' );
+	is( $programs->[0]->{line2}, 'ABC Radio National', '... the current document (network, programType)' );
+
+	$programs = group( items_of( search( { search => 'mornings' } ) ), 'Programs' )->{items};
+	is_deeply(
+		names($programs),
+		[ 'Mornings (ABC South East SA)', 'Mornings (Double J)', 'Mornings (ABC Classic)', 'Mornings (triple j)' ],
+		'the 4 programs called Mornings: all listed, named by network'
+	);
+
+	# synthetic: twins only when they can be one program (t/34's D8 cases, through Search)
+	fresh();
+	my $hit = sub { my %f = @_; return { contentType => 'program', defaultThumbnail => {}, %f } };
+	serve(
+		programs => { content => JSON::PP::encode_json( { hits => [
+			$hit->( objectID => 'coremedia://program/901', title => 'The Secret Keeper', canonicalURL => 'https://www.abc.net.au/listen/audiobooks/the-secret-keeper/', programType => 'audiobook', infoSource => 'Audio Books' ),
+			$hit->( objectID => 'coremedia://program/902', title => 'The Secret Keeper', canonicalURL => 'https://www.abc.net.au/listen/programs/the-secret-keeper/', programType => 'podcast' ),
+			$hit->( objectID => 'coremedia://program/903', title => 'RN Breakfast', canonicalURL => 'https://www.abc.net.au/listen/programs/radionational-breakfast/', programType => 'catch-up' ),
+			$hit->( objectID => 'coremedia://program/904', title => 'Radio National Breakfast', canonicalURL => 'https://www.abc.net.au/listen/programs/radionational-breakfast/', programType => 'podcast', infoSource => 'ABC News Podcasts' ),
+			$hit->( objectID => 'coremedia://program/905', title => 'Download This Show', canonicalURL => 'http://www.abc.net.au/radionational/programs/downloadthisshow/', infoSource => 'ABC Radio National' ),
+			$hit->( objectID => 'coremedia://program/906', title => 'Download This Show', canonicalURL => 'https://www.abc.net.au/listen/programs/downloadthisshow/', programType => 'podcast', infoSource => 'ABC Radio National' ),
+		] } ) },
+		episodes => { file => 'discovery/algolia-search-empty.synthetic.json' },
+	);
+	$programs = group( items_of( search( { search => 'synthetic twins' } ) ), 'Programs' )->{items};
+	is_deeply(
+		[ map { "$_->{passthrough}->[0]->{id} $_->{passthrough}->[0]->{path}" } @$programs ],
+		[ '901 /listen/audiobooks/the-secret-keeper', '902 /listen/programs/the-secret-keeper', '903 /listen/programs/radionational-breakfast', '906 /listen/programs/downloadthisshow' ],
+		'an audiobook and a podcast of one title and slug: two; the same path: one (the first); a legacy and a current copy: one (the current, typed one, in the first one\'s place)'
+	);
+	is_deeply( names($programs), [ 'The Secret Keeper (Audio Books)', 'The Secret Keeper', 'RN Breakfast', 'Download This Show' ], 'repeated titles named by network only where the network tells them apart' );
+	ok( !( grep { exists $_->{passthrough}->[0]->{programType} } @$programs ), 'programType only used for the merge (rows unchanged from D3)' );
+};
+
+subtest 'D9: the rules are the A–Z\'s own (ProgramIndex::siteFilter, ProgramIndex::mergeTwins), not copies' => sub {
+	fresh();
+	serve_d9_index();
+
+	my @merged;
+	{
+		no warnings 'redefine';
+		my $merge = \&Plugins::ABCListen::ProgramIndex::mergeTwins;
+		local *Plugins::ABCListen::ProgramIndex::mergeTwins = sub { push @merged, [ map { $_->{path} } @{ $_[0] } ]; goto &$merge };
+		search( { search => 'big ideas' } );
+	}
+	is_deeply( \@merged, [ [ '/radionational/programs/bigideas', '/listen/programs/bigideas' ] ], 'Search merges its program refs with ProgramIndex::mergeTwins, once per search' );
+
+	my %body = map { group_of( $_->{body} ) => JSON::PP::decode_json( $_->{body} ) } algolia_requests();
+	is( $body{programs}->{filters}, 'contentType:program AND ' . Plugins::ABCListen::ProgramIndex::siteFilter(), 'programs: contentType:program AND ProgramIndex::siteFilter()' );
+	is( $body{programs}->{filters}, Plugins::ABCListen::ProgramIndex::FILTERS(), '... exactly the A–Z index\'s filter' );
+	like( $body{episodes}->{filters}, qr/\) AND \Q${\ Plugins::ABCListen::ProgramIndex::siteFilter() }\E\z/, 'episodes: the same site clause' );
+	is( Plugins::ABCListen::ProgramIndex->siteFilter, $SEGMENTS, 'siteFilter(): the site and URL segments of the 5 ABC listen sites (class method too)' );
 };
 
 done_testing();
