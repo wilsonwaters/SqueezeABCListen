@@ -18,7 +18,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   from the public repo.xml on the testbed: downloaded + SHA1-verified, 0.3.0 installed, 10 top-level items, triple j
   played with song metadata; then uninstalled and dev link restored. #62 closed.
 - #48 O8 + #66 D9 (Hottest 100 follow row, resilient page checks; Search segment/distinct rules) — implementation
-- #15 R2 smoke test + docs + screenshots (amendment 2 posted) — implementation
+- #15 R2 smoke test + docs — PR #68 REQUEST_CHANGES (smoke check 6 vacuous on fallback; follow-restore merge not overwrite;
+  privacy hosts incl. CDNs; screenshot tab; AU-only string wording) — implementer fixing
 - #41 F6 F4 follow-ups — PR #67 in review (foundation: HTTP.pm 3rd arg, API x-nextjs-redirect, stale renditions)
 - Queued (cap 3): then v0.3.0 (system verification → release), R2, R3
 
