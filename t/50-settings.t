@@ -3,6 +3,10 @@
 #   * Plugins::ABCListen::Settings: name, page, prefs (namespace plugin.abclisten, homeState, then L5's
 #     liveQuality: its section and pref are tested in t/28-stream-quality.t), server-wide;
 #     its handler HTML-escapes a rejected value before LMS's base handler echoes it in its warning;
+#   * M3 (#52): a POST that leaves a field out (pref_homeState only, pref_liveQuality only, neither)
+#     shows no warning and leaves the other pref as it is, even a hand-edited invalid value; a
+#     rejected posted value still warns, escaped; core's unprefixed-field fallback still saves, and
+#     a rejected unprefixed value is escaped too;
 #   * MyABC->init: homeState default '' (an existing value is kept), the validator, the settings page
 #     created only under main::WEBUI, and a failing settings constructor logged once without dying;
 #   * the validator truth table (named sub and through the prefs stub's set);
@@ -23,6 +27,7 @@ use Slim::Utils::Prefs;
 use Slim::Utils::Strings;
 use Slim::Web::Settings;
 
+use Plugins::ABCListen::Live;
 use Plugins::ABCListen::MyABC;
 use Plugins::ABCListen::Settings;
 
@@ -149,6 +154,75 @@ subtest 'settings form: save, reject, missing field, HTML in the value' => sub {
 	$params = { pref_homeState => '<b>' };
 	$S->handler( undef, $params );
 	is( $params->{pref_homeState}, '<b>', 'without saveSettings nothing is touched' );
+	ok( !exists $params->{pref_liveQuality}, '... and no field is added' );
+};
+
+subtest 'settings form: a POST that leaves a field out shows no warning (M3, #52)' => sub {
+	freshInit();
+	Plugins::ABCListen::Live->init;    # L5's liveQuality default and validator, as in LMS
+	my $S    = 'Plugins::ABCListen::Settings';
+	my $post = sub { my $params = { saveSettings => 1, @_ }; $S->handler( undef, $params ); return $params };
+	my $both = sub { [ map { prefs()->get($_) } qw(homeState liveQuality) ] };
+
+	prefs()->set( homeState => 'WA' );
+	prefs()->set( liveQuality => 'mediahub' );
+
+	my $params = $post->( pref_homeState => 'SA' );
+	is( $params->{warning}, undef, 'POST pref_homeState=SA alone: no warning (was: Invalid value "" for liveQuality)' );
+	is_deeply( $both->(), [qw(SA mediahub)], '... homeState saved, liveQuality unchanged' );
+	is_deeply( $params->{validated}, { homeState => 1, liveQuality => 1 }, '... both validated' );
+	is_deeply( [ @{ $params->{prefs} }{qw(pref_homeState pref_liveQuality)} ], [qw(SA mediahub)], '... and the page shows both stored values' );
+
+	$params = $post->( pref_liveQuality => 'standard' );
+	is( $params->{warning}, undef, 'POST pref_liveQuality=standard alone: no warning (was: Invalid value "" for homeState)' );
+	is_deeply( $both->(), [qw(SA standard)], '... liveQuality saved, homeState unchanged' );
+	is_deeply( $params->{validated}, { homeState => 1, liveQuality => 1 }, '... both validated' );
+
+	$params = $post->();
+	is( $params->{warning}, undef, 'POST with neither field: no warning' );
+	is_deeply( $both->(), [qw(SA standard)], '... both unchanged' );
+
+	$params = $post->( pref_homeState => '' );
+	is( $params->{warning}, undef, "POST pref_homeState= (empty, Not set) alone: no warning" );
+	is_deeply( $both->(), [ '', 'standard' ], "... homeState reset to '', liveQuality unchanged" );
+
+	$params = $post->( pref_homeState => 'VIC', pref_liveQuality => 'mediahub' );
+	is( $params->{warning}, undef, 'POST of both fields (the browser form): no warning' );
+	is_deeply( $both->(), [qw(VIC mediahub)], '... both saved' );
+
+	# a posted value that is rejected still warns, escaped; the field left out does not
+	$params = $post->( pref_homeState => '<b>x</b>' );
+	is( $params->{warning}, 'Invalid value "&lt;b&gt;x&lt;/b&gt;" for homeState<br/>', 'POST a rejected homeState alone: one warning, for homeState, escaped' );
+	is_deeply( $both->(), [qw(VIC mediahub)], '... both unchanged' );
+	$params = $post->( pref_liveQuality => 'hls' );
+	is( $params->{warning}, 'Invalid value "hls" for liveQuality<br/>', 'POST a rejected liveQuality alone: one warning, for liveQuality' );
+
+	# a hand-edited invalid value of the field left out: kept as it is, no warning (also not escaped
+	# and re-validated as a posted value would be)
+	for my $stored ( 'nsw', '<b>' ) {
+		prefs()->{prefs}->{homeState} = $stored;
+		$params = $post->( pref_liveQuality => 'standard' );
+		is( $params->{warning}, undef, "stored homeState '$stored' (hand-edited), POST pref_liveQuality alone: no warning" );
+		is_deeply( $both->(), [ $stored, 'standard' ], '... homeState kept as it is, liveQuality saved' );
+	}
+	prefs()->set( homeState => 'WA' );
+	prefs()->{prefs}->{liveQuality} = 'hls';
+	$params = $post->( pref_homeState => 'QLD' );
+	is( $params->{warning}, undef, "stored liveQuality 'hls' (hand-edited), POST pref_homeState alone: no warning" );
+	is_deeply( $both->(), [qw(QLD hls)], '... liveQuality kept as it is, homeState saved' );
+	prefs()->set( liveQuality => 'standard' );
+
+	# core's fallback for templates without the pref_ prefix (logged as an error by LMS) still saves,
+	# and a rejected unprefixed value is escaped like a prefixed one
+	@Slim::Web::Settings::LEGACY = ();
+	$params = $post->( homeState => 'NT' );
+	is( $params->{warning}, undef, 'POST unprefixed homeState=NT alone: no warning' );
+	is_deeply( $both->(), [qw(NT standard)], '... saved through core\'s unprefixed fallback, liveQuality unchanged' );
+	is_deeply( \@Slim::Web::Settings::LEGACY, ['homeState'], '... (the fallback, not a filled-in current value)' );
+	$params = $post->( homeState => '<i>' );
+	is( $params->{homeState}, '&lt;i&gt;', 'a rejected unprefixed value is HTML-escaped' );
+	is( $params->{warning}, 'Invalid value "&lt;i&gt;" for homeState<br/>', '... in the warning' );
+	is_deeply( $both->(), [qw(NT standard)], '... and nothing changes' );
 };
 
 subtest 'a failing settings page constructor is logged once and init does not die' => sub {
@@ -241,6 +315,21 @@ subtest 'template settings/basic.html' => sub {
 	like( $options, qr/<option value=""\[% IF prefs\.pref_homeState == '' %\] selected="selected"\[% END %\]>/, 'Not set selected when empty (an invalid value selects nothing)' );
 
 	like( $html, qr/\[% WRAPPER setting title="PLUGIN_ABCLISTEN_HOME_STATE" desc="PLUGIN_ABCLISTEN_HOME_STATE_DESC" %\]/, 'setting WRAPPER with title and description' );
+
+	# M3 (#52): core's description div has no id, so the select is described by a hidden copy that
+	# has one; the copy is not a hiddenDesc div, so core's and Material's help icon are unchanged
+	like( $select, qr/\baria-describedby="homeState-desc"/, 'the select is described by homeState-desc (aria-describedby)' );
+	my @desc;
+	push @desc, $1 while $html =~ /(<(\w+)\b[^>]*\bid="homeState-desc"[^>]*>.*?<\/\2>)/gs;
+	is( scalar @desc, 1, 'one element with id homeState-desc' );
+	like( $desc[0] // '', qr/\A<span id="homeState-desc" hidden>\[% 'PLUGIN_ABCLISTEN_HOME_STATE_DESC' \| string \| html %\]<\/span>\z/, '... a hidden span with the description (HTML-escaped)' );
+	unlike( $desc[0] // '', qr/\bclass=/, '... without a class (not hiddenDesc)' );
+	like( $html, qr/desc="PLUGIN_ABCLISTEN_HOME_STATE_DESC" %\]\s*<span id="homeState-desc" hidden>/, '... first in the WRAPPER content (core still renders its own description div)' );
+	my %ids;
+	$ids{$_}++ for $html =~ /\bid="([^"]+)"/g;
+	is_deeply( [ grep { $ids{$_} > 1 } sort keys %ids ], [], 'every id in the page is unique' );
+	is( scalar( () = $html =~ /\baria-describedby="/g ), 2, 'two aria-describedby: homeState, then L5\'s liveQuality (t/28)' );
+	ok( $ids{$_}, "aria-describedby target $_ exists" ) for $html =~ /\baria-describedby="([^"]+)"/g;
 
 	my @markers = $html =~ /<!-- === (\/?\w+) === -->/g;
 	is_deeply( \@markers, [qw(M1 /M1 L5 /L5)], 'owner sections: M1 (with the select), then L5' );

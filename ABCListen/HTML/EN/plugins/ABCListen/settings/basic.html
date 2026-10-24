@@ -5,9 +5,13 @@
 <!-- === M1 === -->
 	[%# id = the pref name (core convention): the settings footer binds its validator to the element with
 	    that id, and the Classic/Material footer throws a script error if there is none. The setting
-	    WRAPPER's title is a plain div, so the select is named by aria-label. %]
+	    WRAPPER's title is a plain div, so the select is named by aria-label. Its description div
+	    (prefDesc hiddenDesc) has no id, so the select is described by a hidden copy with one
+	    (aria-describedby; M3, #52). The copy is a span without hiddenDesc, so core's and Material's
+	    help icon still come from the WRAPPER's desc alone. %]
 	[% WRAPPER setting title="PLUGIN_ABCLISTEN_HOME_STATE" desc="PLUGIN_ABCLISTEN_HOME_STATE_DESC" %]
-		<select class="stdedit" name="pref_homeState" id="homeState" aria-label="[% 'PLUGIN_ABCLISTEN_HOME_STATE' | string | html %]">
+		<span id="homeState-desc" hidden>[% 'PLUGIN_ABCLISTEN_HOME_STATE_DESC' | string | html %]</span>
+		<select class="stdedit" name="pref_homeState" id="homeState" aria-label="[% 'PLUGIN_ABCLISTEN_HOME_STATE' | string | html %]" aria-describedby="homeState-desc">
 			<option value=""[% IF prefs.pref_homeState == '' %] selected="selected"[% END %]>[% 'PLUGIN_ABCLISTEN_HOME_STATE_NONE' | string | html %]</option>
 			<option value="ACT"[% IF prefs.pref_homeState == 'ACT' %] selected="selected"[% END %]>[% 'PLUGIN_ABCLISTEN_STATE_ACT' | string | html %]</option>
 			<option value="NSW"[% IF prefs.pref_homeState == 'NSW' %] selected="selected"[% END %]>[% 'PLUGIN_ABCLISTEN_STATE_NSW' | string | html %]</option>
@@ -22,11 +26,12 @@
 <!-- === /M1 === -->
 
 <!-- === L5 === -->
-	[%# Live stream quality. id = the pref name and aria-label, as in M1's section. An invalid stored
-	    value selects nothing, so the browser shows Standard (what plays) and a save stores it. No HLS
-	    option until L6 (issue #14). %]
+	[%# Live stream quality. id = the pref name, aria-label and aria-describedby (a hidden copy of the
+	    description), as in M1's section. An invalid stored value selects nothing, so the browser shows
+	    Standard (what plays) and a save stores it. No HLS option until L6 (issue #14). %]
 	[% WRAPPER setting title="PLUGIN_ABCLISTEN_LIVE_QUALITY" desc="PLUGIN_ABCLISTEN_LIVE_QUALITY_DESC" %]
-		<select class="stdedit" name="pref_liveQuality" id="liveQuality" aria-label="[% 'PLUGIN_ABCLISTEN_LIVE_QUALITY' | string | html %]">
+		<span id="liveQuality-desc" hidden>[% 'PLUGIN_ABCLISTEN_LIVE_QUALITY_DESC' | string | html %]</span>
+		<select class="stdedit" name="pref_liveQuality" id="liveQuality" aria-label="[% 'PLUGIN_ABCLISTEN_LIVE_QUALITY' | string | html %]" aria-describedby="liveQuality-desc">
 			<option value="standard"[% IF prefs.pref_liveQuality == 'standard' %] selected="selected"[% END %]>[% 'PLUGIN_ABCLISTEN_LIVE_QUALITY_STANDARD' | string | html %]</option>
 			<option value="mediahub"[% IF prefs.pref_liveQuality == 'mediahub' %] selected="selected"[% END %]>[% 'PLUGIN_ABCLISTEN_LIVE_QUALITY_MEDIAHUB' | string | html %]</option>
 		</select>

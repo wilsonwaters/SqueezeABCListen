@@ -13,7 +13,8 @@
 #     ProtocolHandler->onStream (none when the first candidate plays, after a redirect, or within a
 #     family; nothing written to the song); one onStream also starts L2's metadata poll, and onStop
 #     still stops it; a LiveMetadata::onStream that dies is logged and doesn't skip the fallback
-#     check (L3);
+#     check (L3); M3 (#52): after a redirect the line names the candidate's family, and the
+#     once-per-play guard holds songs weakly (a dropped song is freed, undef entries are pruned);
 #   * the settings page: Settings->prefs (homeState, then liveQuality), saves and partial POSTs, rejected
 #     and HTML values; the template's L5 section (name/id, aria-label, 2 options, no HLS), every token
 #     defined;
@@ -32,6 +33,7 @@ use Cwd qw(abs_path);
 use File::Basename qw(dirname);
 use File::Spec;
 use JSON::PP ();
+use Scalar::Util qw(weaken);
 
 use Slim::Player::Playlist;
 use Slim::Utils::Log;
@@ -463,6 +465,77 @@ subtest 'onStream: no line for stations without an alternate, redirects, same fa
 	is( scalar( fallback_lines() ) + scalar( logged('WARN') ) + scalar( logged('ERROR') ), 0, '... and nothing logged' );
 };
 
+subtest 'onStream after a redirect: the family is the candidate\'s, not the redirected host\'s (M3, #52)' => sub {
+	reset_all();
+	my $player = ABCListenTest::FakeClient->new( '00:00:00:00:00:01', song => undef );
+	my $edge   = 'https://edge.example.net/live/rnnsw/icecast.audio';
+
+	# as LMS's scanner leaves it: streamUrl = the redirected URL, track redir = the candidate
+	set_quality('mediahub');
+	candidates('RN');
+	$PH->onStream( $player, play_song( RN => $edge, redir => ice('rnnsw') ) );
+	my @lines = fallback_lines();
+	is( scalar @lines, 1, 'mediahub failed, the Icecast candidate plays from another host: one line' );
+	like( $lines[0] && $lines[0]->{message}, qr/using Icecast instead of mediahub for RN\b/, '... "using Icecast instead of mediahub" (not "another stream")' );
+	like( $lines[0] && $lines[0]->{message}, qr/\Q$edge\E/, '... naming the stream that plays' );
+
+	set_quality('standard');
+	candidates('RN');
+	$PH->onStream( $player, play_song( RN => 'https://cdn.example.net/2RNW/aac/', redir => $MH{RN} ) );
+	@lines = fallback_lines();
+	is( scalar @lines, 2, 'Icecast failed, the mediahub candidate plays from another host: logged' );
+	like( $lines[-1]->{message}, qr/using mediahub instead of Icecast for RN\b/, '... "using mediahub instead of Icecast"' );
+
+	set_quality('mediahub');
+	candidates('RN');
+	$PH->onStream( $player, play_song( RN => 'https://cdn.example.net/2RNW/aac/', redir => 'https://live-radio02.mediahubaustralia.com/2RNW/aac/' ) );
+	is( scalar( fallback_lines() ), 2, 'a candidate of the first one\'s family (another mediahub host), redirected to another host: nothing logged' );
+
+	$PH->onStream( $player, play_song( RN => ice('rnnsw'), redir => ['not a url'] ) );
+	@lines = fallback_lines();
+	is( scalar @lines, 3, 'an odd (ref) track redir is ignored: the stream that plays decides' );
+	like( $lines[-1]->{message}, qr/using Icecast instead of mediahub for RN\b/, '... "using Icecast instead of mediahub"' );
+	is( scalar( logged('WARN') ) + scalar( logged('ERROR') ), 0, 'nothing at WARN or ERROR' );
+};
+
+subtest 'once-per-play guard: played songs are held weakly and forgotten once dropped (M3, #52)' => sub {
+	reset_all();
+	set_quality('mediahub');
+	candidates('RN');
+	my $player = ABCListenTest::FakeClient->new( '00:00:00:00:00:01', song => undef );
+
+	is_deeply( [ $S->_checked ], [ 0, 0 ], 'nothing remembered yet' );
+
+	my $probe;
+	{
+		my $song = play_song( RN => ice('rnnsw') );
+		$PH->onStream( $player, $song );
+		is_deeply( [ $S->_checked ], [ 1, 1 ], 'a played song is remembered: one entry, holding it' );
+		weaken( $probe = $song );
+	}
+	ok( !defined $probe, 'once the song goes out of scope it is freed: the guard does not keep it alive' );
+	my ( $entries, $songs ) = $S->_checked;
+	is( $songs, 0, '... no entry holds it any more' );
+	ok( $entries <= 1, "... its entry is undef or gone ($entries left)" );
+
+	# many songs dropped at once (distinct addresses): their undef entries are pruned on the next play
+	my @dropped = map { play_song( RN => ice('rnnsw') ) } 1 .. 50;
+	$S->noteStream( $player, $_, 'RN' ) for @dropped;
+	is( ( $S->_checked )[1], 50, '50 songs playing: 50 entries holding them' );
+	@dropped = ();
+	is( ( $S->_checked )[1], 0, 'all 50 dropped: no entry holds a song' );
+
+	my $playing = play_song( RN => ice('rnnsw') );
+	$S->noteStream( $player, $playing, 'RN' );
+	is_deeply( [ $S->_checked ], [ 1, 1 ], 'the next play prunes the undef entries: only the song playing is left' );
+
+	my $lines = scalar fallback_lines();
+	$S->noteStream( $player, play_song( RN => ice('rnnsw') ), 'RN' ) for 1 .. 3;
+	$S->noteStream( $player, $playing, 'RN' );
+	is( scalar( fallback_lines() ), $lines + 3, 'the song still playing is still checked only once per play (three new plays logged, it not again)' );
+	is( ( $S->_checked )[1], 1, '... and it is the only song remembered' );
+};
+
 subtest 'one onStream: L2\'s metadata poll starts AND the fallback is logged; onStop stops the poll' => sub {
 	reset_all();
 	setTime( $NOW + 6900 );    # 07:55 UTC, inside the RN fixture's program (07:00-08:00 UTC)
@@ -572,7 +645,20 @@ subtest 'template: the L5 section' => sub {
 		like( $options, qr/<option value="$q"\[% IF prefs\.pref_liveQuality == '$q' %\] selected="selected"\[% END %\]>/, "$q selected from prefs.pref_liveQuality (an unknown value selects nothing)" );
 	}
 	( my $markup = $l5 ) =~ s/\[%#.*?%\]//gs;    # without template comments
-	unlike( $markup, qr/\bdisabled\b|\bhls\b|PlayHLS|aria-describedby/i, 'no HLS option, note or disabled state' );
+	unlike( $markup, qr/\bdisabled\b|\bhls\b|PlayHLS/i, 'no HLS option, note or disabled state' );
+
+	# M3 (#52): the select is described by a hidden, id-bearing copy of the setting's description,
+	# and by nothing else (no HLS note); core's description div (WRAPPER desc) is unchanged
+	is_deeply( [ $markup =~ /\baria-describedby="([^"]*)"/g ], ['liveQuality-desc'], 'one aria-describedby, on the select: liveQuality-desc' );
+	like( $select, qr/\baria-describedby="liveQuality-desc"/, '... the select is described by liveQuality-desc' );
+	my @desc;
+	push @desc, $1 while $markup =~ /(<(\w+)\b[^>]*\bid="liveQuality-desc"[^>]*>.*?<\/\2>)/gs;
+	is( scalar @desc, 1, 'one element with id liveQuality-desc in the section' );
+	like( $desc[0] // '', qr/\A<span id="liveQuality-desc" hidden>\[% 'PLUGIN_ABCLISTEN_LIVE_QUALITY_DESC' \| string \| html %\]<\/span>\z/, '... a hidden span with the description (HTML-escaped)' );
+	unlike( $desc[0] // '', qr/\bclass=/, '... without a class (not hiddenDesc: core\'s and Material\'s help icon are unchanged)' );
+	is( scalar( () = $html =~ /\bid="liveQuality-desc"/g ), 1, '... and its id is unique in the page' );
+	my ($before) = $l5 =~ /\A(.*?)<span id="liveQuality-desc"/s;
+	like( $before // '', qr/desc="PLUGIN_ABCLISTEN_LIVE_QUALITY_DESC" %\]\s*\z/, '... first in the WRAPPER content, which still passes desc to core' );
 
 	my %tokens = map { $_ => 1 } $l5 =~ /\b(PLUGIN_ABCLISTEN\w*)/g;
 	is_deeply( [ sort keys %tokens ], [ sort @L5_TOKENS ], 'the section uses the four L5 tokens' );
