@@ -99,7 +99,7 @@ has ten entries, in the same order as the ABC listen app:
 
 ![The ABC listen menu in the LMS Default web interface, with its ten entries: Home, Radio, Podcasts, News, Sport, Kids listen, Audiobooks, Programs, Search and My ABC listen](docs/images/default-top-level.png)
 
-![The same ten ABC listen entries in the Material web interface](docs/images/material-top-level.png)
+![The same ten ABC listen entries in the Material web interface, in its dark theme, with Search as a text field](docs/images/material-top-level.png)
 
 Items with a play button play straight away. Click an item's name (or open it on a player) to see
 what's inside. In menus that show a second line (Material, players and apps), stations show
@@ -220,9 +220,10 @@ seek controls.
 **Search** asks for a word or phrase and answers with **Programs (N)** and **Episodes (N)**. Open
 either to see the results; programs open their episode list and episodes play from their row.
 
-ABC listen also answers LMS's own search: the search box at the top of the Default web interface
-(and LMS apps that use it) lists an **ABC listen** section with the matching programs and
-episodes. Material's own search box doesn't include ABC listen; use **ABC listen → Search** there.
+ABC listen also answers LMS's own search, the global search that Squeezebox Touch, Radio and
+Controller players and some LMS apps offer in their Search menu: it lists an **ABC listen** entry
+with **Results for '*your words*'** and the same **Programs (N)** and **Episodes (N)** lists.
+Material's own search box doesn't include ABC listen; use **ABC listen → Search** there.
 
 ![Search results for "science" in the Default web interface: Programs (20) and Episodes (40)](docs/images/default-search-results.png)
 
