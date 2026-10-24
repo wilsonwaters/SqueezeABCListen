@@ -384,7 +384,7 @@ restore_follows() {
   return 1
 }
 
-# shellcheck disable=SC2317  # only called from the EXIT trap
+# shellcheck disable=SC2317,SC2329  # only called from the EXIT trap
 cleanup() {
   local rc=$?
   restore_follows
