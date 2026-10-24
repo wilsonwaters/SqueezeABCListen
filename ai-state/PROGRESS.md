@@ -1,7 +1,7 @@
 # Project Progress
 
 ## Phase
-Phase 5/6 — v1.0.0 released (2026-10-24); final verification + pi14 checklist (R3), then handoff.
+Phase 6 — v1.0.0 released and verified (2026-10-24); handoff written (ai-state/HANDOFF.md); awaiting pi14 acceptance.
 
 ## Issue map (task ID → GitHub issue)
 - foundation: F1 #1 · F2 #3 · F3 #7 · F4 #34 (bug) · F5 #37 (cardRef names) · F6 #41 (F4 follow-ups)
@@ -24,7 +24,9 @@ Phase 5/6 — v1.0.0 released (2026-10-24); final verification + pi14 checklist 
   plugin log lines; 7 criteria: 1–6 PASS, 7 PARTIAL (no GitHub-native reviews — single-account repo; reviews were
   review-agent dispatches recorded here and in the transcript; #61 #63 #64 #71 #73 #74 were orchestrator-reviewed: diff
   read + merged-tree check.sh). Evidence + pi14 checklist posted on #17 (comments 6380815256, 6380828931).
-- Phase 6: final review agent vs brief (running); #75 R5 release-tooling fix (running); then HANDOFF.md + notify.
+- Phase 6: final review vs brief — v1.0.0 delivers the brief (criterion 7 partial: pi14 acceptance pending; one
+  post-instruction commit with the old identity, 71e77b6). Backlog filed: #76 F7, #77 R6, #78 F8, #79 R7, #80 L6, #81 O5.
+  HANDOFF.md written. #75 R5 in progress.
 - Queued (cap 3): then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
