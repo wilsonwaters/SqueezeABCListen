@@ -17,9 +17,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   (raw.githubusercontent.com); repair run on main succeeded; repo.xml → raw URL, same SHA1. Orchestrator install check
   from the public repo.xml on the testbed: downloaded + SHA1-verified, 0.3.0 installed, 10 top-level items, triple j
   played with song metadata; then uninstalled and dev link restored. #62 closed.
-- Next after R2: R3 (#17, amendment 2 posted) — v1.0.0 release, clean-profile install, final verification, pi14 checklist
-- #15 R2 smoke test + docs — PR #68 re-review APPROVE; last small fix round (home-state station row, favorites_title,
-  test gaps) in progress, then merge → R3
+- #17 R3 phase 1 — pre-release smoke gate on main + release PR (install.xml 1.0.0 + CHANGELOG); then orchestrator merges →
+  Release workflow → R3 phase 2 (verify release, clean-profile install, final system verification, pi14 checklist)
 - Queued (cap 3): then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
@@ -36,6 +35,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   (fixed), testbed restarted, R2 resumed.
 
 ## Last completions
+- #15 R2 merged (PR #68, squash 47d2099): smoke.sh (15 checks; follows restored by merge), README (16 sections, 9
+  screenshots), official-repository guide, CHANGELOG Unreleased, desc sync. REQUEST_CHANGES → fixes → re-review APPROVE.
 - O8/D9 review test gaps merged (PR #71, squash 4eeb267): tests only + one comment.
 - #48 O8 merged (PR #69, squash 286f338): Hottest 100 follow row + More from; page checks resilient (10-min unconfirmed
   cache, 403 = no answer, dying check listed). #66 D9 merged (PR #70, squash 965d7d0): Search finds AM / same-title
