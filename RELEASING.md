@@ -107,8 +107,8 @@ Real releases only run from `main`; a real run dispatched on another branch fail
 8. **Verify the download URL.** `scripts/verify-download.sh` downloads
    `https://raw.githubusercontent.com/wilsonwaters/SqueezeABCListen/release-assets/ABCListen-V.zip`
    the way LMS will (following redirects) and compares its SHA1 with the zip's.
-   - raw.githubusercontent.com can take a few minutes to serve a new file, so it retries every
-     15 s for up to 5 minutes.
+   - raw.githubusercontent.com can take a moment to serve a new file, and caches every answer
+     (a 404 included) for 5 minutes, so it retries every 15 s for up to 6 minutes.
    - It fails at once if a response header line is longer than 8,192 bytes, LMS 9.1.1's limit.
    - On a failure the run stops before `repo.xml` is touched.
 9. **repo.xml.** On top of the latest `main`: runs
@@ -246,7 +246,7 @@ and checks the zip on every pull request anyway.
   `release-assets` and `repo.xml` were left alone. Bump the version and release again. Don't
   re-run the workflow for the broken version: its repair path would publish the uploaded file.
 - **"… did not verify after … tries"** (Verify download URL): raw.githubusercontent.com didn't
-  serve the zip with the right SHA1 within 5 minutes; `repo.xml` was left alone. The zip is on
+  serve the zip with the right SHA1 within 6 minutes; `repo.xml` was left alone. The zip is on
   `release-assets`, so run the workflow again later: the repair path finds it there, checks the
   URL again and updates `repo.xml`.
 - **"… sends a response header line longer than 8192 bytes"**: the download URL now answers with

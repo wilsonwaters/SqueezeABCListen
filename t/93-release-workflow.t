@@ -414,7 +414,7 @@ subtest 'release-assets: published, then its raw URL verified, before repo.xml c
 
 	my $verify = stepRun('Verify download URL');
 	ok( length $verify, 'a "Verify download URL" step' ) or return;
-	like( $verify, qr/^scripts\/verify-download\.sh --timeout 300 --interval 15 "\$ZIP_URL" "\$SHA"$/m, 'downloads ZIP_URL and checks its SHA1, retrying for up to 5 minutes' );
+	like( $verify, qr/^scripts\/verify-download\.sh --timeout 360 --interval 15 "\$ZIP_URL" "\$SHA"$/m, 'downloads ZIP_URL and checks its SHA1, retrying for up to 6 minutes (longer than raw.githubusercontent.com caches a 404)' );
 	like( $job{release} // '', qr/^    timeout-minutes: (?:2[0-9]|[3-5][0-9])$/m, 'the job has time for that wait' );
 
 	my @order = ( 'Verify uploaded asset', 'Publish to release-assets', 'Verify download URL', 'Update repo.xml', 'Commit and push repo.xml' );

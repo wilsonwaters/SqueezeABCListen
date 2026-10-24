@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # verify-download.sh - download a plugin zip from the URL LMS will use and check it: HTTP 200,
 # no response header line longer than LMS's limit, and the SHA1 of the body. Retries until it
-# passes or the time is up, because raw.githubusercontent.com can take a few minutes to serve a
-# file that was just pushed.
+# passes or the time is up, because raw.githubusercontent.com can take a moment to serve a file
+# that was just pushed, and caches its answers (a 404 included) for 5 minutes.
 #
 # Usage: scripts/verify-download.sh [--timeout SECONDS] [--interval SECONDS] URL SHA1
 #   URL         the download URL (redirects are followed, as LMS does)

@@ -149,7 +149,7 @@ jobs:
     # branch and repo.xml on main
     permissions:
       contents: write
-    # includes up to 5 minutes of waiting for raw.githubusercontent.com (Verify download URL)
+    # includes up to 6 minutes of waiting for raw.githubusercontent.com (Verify download URL)
     timeout-minutes: 25
     env:
       DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run == true }}
@@ -366,13 +366,15 @@ jobs:
           scripts/publish-release-asset.sh "${args[@]}" "$ZIP"
 
       # ---- 8. LMS can download it: ZIP_URL serves that exact file, with short headers ----
-      # Checked before repo.xml changes. raw.githubusercontent.com can take a few minutes to
-      # serve a newly pushed file, so this retries for up to 5 minutes. A response header line
-      # over LMS's 8,192-byte limit fails at once. Skipped on dry runs (nothing was pushed).
+      # Checked before repo.xml changes. raw.githubusercontent.com can take a moment to serve a
+      # newly pushed file, and caches every answer, a 404 included, for 5 minutes; so this
+      # retries every 15 s for up to 6 minutes, which outlasts a 404 cached by a try that came
+      # too early. A response header line over LMS's 8,192-byte limit fails at once. Skipped on
+      # dry runs (nothing was pushed).
       - name: Verify download URL
         if: env.ACTION != 'none' && env.DRY_RUN != 'true'
         run: |
-          scripts/verify-download.sh --timeout 300 --interval 15 "$ZIP_URL" "$SHA"
+          scripts/verify-download.sh --timeout 360 --interval 15 "$ZIP_URL" "$SHA"
 
       # ---- 9. point repo.xml at the raw URL, on top of the latest main ----
       # minTarget/maxTarget come from the install.xml inside the released zip (built from the
