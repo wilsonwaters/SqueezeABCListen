@@ -21,6 +21,10 @@
 # the network list pages (/triplej/programs, /<network>/audiobooks) never checked, and
 # networkProgramPath (the episode path -> network-relative program path table; the recorded Hottest
 # 100 episodes -> the path the index lists).
+# O8/D9 review follow-ups: a 401 or 410 is an answer (left out 24 h; only 403 is no answer), a
+# continuation that dies after the page checks (synchronous or deferred, also through programs()'
+# fallback) answers LOAD_FAILED once with nothing escaping, and repeated titles compare
+# case-insensitively ("Mornings" / "mornings", OnDemand::_nameRepeats).
 #
 # Fixtures in t/data/ondemand/:
 #   algolia-programs-list.json   raw response body of ai-state/research/abc-samples/algolia-programs-list.json
@@ -900,23 +904,28 @@ subtest 'O7, page checks: at most 4 in flight; callers share requests; one callb
 
 sub decision_entry { Slim::Utils::Cache->new('abclisten')->get( 'program-index-page:' . shift ) }
 
-subtest 'O8: no answer (timeout, 500, 429, 403) -> listed for 10 min: a second call within that makes no page check; then checked again; a 404 stays left out 24 h' => sub {
+subtest 'O8: no answer (timeout, 500, 429, 403) -> listed for 10 min: a second call within that makes no page check; then checked again; a 404, 401 or 410 stays left out 24 h' => sub {
 	fresh();
 	my @transient = ( '/triplej/slow', '/listen/jazz/down', '/kidslisten/busy', '/listen/doublej/blocked' );
-	route_hits( [ hit( slug => 'plain' ), ( map { network_hit($_) } @transient, '/listen/country/gone' ) ] );
+	my @answered  = ( '/listen/country/gone', '/listen/classic/private', '/pacific/removed' );    # 404, 401, 410
+	route_hits( [ hit( slug => 'plain' ), ( map { network_hit($_) } @transient, @answered ) ] );
 	route( page_url('/triplej/slow'),           error => 'Timed out waiting for data' );
 	route( page_url('/listen/jazz/down'),       code  => 500 );
 	route( page_url('/kidslisten/busy'),        code  => 429 );
 	route( page_url('/listen/doublej/blocked'), code  => 403 );
 	route( page_url('/listen/country/gone'),    code  => 404 );
+	route( page_url('/listen/classic/private'), code  => 401 );
+	route( page_url('/pacific/removed'),        code  => 410 );
 
 	my $c = index_call();
 	is( $c->count, 1, 'one callback' );
-	is_deeply( listed_paths($c), [ '/listen/programs/plain', @transient ], 'the timeout, the 500, the 429 and the 403 listed; the 404 left out' );
-	is_deeply( [ page_requests() ], [ @transient, '/listen/country/gone' ], 'each page checked once' );
+	is_deeply( listed_paths($c), [ '/listen/programs/plain', @transient ], 'the timeout, the 500, the 429 and the 403 listed; the 404, 401 and 410 left out' );
+	is_deeply( [ page_requests() ], [ @transient, @answered ], 'each page checked once' );
 	is_deeply( decision_entry('/listen/doublej/blocked'), { listed => 1, unconfirmed => 1 }, 'the 403 (a CDN block, say) is no answer: listed, unconfirmed (not left out for a day)' );
 	is_deeply( decision_entry('/triplej/slow'), { listed => 1, unconfirmed => 1 }, 'the timeout: listed, unconfirmed' );
 	is_deeply( decision_entry('/listen/country/gone'), { listed => 0 }, 'the 404: left out' );
+	is_deeply( decision_entry('/listen/classic/private'), { listed => 0 }, 'a 401 is an answer (only 403 is no answer): left out, cached 24 h' );
+	is_deeply( decision_entry('/pacific/removed'), { listed => 0 }, 'a 410: left out, cached 24 h' );
 	is( scalar( debug_logged(qr/couldn't check .*; listed/) ), 4, 'the 4 unchecked logged at DEBUG' );
 	is( scalar( logged('WARN') ) + scalar( logged('ERROR') ), 0, 'nothing at WARN or ERROR' );
 
@@ -935,7 +944,7 @@ subtest 'O8: no answer (timeout, 500, 429, 403) -> listed for 10 min: a second c
 	my @before = page_requests();
 	$c = index_call();
 	my @after = page_requests();
-	is_deeply( [ @after[ @before .. $#after ] ], \@transient, 'after 10 min: only the 4 unconfirmed pages are checked again' );
+	is_deeply( [ @after[ @before .. $#after ] ], \@transient, 'after 10 min: only the 4 unconfirmed pages are checked again (not the 404, 401 or 410)' );
 	is_deeply( listed_paths($c), [ '/listen/programs/plain', @transient ], 'still no answer: listed again' );
 
 	# once they answer: decided as usual (cached 24 h)
@@ -1036,6 +1045,42 @@ subtest 'O8: a check that dies (1 of 3) -> listed, not cached, WARN; the other c
 	is_deeply( listed_paths($c), \@paths, '... each path decided once by its answer (3 listed)' );
 	is_deeply( decision_entry('/listen/jazz/video-show'), { listed => 1 }, '... and cached (the late die ignored)' );
 	is( scalar( grep { $_->{message} =~ /late die/ } logged('WARN') ), 0, '... nothing logged for it' );
+};
+
+subtest 'O8 (review): a continuation that dies after the checks (synchronous or deferred) answers LOAD_FAILED once; nothing escapes' => sub {
+	for my $defer ( 0, 1 ) {
+		my $how = $defer ? 'deferred' : 'synchronous';
+
+		# _checkPages itself: its $cb (the index's continuation) dies once the check is in
+		fresh();
+		route( page_url('/triplej/hottest-100'),          redirect_308('/triplej/programs/hottest-100'), defer => $defer );
+		route( page_url('/triplej/programs/hottest-100'), file => 'ondemand/nextdata-program-hottest-100.trimmed.json', headers => $JSON_TYPE, defer => $defer );
+		my ( @fail, $continued );
+		my $ok = eval {
+			Plugins::ABCListen::ProgramIndex::_checkPages( sub { push @fail, [@_] }, [ { path => '/triplej/hottest-100' } ], sub { $continued++; die "continuation broke\n" } );
+			1;
+		};
+		ok( $ok, "$how: the die does not reach the caller" ) or diag $@;
+		my $loop = eval { Slim::Networking::SimpleAsyncHTTP->completeDeferred for 1 .. 3; 1 };
+		ok( $loop, "$how: ... nor the event loop" ) or diag $@;
+		is( $continued, 1, "$how: the continuation ran once" );
+		is_deeply( \@fail, [ [ { error => 'PLUGIN_ABCLISTEN_LOAD_FAILED' } ] ], "$how: \$fail answered once, with LOAD_FAILED" );
+		ok( ( grep { $_->{message} =~ /continuation broke/ } logged('ERROR') ), "$how: logged at ERROR" );
+
+		# through programs(): every page left out -> the network-list fallback, which dies
+		fresh();
+		route_hits( [ network_hit('/triplej/like-a-version') ] );
+		route( page_url('/triplej/like-a-version'),          redirect_308('/triplej/programs/like-a-version'), defer => $defer );
+		route( page_url('/triplej/programs/like-a-version'), file => 'ondemand/nextdata-program-like-a-version.trimmed.json', headers => $JSON_TYPE, defer => $defer );
+		{
+			no warnings 'redefine';
+			local *Plugins::ABCListen::Programs::networkPrograms = sub { die "network list broke\n" };
+			my $c;
+			ok( eval { $c = index_call(); Slim::Networking::SimpleAsyncHTTP->completeDeferred for 1 .. 3; 1 }, "$how, programs(): nothing escapes" ) or diag $@;
+			is( $c->count, 1, "$how, programs(): the index calls back exactly once" );
+			is_deeply( result_of($c), { error => 'PLUGIN_ABCLISTEN_LOAD_FAILED' }, "$how, programs(): with LOAD_FAILED" );
+		}
+	}
 };
 
 subtest 'O8: network list pages (/triplej/programs, /<network>/audiobooks) are not network-relative program paths: never checked' => sub {
@@ -1191,6 +1236,37 @@ subtest 'duplicate titles: "<title> (<network>)" in name/line1 only; same networ
 		[ grep {/Breakfast/} @{ names( by_type('catchup')->args(0) ) } ],
 		[ 'Breakfast', 'Breakfast', 'Breakfast', 'Breakfast (ABC Sydney)' ],
 		'the same in a type list'
+	);
+};
+
+subtest 'duplicate titles (review): titles repeat case-insensitively ("Mornings" / "mornings"); OnDemand::_nameRepeats' => sub {
+	fresh();
+	route_hits( [
+		hit( title => 'Mornings', slug => 'doublej-mornings', infoSource => 'Double J',    programType => 'music' ),
+		hit( title => 'mornings', slug => 'classic-mornings', infoSource => 'ABC Classic', programType => 'music' ),
+		hit( title => 'Morning Glory', slug => 'morning-glory', infoSource => 'ABC Classic', programType => 'music' ),
+	] );
+	is_deeply(
+		names( items_of( feed( $LETTER, undef, 'm' ) ) ),
+		[ 'Morning Glory', 'Mornings (Double J)', 'mornings (ABC Classic)' ],
+		'A–Z: "Mornings" and "mornings" repeat a title (each named by its network); Morning Glory does not'
+	);
+	is_deeply( names( by_type('music')->args(0) ), [ 'Morning Glory', 'Mornings (Double J)', 'mornings (ABC Classic)' ], 'the same in a type list' );
+
+	# the helper itself (Search names its rows with it): case-insensitive titles and networks
+	my @rows = (
+		{ name => 'Mornings', line1 => 'Mornings', line2 => 'Double J' },
+		{ name => 'MORNINGS', line1 => 'MORNINGS', line2 => 'ABC Classic' },
+		{ name => 'Lunch',    line1 => 'Lunch',    line2 => 'ABC Classic' },
+		{ name => 'Drive',    line1 => 'Drive',    line2 => 'ABC Sydney' },
+		{ name => 'drive',    line1 => 'drive',    line2 => 'abc sydney' },
+	);
+	my $named = Plugins::ABCListen::OnDemand::_nameRepeats( \@rows );
+	is( $named, \@rows, '_nameRepeats changes the rows in place and returns them' );
+	is_deeply(
+		[ map {"$_->{name} | $_->{line1}"} @rows ],
+		[ 'Mornings (Double J) | Mornings (Double J)', 'MORNINGS (ABC Classic) | MORNINGS (ABC Classic)', 'Lunch | Lunch', 'Drive | Drive', 'drive | drive' ],
+		'titles differing only in case repeat; networks differing only in case are the same network (no name tells them apart)'
 	);
 };
 
