@@ -1,0 +1,616 @@
+{
+ "page": 0,
+ "nbPages": 1,
+ "hitsPerPage": 1000,
+ "exhaustiveNbHits": true,
+ "query": "",
+ "hits": [
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "programs",
+    "am"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/programs/am/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/1813114589b258a13e4bfe6b64e8a092?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "AM is Australia's most informative morning current affairs program. AM sets the agenda for the nation's daily news and current affairs coverage.",
+   "infoSource": "ABC News Podcasts",
+   "programType": "podcast",
+   "shortTeaserText": "AM is Australia's most informative morning current affairs program.",
+   "siteSegment": "adelaide",
+   "title": "AM",
+   "objectID": "coremedia://program/8437680"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "programs",
+    "persuasion"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/programs/persuasion/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/1780f429aea3b78857737928cac0d362?impolicy=wcms_crop_resize&cropH=1080&cropW=1080&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "Anne Elliot, daughter of the snobbish Sir Walter Elliot, is a woman of deep feelings who is always forced to put everyone before herself. When she was ninete...",
+   "infoSource": "ABC Listen",
+   "programType": "podcast",
+   "shortTeaserText": "The not-for-profit community at Ballarat National Theatre is excited to share Persuasion like you've never heard it before, with 20 actors bringing the chara...",
+   "siteSegment": "listen",
+   "title": "Persuasion",
+   "objectID": "coremedia://program/107191836"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "programs",
+    "alive-to-this"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/programs/alive-to-this/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/6836c266e21cd3251eb9f72abad26263?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "What does it mean to be human in the age of AI?\n\nAlive to This is a series of roundtable conversations about a moment that is hard to make sense of and impos...",
+   "infoSource": "ABC Listen",
+   "programType": "podcast",
+   "shortTeaserText": "Alive to This is a series of roundtable conversations about a moment that is hard to make sense of and impossible to ignore. AI is reshaping how we work, dec...",
+   "siteSegment": "listen",
+   "title": "Alive to This",
+   "objectID": "coremedia://program/107139128"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "the-assassin-page"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/the-assassin-page/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/b5b74dd393c455c44ac592752b51d902?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "Having been made High Commissioner in Nairobi, Ed Barnes is keeping his head down and staying out of trouble. But when his daughter, Sophie, is kidnapped fol...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "The explosive sequel to The Ambassador from former No.10 advisor Tom Fletcher, The Assassin is perfect for fans of Robert Peston, Ken Follett and Tom Bradby.",
+   "siteSegment": "listen",
+   "title": "The Assassin",
+   "objectID": "coremedia://program/106353780"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "the-dictionary-of-lost-words-page"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/the-dictionary-of-lost-words-page/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/d69f290a96e32fb4674bad70b4211043?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "In 1901, the word 'bondmaid' was discovered missing from the Oxford English Dictionary. This is the story of the girl who stole it.\n\nMotherless and irrepress...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "In 1901, the word ‘Bondmaid’ was discovered missing from the Oxford English Dictionary. This is the story of the girl who stole it.",
+   "siteSegment": "listen",
+   "title": "The Dictionary of Lost Words",
+   "objectID": "coremedia://program/106353766"
+  },
+  {
+   "canonicalURI_fragments": [
+    "abckids",
+    "programs",
+    "bluey-sign-and-seek"
+   ],
+   "canonicalURL": "https://www.abc.net.au/abckids/programs/bluey-sign-and-seek/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/a9bb2d58d04ff08b5d4f72e49d0c608f?impolicy=wcms_crop_resize&cropH=1080&cropW=1080&xPos=248&yPos=0&width=862&height=862"
+   },
+   "description": "Australia's most watched children's TV show is putting Auslan front and centre.  \n\nABC Kids is launching Bluey's Auslan Sign & Seek, a fun and interactive wa...",
+   "infoSource": "",
+   "programType": null,
+   "shortTeaserText": "Australia's most watched children's TV show is putting Auslan front and centre.  ",
+   "siteSegment": "abckids",
+   "title": "Bluey's Auslan Sign and Seek",
+   "objectID": "coremedia://program/107184110"
+  },
+  {
+   "canonicalURI_fragments": [
+    "takeover",
+    "programs",
+    "takeover-ballarat"
+   ],
+   "canonicalURL": "https://www.abc.net.au/takeover/programs/takeover-ballarat/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/4a087f0d0862b74e56626f7b35eccd29?impolicy=wcms_crop_resize&cropH=810&cropW=810&xPos=315&yPos=0&width=862&height=862"
+   },
+   "description": "Takeover Ballarat creates a powerful platform for Ballarat's youth to be heard.",
+   "infoSource": "",
+   "programType": null,
+   "shortTeaserText": "Takeover Ballarat is a new ABC initiative that creates a powerful platform for Ballarat's youth to be heard.",
+   "siteSegment": "takeover",
+   "title": "Takeover Ballarat",
+   "objectID": "coremedia://program/105787388"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "programs",
+    "octonauts-dolphin-reef-rescue-and-other-stories"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/programs/octonauts-dolphin-reef-rescue-and-other-stories/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/1c263e42862e45e727eca5ee5a196abf?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "Join the Octonauts in this fourth collection of exciting underwater adventures adapted from the popular children's television series! The Octonauts are a tea...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "Join the team of adventure heroes who dive right into action — the fourth collection of episodes adapted from the immensely popular TV series!",
+   "siteSegment": "listen",
+   "title": "Octonauts: The Dolphin Reef Rescue and Other Stories",
+   "objectID": "coremedia://program/106340478"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "the-26-storey-treehouse-page"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/the-26-storey-treehouse-page/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/e71cfa80074bcfe0a6edb1b1bee1ddb6?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "You’re probably wondering just how Andy and Terry met. Well, it’s a long story, but a pretty exciting one, and it’s mostly true! Come on up, choose a hammock...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "Come on back to the most amazing treehouse in the world!",
+   "siteSegment": "listen",
+   "title": "The 26-Storey Treehouse",
+   "objectID": "coremedia://program/106329818"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "the-13-storey-treehouse-page"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/the-13-storey-treehouse-page/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/9779b4fdea8a0d41a60fbfc44b242e1a?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "Andy and Terry's 13-storey treehouse is the most amazing treehouse in the world! It's got a bowling alley, a see-through swimming pool, a tank full of man-ea...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "Andy and Terry live in a 13-storey treehouse. They've also got a new book to write, but there's a problem. A BIG problem. Well, quite a few big problems actu...",
+   "siteSegment": "listen",
+   "title": "The 13-Storey Treehouse",
+   "objectID": "coremedia://program/106329802"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "programs",
+    "abc-business-daily"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/programs/abc-business-daily/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/2c1275ec072268a6acfc347de4215dfa?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "The podcast that helps you unpack the latest business and finance news. Analysing the stories moving share markets, shaping industries and affecting the Aust...",
+   "infoSource": "ABC News Podcasts",
+   "programType": "podcast",
+   "shortTeaserText": "The podcast that helps you unpack the latest business and finance news. Analysing the stories moving share markets, shaping industries and affecting the Aust...",
+   "siteSegment": "listen",
+   "title": "ABC Business Daily",
+   "objectID": "coremedia://program/106452470"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "hush-hush-page"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/hush-hush-page/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/51625313a38f97059bc47f8aa83d9994?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "Harriet Blue used to be a detective. Now she's inmate 3329.\n\nPrison is a dangerous place for a former cop — as Harriet is learning on a daily basis.\n\nSo, fol...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "The fourth novel in the Harriet Blue series sees Harry on the hunt for a missing mother and child, while also trying to solve the murder of a prison doctor.",
+   "siteSegment": "listen",
+   "title": "Hush Hush",
+   "objectID": "coremedia://program/106353750"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "death-of-a-hollow-man-page"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/death-of-a-hollow-man-page/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/7a384167d353c1d8409a65782fe89086?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "Backstage nerves are fraying, and revenge is on its way. As Causton Amateur Dramatic Society prepares for the opening night of Amadeus, in the wings Esslyn C...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "Death of a Hollow Man is the second instalment in the Midsomer Murders series, featuring an exclusive foreword by John Nettles (ITV's DCI Tom Barnaby).",
+   "siteSegment": "listen",
+   "title": "Death of a Hollow Man",
+   "objectID": "coremedia://program/106321136"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "programs",
+    "australia-plays"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/programs/australia-plays/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/f7a65eafec9ba19d61aae4735b94e60e?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "Music performed by the best and most exciting Australian musicians. \n\nSundays, 6-8pm ",
+   "infoSource": "ABC Classic",
+   "programType": "music",
+   "shortTeaserText": "Music performed by the best and most exciting Australian musicians.",
+   "siteSegment": "listen",
+   "title": "Australia Plays",
+   "objectID": "coremedia://program/106130436"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "a-man-s-got-to-have-a-hobby-long-summers-with-my-dad"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/a-man-s-got-to-have-a-hobby-long-summers-with-my-dad/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/603bc8a6801047b8c8b71d2cbe426dbb?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "William McInnes is a talented writer and a natural storyteller. A tail-end baby boomer, he recalls summer holidays that seemed to go on forever, when he and...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "William McInnes' bestselling memoir, A Man's Got to Have a Hobby, takes us back to the long summer holidays of the 1960s and 70s, and the last of the baby-bo...",
+   "siteSegment": "listen",
+   "title": "A Man's Got to Have A Hobby: Long Summers With My Dad",
+   "objectID": "coremedia://program/105924626"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "fifty-fifty"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/fifty-fifty/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/9e8529b1b12cc7a5375276396f2b8f3b?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "It's not easy being a good detective — especially when your brother's a serial killer.\n\nSam Blue stands accused of the brutal murders of three young students...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "The thrilling follow-up to the bestseller, Never Never.",
+   "siteSegment": "listen",
+   "title": "Fifty Fifty",
+   "objectID": "coremedia://program/105930108"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "one-hundred-days"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/one-hundred-days/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/e36d949a3295b93f11a58764538ddd7b?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "One hundred days. It's no time at all, she tells me. But she's not the one waiting.\n\nIn a heady whirlwind of independence, lust and defiance, 16-year-old Kar...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "From one of Australia's most celebrated authors comes a mother-daughter drama exploring the faultlines between love and control.",
+   "siteSegment": "listen",
+   "title": "One Hundred Days",
+   "objectID": "coremedia://program/105925044"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "the-taliban-cricket-club"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/the-taliban-cricket-club/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/33442286a6be9744eb568b3eed01648c?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "Rukhsana, a spirited young journalist in Kabul, is summoned to the infamous Ministry for the Propagation of Virtue and Prevention of Vice to face its terrify...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "A soaring novel of resilience, hope, strength and tenderness, The Taliban Cricket Club reveals how love can overcome, and outwit, even the power of tyrants.\n\n ",
+   "siteSegment": "listen",
+   "title": "The Taliban Cricket Club",
+   "objectID": "coremedia://program/105929674"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "the-secret-keeper"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/the-secret-keeper/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/e07dac3f7eeaa6b9696d8c3e4db29c15?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "1961: On a sweltering summer's day, while her family picnics by the stream on their Suffolk farm, 16-year-old Laurel hides out in her childhood tree house, d...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "From the internationally bestselling author of The Shifting Fog and The Forgotten Garden comes a spellbinding story of mysteries and secrets, theatre and thi...",
+   "siteSegment": "listen",
+   "title": "The Secret Keeper",
+   "objectID": "coremedia://program/105926124"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "love-clancy-a-dogs-letters-home"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/love-clancy-a-dogs-letters-home/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/719ce3aea3ad8e686d454091ca9b0f94?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "Human beings often write about their dogs, but the dogs don't usually get a right of reply. In Love, Clancy, Richard Glover has collated the letters sent by...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "The new audiobook from the bestselling author of Flesh Wounds, heartfelt and hilarious, Love, Clancy is an audiobook for anyone who has ever tried to imagine...",
+   "siteSegment": "listen",
+   "title": "Love, Clancy A Dog's Letters Home",
+   "objectID": "coremedia://program/105929162"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "the-wind-in-the-willows-page"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/the-wind-in-the-willows-page/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/6e99e8fcd84d218fa6fca577f6131bc9?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "Mole, Ratty, Toad, and Badger tumble through wild adventures—escaping weasels, racing motorcars, and drifting lazily along the riverbank. Kenneth Grahame's T...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "Kenneth Grahame's The Wind in the Willows is a children's classic full of friendship, imagination, and charm, capturing the magic of nature and the joy of si...",
+   "siteSegment": "listen",
+   "title": "The Wind in the Willows",
+   "objectID": "coremedia://program/105915246"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "the-wonderful-wizard-of-oz-page"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/the-wonderful-wizard-of-oz-page/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/96d3a8eb2ebaf07a595857fbe264e085?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "Dorothy is swept away to the magical land of Oz, where she befriends a clever Scarecrow, a tender-hearted Tin Man, and a timid Lion. Together, they face wick...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "A story that continues to cast its spell, it introduced generations of readers and audiences to a magical world that still feels alive today.",
+   "siteSegment": "listen",
+   "title": "The Wonderful Wizard of Oz",
+   "objectID": "coremedia://program/105915334"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "persuasion-page"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/persuasion-page/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/9233c3c6b7865fde1a3aae74cf0fb69a?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "Anne Elliot is persuaded to give up the man she loves, only to cross paths with him years later. Austen's final novel is a classic romance about love, regret...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "Austen's final novel is a classic romance about love, regret, and second chances. With its sharp observations on family, class, and the choices that shape ou...",
+   "siteSegment": "listen",
+   "title": "Persuasion",
+   "objectID": "coremedia://program/105543526"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "my-brilliant-career-page"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/my-brilliant-career-page/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/096224720d23db565ee531d3ec1fd084?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "A fiercely independent young woman in rural Australia refuses to accept the limits society places on her. Miles Franklin's My Brilliant Career is a classic A...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "My Brilliant Career is a classic Australian novel about creativity, ambition, and finding your own path. First published in 1901, it shocked readers with its...",
+   "siteSegment": "listen",
+   "title": "My Brilliant Career",
+   "objectID": "coremedia://program/105915076"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "frankenstein-page"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/frankenstein-page/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/c6bcabdd818e620a5d560385570e9847?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "A young scientist pushes the boundaries of knowledge and creates life, only to be horrified by the results. Mary Shelley's Frankenstein is a classic horror t...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "Mary Shelley's Frankenstein is a classic horror tale that asks deep questions about ambition, responsibility, and what it means to be human.",
+   "siteSegment": "listen",
+   "title": "Frankenstein; or, The Modern Prometheus",
+   "objectID": "coremedia://program/105915012"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "animal-farm-page"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/animal-farm-page/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/994103e7f65b244f4dde738f38582072?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "On a small farm, animals overthrow their human master and dream of freedom, but power soon corrupts their revolution. George Orwell's Animal Farm is a classi...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "Animal Farm is a classic political fable about betrayal, control, and the steps towards authoritarianism, a deceptively simple story that speaks powerfully a...",
+   "siteSegment": "listen",
+   "title": "Animal Farm",
+   "objectID": "coremedia://program/105914966"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "audiobooks",
+    "the-killings-at-badger-s-drift"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/audiobooks/the-killings-at-badger-s-drift/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/f370a0aa9966238d2ce31b2cac2bebfc?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "The village of Badger's Drift is the essence of tranquillity. But when resident and well-loved spinster Miss Simpson takes a stroll in the nearby woods, she...",
+   "infoSource": "Audio Books",
+   "programType": "audiobook",
+   "shortTeaserText": "The Killings at Badger's Drift is the first spectacular instalment in the Midsomer Murders series and the story that inspired the ITV hit drama, now featurin...",
+   "siteSegment": "listen",
+   "title": "The Killings at Badger’s Drift",
+   "objectID": "coremedia://program/105921990"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "programs",
+    "southeastsa-mornings"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/programs/southeastsa-mornings/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/4233394d38fe089116dee801ef7d3992?impolicy=wcms_crop_resize&cropH=1836&cropW=1836&xPos=712&yPos=0&width=862&height=862"
+   },
+   "description": "Join us as we look at the stories making news across the region and take you through the morning with plenty of entertainment and music.\n\nOnline, on the ABC...",
+   "infoSource": "ABC South East SA",
+   "programType": null,
+   "shortTeaserText": "Join Mornings for a look at the stories making news across the region.",
+   "siteSegment": "listen",
+   "title": "Mornings",
+   "objectID": "coremedia://program/10599756"
+  },
+  {
+   "canonicalURI_fragments": [],
+   "canonicalURL": "http://www.abc.net.au/radionational/programs/bigideas/",
+   "defaultThumbnail": {},
+   "description": "Big Ideas brings you the best of talks, forums, debates, and festivals held in Australia and around the world, casting light on the major social, cultural, s...",
+   "infoSource": "",
+   "programType": null,
+   "shortTeaserText": "Big Ideas brings you the best of talks, forums, debates, and festivals held in Australia and around",
+   "siteSegment": "pacific",
+   "title": "Big Ideas",
+   "objectID": "coremedia://program/9681432"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "programs",
+    "doublej-mornings"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/programs/doublej-mornings/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/e953c46b38c7540f5515ac825ad76a42?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862"
+   },
+   "description": "Start your weekday with the songs that soundtrack your life, thrilling new releases and fun chats. Michael Hing hosts Mornings from 9am Monday to Thursday, o...",
+   "infoSource": "Double J",
+   "programType": "music",
+   "shortTeaserText": "Start your weekday with the songs that soundtrack your life, thrilling new releases and fun chats. Michael Hing hosts Mornings from 9am Monday to Thursday, o...",
+   "siteSegment": "listen",
+   "title": "Mornings",
+   "objectID": "coremedia://program/9339320"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "programs",
+    "classic-mornings"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/programs/classic-mornings/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/49cb23b890780f64d7912edc87f8a7b5?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862"
+   },
+   "description": "Spend your morning with great music, including the latest news from the classical world. And discover a new theme each week with the Mornings Playlist.\n\nMond...",
+   "infoSource": "ABC Classic",
+   "programType": "music",
+   "shortTeaserText": "Spend your morning with great music, including the latest news from the classical world.",
+   "siteSegment": "listen",
+   "title": "Mornings",
+   "objectID": "coremedia://program/8812274"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "programs",
+    "worldtoday"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/programs/worldtoday/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/37fbc25fd6c2a23638a6c399a705aecc?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862"
+   },
+   "description": "The World Today is a comprehensive current affairs program which backgrounds, analyses, interprets and encourages debate on events and issues of interest and...",
+   "infoSource": "ABC News Podcasts",
+   "programType": "podcast",
+   "shortTeaserText": "The World Today is a comprehensive current affairs program.",
+   "siteSegment": "adelaide",
+   "title": "The World Today",
+   "objectID": "coremedia://program/7859670"
+  },
+  {
+   "canonicalURI_fragments": [
+    "triplej",
+    "programs",
+    "mornings"
+   ],
+   "canonicalURL": "https://www.abc.net.au/triplej/programs/mornings/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/ac35ec546ab1c3b4e1f2ceecc91b9019?impolicy=wcms_crop_resize&cropH=1125&cropW=1125&xPos=438&yPos=0&width=862&height=862"
+   },
+   "description": "New music and your all-time faves courtesy of Lucy Smith on Mornings.",
+   "infoSource": "triple j",
+   "programType": "music",
+   "shortTeaserText": "Weekdays 9am - 12pm",
+   "siteSegment": "triplej",
+   "title": "Mornings",
+   "objectID": "coremedia://program/6842778"
+  },
+  {
+   "canonicalURI_fragments": [
+    "listen",
+    "programs",
+    "bigideas"
+   ],
+   "canonicalURL": "https://www.abc.net.au/listen/programs/bigideas/",
+   "defaultThumbnail": {
+    "1x1": "https://live-production.wcms.abc-cdn.net.au/13d3a629d9906cbb7bce70150cf8fb25?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+   },
+   "description": "Your front row seat to big thinkers at the best live events, forums, and festivals. Feed your mind. Be provoked. One big idea at a time. Your brain will love...",
+   "infoSource": "ABC Radio National",
+   "programType": "podcast",
+   "shortTeaserText": "Your front row seat to big thinkers at the best live events, forums, and festivals. Feed your mind. Be provoked. One big idea at a time. Your brain will love...",
+   "siteSegment": "listen",
+   "title": "Big Ideas",
+   "objectID": "coremedia://program/2893852"
+  }
+ ],
+ "nbHits": 34
+}

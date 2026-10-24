@@ -13,9 +13,11 @@ package Plugins::ABCListen::OnDemand;
 #   All programs A–Z (O3) -> "<L> (<n>)" for A..Z, then "0–9 (<n>)", then (D7) "Other (<n>)"
 #   (PLUGIN_ABCLISTEN_AZ_OTHER), rows without programs omitted -> that row's programs (rows as in
 #   programsByType). A program's row comes from the first letter or digit of its Programs::sortKey
-#   (a leading "The " ignored, accents folded; punctuation, symbols and spaces before it skipped):
-#   a-z -> that letter; D7: a letter NFD leaves alone maps to its Latin letter (æ -> A, ø œ -> O,
-#   ł -> L, đ ð -> D, þ -> T, ß -> S, ı -> I); a digit -> 0–9; any other letter (CJK, Cyrillic,
+#   (a leading "The " ignored, accents folded; punctuation, symbols, spaces and (D8) modifier
+#   letters such as the ʻokina before it skipped; D8: compatibility forms folded, so fullwidth
+#   and ligature letters count as their letters): a-z -> that letter; D7: a letter NFD leaves
+#   alone maps to its Latin letter (æ -> A, ø œ -> O, ł -> L, đ ð -> D, þ -> T, ß -> S, ı -> I;
+#   D8: ħ -> H, ŋ -> N, ə -> E); a digit -> 0–9; any other letter (CJK, Cyrillic,
 #   Greek, ...) or no letter or digit at all -> Other. In fallback mode (ProgramIndex: network
 #   lists) the first item is the PLUGIN_ABCLISTEN_INDEX_FALLBACK text.
 #   By type (O3) -> "<type label> (<n>)" in programsByType's type order, empty types omitted ->
@@ -154,7 +156,8 @@ package Plugins::ABCListen::OnDemand;
 # stay with O2. D6 added programsByTypeAZ inside
 # O3's section (programsByType's core moved to _byType; _letterRows/_bucketRows are shared with
 # All programs A–Z, whose menus are unchanged). D7 changed _bucket (Latin letters NFD leaves alone,
-# the Other row) and _letterRows (the Other row), for both A–Z lists.
+# the Other row) and _letterRows (the Other row), for both A–Z lists; D8 changed _bucket
+# (modifier letters, compatibility forms, ħ ŋ ə).
 
 use strict;
 use warnings;
@@ -290,7 +293,13 @@ my %LATIN_LETTER = (
 	"\x{FE}"  => 't', "\x{DE}"  => 't',
 	"\x{DF}"  => 's', "\x{1E9E}" => 's',
 	"\x{131}" => 'i',
+	# D8: ħ (Maltese), ŋ (eng), ə (schwa)
+	"\x{127}" => 'h', "\x{126}" => 'h',
+	"\x{14B}" => 'n', "\x{14A}" => 'n',
+	"\x{259}" => 'e', "\x{18F}" => 'e',
 );
+
+my $HAS_NORMALIZE = eval { require Unicode::Normalize; 1 } ? 1 : 0;    # D8: _bucket's NFKD
 
 # By type: the type keys (ProgramIndex::typeKey) in menu order, with their label tokens
 my @TYPES = (
@@ -507,12 +516,22 @@ sub _indexTitle {
 
 # A program's A–Z bucket, from the first letter or digit of its sort key (punctuation, symbols
 # and spaces before it skipped): a-z -> that letter; D7: a Latin letter NFD leaves alone (æ, ø,
-# œ, ł, đ, ð, þ, ß, ı) -> its letter (%LATIN_LETTER); a digit -> DIGITS; any other letter
-# (non-Latin), or no letter or digit at all -> OTHER.
+# œ, ł, đ, ð, þ, ß, ı; D8: ħ, ŋ, ə) -> its letter (%LATIN_LETTER); a digit -> DIGITS; any other
+# letter (non-Latin), or no letter or digit at all -> OTHER.
+# D8: modifier letters (\p{Lm}: ʻ U+02BB okina, ʼ U+02BC) are skipped like punctuation
+# ("ʻUlu" -> u), and the letter or digit found is folded to its compatibility form first (NFKD,
+# marks dropped, its first letter or digit, lower case: fullwidth Ｆ and the ﬁ ligature -> f,
+# ① -> 1). Symbols stay skipped, also those with a compatibility form (™).
 sub _bucket {
-	my ($char) = Plugins::ABCListen::Programs::sortKey( _indexTitle(shift) ) =~ /([\p{L}\p{N}])/;
+	my ($char) = Plugins::ABCListen::Programs::sortKey( _indexTitle(shift) ) =~ /((?!\p{Lm})[\p{L}\p{N}])/;
 
 	return OTHER unless defined $char;
+
+	if ($HAS_NORMALIZE) {
+		my ($folded) = Unicode::Normalize::NFKD($char) =~ /([\p{L}\p{N}])/;
+		$char = lc $folded if defined $folded;    # NFKD may give a capital (U+210C ℌ -> H)
+	}
+
 	return $char if $char =~ /\A[a-z]\z/;
 	return $LATIN_LETTER{$char} if exists $LATIN_LETTER{$char};
 	return DIGITS if $char =~ /\p{N}/;

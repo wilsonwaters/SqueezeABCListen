@@ -11,6 +11,10 @@
 # O7: network-relative program paths ('/triplej/hottest-100'): the page check through
 # API::nextData (which follows ABC's 308), listed or left out, the 24 h decision cache, at most 4
 # checks in flight, and Hottest 100 through A–Z -> H -> its program menu.
+# D8: the query's distinct 0 and URL segments against a fake of ABC's index (AM under A, all 20
+# audiobooks incl. Persuasion; the O3 params reproduce both gaps), one program twice (legacy and
+# current path, the same path) merged, and the A–Z bucket rule's modifier letters (ʻokina),
+# compatibility forms (fullwidth, ligatures, circled digits) and ħ ŋ ə.
 #
 # Fixtures in t/data/ondemand/:
 #   algolia-programs-list.json   raw response body of ai-state/research/abc-samples/algolia-programs-list.json
@@ -35,6 +39,18 @@
 #                                recorded 2026-10-19 (9 episodes), trimmed to 2 (pagination set to 2).
 #   bff-programAggregationCollection-rn.json, -rn-featured.synthetic.json, -pacific.trimmed.json
 #                                O2's network fixtures (see t/32-programs.t), for the fallback path.
+#   algolia-programs-d8.trimmed.json
+#                                D8: POST .../indexes/listen_prod_all/query, recorded 2026-10-23 with D8's
+#                                params (distinct 0, the filter with the URL segments; 755 programs) plus
+#                                siteSegment and canonicalURI_fragments in attributesToRetrieve, trimmed to
+#                                32 hits (AM and The World Today, filed under siteSegment adelaide; all 20
+#                                audiobooks; Persuasion the podcast; Big Ideas at its legacy and its current
+#                                path; 4 programs called Mornings; 3 other programs), plus 2 hits of the
+#                                same query with filter siteSegment:abckids / siteSegment:takeover (TV and
+#                                youth programs at /<site>/programs/<slug>, outside the ABC listen sites);
+#                                defaultThumbnail 1x1 only, long texts shortened; nbHits set to 34. The fake
+#                                index below (d8_index) answers from it as ABC's index does (site segments
+#                                or URL segments; one hit per title unless distinct is 0).
 # Synthetic hit lists are built below (hit()). The search page (Algolia app id TESTAPPID, key
 # testsearchkey, index listen_prod_all) is F3's t/data/foundation/listen-search.trimmed.html.
 
@@ -86,7 +102,10 @@ my $LETTER       = \&Plugins::ABCListen::OnDemand::_letterFeed;
 my $TYPES        = \&Plugins::ABCListen::OnDemand::_typesFeed;
 my $TYPE         = \&Plugins::ABCListen::OnDemand::_typeFeed;
 
-my $FILTERS = 'contentType:program AND (siteSegment:listen OR siteSegment:triplej OR siteSegment:kidslisten OR siteSegment:triplejunearthed OR siteSegment:pacific)';
+my $SITES   = 'siteSegment:listen OR siteSegment:triplej OR siteSegment:kidslisten OR siteSegment:triplejunearthed OR siteSegment:pacific';
+my $FILTERS = "contentType:program AND ($SITES OR canonicalURI_fragments:listen OR canonicalURI_fragments:triplej OR canonicalURI_fragments:kidslisten"
+	. ' OR canonicalURI_fragments:triplejunearthed OR canonicalURI_fragments:pacific)';    # D8: + the URL segments
+my $O3_FILTERS = "contentType:program AND ($SITES)";    # before D8
 my @ATTRIBUTES = qw(objectID title canonicalURL shortTeaserText description defaultThumbnail infoSource programType);
 
 # ---- API spy: every algolia call with its params and options ----
@@ -326,13 +345,13 @@ subtest 'programs: the fixture hits -> exact program refs; the request (params, 
 	is_deeply( $ALGOLIA[0]->{opts}, { ttl => 86400, stale_ok => 1 }, 'opts: ttl 86400 (24 h), stale_ok (last-good)' );
 	is_deeply(
 		$ALGOLIA[0]->{params},
-		{ query => '', hitsPerPage => 1000, filters => $FILTERS, attributesToRetrieve => \@ATTRIBUTES },
-		'params: empty query, hitsPerPage 1000, the program filter, attributesToRetrieve'
+		{ query => '', hitsPerPage => 1000, distinct => 0, filters => $FILTERS, attributesToRetrieve => \@ATTRIBUTES },
+		'params: empty query, hitsPerPage 1000, distinct 0 (D8), the program filter (D8: site segments or URL segments), attributesToRetrieve'
 	);
 
 	my @sent = algolia_requests();
 	is( scalar @sent, 1, 'one Algolia request' );
-	is_deeply( JSON::PP::decode_json( $sent[0]->{body} ), { query => '', hitsPerPage => 1000, filters => $FILTERS, attributesToRetrieve => \@ATTRIBUTES }, 'the request body' );
+	is_deeply( JSON::PP::decode_json( $sent[0]->{body} ), { query => '', hitsPerPage => 1000, distinct => 0, filters => $FILTERS, attributesToRetrieve => \@ATTRIBUTES }, 'the request body' );
 	is( scalar agg_requests(), 0, 'no network lists loaded' );
 };
 
@@ -1169,6 +1188,197 @@ subtest 'O7 in the menus: All programs A–Z -> H -> Hottest 100 opens /triplej/
 	my @after = page_requests();
 	is_deeply( [ @after[ @before .. $#after ] ], [ '/triplej/hottest-100', '/triplej/programs/hottest-100' ], 'nothing cached: /triplej/hottest-100, then its 308 target /triplej/programs/hottest-100' );
 	is_deeply( $episodes->($menu), \@expected, 'nothing cached: the same episodes' );
+};
+
+# ---------------------------------------------------------------------------
+# D8: A–Z completeness (AM, Persuasion), one program twice, bucket rule
+# ---------------------------------------------------------------------------
+
+# A fake of ABC's index from the recorded hits of algolia-programs-d8.trimmed.json, answering as
+# ABC's index did on 2026-10-23: a hit matches when its siteSegment, or one of its
+# canonicalURI_fragments, is named in the filter (siteSegment:<x>, canonicalURI_fragments:<x>;
+# every hit is a contentType:program); then, unless the query sets distinct to 0, only the first
+# hit of each title (the index's distinct setting).
+my $D8_FIXTURE = 'ondemand/algolia-programs-d8.trimmed.json';
+
+sub d8_answer {
+	my $params  = shift;
+	my $index   = JSON::PP::decode_json( fixture($D8_FIXTURE) );
+	my $filters = defined $params->{filters} ? $params->{filters} : '';
+
+	my %segment  = map { $_ => 1 } $filters =~ /\bsiteSegment:([\w.-]+)/g;
+	my %fragment = map { $_ => 1 } $filters =~ /\bcanonicalURI_fragments:([\w.-]+)/g;
+
+	my @hits = grep {
+		my $hit = $_;
+		$segment{ defined $hit->{siteSegment} ? $hit->{siteSegment} : '' } || grep { $fragment{$_} } @{ $hit->{canonicalURI_fragments} || [] };
+	} @{ $index->{hits} };
+
+	if ( !( exists $params->{distinct} && !$params->{distinct} ) ) {
+		my %seen;
+		@hits = grep { !$seen{ $_->{title} }++ } @hits;
+	}
+
+	return { %$index, hits => \@hits, nbHits => scalar @hits };
+}
+
+sub route_d8_index {
+	Slim::Networking::SimpleAsyncHTTP->addRoute( $ALGOLIA, sub {
+		my ( $url, $method, $body ) = @_;
+		return { content => to_json( d8_answer( JSON::PP::decode_json($body) ) ), headers => $JSON_TYPE };
+	} );
+}
+
+sub count_sum { my $sum = 0; $sum += $_ for map { $_->{name} =~ /\(([0-9]+)\)\z/ ? $1 : 0 } @{ $_[0] }; return $sum }
+
+sub row_for { my ( $rows, $bucket ) = @_; my ($row) = grep { $_->{passthrough}->[0] eq $bucket } @$rows; return $row }
+
+my @AUDIOBOOKS = (
+	'A Man\'s Got to Have A Hobby: Long Summers With My Dad', 'Animal Farm', 'Death of a Hollow Man', 'The Dictionary of Lost Words',
+	'Fifty Fifty', 'Frankenstein; or, The Modern Prometheus', 'Hush Hush', "The Killings at Badger\x{2019}s Drift",
+	'Love, Clancy A Dog\'s Letters Home', 'My Brilliant Career', 'Octonauts: The Dolphin Reef Rescue and Other Stories', 'One Hundred Days',
+	'Persuasion', 'The Assassin', 'The Secret Keeper', 'The Taliban Cricket Club', 'The 13-Storey Treehouse', 'The 26-Storey Treehouse',
+	'The Wind in the Willows', 'The Wonderful Wizard of Oz',
+);
+
+subtest 'D8: the cause, on the fake index - the O3 query misses AM and The World Today (siteSegment adelaide) and the audiobook Persuasion (distinct)' => sub {
+	my $o3     = d8_answer( { query => '', hitsPerPage => 1000, filters => $O3_FILTERS } );
+	my @titles = map { $_->{title} } @{ $o3->{hits} };
+	ok( !( grep { $_ eq 'AM' || $_ eq 'The World Today' } @titles ), 'O3 filter: no AM, no The World Today (ABC files them under siteSegment adelaide)' );
+	is( scalar( grep { ( $_->{programType} || '' ) eq 'audiobook' } @{ $o3->{hits} } ), 19, 'O3 (distinct on): 19 audiobooks ...' );
+	is_deeply( [ map { "$_->{programType} $_->{canonicalURL}" } grep { $_->{title} eq 'Persuasion' } @{ $o3->{hits} } ], ['podcast https://www.abc.net.au/listen/programs/persuasion/'], '... Persuasion only once: the podcast (one hit per title)' );
+
+	my $d8 = d8_answer( { query => '', hitsPerPage => 1000, distinct => 0, filters => $FILTERS } );
+	is( scalar @{ $d8->{hits} }, 32, 'D8 query: the 32 hits of the ABC listen sites (not the ABC Kids or Takeover programs)' );
+	is( scalar( grep { ( $_->{programType} || '' ) eq 'audiobook' } @{ $d8->{hits} } ), 20, 'D8 query: 20 audiobooks' );
+};
+
+subtest 'D8: AM and The World Today in All programs A–Z (A, W); both Persuasions; counts add up to the programs' => sub {
+	fresh();
+	route_d8_index();
+
+	my $c = index_call();
+	is( $c->count, 1, 'one callback' );
+	my $result = result_of($c);
+	is( $result->{fallback}, 0, 'fallback 0' );
+	my %by = map { $_->{path} => $_ } @{ $result->{items} };
+
+	is_deeply(
+		$by{'/listen/programs/am'},
+		{ id => '8437680', title => 'AM', path => '/listen/programs/am', description => "AM is Australia's most informative morning current affairs program.", image => $by{'/listen/programs/am'}->{image}, network => 'ABC News Podcasts', programType => 'podcast' },
+		'AM: the program ref'
+	);
+	like( $by{'/listen/programs/am'}->{image}, qr/\A\Q$WCMS\E\//, 'AM: its 1x1 image' );
+	ok( $by{'/listen/programs/worldtoday'}, 'The World Today listed' );
+	ok( $by{'/listen/programs/persuasion'} && $by{'/listen/audiobooks/persuasion-page'}, 'both programs called Persuasion listed (the podcast and the audiobook)' );
+	ok( !( grep {m{\A/(?:abckids|takeover)/}} keys %by ), 'no ABC Kids or Takeover program (outside the ABC listen sites)' );
+	is( scalar( grep { $_->{title} eq 'Mornings' } values %by ), 4, 'the 4 programs called Mornings' );
+	is_deeply( [ map { $_->{path} } grep { $_->{title} eq 'Big Ideas' } @{ $result->{items} } ], ['/listen/programs/bigideas'], 'Big Ideas once: the current path (the legacy one merged)' );
+	is( scalar @{ $result->{items} }, 31, '31 programs (32 hits, Big Ideas twice)' );
+
+	my $letters = items_of( feed($AZ) );
+	is( count_sum($letters), 31, 'A–Z: the letter counts add up to the 31 programs' );
+	my $a = row_for( $letters, 'a' );
+	is( $a->{name}, 'A (7)', 'A (7)' );
+	my $rows = items_of( open_item($a) );
+	is_deeply( names($rows), [ "A Man's Got to Have A Hobby: Long Summers With My Dad", 'ABC Business Daily', 'Alive to This', 'AM', 'Animal Farm', 'The Assassin', 'Australia Plays' ], 'A: AM among them, in sortKey order' );
+	my ($am) = grep { $_->{name} eq 'AM' } @$rows;
+	is_deeply( $am, $OD->programItem( undef, $by{'/listen/programs/am'} ), 'AM: the programItem row (opens /listen/programs/am)' );
+	is_deeply( names( items_of( open_item( row_for( $letters, 'w' ) ) ) ), [ 'The Wind in the Willows', 'The Wonderful Wizard of Oz', 'The World Today' ], 'W: The World Today' );
+	is_deeply( names( items_of( open_item( row_for( $letters, 'p' ) ) ) ), [ 'Persuasion (Audio Books)', 'Persuasion (ABC Listen)' ], 'P: both Persuasions, named by network' );
+	is( scalar algolia_requests(), 1, 'one Algolia request for all of it' );
+};
+
+subtest 'D8: All audiobooks A–Z (programsByType audiobook) lists all 20 audiobooks, Persuasion too; By type: Audiobooks (20)' => sub {
+	fresh();
+	route_d8_index();
+
+	my $c = by_type('audiobook');
+	is( $c->count, 1, 'one callback' );
+	my ($items) = $c->args(0);
+	is( scalar @$items, 20, '20 audiobooks' );
+	is_deeply( [ sort @{ names($items) } ], [ sort @AUDIOBOOKS ], 'every one of ABC\'s 20 audiobooks' );
+	my ($persuasion) = grep { $_->{name} eq 'Persuasion' } @$items;
+	is( $persuasion->{passthrough}->[0]->{path}, '/listen/audiobooks/persuasion-page', 'Persuasion: the audiobook (the podcast is not an audiobook)' );
+	is( $persuasion->{line2}, 'Audio Books', '(line2 Audio Books)' );
+
+	my $types = items_of( feed($TYPES) );
+	is( ( grep { $_->{name} eq 'Audiobooks (20)' } @$types ), 1, 'By type: Audiobooks (20)' );
+	is( count_sum($types), 31, 'By type: the counts add up to the 31 programs' );
+};
+
+subtest 'D8: one program twice in the index (a legacy and the current path, or the same path) -> one ref: the one with a programType, else the first, in the first one\'s place' => sub {
+	fresh();
+	route_hits( [
+		hit( title => 'Big Ideas', canonicalURL => 'http://www.abc.net.au/radionational/programs/bigideas/', infoSource => '', programType => undef ),
+		hit( slug => 'other-1' ),
+		( my $bigIdeas = hit( title => 'Big Ideas', slug => 'bigideas', infoSource => 'ABC Radio National', programType => 'podcast' ) ),
+		hit( title => 'A Big Country', slug => 'abigcountry', programType => undef ),
+		( my $country = hit( title => 'A Big Country', slug => 'abigcountry', programType => 'podcast', infoSource => 'ABC Rural' ) ),
+		hit( title => 'Future Tense', canonicalURL => 'http://www.abc.net.au/radionational/programs/futuretense/', programType => 'podcast' ),
+		hit( title => 'future tense', slug => 'futuretense', programType => 'catch-up' ),
+		hit( title => 'Mornings', slug => 'doublej-mornings' ),
+		hit( title => 'Mornings', canonicalURL => 'https://www.abc.net.au/triplej/programs/mornings/' ),
+		hit( title => 'Hack', canonicalURL => 'https://www.abc.net.au/triplej/programs/hack/' ),
+		hit( title => 'Hack Live', slug => 'hack' ),
+		network_hit( '/listen/classic/special-features', title => 'Special Features', programType => undef ),
+		hit( title => 'Special Features', slug => 'special-features', programType => 'music' ),
+	] );
+	route( qr{\A\Q$NEXT\E/}, code => 404 );
+
+	my $items = result_of( index_call() )->{items};
+	is_deeply(
+		[ map { $_->{path} } @$items ],
+		[ '/listen/programs/bigideas', '/listen/programs/other-1', '/listen/programs/abigcountry', '/radionational/programs/futuretense', '/listen/programs/doublej-mornings', '/triplej/programs/mornings', '/triplej/programs/hack', '/listen/programs/hack', '/listen/programs/special-features' ],
+		'9 refs: each twin once, in the first one\'s place; same title on other slugs, or the same slug with another title: not twins'
+	);
+	my ($id) = $bigIdeas->{objectID} =~ /([0-9]+)\z/;
+	is_deeply( [ @{ $items->[0] }{qw(id network programType)} ], [ $id, 'ABC Radio National', 'podcast' ], 'Big Ideas: the current path\'s ref (it has a programType; the legacy one has none)' );
+	($id) = $country->{objectID} =~ /([0-9]+)\z/;
+	is_deeply( [ @{ $items->[2] }{qw(id programType)} ], [ $id, 'podcast' ], 'A Big Country (the same path twice): the one with a programType' );
+	is( $items->[3]->{programType}, 'podcast', 'Future Tense: both typed -> the first (case-insensitive title)' );
+	is( $items->[-1]->{programType}, 'music', 'Special Features: the program page (with a programType) ...' );
+	ok( !( grep { $_ eq '/listen/classic/special-features' } page_requests() ), '... so its network-relative twin needs no page check' );
+	ok( ( grep { $_->{message} =~ /4 hits of a program listed already merged/ } logged('DEBUG') ), 'the merged count logged at DEBUG' );
+};
+
+subtest 'A–Z buckets (D8): modifier letters skipped (ʻokina), compatibility forms folded (fullwidth, ligatures, circled digits), ħ ŋ ə; the counts add up' => sub {
+	my $bucket = sub { Plugins::ABCListen::OnDemand::_bucket( { title => $_[0], path => '/listen/programs/x' } ) };
+	my @table = (
+		[ "\x{2BB}Ulu Mau",                 'u' ],        # ʻokina (U+02BB, a modifier letter)
+		[ "\x{2BC}Akau",                    'a' ],        # ʼ (U+02BC)
+		[ "\x{2BB}\x{14C}lelo",             'o' ],        # ʻŌlelo: okina skipped, accent folded
+		[ "\x{2BB}\x{2BC}",                 'other' ],    # only modifier letters
+		[ "\x{30FC}\x{58F0}",               'other' ],    # ー (a modifier letter) skipped, then CJK
+		[ "\x{FF26}ullwidth",               'f' ],        # Ｆ fullwidth
+		[ "\x{FF46}\x{FF55}\x{FF4C}\x{FF4C}", 'f' ],      # ｆｕｌｌ
+		[ "\x{FB01}ve Minutes",             'f' ],        # ﬁ ligature
+		[ "\x{FB00} Words",                 'f' ],        # ﬀ ligature
+		[ "\x{1D400}BC",                    'a' ],        # 𝐀 mathematical bold capital A
+		[ "\x{210C}eart",                   'h' ],        # ℌ (NFKD: a capital H)
+		[ "\x{2460} One",                   '0-9' ],      # ① circled digit
+		[ "\x{FF11}00",                     '0-9' ],      # １ fullwidth digit
+		[ "\x{126}al Far",                  'h' ],        # Ħ
+		[ "\x{127}obz",                     'h' ],        # ħ
+		[ "\x{14A}gat",                     'n' ],        # Ŋ
+		[ "\x{14B}a",                       'n' ],        # ŋ
+		[ "\x{18F}li",                      'e' ],        # Ə
+		[ "\x{259}",                        'e' ],        # ə
+		[ "\x{2122} Hits",                  'h' ],        # ™: a symbol stays skipped (not T)
+		[ "The \x{FB01}x",                  'f' ],        # a leading "The" still ignored
+	);
+	for my $row (@table) {
+		my ( $title, $expected ) = @$row;
+		is( $bucket->($title), $expected, "'$title' -> $expected" );
+	}
+
+	fresh();
+	route_hits( [ map { hit( title => $_->[0] ) } @table ] );
+	my $letters = items_of( feed($AZ) );
+	is( count_sum($letters), scalar @table, 'A–Z: the counts add up to the programs' );
+	is_deeply( names($letters), [ 'A (2)', 'E (2)', 'F (5)', 'H (4)', 'N (2)', 'O (1)', 'U (1)', '0–9 (2)', 'Other (2)' ], 'the letter rows' );
+	is_deeply( names( items_of( open_item( row_for( $letters, 'u' ) ) ) ), ["\x{2BB}Ulu Mau"], 'U: ʻUlu Mau' );
+	is( scalar @{ items_of( open_item( row_for( $letters, 'f' ) ) ) }, 5, 'F: its 5 programs' );
 };
 
 done_testing();
