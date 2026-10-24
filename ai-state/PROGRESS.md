@@ -17,7 +17,7 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   (raw.githubusercontent.com); repair run on main succeeded; repo.xml → raw URL, same SHA1. Orchestrator install check
   from the public repo.xml on the testbed: downloaded + SHA1-verified, 0.3.0 installed, 10 top-level items, triple j
   played with song metadata; then uninstalled and dev link restored. #62 closed.
-- #48 O8 (PR #69) + #66 D9 (PR #70) — in review (one reviewer for both)
+- O8/D9 review test gaps — small follow-up PR (test/O8-D9-gaps)
 - #15 R2 smoke test + docs — PR #68 REQUEST_CHANGES (smoke check 6 vacuous on fallback; follow-restore merge not overwrite;
   privacy hosts incl. CDNs; screenshot tab; AU-only string wording) — implementer fixing
 - Queued (cap 3): then v0.3.0 (system verification → release), R2, R3
@@ -34,6 +34,10 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   stale D5-review lock broken, main re-linked; SYS, D5 review and M4 resumed from saved state.
 
 ## Last completions
+- #48 O8 merged (PR #69, squash 286f338): Hottest 100 follow row + More from; page checks resilient (10-min unconfirmed
+  cache, 403 = no answer, dying check listed). #66 D9 merged (PR #70, squash 965d7d0): Search finds AM / same-title
+  programs (siteFilter + mergeTwins, distinct 0); A–Z byte-identical. One reviewer, both APPROVE; merged-tree check.sh
+  767 tests. Test gaps → small follow-up PR.
 - #41 F6 merged (PR #67, squash e979a24): HTTP.pm response to error callbacks, x-nextjs-redirect follow, stale renditions
   fallback, drift probe 12. Review APPROVE; fixes verified (diff read + merged-tree check.sh 752 tests).
 - #56 D8 merged (PR #65, squash 9be5881): A–Z 709 → 736 (AM via URL site segment; distinct 0 + strict twin merge),
