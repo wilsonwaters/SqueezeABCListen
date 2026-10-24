@@ -17,7 +17,8 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   **Install from GitHub FAILS on LMS 9.1.1**: GitHub's releases/download 302 now has a 9,243-char CSP header; LMS's
   Net::HTTP limit is 8,192 ("Header line too long"). v0.2.0's install passed on 10-19, so GitHub changed it. → R4 (#62):
   serve zips from raw.githubusercontent.com (orphan branch release-assets), repair v0.3.0, re-check the install.
-- #62 R4 raw-hosted release zips — implementation
+- #62 R4 raw-hosted release zips — PR #63 merged (squash 884d4c9; orchestrator read the workflow diff: no force-push,
+  zips never replaced, identity Wilson Waters); repair run dispatched on main for v0.3.0, then install check
 - #56 D8 A–Z completeness (AM, Persuasion) + D7 follow-ups — implementation
 - #52 M3 settings/live-quality follow-ups — implementation
 - Queued (cap 3): O8, F6, then v0.3.0 (system verification → release), R2, R3
