@@ -193,7 +193,12 @@ package Plugins::ABCListen::Collections;
 #       Same shape as podcasts()'s categories. No categoriesId (or a podcasts() error): 2 or 3 at
 #       once, without a request. Answers at most CATEGORY_DEADLINE (3 s, the Podcasts menu's
 #       withImages wait) after the call; pages still in flight then carry on (and go on paging)
-#       to warm the cache for the next open. Exactly one callback, also if paging dies.
+#       to warm the cache for the next open. D8: at the deadline, before 2, the whole collection
+#       as cached (source 'last-good'): after PAGE_TTL a page is fetched again, and when ABC
+#       hangs instead of failing, stale_ok's last-good copy would come only after the request's
+#       8 s timeout, so the cached pages are read instead (_cachedCategories: the copy API.pm keeps
+#       7 days, whatever its age; used only when it holds every page). Exactly one callback, also
+#       if paging or (D8) building the list dies (then the static list).
 #
 #   recommendations($name, $cb) -> $cb->({ title, cards => [refs], stale => 0|1 }) | $cb->({ error => TOKEN })
 #       API::bff("recommendations/listen/$name") (ttl 1 h, stale_ok, timeout 8 s); $name is
@@ -209,7 +214,7 @@ package Plugins::ABCListen::Collections;
 #       (collectionItem then uses the plugin icon). Lookups still queued or in flight at the
 #       deadline carry on and warm the cache for the menus.
 #
-# Owned by the discovery stream (D1 creates; D2, D4, D6 and D7 extend additively).
+# Owned by the discovery stream (D1 creates; D2, D4, D6, D7 and D8 extend additively).
 
 use strict;
 use warnings;
@@ -244,6 +249,7 @@ use constant IMAGE_CONCURRENCY   => 4;                     # D6 withImages(): fi
 use constant CATEGORY_DEADLINE  => IMAGE_DEADLINE;    # D7 categories(): seconds (runs alongside withImages)
 use constant CATEGORY_MAX_PAGES => 10;                # D7 categories(): collection pages at most
 use constant MIN_CATEGORIES     => 2;                 # D7: category cards a categories collection has at least
+use constant LAST_GOOD_TTL      => 7 * 86400;         # D8: API.pm keeps a last-good copy (stale_ok) 7 days
 
 # D7 categories(): cards per collection page (PAGE_SIZE; tests page smaller)
 our $CATEGORY_PAGE_SIZE = PAGE_SIZE;
@@ -798,28 +804,24 @@ sub categories {
 
 	my @pageCards = $podcasts->{error} ? () : _uniqueCategories( map { {%$_} } grep { ref $_ eq 'HASH' } _list( $podcasts->{categories} ) );
 	my $id        = $podcasts->{error} ? undef : _digits( $podcasts->{categoriesId} );
+	my $size      = _int($CATEGORY_PAGE_SIZE) || PAGE_SIZE;
 
 	my ( @found, $finished, $timer );
 
-	# $complete: the collection was paged to its end. Else: what it gave first, then the page's cards.
+	# $complete: the collection was paged to its end. Else (D8): the cached collection ($lastGood,
+	# the deadline's), else what it gave first, then the page's cards. The list is built inside an
+	# eval (D8): if building it dies, the static list, so $cb is always called.
 	my $finish = sub {
-		my ( $complete, $why ) = @_;
+		my ( $complete, $why, $lastGood ) = @_;
 		return if $finished++;
 
 		Slim::Utils::Timers::killSpecific($timer) if $timer;
 		undef $timer;
 
-		my @collection = _uniqueCategories(@found);
-		my ( $list, $source );
-
-		if ( $complete && @collection ) {
-			( $list, $source ) = ( \@collection, 'collection' );
-		}
-		elsif ( my @merged = _uniqueCategories( @collection, @pageCards ) ) {
-			( $list, $source ) = ( \@merged, @collection ? 'collection+page' : 'page' );
-		}
-		else {
-			( $list, $source ) = ( [ staticCategories() ], 'static' );
+		my ( $list, $source ) = eval { _categoriesList( $complete, \@found, \@pageCards, $lastGood ) };
+		if ( ref $list ne 'ARRAY' ) {
+			$log->error( 'ABC listen: Browse by category: building the list failed: ' . ( $@ || 'unknown error' ) );
+			( $list, $source, $why ) = ( [ staticCategories() ], 'static', 'building the list failed' );
 		}
 
 		my $note = 'ABC listen: Browse by category: ' . scalar(@$list) . " categories ($source" . ( defined $why ? "; $why" : '' ) . ')';
@@ -836,12 +838,15 @@ sub categories {
 
 	$timer = Slim::Utils::Timers::setTimer( undef, Time::HiRes::time() + CATEGORY_DEADLINE, sub {
 		undef $timer;
-		$finish->( 0, "collection $id not loaded within " . CATEGORY_DEADLINE . ' s' );
+		my $why      = "collection $id not loaded within " . CATEGORY_DEADLINE . ' s';
+		my $lastGood = eval { _cachedCategories( $id, $size ) };
+		$log->error("ABC listen: reading the cached categories collection $id failed: $@") if $@;
+		$finish->( 0, $why, $lastGood );
 	} );
 
 	my $state = {
 		id     => $id,
-		size   => _int($CATEGORY_PAGE_SIZE) || PAGE_SIZE,
+		size   => $size,
 		pages  => 0,
 		found  => \@found,
 		done   => sub { $finished },
@@ -854,6 +859,51 @@ sub categories {
 	};
 
 	return;
+}
+
+# categories()' list: ($list, $source) (see the header). $found: the collection's categories paged
+# so far; $pageCards: the podcasts page's; $lastGood: the cached collection (D8) or undef.
+sub _categoriesList {
+	my ( $complete, $found, $pageCards, $lastGood ) = @_;
+
+	my @collection = _uniqueCategories(@$found);
+
+	return ( \@collection, 'collection' ) if $complete && @collection;
+	return ( $lastGood, 'last-good' ) if ref $lastGood eq 'ARRAY' && @$lastGood;    # D8
+
+	my @merged = _uniqueCategories( @collection, @$pageCards );
+	return ( \@merged, @collection ? 'collection+page' : 'page' ) if @merged;
+
+	return ( [ staticCategories() ], 'static' );
+}
+
+# D8: the whole categories collection from the cache, at the deadline: its pages read from offset 0
+# with a LAST_GOOD_TTL ttl, so the copy API.pm keeps (7 days with stale_ok) answers synchronously
+# whatever its age. -> [categories] (ABC's order, each page id once) when the cached pages reach the
+# collection's end (as _categoryPage pages it, CATEGORY_MAX_PAGES at most), else undef: a page
+# without a copy ends the walk (its request joins the one in flight, or starts one that only warms
+# the cache; its answer is not used).
+sub _cachedCategories {
+	my ( $id, $size ) = @_;
+
+	my @found;
+	my $offset = 0;
+	for ( 1 .. CATEGORY_MAX_PAGES ) {
+		my $result;
+		_bffCollection( 'collection/x', LAST_GOOD_TTL, $id, $offset, $size, sub { $result = shift } );
+		return undef unless ref $result eq 'HASH' && !$result->{error};    # no cached copy: not answered yet
+
+		push @found, _categoryList( _list( $result->{cards} ) );
+
+		my $next = $offset + $result->{count};
+		if ( !( $result->{count} > 0 && defined $result->{total} && $next < $result->{total} ) ) {
+			my @list = _uniqueCategories(@found);
+			return @list ? \@list : undef;
+		}
+		$offset = $next;
+	}
+
+	return undef;    # longer than CATEGORY_MAX_PAGES: not the whole collection
 }
 
 # categories(): one page of the categories collection from $offset, then the next while ABC has more

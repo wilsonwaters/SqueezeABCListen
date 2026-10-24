@@ -8,15 +8,34 @@ package Plugins::ABCListen::ProgramIndex;
 #       Calls $cb EXACTLY ONCE, on every path (a $cb that dies is logged, never called again).
 #       Cache hits call back synchronously, other calls later: code must work either way.
 #       One API::algolia call, opts { ttl => 86400, stale_ok => 1 }, params:
-#         { query => '', hitsPerPage => 1000,
+#         { query => '', hitsPerPage => 1000, distinct => 0,
 #           filters => 'contentType:program AND (siteSegment:listen OR siteSegment:triplej OR
-#                       siteSegment:kidslisten OR siteSegment:triplejunearthed OR siteSegment:pacific)',
+#                       siteSegment:kidslisten OR siteSegment:triplejunearthed OR siteSegment:pacific
+#                       OR canonicalURI_fragments:listen OR canonicalURI_fragments:triplej OR
+#                       canonicalURI_fragments:kidslisten OR canonicalURI_fragments:triplejunearthed
+#                       OR canonicalURI_fragments:pacific)',
 #           attributesToRetrieve => [qw(objectID title canonicalURL shortTeaserText description
 #                                       defaultThumbnail infoSource programType)] }
+#       D8, why distinct and the canonicalURI_fragments terms (ABC's index, probed 2026-10-23):
+#         - distinct => 0: by default the index keeps one hit per title, so the A–Z missed 29
+#           programs: the audiobook Persuasion (the podcast Persuasion was kept), Big Ideas,
+#           Future Tense, Download This Show, A Big Country, 13 of the 14 programs called
+#           "Mornings", Lunch, Live At The Wireless, Classic Albums, Special Features, ...
+#         - canonicalURI_fragments: some ABC listen programs are filed under another site segment
+#           (AM and The World Today: siteSegment 'adelaide', canonicalURL /listen/programs/...),
+#           so a program is also in when a segment of its canonical URL names an ABC listen site
+#           (the path rule below still decides what is listed).
+#       Programs that ABC's index does not have at all (2026-10-23: Comedy Showcase, Grass Roots
+#       and Desko, of the 219 By network programs) are not in the A–Z; By network lists them.
 #       API.pm caches the answer 24 h by canonical params (on disk: it survives LMS restarts),
 #       coalesces identical queries in flight, and with stale_ok serves the last-good copy (kept
 #       7 days) when Algolia fails after that: such data is served as usual (fallback 0).
-#       Hits are mapped to program refs in Algolia's order, de-duplicated by path; hits without
+#       Hits are mapped to program refs in Algolia's order, de-duplicated by path and (D8) by
+#       title (case-insensitive) with the path's last segment (one program at a legacy and a
+#       current path), the latter only when at most one has a programType (or both the same type
+#       key) and the networks are the same or one is missing (_twins): of two, the one at a
+#       program page path is kept, then the one with a programType, else the first, in the first
+#       one's place (_rank). Hits without
 #       a usable path are dropped (count logged at DEBUG), and network-relative paths are kept only
 #       when their page checks out (O7, below). nbHits > the hits returned (the index outgrew
 #       Algolia's 1000-hit cap) -> the hits returned, WARN logged once per run.
@@ -73,7 +92,8 @@ package Plugins::ABCListen::ProgramIndex;
 #   Both work as class methods (Plugins::ABCListen::ProgramIndex->programs($cb)) or as plain
 #   functions (Plugins::ABCListen::ProgramIndex::programs($cb)).
 #
-# Owned by the ondemand stream (O3; O7 added the page check).
+# Owned by the ondemand stream (O3; O7 added the page check; D8 the filter's URL segments,
+# distinct => 0 and the merge of one program's two documents).
 
 use strict;
 use warnings;
@@ -92,8 +112,11 @@ use constant HITS_PER_PAGE => 1000;     # Algolia's cap; no paging past it
 use constant MAX_IN_FLIGHT => 4;        # network lists (fallback) or page checks loading at once
 use constant PAGE_TIMEOUT  => 8;        # seconds per page check (a menu waits for it, as in Programs)
 
+# The ABC listen sites, as site segments and (D8) as canonical URL segments (see the header)
 use constant FILTERS => 'contentType:program AND (siteSegment:listen OR siteSegment:triplej OR siteSegment:kidslisten'
-	. ' OR siteSegment:triplejunearthed OR siteSegment:pacific)';
+	. ' OR siteSegment:triplejunearthed OR siteSegment:pacific'
+	. ' OR canonicalURI_fragments:listen OR canonicalURI_fragments:triplej OR canonicalURI_fragments:kidslisten'
+	. ' OR canonicalURI_fragments:triplejunearthed OR canonicalURI_fragments:pacific)';
 
 my @ATTRIBUTES = qw(objectID title canonicalURL shortTeaserText description defaultThumbnail infoSource programType);
 
@@ -127,6 +150,7 @@ sub programs {
 		{
 			query                => '',
 			hitsPerPage          => HITS_PER_PAGE,
+			distinct             => 0,    # D8: every program, also those sharing a title
 			filters              => FILTERS,
 			attributesToRetrieve => [@ATTRIBUTES],
 		},
@@ -168,20 +192,81 @@ sub _refs {
 
 	my %networks = _networkPaths();
 
-	my ( %seen, @refs );
-	my $dropped = 0;
+	my ( %atPath, %atTitle, @refs );    # path -> index in @refs; title+slug key -> [indexes]
+	my ( $dropped, $twins ) = ( 0, 0 );
 	for my $hit (@hits) {
 		my $ref = _ref( $hit, \%networks );
 		if ( !$ref ) {
 			$dropped++;
 			next;
 		}
-		push @refs, $ref unless $seen{ $ref->{path} }++;
+
+		# the same path: the same program; the same title and slug (D8): only a twin (_twins)
+		my $i = $atPath{ $ref->{path} };
+		if ( !defined $i ) {
+			($i) = grep { _twins( $refs[$_], $ref ) } @{ $atTitle{ _titleKey($ref) } || [] };
+		}
+
+		if ( !defined $i ) {
+			push @refs, $ref;
+			$i = $#refs;
+		}
+		else {
+			# D8: the same program twice: the better ref (_rank), else the first, in the first one's place
+			$twins++;
+			$refs[$i] = $ref if _rank($ref) > _rank( $refs[$i] );
+		}
+
+		for my $r ( $ref, $refs[$i] ) {
+			$atPath{ $r->{path} } = $i;
+			my $key = _titleKey($r);
+			next unless length $key;
+			my $list = $atTitle{$key} ||= [];
+			push @$list, $i unless grep { $_ == $i } @$list;
+		}
 	}
 
 	main::DEBUGLOG && $dropped && $log->is_debug && $log->debug("Program index: $dropped hits without a program page skipped");
+	main::DEBUGLOG && $twins   && $log->is_debug && $log->debug("Program index: $twins hits of a program listed already merged");
 
 	return \@refs;
+}
+
+# D8: with distinct => 0 ABC's index has some programs twice: one document at a legacy path and
+# one at the current one ('Big Ideas' at /radionational/programs/bigideas and
+# /listen/programs/bigideas, the first without a programType or network), or at a
+# network-relative and a program path (/listen/classic/special-features,
+# /listen/programs/special-features). Such twins share their title (lower case) and their path's
+# last segment (_titleKey: '' without a title, so such refs never match); two refs with the same
+# path are always one program.
+sub _titleKey {
+	my $ref = shift;
+	my ($slug) = $ref->{path} =~ m{/([^/]+)\z};
+	return defined $ref->{title} && defined $slug ? lc( $ref->{title} ) . "\0$slug" : '';
+}
+
+# Two refs with the same _titleKey are twins only when they can be one program: at most one has a
+# programType, or both have the same type key (an audiobook and a podcast of one title and slug,
+# /listen/audiobooks/the-secret-keeper and /listen/programs/the-secret-keeper, stay two), and the
+# networks are the same (case-insensitive) or one is missing (Mornings on two networks stay two).
+sub _twins {
+	my ( $x, $y ) = @_;
+	return 0 unless length _titleKey($x) && _titleKey($x) eq _titleKey($y);
+
+	if ( defined $x->{programType} && defined $y->{programType} ) {
+		return 0 unless typeKey( $x->{programType} ) eq typeKey( $y->{programType} );
+	}
+	if ( defined $x->{network} && defined $y->{network} ) {
+		return 0 unless lc $x->{network} eq lc $y->{network};
+	}
+	return 1;
+}
+
+# D8: which of two refs of one program is listed: a program page path (always listed; a
+# network-relative path needs its page check) first, then one with a programType (By type).
+sub _rank {
+	my $ref = shift;
+	return ( _isProgramPath( $ref->{path} ) ? 2 : 0 ) + ( defined $ref->{programType} ? 1 : 0 );
 }
 
 # One Algolia hit -> a program ref, or undef without a program page or network-relative path
