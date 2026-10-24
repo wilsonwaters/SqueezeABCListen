@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # repo.xml, the third-party LMS repository file users add in Manage Plugins: well-formed, has
-# every element/attribute LMS reads (ExtensionsManager::_parseXML), uses absolute URLs, and
-# agrees with ABCListen/install.xml.
+# every element/attribute LMS reads (ExtensionsManager::_parseXML), uses absolute URLs (the zip
+# on the release-assets branch), and agrees with ABCListen/install.xml.
 
 use strict;
 use warnings;
@@ -73,8 +73,27 @@ is( $child{category}, $category,       'category matches install.xml' );
 is( $child{creator},  'Wilson Waters', 'creator' );
 is( $child{link},     $REPO,           'link to the GitHub repository' );
 
-my $v = $attr{version} // '';
-is( $child{url}, "$REPO/releases/download/v$v/ABCListen-$v.zip", 'url is the absolute release asset URL for the version attribute' );
+# url: the zip on the release-assets branch, served by raw.githubusercontent.com, because LMS
+# 9.1.1 can't read the redirect GitHub sends for release asset downloads (#62). Releases up to
+# 0.3.0 were made before that branch existed and pointed at their GitHub Release asset; the
+# Release workflow's repair run (the workflow dispatched on main) moves repo.xml over, and its
+# CI checks run on main before that, so the old URL is still accepted for those versions only.
+my $ZIPS = 'https://raw.githubusercontent.com/wilsonwaters/SqueezeABCListen/release-assets/';
+sub urlRule {
+	my ( $version, $url ) = @_;
+	return 'raw' if $url eq "${ZIPS}ABCListen-$version.zip";
+	return 'legacy' if versionCmp( $version, '0.3.0' ) <= 0 && $url eq "$REPO/releases/download/v$version/ABCListen-$version.zip";
+	return '';
+}
+is_deeply(
+	[ map { urlRule(@$_) } [ '0.4.0', "${ZIPS}ABCListen-0.4.0.zip" ], [ '0.4.0', "$REPO/releases/download/v0.4.0/ABCListen-0.4.0.zip" ], [ '0.4.0', "${ZIPS}ABCListen-0.3.0.zip" ], [ '0.3.0', "$REPO/releases/download/v0.3.0/ABCListen-0.3.0.zip" ], [ '0.3.0', "$REPO/releases/download/v0.2.0/ABCListen-0.2.0.zip" ] ],
+	[ 'raw', '', '', 'legacy', '' ],
+	'url rule: the raw release-assets URL of the version; a GitHub Release URL only up to 0.3.0'
+);
+my $v    = $attr{version} // '';
+my $rule = urlRule( $v || '0.0.0', $child{url} // '' );
+ok( $rule, "url is ${ZIPS}ABCListen-$v.zip (the zip on the release-assets branch, for the version attribute)" ) or diag "url is '" . ( $child{url} // '' ) . "'";
+note("url: $v predates release-assets and still has its GitHub Release asset URL, until the Release workflow repairs it") if $rule eq 'legacy';
 like( $child{sha}, qr/\A[0-9a-f]{40}\z/, 'sha is 40 lower-case hex digits' );
 
 is( $child{icon}, "${RAW}ABCListen/HTML/EN/plugins/ABCListen/html/images/icon.png", 'icon is the absolute raw.githubusercontent.com URL on main' );

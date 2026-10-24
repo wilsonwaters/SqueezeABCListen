@@ -1,16 +1,21 @@
 name: Release
 
 # Builds ABCListen-<version>.zip from ABCListen/install.xml's <version>, creates the tag and GitHub
-# Release v<version> with the zip attached, checks the uploaded asset, then points repo.xml on
-# main at it. The release always comes before the repo.xml commit, so repo.xml never names an
-# asset that doesn't exist; if a run stops in between, the next run repairs repo.xml from the
-# existing asset. The release notes are CHANGELOG.md's section for the version
-# (scripts/changelog-section.sh), or GitHub-generated notes when there is none. The repo.xml
-# commit is made as COMMIT_NAME/COMMIT_EMAIL (below) and pushed with GITHUB_TOKEN. A push to
-# main that touches install.xml without changing <version> does nothing, provided repo.xml on
-# main already has that version (otherwise it releases it). Dry runs (pull requests, or
-# dispatch with dry_run) build and show everything, including the notes, but create no
-# release, tag or commit. See RELEASING.md.
+# Release v<version> with the zip attached, checks the uploaded asset, commits the same zip to the
+# release-assets branch, checks that raw.githubusercontent.com serves it, then points repo.xml on
+# main at that raw URL. LMS downloads the zip from there because LMS 9.1.1 can't read the
+# redirect GitHub sends for release asset downloads (a header line over its 8,192-byte limit,
+# issue #62). The release and the release-assets copy always come before the repo.xml commit, so
+# repo.xml never names a file that doesn't exist; if a run stops in between, the next run
+# repairs it from the existing asset (which is also how a release made before release-assets
+# existed is moved over). The release notes are CHANGELOG.md's section for the version
+# (scripts/changelog-section.sh), or GitHub-generated notes when there is none. The
+# release-assets and repo.xml commits are made as COMMIT_NAME/COMMIT_EMAIL (below) and pushed
+# with GITHUB_TOKEN. A push to main that touches install.xml without changing <version> does
+# nothing, provided repo.xml on main already has that version (otherwise it releases it). Dry
+# runs (pull requests, or dispatch with dry_run) build and show everything, including the notes
+# and the release-assets commit, but create no release, tag or commit on GitHub. See
+# RELEASING.md.
 
 on:
   workflow_dispatch:
@@ -32,9 +37,11 @@ on:
       - 'scripts/check-package.sh'
       - 'scripts/update-repo-xml.pl'
       - 'scripts/changelog-section.sh'
+      - 'scripts/publish-release-asset.sh'
+      - 'scripts/verify-download.sh'
 
-# Read-only by default; only the release job, which creates the release and pushes repo.xml,
-# gets contents: write.
+# Read-only by default; only the release job, which creates the release and pushes the
+# release-assets branch and repo.xml, gets contents: write.
 permissions:
   contents: read
 
@@ -49,10 +56,10 @@ concurrency:
   group: ${{ (github.event_name == 'pull_request' || inputs.dry_run || github.ref != 'refs/heads/main') && format('release-run-{0}', github.run_id) || 'release' }}
   cancel-in-progress: false
 
-# Commit identity (author and committer) of the repo.xml commit the workflow pushes to main:
-# the repository owner (RQ1; OPEN-QUESTIONS, Resolved: commit authorship). This is the only
-# place it is set; change these two values to commit as someone else. The push itself always
-# uses GITHUB_TOKEN.
+# Commit identity (author and committer) of the commits the workflow pushes, to release-assets
+# and (repo.xml) to main: the repository owner (RQ1; OPEN-QUESTIONS, Resolved: commit
+# authorship). This is the only place it is set; change these two values to commit as someone
+# else. The pushes themselves always use GITHUB_TOKEN.
 env:
   COMMIT_NAME: Wilson Waters
   COMMIT_EMAIL: wilsonwaters@users.noreply.github.com
@@ -138,17 +145,24 @@ jobs:
     needs: [version, checks]
     if: needs.version.outputs.release == 'true'
     runs-on: ubuntu-latest
-    # the only job that writes: it creates the tag and release and pushes repo.xml to main
+    # the only job that writes: it creates the tag and release and pushes the release-assets
+    # branch and repo.xml on main
     permissions:
       contents: write
-    timeout-minutes: 15
+    # includes up to 5 minutes of waiting for raw.githubusercontent.com (Verify download URL)
+    timeout-minutes: 25
     env:
       DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run == true }}
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       V: ${{ needs.version.outputs.version }}
       ZIP_NAME: ABCListen-${{ needs.version.outputs.version }}.zip
+      # the GitHub Release asset (for people; LMS 9.1.1 can't download it, issue #62)
       ASSET_URL: https://github.com/${{ github.repository }}/releases/download/v${{ needs.version.outputs.version }}/ABCListen-${{ needs.version.outputs.version }}.zip
+      # the copy LMS downloads, repo.xml's <url>: the zip on the ASSETS_BRANCH branch, served by
+      # raw.githubusercontent.com (ZIP_URL names the same branch)
+      ASSETS_BRANCH: release-assets
+      ZIP_URL: https://raw.githubusercontent.com/${{ github.repository }}/release-assets/ABCListen-${{ needs.version.outputs.version }}.zip
     steps:
       - uses: actions/checkout@v4
         with:
@@ -213,7 +227,10 @@ jobs:
           fi
           echo "RELEASE_EXISTS=$release_exists" >> "$GITHUB_ENV"
 
-      # ---- 3. release exists: no-op, or repair repo.xml from the existing asset ----
+      # ---- 3. release exists: no-op, or repair release-assets and repo.xml from the existing asset ----
+      # Nothing to do only when repo.xml on main has version V, the raw URL (ZIP_URL) and the
+      # asset's SHA1, and release-assets has that same file. Anything else is repaired, including
+      # a release made before release-assets existed (repo.xml still has its GitHub Release URL).
       - name: Existing release (no-op or repair)
         if: env.RELEASE_EXISTS == 'true'
         run: |
@@ -233,11 +250,31 @@ jobs:
           main_sha="$(xp 'normalize-space(/extensions/plugins/plugin[@name="ABCListen"]/sha)')"
           echo "repo.xml on main: version $main_version, url $main_url, sha $main_sha"
 
-          if [[ "$main_version" == "$V" && "$main_url" == "$ASSET_URL" && "$main_sha" == "$sha" ]]; then
-            echo "nothing to do: release v$V exists and repo.xml on main already points at it"
+          published=""
+          if git ls-remote --exit-code origin "refs/heads/$ASSETS_BRANCH" >/dev/null &&
+            git fetch -q --no-tags origin "+refs/heads/$ASSETS_BRANCH:refs/remotes/origin/$ASSETS_BRANCH" &&
+            git cat-file -e "origin/$ASSETS_BRANCH:$ZIP_NAME" 2>/dev/null; then
+            published="$(git cat-file blob "origin/$ASSETS_BRANCH:$ZIP_NAME" | sha1sum | cut -d' ' -f1)"
+            echo "$ASSETS_BRANCH: $ZIP_NAME has sha1 $published"
+          else
+            echo "$ASSETS_BRANCH: no $ZIP_NAME (or no $ASSETS_BRANCH branch) yet"
+          fi
+          if [[ -n "$published" && "$published" != "$sha" ]]; then
+            echo "::error::$ASSETS_BRANCH already has $ZIP_NAME with sha1 $published, but release v$V's asset has $sha. A published zip is never replaced: bump the version and release again."
+            exit 1
+          fi
+
+          stale=()
+          [[ "$main_version" == "$V" ]] || stale+=("repo.xml version is '$main_version', not $V")
+          [[ "$main_url" == "$ZIP_URL" ]] || stale+=("repo.xml url is '$main_url', not $ZIP_URL")
+          [[ "$main_sha" == "$sha" ]] || stale+=("repo.xml sha is '$main_sha', not $sha")
+          [[ "$published" == "$sha" ]] || stale+=("$ZIP_NAME is not on $ASSETS_BRANCH")
+          if [[ ${#stale[@]} -eq 0 ]]; then
+            echo "nothing to do: release v$V exists, $ZIP_NAME is on $ASSETS_BRANCH and repo.xml on main points at it ($ZIP_URL)"
             echo "ACTION=none" >> "$GITHUB_ENV"
           else
-            echo "repo.xml on main is stale; it will be updated from the existing asset (repair)"
+            printf 'stale: %s\n' "${stale[@]}"
+            echo "repair: the existing asset will be published to $ASSETS_BRANCH and repo.xml on main pointed at $ZIP_URL"
             { echo "ACTION=repair"; echo "SHA=$sha"; echo "ZIP=$dir/$ZIP_NAME"; } >> "$GITHUB_ENV"
           fi
 
@@ -257,6 +294,7 @@ jobs:
           echo "Version: $V"
           echo "Zip:     $ZIP_NAME"
           echo "SHA1:    $SHA"
+          echo "URL:     $ZIP_URL (repo.xml; GitHub Release asset: $ASSET_URL)"
           echo "Action:  $ACTION (dry run: $DRY_RUN)"
           unzip -l "$ZIP"
 
@@ -312,7 +350,31 @@ jobs:
           fi
           echo "uploaded asset sha1 $got matches the built zip"
 
-      # ---- 7. point repo.xml at the release, on top of the latest main ----
+      # ---- 7. the copy LMS downloads: the same zip on the release-assets branch ----
+      # The zip just built, hashed and verified as the uploaded asset, or on the repair path the
+      # downloaded asset itself. release-assets is an orphan branch holding only the zips and a
+      # README (created on the first publish); a zip already there is never replaced. Committed
+      # as COMMIT_NAME/COMMIT_EMAIL and pushed with GITHUB_TOKEN. A dry run makes the commit
+      # locally and shows it, without pushing.
+      - name: Publish to release-assets
+        if: env.ACTION != 'none'
+        run: |
+          git config user.name "$COMMIT_NAME"
+          git config user.email "$COMMIT_EMAIL"
+          args=(--branch "$ASSETS_BRANCH")
+          if [[ "$DRY_RUN" == true ]]; then args+=(--dry-run); fi
+          scripts/publish-release-asset.sh "${args[@]}" "$ZIP"
+
+      # ---- 8. LMS can download it: ZIP_URL serves that exact file, with short headers ----
+      # Checked before repo.xml changes. raw.githubusercontent.com can take a few minutes to
+      # serve a newly pushed file, so this retries for up to 5 minutes. A response header line
+      # over LMS's 8,192-byte limit fails at once. Skipped on dry runs (nothing was pushed).
+      - name: Verify download URL
+        if: env.ACTION != 'none' && env.DRY_RUN != 'true'
+        run: |
+          scripts/verify-download.sh --timeout 300 --interval 15 "$ZIP_URL" "$SHA"
+
+      # ---- 9. point repo.xml at the raw URL, on top of the latest main ----
       # minTarget/maxTarget come from the install.xml inside the released zip (built from the
       # released commit, or the existing asset on the repair path), never from main's, which
       # may have moved on since.
@@ -334,7 +396,7 @@ jobs:
               exit 1
             fi
           fi
-          scripts/update-repo-xml.pl --version "$V" --sha "$SHA" --url "$ASSET_URL" --install-xml "$INSTALL_XML"
+          scripts/update-repo-xml.pl --version "$V" --sha "$SHA" --url "$ZIP_URL" --install-xml "$INSTALL_XML"
           xmllint --noout repo.xml
           echo "---- git diff repo.xml ----"
           git --no-pager diff -- repo.xml
@@ -343,7 +405,8 @@ jobs:
             echo
             echo "- Zip: \`$ZIP_NAME\`"
             echo "- SHA1: \`$SHA\`"
-            echo "- Asset URL: $ASSET_URL"
+            echo "- repo.xml url ($ASSETS_BRANCH branch): $ZIP_URL"
+            echo "- GitHub Release asset: $ASSET_URL"
             echo
             echo '```diff'
             git --no-pager diff -- repo.xml
@@ -394,7 +457,7 @@ jobs:
               echo "::error::repo.xml on main moved to $main_version, newer than $V; not overwriting it"
               exit 1
             fi
-            scripts/update-repo-xml.pl --version "$V" --sha "$SHA" --url "$ASSET_URL" --install-xml "$INSTALL_XML"
+            scripts/update-repo-xml.pl --version "$V" --sha "$SHA" --url "$ZIP_URL" --install-xml "$INSTALL_XML"
             xmllint --noout repo.xml
           done
           echo "::error::could not push repo.xml after 3 retries; re-run the workflow to repair it"

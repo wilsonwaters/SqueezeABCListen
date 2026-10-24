@@ -2,10 +2,12 @@
 # .github/workflows/release.yml: triggers and dry runs, permissions (write for the release job
 # only), concurrency, CI first (workflow_call of ci.yml), the no-op for a push that leaves
 # <version> alone once that version is in repo.xml on main, the guards, release notes from
-# CHANGELOG.md with a GitHub-generated fallback, the uploaded-asset check, repo.xml targets from
-# the released zip, and the repo.xml commit (identity defined once, as the repository owner;
-# [skip ci]; only repo.xml; retried 3x; refusals recognised). The scripts of the "Read version",
-# "Update repo.xml" and "Commit and push repo.xml" steps are also run here, against throwaway
+# CHANGELOG.md with a GitHub-generated fallback, the uploaded-asset check, the copy on the
+# release-assets branch that repo.xml points LMS at (published, then its raw URL verified, before
+# repo.xml changes; #62), repo.xml targets from the released zip, and the repo.xml commit
+# (identity defined once, as the repository owner; [skip ci]; only repo.xml; retried 3x;
+# refusals recognised). The scripts of the "Read version", "Existing release (no-op or repair)",
+# "Publish to release-assets" and "Update repo.xml" steps are also run here, against throwaway
 # git repositories.
 
 use strict;
@@ -117,7 +119,7 @@ subtest 'triggers' => sub {
 	my @paths = ( $paths // '' ) =~ /^      - '([^']+)'$/mg;
 	is_deeply(
 		[ sort @paths ],
-		[ sort qw(.github/workflows/release.yml ABCListen/install.xml repo.xml CHANGELOG.md scripts/build.sh scripts/check-package.sh scripts/update-repo-xml.pl scripts/changelog-section.sh) ],
+		[ sort qw(.github/workflows/release.yml ABCListen/install.xml repo.xml CHANGELOG.md scripts/build.sh scripts/check-package.sh scripts/update-repo-xml.pl scripts/changelog-section.sh scripts/publish-release-asset.sh scripts/verify-download.sh) ],
 		'pull requests touching the release files get a dry run'
 	);
 	like( $yml, qr/DRY_RUN: \$\{\{ github\.event_name == 'pull_request' \|\| inputs\.dry_run == true \}\}/, 'pull requests and dispatch with dry_run are dry runs' );
@@ -248,8 +250,107 @@ subtest 'existing release: no-op or repair, never a new asset' => sub {
 	like( $existing, qr/gh release download "v\$V"/, 'hashes the existing asset' );
 	like( $existing, qr/ACTION=none/,   'nothing to do when repo.xml already points at it' );
 	like( $existing, qr/ACTION=repair/, 'otherwise repairs repo.xml from it' );
+	like( $existing, qr/\[\[ "\$main_url" == "\$ZIP_URL" \]\]/, 'the no-op compares repo.xml\'s url with the raw release-assets URL (ZIP_URL), not the GitHub Release URL' );
+	unlike( $existing, qr/ASSET_URL/, 'and never with the GitHub Release URL' );
 	is( stepIf('Build'), q{env.RELEASE_EXISTS == 'false'}, 'builds only when there is no release yet' );
 	unlike( $yml, qr/gh release (?:upload|delete|edit)/, 'never uploads to, deletes or edits an existing release' );
+};
+
+# Runs the "Existing release (no-op or repair)" script with a stand-in gh that "downloads" a
+# fixed asset, against an origin whose main has a given repo.xml and maybe a release-assets
+# branch. The case that matters (#62): 0.3.0, released with repo.xml pointing at its GitHub
+# Release asset, must be repaired, not reported as "nothing to do".
+subtest 'existing release: the no-op decision, run against git repositories' => sub {
+	runnable('Existing release (no-op or repair)') or return;
+	my @missing = grep { my $tool = $_; !grep { -x "$_/$tool" } split /:/, $ENV{PATH} } qw(xmllint sha1sum);
+	if (@missing) {
+		fail("not installed: @missing") if $ENV{CI};
+		diag("skipping the run of \"Existing release (no-op or repair)\": not installed: @missing");
+		return;
+	}
+
+	my $tmp = tempdir( CLEANUP => 1 );
+	make_path( "$tmp/bin", "$tmp/asset", "$tmp/other" );
+	my $asset = spew( "$tmp/asset/ABCListen-0.3.0.zip", "the released 0.3.0 zip\n" );
+	my $other = spew( "$tmp/other/ABCListen-0.3.0.zip", "some other zip\n" );
+	my ( undef, $shaOut ) = run( [ 'sha1sum', $asset ] );
+	my ($sha) = split ' ', $shaOut;
+	my $gh = spew( "$tmp/bin/gh", <<'EOF' );
+#!/usr/bin/env bash
+# stand-in for "gh release download vV --pattern NAME --dir DIR": copies $FAKE_ASSET there
+[[ "$1 $2" == "release download" ]] || { echo "unexpected: gh $*" >&2; exit 1; }
+shift 3
+while [[ $# -gt 0 ]]; do
+  case "$1" in --pattern) p="$2"; shift 2 ;; --dir) d="$2"; shift 2 ;; *) shift ;; esac
+done
+cp "$FAKE_ASSET" "$d/$p"
+EOF
+	chmod 0755, $gh;
+
+	my $zipUrl    = 'https://raw.githubusercontent.com/wilsonwaters/SqueezeABCListen/release-assets/ABCListen-0.3.0.zip';
+	my $assetUrl  = 'https://github.com/wilsonwaters/SqueezeABCListen/releases/download/v0.3.0/ABCListen-0.3.0.zip';
+	my $committed = slurp("$ROOT/repo.xml");
+	my $n         = 0;
+	my $decide    = sub {
+		my (%a) = @_;
+		my $dir    = "$tmp/case" . ++$n;
+		my $origin = "$dir/origin.git";
+		my $work   = "$dir/work";
+		my $co     = "$dir/checkout";
+		make_path($dir);
+		git( $dir, 'init', '-q', '--bare', $origin );
+		git( $dir, 'init', '-q', $work );
+		git( $work, 'symbolic-ref', 'HEAD', 'refs/heads/main' );
+		spew( "$work/repo.xml", $committed =~ s{(<plugin\s[^>]*?\sversion=")[^"]*"}{${1}0.3.0"}r =~ s{<url>[^<]*</url>}{<url>$a{url}</url>}r =~ s{<sha>[^<]*</sha>}{<sha>$a{sha}</sha>}r );
+		git( $work, 'add', 'repo.xml' );
+		git( $work, 'commit', '-q', '-m', 'main' );
+		git( $work, 'push', '-q', $origin, 'main' );
+		if ( $a{published} ) {
+			git( $work, 'checkout', '-q', '--orphan', 'release-assets' );
+			git( $work, 'rm', '-q', '-rf', '.' );
+			spew( "$work/ABCListen-0.3.0.zip", slurp( $a{published} ) );
+			git( $work, 'add', 'ABCListen-0.3.0.zip' );
+			git( $work, 'commit', '-q', '-m', 'Add ABCListen-0.3.0.zip' );
+			git( $work, 'push', '-q', $origin, 'release-assets' );
+		}
+		git( $dir, 'clone', '-q', $origin, $co );
+		my ( $rc, $out, undef, $env ) = runStep(
+			'Existing release (no-op or repair)', $co,
+			PATH          => "$tmp/bin:$ENV{PATH}",
+			FAKE_ASSET    => $asset,
+			V             => '0.3.0',
+			ZIP_NAME      => 'ABCListen-0.3.0.zip',
+			ZIP_URL       => $zipUrl,
+			ASSETS_BRANCH => 'release-assets',
+		);
+		my ($action) = $env =~ /^ACTION=(.*)$/m;
+		return ( $rc, $out, $action // '', $env );
+	};
+
+	my ( $rc, $out, $action, $env ) = $decide->( url => $assetUrl, sha => $sha );
+	is( $rc, 0, '0.3.0 with its GitHub Release URL in repo.xml: step succeeds' ) or diag $out;
+	is( $action, 'repair', '... and repairs (the published v0.3.0 state)' );
+	like( $out, qr/stale: repo\.xml url is '\Q$assetUrl\E', not \Q$zipUrl\E/, '... because of the url' );
+	like( $out, qr/stale: ABCListen-0\.3\.0\.zip is not on release-assets/, '... and the missing release-assets copy' );
+	like( $env, qr/^SHA=$sha$/m,                                 '... from the existing asset\'s SHA1' );
+	like( $env, qr/^ZIP=.*\/existing\/ABCListen-0\.3\.0\.zip$/m, '... and that file' );
+
+	( $rc, $out, $action ) = $decide->( url => $zipUrl, sha => $sha, published => $asset );
+	is( $rc, 0, 'raw URL, same SHA1, zip on release-assets: step succeeds' ) or diag $out;
+	is( $action, 'none', '... nothing to do' );
+	like( $out, qr/nothing to do: release v0\.3\.0 exists, ABCListen-0\.3\.0\.zip is on release-assets/, '... and says so' );
+
+	( $rc, $out, $action ) = $decide->( url => $zipUrl, sha => $sha );
+	is( $action, 'repair', 'raw URL and SHA1 in repo.xml but no release-assets copy: repair' ) or diag $out;
+
+	( $rc, $out, $action ) = $decide->( url => $zipUrl, sha => 'f' x 40, published => $asset );
+	is( $action, 'repair', 'zip on release-assets but another SHA1 in repo.xml: repair' ) or diag $out;
+	like( $out, qr/stale: repo\.xml sha is 'f{40}', not $sha/, '... because of the sha' );
+
+	( $rc, $out, $action ) = $decide->( url => $zipUrl, sha => $sha, published => $other );
+	is( $rc, 1, 'a different zip of that name on release-assets: the step fails' );
+	like( $out, qr/::error::release-assets already has ABCListen-0\.3\.0\.zip with sha1 [0-9a-f]{40}, but release v0\.3\.0's asset has $sha\. A published zip is never replaced/, '... and says a published zip is never replaced' );
+	is( $action, '', '... before choosing an action' );
 };
 
 subtest 'release notes from CHANGELOG.md, GitHub-generated as the fallback' => sub {
@@ -266,7 +367,7 @@ subtest 'release notes from CHANGELOG.md, GitHub-generated as the fallback' => s
 };
 
 subtest 'dry runs publish nothing; the uploaded asset is verified' => sub {
-	for my $name ( 'Create release', 'Verify uploaded asset', 'Commit and push repo.xml' ) {
+	for my $name ( 'Create release', 'Verify uploaded asset', 'Verify download URL', 'Commit and push repo.xml' ) {
 		like( stepIf($name), qr/env\.DRY_RUN != 'true'/, "$name: skipped on dry runs" );
 	}
 	unlike( $yml, qr/^\s+git tag\b|git push[^\n]*(?:--tags|refs\/tags)/m, 'never creates or pushes a git tag itself' );
@@ -283,9 +384,83 @@ subtest 'dry runs publish nothing; the uploaded asset is verified' => sub {
 	}
 
 	my $update = $step{'Update repo.xml'} // '';
-	like( $update, qr/scripts\/update-repo-xml\.pl --version "\$V" --sha "\$SHA" --url "\$ASSET_URL"/, 'update-repo-xml.pl' );
+	like( $update, qr/scripts\/update-repo-xml\.pl --version "\$V" --sha "\$SHA" --url "\$ZIP_URL"/, 'update-repo-xml.pl, with the raw release-assets URL' );
 	like( $update, qr/xmllint --noout repo\.xml/,       'xmllint' );
 	like( $update, qr/git --no-pager diff -- repo\.xml/, 'shows the repo.xml diff' );
+};
+
+# LMS 9.1.1 can't read GitHub's release-download redirect (#62): repo.xml points at the copy on
+# the release-assets branch, served by raw.githubusercontent.com.
+subtest 'release-assets: published, then its raw URL verified, before repo.xml changes' => sub {
+	my $release = $job{release} // '';
+	like( $release, qr/^      ASSETS_BRANCH: release-assets$/m, 'ASSETS_BRANCH: release-assets' );
+	my ($zipUrl) = $release =~ /^      ZIP_URL: (.+)$/m;
+	is(
+		$zipUrl // '',
+		'https://raw.githubusercontent.com/${{ github.repository }}/release-assets/ABCListen-${{ needs.version.outputs.version }}.zip',
+		'ZIP_URL: the zip of the version on that branch, on raw.githubusercontent.com'
+	);
+	like( $release, qr{^      ASSET_URL: https://github\.com/\$\{\{ github\.repository \}\}/releases/download/}m, 'ASSET_URL stays the GitHub Release asset (for people)' );
+	my @urls = $yml =~ /--url "\$(\w+)"/g;
+	is_deeply( [ sort { $a cmp $b } keys %{ { map { $_ => 1 } @urls } } ], ['ZIP_URL'], 'repo.xml only ever gets ZIP_URL' );
+
+	my $publish = stepRun('Publish to release-assets');
+	ok( length $publish, 'a "Publish to release-assets" step' ) or return;
+	is( stepIf('Publish to release-assets'), q{env.ACTION != 'none'}, 'it runs on releases and repairs, dry runs included' );
+	like( $publish, qr/args=\(--branch "\$ASSETS_BRANCH"\)/,                                  'publishes to ASSETS_BRANCH' );
+	like( $publish, qr/if \[\[ "\$DRY_RUN" == true \]\]; then args\+=\(--dry-run\); fi/,     'with --dry-run on dry runs (nothing pushed)' );
+	like( $publish, qr/^scripts\/publish-release-asset\.sh "\$\{args\[@\]\}" "\$ZIP"$/m,       'the zip that was built and verified, or the existing asset on repair' );
+	like( $publish, qr/git config user\.name "\$COMMIT_NAME"\ngit config user\.email "\$COMMIT_EMAIL"\n/, 'committed as COMMIT_NAME/COMMIT_EMAIL' );
+
+	my $verify = stepRun('Verify download URL');
+	ok( length $verify, 'a "Verify download URL" step' ) or return;
+	like( $verify, qr/^scripts\/verify-download\.sh --timeout 300 --interval 15 "\$ZIP_URL" "\$SHA"$/m, 'downloads ZIP_URL and checks its SHA1, retrying for up to 5 minutes' );
+	like( $job{release} // '', qr/^    timeout-minutes: (?:2[0-9]|[3-5][0-9])$/m, 'the job has time for that wait' );
+
+	my @order = ( 'Verify uploaded asset', 'Publish to release-assets', 'Verify download URL', 'Update repo.xml', 'Commit and push repo.xml' );
+	my @at    = map { index( $yml, "      - name: $_\n" ) } @order;
+	ok( !grep( { $_ < 0 } @at ) && join( ',', @at ) eq join( ',', sort { $a <=> $b } @at ), 'order: ' . join( ' -> ', @order ) );
+
+	my ($scriptRefused) = slurp('scripts/publish-release-asset.sh') =~ /^(refused\(\) \{.*\})$/m;
+	my ($stepRefused)   = ( $step{'Commit and push repo.xml'} // '' ) =~ /^ +(refused\(\) \{.*\})$/m;
+	is( $scriptRefused, $stepRefused, 'publish-release-asset.sh recognises a refused push exactly as the repo.xml push does' );
+};
+
+# Runs the "Publish to release-assets" script in a throwaway checkout: a dry run pushes nothing;
+# a real run creates the branch as COMMIT_NAME/COMMIT_EMAIL. No other git identity is set (as on
+# a runner), so the step's own git config is what names the author and committer.
+subtest 'release-assets publish step, run against a git repository' => sub {
+	runnable('Publish to release-assets') or return;
+	local %ENV = %ENV;
+	my $tmp    = tempdir( CLEANUP => 1 );
+	my $origin = "$tmp/origin.git";
+	my $work   = "$tmp/work";
+	my $co     = "$tmp/checkout";
+	git( $tmp, 'init', '-q', '--bare', $origin );
+	git( $origin, 'symbolic-ref', 'HEAD', 'refs/heads/main' );
+	git( $tmp, 'init', '-q', $work );
+	git( $work, 'symbolic-ref', 'HEAD', 'refs/heads/main' );
+	make_path("$work/scripts");
+	spew( "$work/scripts/publish-release-asset.sh", slurp("$ROOT/scripts/publish-release-asset.sh") );
+	chmod 0755, "$work/scripts/publish-release-asset.sh";
+	git( $work, 'add', '.' );
+	git( $work, 'commit', '-q', '-m', 'main' );
+	git( $work, 'push', '-q', $origin, 'main' );
+	git( $tmp, 'clone', '-q', $origin, $co );
+	my $zip = spew( "$tmp/ABCListen-0.3.0.zip", "zip\n" );
+	delete @ENV{qw(GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL)};
+
+	my %env = ( ASSETS_BRANCH => 'release-assets', ZIP => $zip, COMMIT_NAME => 'Wilson Waters', COMMIT_EMAIL => 'wilsonwaters@users.noreply.github.com' );
+	my ( $rc, $out ) = runStep( 'Publish to release-assets', $co, %env, DRY_RUN => 'true' );
+	is( $rc, 0, 'dry run: step succeeds' ) or diag $out;
+	like( $out, qr/dry run: ABCListen-0\.3\.0\.zip not pushed/, 'dry run: not pushed' );
+	my ($lsRc) = run( [ 'git', 'rev-parse', '-q', '--verify', 'refs/heads/release-assets' ], cwd => $origin );
+	isnt( $lsRc, 0, 'dry run: no release-assets branch on origin' );
+
+	( $rc, $out ) = runStep( 'Publish to release-assets', $co, %env, DRY_RUN => 'false' );
+	is( $rc, 0, 'real run: step succeeds' ) or diag $out;
+	is( git( $origin, 'log', '-1', '--format=%an <%ae>|%cn <%ce>|%s', 'release-assets' ), 'Wilson Waters <wilsonwaters@users.noreply.github.com>|Wilson Waters <wilsonwaters@users.noreply.github.com>|Add ABCListen-0.3.0.zip', 'real run: release-assets created, authored and committed as COMMIT_NAME <COMMIT_EMAIL>' );
+	is( git( $origin, 'ls-tree', '--name-only', 'release-assets' ), "ABCListen-0.3.0.zip\nREADME.md", 'real run: the zip and the README' );
 };
 
 subtest 'repo.xml commit: the repository owner, [skip ci], only repo.xml, retried 3 times' => sub {
@@ -384,12 +559,15 @@ subtest 'repo.xml minTarget/maxTarget come from the released zip, not from main'
 		SHA               => $sha,
 		ZIP               => "$tmp/ABCListen-0.3.0.zip",
 		ZIP_NAME          => 'ABCListen-0.3.0.zip',
+		ASSETS_BRANCH     => 'release-assets',
+		ZIP_URL           => 'https://raw.githubusercontent.com/wilsonwaters/SqueezeABCListen/release-assets/ABCListen-0.3.0.zip',
 		ASSET_URL         => 'https://github.com/wilsonwaters/SqueezeABCListen/releases/download/v0.3.0/ABCListen-0.3.0.zip',
 	);
 	is( $rc, 0, 'step succeeds' ) or diag $out;
 	my $repo = slurp("$co/repo.xml");
 	like( $repo, qr/<plugin name="ABCListen" version="0\.3\.0" minTarget="9\.0" maxTarget="9\.\*">/, 'targets from the zip\'s install.xml (9.0 .. 9.*), not main\'s (8.3 .. *)' );
 	like( $repo, qr/<sha>$sha<\/sha>/,                                                     'sha set' );
+	like( $repo, qr{<url>https://raw\.githubusercontent\.com/wilsonwaters/SqueezeABCListen/release-assets/ABCListen-0\.3\.0\.zip</url>}, 'url set to ZIP_URL' );
 	like( $env,  qr/^INSTALL_XML=.*\/released-install\.xml$/m,                              'INSTALL_XML exported for the commit step' );
 	like( $summary, qr/^\+.*minTarget="9\.0"/m,                                             'the summary diff shows it' );
 };

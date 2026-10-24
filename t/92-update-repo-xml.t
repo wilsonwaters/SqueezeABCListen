@@ -12,7 +12,7 @@ use Test::More;
 
 my $SCRIPT = 'scripts/update-repo-xml.pl';
 my $SHA    = 'da39a3ee5e6b4b0d3255bfef95601890afd80709';
-my $REPO   = 'https://github.com/wilsonwaters/SqueezeABCListen';
+my $ZIPS   = 'https://raw.githubusercontent.com/wilsonwaters/SqueezeABCListen/release-assets';
 
 sub slurp {
 	my $file = shift;
@@ -63,10 +63,10 @@ subtest 'sets version, url, sha and targets; nothing else changes' => sub {
 	is( $rc, 0, 'exit 0' ) or diag $out;
 	like( $out, qr/updated/, 'reports the update' );
 
-	my $url = "$REPO/releases/download/v1.2.3/ABCListen-1.2.3.zip";
+	my $url = "$ZIPS/ABCListen-1.2.3.zip";
 	my $got = slurp($file);
 	like( $got, qr{<plugin name="ABCListen" version="1\.2\.3" minTarget="9\.0" maxTarget="9\.\*">}, 'version, minTarget, maxTarget attributes' );
-	like( $got, qr{<url>\Q$url\E</url>}, 'default url derived from the version' );
+	like( $got, qr{<url>\Q$url\E</url>}, 'default url derived from the version: the zip on the release-assets branch (raw.githubusercontent.com)' );
 	like( $got, qr{<sha>$SHA</sha>},     'sha written in lower case' );
 
 	# expected result: the original with exactly those values replaced
@@ -79,8 +79,9 @@ subtest 'sets version, url, sha and targets; nothing else changes' => sub {
 
 subtest 'release of the committed version: only the sha line changes' => sub {
 	my $file = fresh('release.xml');
-	my ($v) = $original =~ m{<plugin name="ABCListen" version="([^"]+)"};
-	my ( $rc, $out ) = run( '--file', $file, '--version', $v, '--sha', $SHA, '--url', "$REPO/releases/download/v$v/ABCListen-$v.zip" );
+	my ($v)   = $original =~ m{<plugin name="ABCListen" version="([^"]+)"};
+	my ($url) = $original =~ m{<url>([^<]+)</url>};
+	my ( $rc, $out ) = run( '--file', $file, '--version', $v, '--sha', $SHA, '--url', $url );
 	is( $rc, 0, 'exit 0' ) or diag $out;
 	my @old     = split /\n/, $original, -1;
 	my @new     = split /\n/, slurp($file), -1;
@@ -88,6 +89,22 @@ subtest 'release of the committed version: only the sha line changes' => sub {
 	is( scalar @new, scalar @old, 'same number of lines' );
 	is( scalar @changed, 1, 'exactly one line differs' );
 	like( $new[ $changed[0] // 0 ], qr{^\s*<sha>$SHA</sha>$}, 'and it is the sha line' );
+};
+
+# the repair of a release made before release-assets (0.3.0): same version and sha, new url
+subtest 'repair of a GitHub Release url: only the url line changes, to the release-assets zip' => sub {
+	my ($v)   = $original =~ m{<plugin name="ABCListen" version="([^"]+)"};
+	my ($sha) = $original =~ m{<sha>([^<]+)</sha>};
+	my $old   = $original =~ s{<url>[^<]*</url>}{<url>https://github.com/wilsonwaters/SqueezeABCListen/releases/download/v$v/ABCListen-$v.zip</url>}r;
+	my $file  = fresh( 'repair.xml', $old );
+	my ( $rc, $out ) = run( '--file', $file, '--version', $v, '--sha', $sha );
+	is( $rc, 0, 'exit 0' ) or diag $out;
+	my @old     = split /\n/, $old, -1;
+	my @new     = split /\n/, slurp($file), -1;
+	my @changed = grep { $old[$_] ne $new[$_] } 0 .. $#old;
+	is( scalar @new, scalar @old, 'same number of lines' );
+	is( scalar @changed, 1, 'exactly one line differs' );
+	is( $new[ $changed[0] // 0 ], "      <url>$ZIPS/ABCListen-$v.zip</url>", 'and it is the url line, now the release-assets zip' );
 };
 
 subtest 'positional file argument (REF form) still works' => sub {
