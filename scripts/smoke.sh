@@ -12,8 +12,10 @@
 #
 # WARNING: the test plays audio on the chosen player. It replaces the player's queue; at the end
 # (also on failure or Ctrl-C) it stops the player, clears the queue and switches the player off
-# again if it was off. It follows and unfollows one program, then puts the followed programs back
-# exactly as they were.
+# again if it was off. A player in a sync group stops with its group, and the group's shared queue
+# is cleared. It follows and unfollows one program, then puts that program (and any follow the
+# plugin dropped to make room for it) back as it was; other changes to the followed programs, made
+# by someone else meanwhile, are kept.
 #
 # Checks, one line each ("PASS|FAIL|SKIP  <n>. <name> — <detail>"), then
 # "SMOKE: <passed>/<run> passed" (", <k> skipped" when checks were skipped):
@@ -24,7 +26,7 @@
 #   13. Podcasts non-empty       14. Sections non-empty         15. Kids listen live plays
 # Menus are walked by item name, always with the ids from the latest response.
 # Exit codes: 0 no check failed (skips allowed), 1 a check failed, 2 usage, dependency or
-# connectivity error. Needs bash 4+, curl and jq. Takes about 2 minutes.
+# connectivity error. Needs bash 4+, curl and jq. Takes about a minute.
 
 if [ -z "${BASH_VERSION:-}" ]; then
   echo "smoke: needs bash 4 or later" >&2
@@ -64,6 +66,7 @@ STR_UNFOLLOWED_OK='No longer following %s'            # PLUGIN_ABCLISTEN_UNFOLLO
 STR_RATE_LIMITED='ABC listen is busy right now. Please try again in a few minutes.'  # PLUGIN_ABCLISTEN_RATE_LIMITED
 STR_LOAD_FAILED="Couldn't load this from ABC listen. Please try again later."         # PLUGIN_ABCLISTEN_LOAD_FAILED
 STR_ERROR='Sorry, part of the ABC listen menu could not be loaded. Please try again later.'  # PLUGIN_ABCLISTEN_ERROR
+STR_PLUGIN='ABC listen'                               # PLUGIN_ABCLISTEN
 
 # ABC's own collection title (data from ABC, not a plugin string)
 ABC_NEW_NOTEWORTHY='New & Noteworthy'
@@ -88,7 +91,7 @@ MAX_ATTEMPTS=5      # episodes tried (check 8)
 MAX_HOME_LINKS=3    # Home links tried (check 10)
 SEARCH_QUERY='science'
 
-usage() { sed -n '4,27p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '4,/^$/p' "$0" | sed '/^$/d; s/^# \{0,1\}//'; }   # the header, from "Usage:"
 die() { echo "smoke: $*" >&2; exit 2; }
 
 # ---- arguments ----
@@ -126,11 +129,21 @@ player="${player,,}"
 
 tmp="$(mktemp -d)" || die "can't create a temporary directory"
 curl_opts=(-sS -m "$CURL_TIMEOUT_S" --connect-timeout 10 -H 'Content-Type: application/json')
-[[ -n "${LMS_USER:-}" ]] && curl_opts+=(-u "$LMS_USER:${LMS_PASS:-}")
+if [[ -n "${LMS_USER:-}" ]]; then
+  # the credentials go in a curl config file only this user can read, never on curl's command line
+  auth="$LMS_USER:${LMS_PASS:-}"
+  auth="${auth//\\/\\\\}"
+  auth="${auth//\"/\\\"}"
+  (umask 077 && printf 'user = "%s"\n' "$auth" >"$tmp/auth.conf") || die "can't write $tmp/auth.conf"
+  unset auth
+  curl_opts+=(-K "$tmp/auth.conf")
+fi
 
 touched=""      # set once the player has been changed: cleanup then stops it
 was_power=1     # the player's power state before the test
 follows_saved=""  # the followed programs before check 12 (JSON), while check 12 may have changed them
+follow_sent=""    # set once check 12 has sent a Follow or Unfollow
+follow_path="" follow_name="" follow_title="" follow_note="" follow_start=""
 passed=0 failed=0 skipped=0
 
 DRIFT_HINT="if this persists, ABC may have changed its data: run scripts/abc-endpoints-check.sh"
@@ -315,6 +328,54 @@ find_station() {
 }
 has_favs() { jq -e 'any(.item_loop[]?; .presetParams.favorites_url? // "" | startswith("abclisten://live/"))' <<<"$1" >/dev/null 2>&1; }
 
+# station_names LEVEL_JSON: the names of a menu-mode level's station rows (rows with a station
+# favourite, or playable rows on an LMS without favourite links), one per line
+station_names() {
+  jq -r '.item_loop[]? | select((.presetParams.favorites_url? // "" | startswith("abclisten://live/")) or .type == "playlist" or .type == "audio") | .text // "" | split("\n")[0]' <<<"$1"
+}
+
+# menu_links LEVEL_JSON: "<id><US><name>" of a menu-mode level's links (not station rows)
+menu_links() {
+  jq -r '.item_loop[]? | select((.actions.go.params.item_id? // "") != "" and .type != "playlist" and .type != "audio" and ((.presetParams.favorites_url? // "") == "")) | [(.actions.go.params.item_id | tostring), (.text // "" | split("\n")[0])] | join("\u001f")' <<<"$1"
+}
+
+# search_station LEVEL_ID SERVICE_ID: breadth-first through the menu-mode levels below LEVEL_ID
+# (two levels down, at most 20 requests) for the row whose favourite is abclisten://live/SERVICE_ID.
+# ST_ID, ST_NAME = that row; ST_WHERE = the links that lead to it; ST_NAMES = the names of every
+# station row seen (one per line); ST_FAVS set when any row had a station favourite.
+search_station() {
+  local queue=("$1"$'\x1f'0$'\x1f') entry id depth where child cname requests=0
+  ST_ID="" ST_NAME="" ST_WHERE="" ST_NAMES="" ST_FAVS="" ST_ERR=""
+  while [[ ${#queue[@]} -gt 0 ]] && ((requests < 20)); do
+    entry="${queue[0]}"
+    queue=("${queue[@]:1}")
+    IFS=$'\x1f' read -r id depth where <<<"$entry"
+    requests=$((requests + 1))
+    menu_items "$id" || { ST_ERR="${where:-$id}: $rpc_error"; continue; }
+    has_favs "$R" && ST_FAVS=1
+    ST_NAMES+="$(station_names "$R")"$'\n'
+    IFS=$'\x1f' read -r ST_ID ST_NAME <<<"$(find_station "$R" "$2")"
+    if [[ -n "$ST_ID" ]]; then ST_WHERE="$where"; return 0; fi
+    ((depth < 2)) || continue
+    while IFS=$'\x1f' read -r child cname; do
+      [[ -n "$child" ]] && queue+=("$child"$'\x1f'$((depth + 1))$'\x1f'"${where:+$where › }$cname")
+    done < <(menu_links "$R")
+  done
+  ST_ID="" ST_NAME=""
+  return 1
+}
+
+# not_a_station_name TITLE: TITLE is neither a station row's name seen by search_station, nor the
+# service id, nor the plugin's own name (what Now Playing shows before it has any metadata)
+not_a_station_name() {
+  local name
+  [[ -n "$1" && "$1" != "$station" && "$1" != "$STR_PLUGIN" ]] || return 1
+  while IFS= read -r name; do
+    [[ -n "$name" && "$name" == "$1" ]] && return 1
+  done <<<"$ST_NAMES"
+  return 0
+}
+
 # play_station ID NAME SERVICE_ID: play a station row (or its URL when ID is empty); why = detail
 play_station() {
   local how
@@ -358,30 +419,67 @@ followed() {
   R_FOLLOWED="$(jq -c '._p2 // []' <<<"$R")"
 }
 
-# restore_follows: put the followed programs back as they were before check 12. An unfollow
-# leaves the program in the list for 30 minutes (marked unfollowed), so the list is written back
-# when the followed programs are the same as before, or differ only by the test program.
+# same_json A B: A and B are the same JSON, numbers compared as text (LMS may report a number as a
+# string once it has saved its prefs file)
+same_json() {
+  jq -en --argjson a "$1" --argjson b "$2" '
+      def text: if type == "array" then map(text) elif type == "object" then map_values(text) elif type == "number" then tostring else . end;
+      ($a | text) == ($b | text)' >/dev/null 2>&1
+}
+
+# find_test_path follow|unfollow SAVED: the path of the test program's entry in the followed
+# programs (R_FOLLOWED): the program check 12 followed (followed now, not in SAVED) or unfollowed
+# (followed in SAVED, not now), told apart by its title from changes someone else made meanwhile.
+# Empty when unsure.
+find_test_path() {
+  jq -r --argjson s "$2" --arg op "$1" --arg t1 "$follow_title" --arg t2 "$follow_name" '
+      def act: [.[]? | select(type == "object" and (has("unfollowedAt") | not)) | .path];
+      ($s | act) as $sa | act as $ca |
+      (if $op == "follow" then $ca - $sa else $sa - $ca end) as $changed |
+      ([ .[]?, $s[]? | select(type == "object") | select(.path as $x | $changed | index([$x]) != null)
+         | select((.title // "") == $t2 or ($t1 != "" and (.title // "") == $t1)) | .path ] | unique) as $named |
+      if ($named | length) == 1 then $named[0]
+      elif ($named | length) == 0 and ($changed | length) == 1 then $changed[0]
+      else "" end' <<<"$R_FOLLOWED" 2>/dev/null
+}
+
+# restore_follows: put back what check 12 changed in the followed programs, and nothing else. The
+# test program's entry goes back to what it was before check 12 (taken out if it wasn't there: an
+# unfollow leaves it in the list, marked unfollowed, for 30 minutes), and so does the follow the
+# plugin dropped to make room for it when 200 were followed. Changes someone else made meanwhile
+# are kept. Nothing is written when check 12 never sent a Follow or Unfollow.
 restore_follows() {
-  local saved="$follows_saved"
+  local saved="$follows_saved" path merged
   [[ -n "$saved" ]] || return 0
   follows_saved=""
+  [[ -n "$follow_sent" ]] || return 0
   followed || { follow_note="couldn't read the followed programs: $rpc_error"; return 1; }
-  # (LMS may report a number as a string once it has saved its prefs file: compare them as text)
-  jq -en --argjson a "$saved" --argjson b "$R_FOLLOWED" '
-      def text: if type == "array" then map(text) elif type == "object" then map_values(text) elif type == "number" then tostring else . end;
-      ($a | text) == ($b | text)' >/dev/null 2>&1 && return 0
-  # the followed programs that differ: none but the test program (or, when the test was
-  # interrupted before it could tell which program that was, at most one)
-  if jq -en --argjson a "$saved" --argjson b "$R_FOLLOWED" --arg p "${follow_path:-}" '
-      def active: [.[]? | select(type == "object" and (has("unfollowedAt") | not)) | .path] | unique;
-      ($a | active) as $x | ($b | active) as $y | (($x - $y) + ($y - $x)) as $d |
-      if $p != "" then ($d - [$p]) == [] else ($d | length) <= 1 end' >/dev/null 2>&1; then
-    rpc "" "$(jq -cn --argjson v "$saved" '["pref","plugin.abclisten:followed",$v]')" ||
-      { follow_note="couldn't restore the followed programs: $rpc_error"; return 1; }
-    return 0
+  same_json "$saved" "$R_FOLLOWED" && return 0
+  path="$follow_path"
+  [[ -n "$path" ]] || path="$(find_test_path follow "$saved")"
+  [[ -n "$path" ]] || path="$(find_test_path unfollow "$saved")"
+  merged="$(jq -c --argjson s "$saved" --arg p "$path" '
+      def obj: [.[]? | select(type == "object" and (.path | type) == "string")];
+      def act: [.[] | select(has("unfollowedAt") | not)];
+      def num: (tostring | tonumber? // 0);
+      ($s | obj) as $s | obj as $c | ($s | act) as $sa |
+      (if ($sa | length) >= 200 then ($sa | min_by(.followedAt | num) | .path) else "" end) as $oldest |
+      (if $oldest != "" and $oldest != $p and any($c[]; .path == $oldest and has("unfollowedAt")) then $oldest else "" end) as $dropped |
+      ([$p, $dropped] | map(select(. != ""))) as $put |
+      ($s | map({key: .path, value: .}) | from_entries) as $before |
+      [ $c[] | if (.path as $x | $put | index([$x])) != null then ($before[.path] // empty) else . end ]
+      + [ $s[] | select(.path as $x | $put | index([$x]) != null) | select(.path as $x | any($c[]; .path == $x) | not) ]
+    ' <<<"$R_FOLLOWED" 2>/dev/null)"
+  [[ -n "$merged" ]] || { follow_note="couldn't work out which follows to put back"; return 1; }
+  if [[ -z "$path" ]]; then
+    follow_note="couldn't tell which followed program was the test's ($follow_name): check $STR_MY_ABC"
+    same_json "$merged" "$R_FOLLOWED" && return 1
   fi
-  follow_note="the followed programs were changed by someone else during the test; left as they are"
-  return 1
+  same_json "$merged" "$R_FOLLOWED" && return 0
+  rpc "" "$(jq -cn --argjson v "$merged" '["pref","plugin.abclisten:followed",$v]')" ||
+    { follow_note="couldn't restore the followed programs: $rpc_error"; return 1; }
+  [[ -z "$path" ]] && return 1
+  return 0
 }
 
 # shellcheck disable=SC2317,SC2329  # only called from the EXIT trap
@@ -501,22 +599,25 @@ needs_top() { # needs_top N NAME: FAIL N when the top level can't be walked
 if [[ -n "$skip_live" ]]; then
   result SKIP 6 "National station plays with metadata" "--skip-live"
 elif needs_top 6 "National station plays with metadata"; then
-  if ! walk "$STR_RADIO" || ! menu_items "$W_ID"; then
-    result FAIL 6 "National station plays with metadata" "${walk_error:-$rpc_error}"
+  if ! walk "$STR_RADIO"; then
+    result FAIL 6 "National station plays with metadata" "$walk_error"
   else
-    IFS=$'\x1f' read -r st_id st_name <<<"$(find_station "$R" "$station")"
-    note=""
+    # the station's row: in Radio itself, else in Sport, Local radio (each state) or Time-zone versions
+    search_station "$W_ID" "$station"
+    st_id="$ST_ID" st_name="$ST_NAME" note=""
     if [[ -z "$st_id" ]]; then
-      if has_favs "$R"; then note=" ($station is not in $STR_RADIO)"; else note=" (no station links in menu mode, older LMS?)"; fi
+      if [[ -n "$ST_FAVS" ]]; then note=" ($station is not in $STR_RADIO${ST_ERR:+; $ST_ERR})"; else note=" (no station links in menu mode, older LMS?${ST_ERR:+; $ST_ERR})"; fi
       st_name="$station"
     fi
     if ! play_station "$st_id" "$st_name" "$station"; then
       result FAIL 6 "National station plays with metadata" "$why$note"
     else
-      played="$why"
+      # metadata: a title that is not a station's name (the station's own title is all LMS shows
+      # without the plugin's program or song information)
+      played="${ST_WHERE:+$ST_WHERE › }$why"
       title_ok=""
       while :; do
-        if [[ -n "$S_TITLE" && "$S_TITLE" != "$st_name" ]]; then title_ok=1; break; fi
+        if [[ "$S_TITLE" != "$st_name" ]] && not_a_station_name "$S_TITLE"; then title_ok=1; break; fi
         ((SECONDS - play_start < META_WAIT_S)) || break
         sleep "$POLL_S"
         status || break
@@ -715,13 +816,16 @@ followed_count() {
 
 # follow_action OP: open the program again and choose Follow (OP=follow) or Unfollow; why = detail
 follow_action() {
-  local want id answer
+  local want id answer reply
   if [[ "$1" == follow ]]; then want="$STR_FOLLOW"; answer="$STR_FOLLOWED_OK"; else want="$STR_UNFOLLOW"; answer="$STR_UNFOLLOWED_OK"; fi
   walk "${follow_menu[@]}" || { why="$walk_error"; return 1; }
   id="$(find_item "$R" "$(prefix "$want")")"
   [[ -n "$id" ]] || { why="no \"$(prefix "$want")…\" item in $follow_name (got: $(names "$R"))"; return 1; }
+  follow_sent=1
   items "$id" || { why="$(prefix "$want")…: $rpc_error"; return 1; }
-  [[ -n "$(find_item "$R" "$(prefix "$answer")")" ]] || { why="$(prefix "$want")… answered: $(names "$R")"; return 1; }
+  reply="$(jq -r --arg p "$(prefix "$answer")" 'first(.loop_loop[]? | .name // "" | select(startswith($p)))' <<<"$R")"
+  [[ -n "$reply" ]] || { why="$(prefix "$want")… answered: $(names "$R")"; return 1; }
+  follow_title="${reply#"$(prefix "$answer")"}"   # the title the plugin stored
 }
 
 # listed: the program is a row of Followed programs
@@ -731,16 +835,20 @@ listed() {
 }
 
 follow_check() {
-  local start n already
+  local start n already full expect
   follow_menu=("${episode_path[@]}")
   [[ ${#follow_menu[@]} -gt 0 ]] || follow_menu=("${az_path[@]}")
   [[ ${#follow_menu[@]} -gt 0 ]] || { why="skipped: no program from checks 8 or 9"; return 1; }
   follow_name="${follow_menu[${#follow_menu[@]} - 1]}"
   followed || { why="can't read the followed programs: $rpc_error"; return 1; }
   follows_saved="$R_FOLLOWED"
-  follow_path="" follow_note=""
+  follow_path="" follow_note="" follow_title="" follow_sent=""
   followed_count || return 1
   start="$F_COUNT"
+  follow_start="$start"
+  # with 200 followed (the plugin's limit), a follow unfollows the oldest one to make room
+  full=""
+  [[ "$start" -ge 200 ]] && full=1
 
   walk "${follow_menu[@]}" || { why="$walk_error"; return 1; }
   if [[ -n "$(find_item "$R" "$(prefix "$STR_FOLLOW")")" ]]; then
@@ -754,19 +862,21 @@ follow_check() {
 
   if [[ -z "$already" ]]; then
     follow_action follow || return 1
-    followed && follow_path="$(jq -r --argjson a "$follows_saved" '[.[]? | select(type == "object" and (has("unfollowedAt") | not)) | .path] - [$a[]? | select(type == "object" and (has("unfollowedAt") | not)) | .path] | first // empty' <<<"$R_FOLLOWED")"
+    followed && follow_path="$(find_test_path follow "$follows_saved")"
     followed_count || return 1
     n="$F_COUNT"
     listed || { why="followed, but $(prefix "$STR_FOLLOWED_PROGRAMS")$n) doesn't list $follow_name"; return 1; }
-    [[ "$n" -eq $((start + 1)) || "$start" -ge 200 ]] || { why="followed: $(prefix "$STR_FOLLOWED_PROGRAMS")$start) → ($n), expected $((start + 1))"; return 1; }
+    expect=$((full ? start : start + 1))
+    [[ "$n" -eq "$expect" ]] || { why="followed: $(prefix "$STR_FOLLOWED_PROGRAMS")$start) → ($n), expected ($expect)"; return 1; }
     follow_action unfollow || return 1
     followed_count || return 1
-    [[ "$F_COUNT" -eq "$start" ]] || { why="unfollowed: $(prefix "$STR_FOLLOWED_PROGRAMS")$n) → ($F_COUNT), expected ($start)"; return 1; }
+    expect=$((full ? start - 1 : start))
+    [[ "$F_COUNT" -eq "$expect" ]] || { why="unfollowed: $(prefix "$STR_FOLLOWED_PROGRAMS")$n) → ($F_COUNT), expected ($expect)"; return 1; }
     why="$follow_name: $(prefix "$STR_FOLLOWED_PROGRAMS")$start) → followed, listed ($n) → unfollowed ($F_COUNT)"
-    [[ "$start" -ge 200 ]] && why="$why; the list was full, so the oldest follow was replaced for the test"
+    [[ -n "$full" ]] && why="$why; the list was full, so the plugin dropped the oldest follow to make room"
   else
     follow_action unfollow || return 1
-    followed && follow_path="$(jq -r --argjson a "$follows_saved" '[$a[]? | select(type == "object" and (has("unfollowedAt") | not)) | .path] - [.[]? | select(type == "object" and (has("unfollowedAt") | not)) | .path] | first // empty' <<<"$R_FOLLOWED")"
+    followed && follow_path="$(find_test_path unfollow "$follows_saved")"
     followed_count || return 1
     n="$F_COUNT"
     [[ "$n" -eq $((start - 1)) ]] || { why="unfollowed: $(prefix "$STR_FOLLOWED_PROGRAMS")$start) → ($n), expected $((start - 1))"; return 1; }
@@ -781,10 +891,15 @@ follow_check() {
 
 if needs_top 12 "Follow round trip"; then
   if follow_check; then
-    if restore_follows; then
-      result PASS 12 "Follow round trip" "$why; followed programs restored"
+    detail="$why"
+    if ! restore_follows; then
+      result FAIL 12 "Follow round trip" "$detail; but $follow_note"
+    elif ! followed_count; then
+      result FAIL 12 "Follow round trip" "$detail; restored, but then $why"
+    elif [[ "$F_COUNT" -ne "$follow_start" ]]; then
+      result FAIL 12 "Follow round trip" "$detail; restored, but $(prefix "$STR_FOLLOWED_PROGRAMS")$F_COUNT), expected ($follow_start)"
     else
-      result FAIL 12 "Follow round trip" "$why; but $follow_note"
+      result PASS 12 "Follow round trip" "$detail; followed programs restored ($F_COUNT)"
     fi
   else
     detail="$why"

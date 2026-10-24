@@ -170,7 +170,7 @@ time, and then ABC's sport collections and sport programs.
 
 **Audiobooks** has ABC's audiobook collections ("Most Popular", "Top 100 Australian Books", "Crime
 & Thriller" and more), **All audiobooks A–Z**, and the note
-"**Audiobooks play only in Australia.**" (see [Limitations](#limitations)).
+"**Most audiobooks play only in Australia.**" (see [Limitations](#limitations)).
 
 Open a book for its description, its reader ("Presented by …") and **Chapters (N)**. **Chapters**
 lists the book in reading order, numbered: "1. Prologue: February 1886", "2. PART ONE: 1887 -

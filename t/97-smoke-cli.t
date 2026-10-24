@@ -37,17 +37,17 @@ my $DIR    = tempdir( CLEANUP => 1 );
 my $SCRIPT = 'scripts/smoke.sh';
 my $JSON   = JSON::PP->new->canonical->utf8;
 
-# short waits for the fake player (its time runs 16 times faster than the clock, so 0.5 s of
-# waiting is 8 s of playing)
+# short waits for the fake player (its time runs 20 times faster than the clock, so 0.3 s of
+# waiting is 6 s of playing)
 my %FAST = (
 	SMOKE_LIVE_START_S     => 3,
-	SMOKE_LIVE_WINDOW_S    => '0.5',
-	SMOKE_META_WAIT_S      => 2,
+	SMOKE_LIVE_WINDOW_S    => '0.3',
+	SMOKE_META_WAIT_S      => 1,
 	SMOKE_EPISODE_START_S  => 3,
-	SMOKE_EPISODE_WINDOW_S => '0.5',
-	SMOKE_SEEK_WAIT_S      => 3,
+	SMOKE_EPISODE_WINDOW_S => '0.3',
+	SMOKE_SEEK_WAIT_S      => 2,
 	SMOKE_STOP_GRACE_S     => 0,
-	SMOKE_POLL_S           => '0.1',
+	SMOKE_POLL_S           => '0.05',
 	SMOKE_CURL_TIMEOUT_S   => 5,
 );
 
@@ -57,25 +57,38 @@ my $GONE  = { playerid => '00:04:20:00:00:02', name => 'Old Boom',  connected =>
 my $RADIOS = [ { cmd => 'presets', name => 'My Presets', type => 'xmlbrowser' }, { cmd => 'abclisten', name => 'ABC listen', type => 'xmlbrowser' } ];
 
 # run smoke.sh with @args (and %env); returns { code, out, err, secs }
-sub smoke {
-	my ( $args, %opt ) = @_;
-	my $start = time;
-	my $pid   = open( my $fh, '-|' ) // die "fork: $!";
-	if ( !$pid ) {
-		open( STDERR, '>', "$DIR/stderr" ) or die;
-		$ENV{$_} = $opt{env}->{$_} for keys %{ $opt{env} || {} };
-		exec( $opt{bash} || 'bash', $SCRIPT, @$args ) or die "exec: $!";
+sub smoke { return smoke_all( [@_] )->[0] }
+
+# smoke_all([\@args, %opt], ...): several smoke.sh runs at the same time (each against its own fake
+# LMS), to keep this file fast; returns their results in order
+my $RUN = 0;
+sub smoke_all {
+	my @procs;
+	for my $run (@_) {
+		my ( $args, %opt ) = @$run;
+		my $errfile = "$DIR/stderr-" . $RUN++;
+		my $pid     = open( my $fh, '-|' ) // die "fork: $!";
+		if ( !$pid ) {
+			open( STDERR, '>', $errfile ) or die;
+			$ENV{$_} = $opt{env}->{$_} for keys %{ $opt{env} || {} };
+			exec( $opt{bash} || 'bash', $SCRIPT, @$args ) or die "exec: $!";
+		}
+		binmode( $fh, ':encoding(UTF-8)' );
+		push @procs, { fh => $fh, args => $args, errfile => $errfile, start => time };
 	}
-	binmode( $fh, ':encoding(UTF-8)' );
-	local $/;
-	my $out = <$fh> // '';
-	close $fh;
-	my $code = $? >> 8;
-	open( my $efh, '<:encoding(UTF-8)', "$DIR/stderr" ) or die;
-	my $err = do { local $/; <$efh> } // '';
-	close $efh;
-	note( sprintf( 'smoke.sh %s: exit %d in %.1f s', join( ' ', @$args ), $code, time - $start ) );
-	return { code => $code, out => $out, err => $err, secs => time - $start };
+	my @results;
+	for my $p (@procs) {
+		my $out = do { local $/; readline( $p->{fh} ) } // '';
+		close $p->{fh};
+		my $code = $? >> 8;
+		open( my $efh, '<:encoding(UTF-8)', $p->{errfile} ) or die;
+		my $err = do { local $/; <$efh> } // '';
+		close $efh;
+		my $secs = time - $p->{start};
+		note( sprintf( 'smoke.sh %s: exit %d in %.1f s', join( ' ', @{ $p->{args} } ), $code, $secs ) );
+		push @results, { code => $code, out => $out, err => $err, secs => $secs };
+	}
+	return \@results;
 }
 
 # the check lines of an output: "PASS 1", "SKIP 6", ...
@@ -99,7 +112,7 @@ my %STATIONS = (
 
 sub fake_lms {
 	my %opt = @_;
-	$opt{speed} //= 16;
+	$opt{speed} //= 20;
 	my $server = IO::Socket::INET->new( LocalAddr => '127.0.0.1', LocalPort => 0, Listen => 16, ReuseAddr => 1 ) or die "listen: $!";
 	my $port  = $server->sockport;
 	my $log   = "$DIR/commands-$port.log";
@@ -107,6 +120,7 @@ sub fake_lms {
 
 	my $pid = fork // die "fork: $!";
 	if ( !$pid ) {
+		local $SIG{PIPE} = 'IGNORE';    # a client that gave up waiting (curl timeout) has closed its socket
 		my $lms = FakeLMS->new( %opt, statefile => $state );
 		while ( my $c = $server->accept ) {
 			my ( %h, $line );
@@ -190,7 +204,21 @@ sub handle {
 
 	if ( $name eq 'pref' ) {
 		if ( ( $cmd->[1] // '' ) eq 'plugin.abclisten:followed' ) {
-			return { _p2 => $self->{followed} } if ( $cmd->[2] // '' ) eq '?';
+			if ( ( $cmd->[2] // '' ) eq '?' && ( my $other = delete $self->{pre_change} ) ) {
+				# another client follows a program right after this read; the next menu request is
+				# answered late (the test interrupts smoke.sh meanwhile)
+				my $snapshot = $JSON->decode( $JSON->encode( $self->{followed} ) );
+				push @{ $self->{followed} }, $other;
+				$self->_saveFollowed;
+				$self->{hang} = 2;
+				open( my $fh, '>', "$self->{statefile}.changed" ) or die;
+				close $fh;
+				return { _p2 => $snapshot };
+			}
+			if ( ( $cmd->[2] // '' ) eq '?' ) {
+				Time::HiRes::sleep( delete $self->{hang_pref} ) if $self->{hang_pref};    # see hang_pref_after_follow
+				return { _p2 => $self->{followed} };
+			}
 			$self->{followed} = $cmd->[2];
 			$self->_saveFollowed;
 			return {};
@@ -217,6 +245,7 @@ sub _player {
 	if ( $name eq 'stop' ) { $p->{mode} = 'stop' if $p; return {} }
 	if ( $name eq 'time' ) {
 		@$p{qw(offset at)} = ( $cmd->[1], Time::HiRes::time() ) if $p;
+		$p->{frozen} = 1 if $p && $self->{seek_stuck} && $self->{seek_stuck}--;    # the first seek(s) land on the target, then time never moves
 		return {};
 	}
 	if ( $name eq 'playlist' ) {
@@ -231,11 +260,14 @@ sub _player {
 
 	# status
 	return { mode => 'stop', time => 0, playlist_tracks => 0 } unless $p;
-	my $elapsed = ( Time::HiRes::time() - $p->{at} ) * $self->{speed};
+	my $real    = Time::HiRes::time() - $p->{at};
+	my $elapsed = $p->{frozen} ? 0 : $real * $self->{speed};
 	my $mode    = $p->{dead} ? 'stop' : $p->{mode};
 	my $time    = $mode ne 'play' ? 0 : $p->{station} && ( $self->{stuck} // '' ) eq $p->{station} ? 0.4 : $p->{offset} + $elapsed;
-	my $title   = $p->{name};
-	$title = 'Some Song' if $p->{station} && !( grep { $_ eq $p->{station} } @{ $self->{no_meta} || [] } ) && $mode eq 'play';
+	# a station shows its own name until the plugin has metadata (after meta_after seconds; never
+	# for the stations in no_meta), then a song
+	my $title = $p->{name};
+	$title = 'Some Song' if $p->{station} && $mode eq 'play' && !( grep { $_ eq $p->{station} } @{ $self->{no_meta} || [] } ) && $real >= ( $self->{meta_after} // 0 );
 	return {
 		mode            => $mode,
 		time            => $time,
@@ -297,13 +329,24 @@ sub _followAction {
 			my ($entry) = grep { $_->{path} eq $path } @{ $self->{followed} };
 			if ($entry) { delete $entry->{unfollowedAt} }
 			else        { push @{ $self->{followed} }, { path => $path, title => $title, followedAt => 1700000000 + @{ $self->{followed} } } }
+			# like Follow.pm: beyond `cap` followed, the oldest follow (not this one) is unfollowed
+			my @active = grep { !exists $_->{unfollowedAt} } @{ $self->{followed} };
+			if ( $self->{cap} && @active > $self->{cap} ) {
+				my ($oldest) = sort { $a->{followedAt} <=> $b->{followedAt} } grep { $_->{path} ne $path } @active;
+				$oldest->{unfollowedAt} = 1800000000;
+			}
+			# another client follows a program at the same moment
+			if ( my $other = delete $self->{other_follow} ) { push @{ $self->{followed} }, $other }
 		}
 		else {
 			$_->{unfollowedAt} = 1800000000 for grep { $_->{path} eq $path } @{ $self->{followed} };
 		}
 		$self->_saveFollowed;
-		if ( $self->{hang_after_follow} && $op eq 'follow' ) {
-			$self->{hang} = $self->{hang_after_follow};
+		# after the follow, the next menu request (hang_after_follow) or the next read of the followed
+		# programs (hang_pref_after_follow) is answered late; the test interrupts smoke.sh meanwhile
+		if ( $op eq 'follow' && ( $self->{hang_after_follow} || $self->{hang_pref_after_follow} ) ) {
+			$self->{hang}      = $self->{hang_after_follow}      if $self->{hang_after_follow};
+			$self->{hang_pref} = $self->{hang_pref_after_follow} if $self->{hang_pref_after_follow};
 			open( my $fh, '>', "$self->{statefile}.followed" ) or die;
 			close $fh;
 		}
@@ -327,7 +370,7 @@ sub _top {
 		_link( 'News',  sub { [ _link( 'Latest News', sub { [] } ) ] } ),
 		_link( 'Sport', sub { $self->{empty_sport} ? [ _text('Nothing here right now') ] : [ _link( 'Best of ABC Sport', sub { [] } ) ] } ),
 		_link( 'Kids listen', sub { [ _station('KIDSLISTEN'), _link( 'Featured', sub { [] } ) ] } ),
-		_link( 'Audiobooks',  sub { [ _link( 'Most Popular', sub { [] } ), _text('Audiobooks play only in Australia.') ] } ),
+		_link( 'Audiobooks',  sub { [ _link( 'Most Popular', sub { [] } ), _text('Most audiobooks play only in Australia.') ] } ),
 		_link( 'Programs', sub {
 			[
 				_link( 'By network', sub { [ _link( 'Radio National', sub { [ map { $self->_program(@$_) } @PROGRAMS ] } ), _link( 'triple j', sub { [] } ) ] } ),
@@ -340,7 +383,8 @@ sub _top {
 			my @all    = @{ $self->{followed} };
 			my @active = grep { !exists $_->{unfollowedAt} } @all;
 			return [ _text('Open any program and choose Follow') ] unless @all;
-			return [ _link( 'Latest episodes', sub { [] } ), _link( 'Followed programs (' . scalar(@active) . ')', sub { [ map { $self->_program( $_->{title}, $_->{path} =~ m{([^/]+)\z} ) } @all ] } ) ];
+			my @rows = $self->{hide_followed_rows} ? () : @all;    # a broken Followed programs list
+			return [ _link( 'Latest episodes', sub { [] } ), _link( 'Followed programs (' . scalar(@active) . ')', sub { [ map { $self->_program( $_->{title}, $_->{path} =~ m{([^/]+)\z} ) } @rows ] } ) ];
 		} ),
 	);
 	@top = map { $_->{name} eq $self->{rename_top}->[0] ? { %$_, name => $self->{rename_top}->[1] } : $_ } @top if $self->{rename_top};
@@ -377,6 +421,9 @@ sub _items {
 
 	if ( $self->{hang} ) {    # answer the next menu request late (the test interrupts smoke.sh meanwhile)
 		Time::HiRes::sleep( delete $self->{hang} );
+	}
+	if ( $self->{slow_first_items} ) {    # the first menu request takes longer than curl waits
+		Time::HiRes::sleep( delete $self->{slow_first_items} );
 	}
 
 	my ( $prefix, $items );
@@ -506,6 +553,23 @@ subtest 'password-protected server: exit 2 with the LMS_USER hint; works with LM
 	like( $r->{out}, qr/^PASS  1\. Server reachable/m, 'with credentials: check 1 passes' );
 	like( $r->{out}, qr/^PASS  2\. Player connected/m, 'with credentials: check 2 passes' );
 	$stop->();
+
+	# a password with quotes, a backslash and an ampersand; curl must never see it on its command line
+	my $pass = q{p"a\\ss&w0rd};
+	( $url, $stop ) = fake_lms( players => [$DEV], auth => "ad min:$pass" );
+	my $bin = "$DIR/curlspy";
+	mkdir $bin;
+	my ($curl) = grep { -x "$_/curl" } split /:/, $ENV{PATH};
+	open( my $fh, '>', "$bin/curl" ) or die;
+	print $fh "#!/bin/sh\nprintf '%s\\n' \"\$*\" >>'$DIR/curl-args.log'\nexec '$curl/curl' \"\$@\"\n";
+	close $fh;
+	chmod 0755, "$bin/curl";
+	$r = smoke( [ $url, '00:00:00:00:00:01' ], env => { LMS_USER => 'ad min', LMS_PASS => $pass, PATH => "$bin:$ENV{PATH}" } );
+	like( $r->{out}, qr/^PASS  1\. Server reachable/m, 'quotes, backslash and & in the password: check 1 passes' );
+	my $args = do { local ( @ARGV, $/ ) = "$DIR/curl-args.log"; <> } // '';
+	like( $args, qr/ -K \S+\/auth\.conf /, 'curl reads the credentials from a config file' );
+	unlike( $args, qr/s3cret|ss&w0rd|-u /, 'the password is never on curl\'s command line' );
+	$stop->();
 };
 
 subtest 'unknown or ambiguous player: exit 2, players listed, player untouched' => sub {
@@ -565,13 +629,13 @@ subtest 'a full pass: 15/15, exit 0; the player is stopped, cleared and switched
 	is( $r->{code}, 0, 'exit 0' ) or diag $r->{out}, $r->{err};
 	is_deeply( verdicts( $r->{out} ), [ map {"PASS $_"} 1 .. 15 ], '15 PASS lines, in order' );
 	like( $r->{out}, qr/^PASS  5\. Top level — 10 entries: Home \| Radio \| Podcasts \| News \| Sport \| Kids listen \| Audiobooks \| Programs \| Search \| My ABC listen$/m, 'check 5: the 10 entries' );
-	like( $r->{out}, qr/^PASS  6\. National station plays with metadata — "triple j": time [\d.]+ → [\d.]+ s in 0\.5 s; now playing 'Some Song'$/m, 'check 6: triple j by its favourite link, with a song title' );
+	like( $r->{out}, qr/^PASS  6\. National station plays with metadata — "triple j": time [\d.]+ → [\d.]+ s in 0\.3 s; now playing 'Some Song'$/m, 'check 6: triple j by its favourite link, with a song title' );
 	like( $r->{out}, qr/^PASS  7\. Local station plays — New South Wales › "702 ABC Sydney": time /m,      'check 7: 702 ABC Sydney under New South Wales' );
 	like( $r->{out}, qr/^PASS  8\. Episode plays and seeks — Radio National › The Science Show › Mon 1 Oct – The Science Show, part 1: duration 1800 s, seek to 600 s: time 6\d\d(?:\.\d)? → /m, 'check 8: an episode played and sought to 600 s' );
 	like( $r->{out}, qr/^PASS  9\. All programs A–Z non-empty — A \(2\): 2 programs, first 'AM'$/m,         'check 9' );
 	like( $r->{out}, qr/^PASS  10\. Home non-empty — Featured: 3 items/m,                                    'check 10' );
 	like( $r->{out}, qr/^PASS  11\. Search — 'science': Programs \(3\), Episodes \(7\)$/m,                   'check 11' );
-	like( $r->{out}, qr/^PASS  12\. Follow round trip — The Science Show: Followed programs \(0\) → followed, listed \(1\) → unfollowed \(0\); followed programs restored$/m, 'check 12: follow, listed, unfollow' );
+	like( $r->{out}, qr/^PASS  12\. Follow round trip — The Science Show: Followed programs \(0\) → followed, listed \(1\) → unfollowed \(0\); followed programs restored \(0\)$/m, 'check 12: follow, listed, unfollow, restored' );
 	like( $r->{out}, qr/^PASS  13\. Podcasts non-empty — New & Noteworthy: 2 programs/m,                    'check 13' );
 	like( $r->{out}, qr/^PASS  14\. Sections non-empty — News 1, Sport 1, Kids listen 2, Audiobooks 1 items$/m, 'check 14' );
 	like( $r->{out}, qr/^PASS  15\. Kids listen live plays — "ABC KIDS listen": time /m,                     'check 15' );
@@ -592,14 +656,16 @@ subtest 'a full pass: 15/15, exit 0; the player is stopped, cleared and switched
 	$stop->();
 };
 
-subtest '--skip-live: checks 6, 7 and 15 SKIP, exit 0; a powered-on player stays on' => sub {
-	my ( $url, $stop, $commands ) = fake_lms(@FULL);
-	my $r = smoke( [ $url, '00:00:00:00:00:01', '--skip-live' ], env => \%FAST );
+subtest '--skip-live: checks 6, 7 and 15 SKIP, exit 0; a timed-out menu request is tried again' => sub {
+	my ( $url, $stop, $commands ) = fake_lms( @FULL, slow_first_items => 1.6 );
+	my $r = smoke( [ $url, '00:00:00:00:00:01', '--skip-live' ], env => { %FAST, SMOKE_CURL_TIMEOUT_S => 1 } );
 	is( $r->{code}, 0, 'exit 0' ) or diag $r->{out};
 	is_deeply( verdicts( $r->{out} ), [ ( map {"PASS $_"} 1 .. 5 ), 'SKIP 6', 'SKIP 7', ( map {"PASS $_"} 8 .. 14 ), 'SKIP 15' ], 'three SKIP lines: 6, 7, 15' );
 	like( $r->{out}, qr/^SKIP  6\. National station plays with metadata — --skip-live$/m, 'SKIP line format' );
 	like( $r->{out}, qr/SMOKE: 12\/12 passed, 3 skipped\n\z/,                          'final line: SMOKE: 12/12 passed, 3 skipped' );
 	my @c = $commands->();
+	my @menus = grep { $_->[1][0] eq 'abclisten' && $_->[1][1] eq 'items' } @c;
+	is_deeply( [ map { $JSON->encode( $_->[1] ) } @menus[ 0, 1 ] ], [ ('["abclisten","items",0,200]') x 2 ], 'check 5: the first top-level request timed out (curl exit 28) and was tried once more' );
 	ok( !( grep { $_->[1][0] eq 'power' && $_->[1][1] eq '0' } @c ), 'no power 0 for a player that was on' );
 	is_deeply( [ map { $JSON->encode( $_->[1] ) } ( grep { $_->[1][0] =~ /^(?:stop|playlist)$/ } @c )[ -2, -1 ] ], [ '["stop"]', '["playlist","clear"]' ], 'cleanup: stop and clear' );
 	$stop->();
@@ -609,88 +675,155 @@ subtest 'a live stream whose time is stuck: check 6 FAIL, exit 1' => sub {
 	my ( $url, $stop ) = fake_lms( @FULL, stuck => 'TRIPLEJ' );
 	my $r = smoke( [ $url, '00:00:00:00:00:01' ], env => \%FAST );
 	is( $r->{code}, 1, 'exit 1' );
-	like( $r->{out}, qr/^FAIL  6\. National station plays with metadata — "triple j": time 0\.4 → 0\.4 s in 0\.5 s, needs \+5 s \(mode=play/m, 'check 6 fails with the times' );
+	like( $r->{out}, qr/^FAIL  6\. National station plays with metadata — "triple j": time 0\.4 → 0\.4 s in 0\.3 s, needs \+5 s \(mode=play/m, 'check 6 fails with the times' );
 	like( $r->{out}, qr/^PASS  7\. /m,                 'check 7 still runs' );
 	like( $r->{out}, qr/SMOKE: 14\/15 passed\n\z/,     'SMOKE: 14/15 passed' );
 	$stop->();
 };
 
-subtest 'stations without favourite links: played by URL, said in the detail; an unknown station fails' => sub {
-	my ( $url, $stop, $commands ) = fake_lms( @FULL, no_presets => 1, no_meta => ['LOCAL_SYDNEY'] );
-	my $r = smoke( [ $url, '00:00:00:00:00:01', '--station', 'RN' ], env => \%FAST );
-	is( $r->{code}, 0, 'exit 0' ) or diag $r->{out};
-	like( $r->{out}, qr/^PASS  6\. National station plays with metadata — abclisten:\/\/live\/RN \(played by URL\): .* \(no station links in menu mode, older LMS\?\)$/m, 'check 6: by URL, with a note' );
-	ok( ( grep { $_->[1][0] eq 'playlist' && ( $_->[1][2] // '' ) eq 'abclisten://live/RN' } $commands->() ), '["playlist","play","abclisten://live/RN"]' );
-	$stop->();
+subtest 'check 6 needs program or song metadata, also for a station played by URL; stations are looked up below Radio' => sub {
+	my @fakes = (
+		# no favourite links (an older LMS), and no metadata: the only title is the station's own name
+		[ [ no_presets => 1, no_meta => ['RN'] ], [ '--station', 'RN' ] ],
+		# favourite links, no metadata; an unknown --local
+		[ [ no_meta => ['TRIPLEJ'] ], [ '--local', 'NOSUCHLOCAL' ] ],
+		# played by URL, and the metadata comes a moment later
+		[ [ no_presets => 1, meta_after => 0.2 ], [ '--station', 'RN' ] ],
+		# a station that isn't in Radio itself is found under Local radio
+		[ [], [ '--station', 'LOCAL_MELB', '--local', 'LOCAL_MELB' ] ],
+		# an unknown station
+		[ [], [ '--station', 'NOSUCHSTATION' ] ],
+	);
+	my @lms = map { [ fake_lms( @FULL, @{ $_->[0] } ) ] } @fakes;
+	my @r = @{ smoke_all( map { [ [ $lms[$_][0], '00:00:00:00:00:01', @{ $fakes[$_][1] } ], env => \%FAST ] } 0 .. $#fakes ) };
 
-	( $url, $stop ) = fake_lms(@FULL);
-	$r = smoke( [ $url, '00:00:00:00:00:01', '--station', 'NOSUCHSTATION', '--local', 'LOCAL_MELB' ], env => \%FAST );
-	is( $r->{code}, 1, 'an unknown --station: exit 1' );
-	like( $r->{out}, qr/^FAIL  6\. National station plays with metadata — abclisten:\/\/live\/NOSUCHSTATION \(played by URL\): stopped after \d+ s .*\(NOSUCHSTATION is not in Radio\)$/m, 'check 6: not in Radio, and it does not play' );
-	like( $r->{out}, qr/^PASS  7\. Local station plays — Victoria › "ABC Melbourne": /m, '--local LOCAL_MELB: found under its state' );
-	$stop->();
+	is( $r[0]{code}, 1, 'played by URL, no metadata: exit 1' );
+	like( $r[0]{out}, qr/^FAIL  6\. National station plays with metadata — abclisten:\/\/live\/RN \(played by URL\): time .*, but no program or song title within 1 s \(title 'Radio National'\) \(no station links in menu mode, older LMS\?\)$/m, 'check 6 FAILs: the title is only the station name' );
+	ok( ( grep { $_->[1][0] eq 'playlist' && ( $_->[1][2] // '' ) eq 'abclisten://live/RN' } $lms[0][2]->() ), '["playlist","play","abclisten://live/RN"]' );
+	like( $r[0]{out}, qr/^PASS  7\. Local station plays — abclisten:\/\/live\/LOCAL_SYDNEY \(played by URL\): /m, 'check 7: by URL too' );
+
+	is( $r[1]{code}, 1, 'found by its link, no metadata: exit 1' );
+	like( $r[1]{out}, qr/^FAIL  6\. National station plays with metadata — "triple j": time .*, but no program or song title within 1 s \(title 'triple j'\)$/m, 'check 6 FAILs: the title is the station\'s menu name' );
+	like( $r[1]{out}, qr/^FAIL  7\. Local station plays — abclisten:\/\/live\/NOSUCHLOCAL \(played by URL\): stopped after \d+ s .*\(NOSUCHLOCAL is not in Local radio\)$/m, 'an unknown --local: not in Local radio, does not play' );
+
+	like( $r[2]{out}, qr/^PASS  6\. National station plays with metadata — abclisten:\/\/live\/RN \(played by URL\): .*; now playing 'Some Song' \(no station links in menu mode, older LMS\?\)$/m, 'check 6 PASSes by URL once a program or song title shows' );
+
+	is( $r[3]{code}, 0, '--station LOCAL_MELB: exit 0' ) or diag $r[3]{out};
+	like( $r[3]{out}, qr/^PASS  6\. National station plays with metadata — Local radio › Victoria › "ABC Melbourne": .*; now playing 'Some Song'$/m, 'check 6: found by its link under Local radio › Victoria' );
+	like( $r[3]{out}, qr/^PASS  7\. Local station plays — Victoria › "ABC Melbourne": /m, 'check 7: found under its state' );
+	ok( !( grep { $_->[1][0] eq 'playlist' && ( $_->[1][1] // '' ) eq 'play' } $lms[3][2]->() ), 'nothing played by URL' );
+
+	is( $r[4]{code}, 1, 'an unknown --station: exit 1' );
+	like( $r[4]{out}, qr/^FAIL  6\. National station plays with metadata — abclisten:\/\/live\/NOSUCHSTATION \(played by URL\): stopped after \d+ s .*\(NOSUCHSTATION is not in Radio\)$/m, 'check 6: not in Radio, and it does not play' );
+
+	$_->[1]->() for @lms;
 };
 
 subtest 'geo-blocked or expired episodes are skipped; FAIL after 5 attempts with the last reason' => sub {
-	my ( $url, $stop ) = fake_lms( @FULL, geo => 2 );
-	my $r = smoke( [ $url, '00:00:00:00:00:01', '--skip-live' ], env => \%FAST );
-	is( $r->{code}, 0, 'two blocked episodes, then one plays: exit 0' ) or diag $r->{out};
-	like( $r->{out}, qr/^PASS  8\. Episode plays and seeks — Radio National › Late Night Live › Mon 1 Oct – Late Night Live, part 1: /m, 'check 8: the next program\'s episode' );
-	like( $r->{out}, qr/^PASS  12\. Follow round trip — Late Night Live: /m, 'check 12 follows that program' );
-	$stop->();
+	my @lms = map { [ fake_lms( @FULL, geo => $_ ) ] } 2, 99;
+	my @r = @{ smoke_all( map { [ [ $_->[0], '00:00:00:00:00:01', '--skip-live' ], env => \%FAST ] } @lms ) };
 
-	( $url, $stop ) = fake_lms( @FULL, geo => 99 );
-	$r = smoke( [ $url, '00:00:00:00:00:01', '--skip-live' ], env => \%FAST );
-	is( $r->{code}, 1, 'nothing plays: exit 1' );
-	like( $r->{out}, qr/^FAIL  8\. Episode plays and seeks — no episode played in 5 attempt\(s\) over 3 program\(s\) of Radio National; last: Rear Vision › Mon 1 Oct – Rear Vision, part 1: stopped after \d+ s/m, 'check 8: 5 attempts, the last reason' );
-	like( $r->{out}, qr/^PASS  12\. Follow round trip — AM: /m, 'check 12 falls back to the first program of check 9' );
-	$stop->();
+	is( $r[0]{code}, 0, 'two blocked episodes, then one plays: exit 0' ) or diag $r[0]{out};
+	like( $r[0]{out}, qr/^PASS  8\. Episode plays and seeks — Radio National › Late Night Live › Mon 1 Oct – Late Night Live, part 1: /m, 'check 8: the next program\'s episode' );
+	like( $r[0]{out}, qr/^PASS  12\. Follow round trip — Late Night Live: /m, 'check 12 follows that program' );
+
+	is( $r[1]{code}, 1, 'nothing plays: exit 1' );
+	like( $r[1]{out}, qr/^FAIL  8\. Episode plays and seeks — no episode played in 5 attempt\(s\) over 3 program\(s\) of Radio National; last: Rear Vision › Mon 1 Oct – Rear Vision, part 1: stopped after \d+ s/m, 'check 8: 5 attempts, the last reason' );
+	like( $r[1]{out}, qr/^PASS  12\. Follow round trip — AM: /m, 'check 12 falls back to the first program of check 9' );
+
+	$_->[1]->() for @lms;
 };
 
-subtest 'search rate-limited, an empty section, a wrong top level: FAIL with the reason' => sub {
-	my ( $url, $stop ) = fake_lms( @FULL, rate_limited => 1, empty_sport => 1, rename_top => [ 'News', 'Newsroom' ] );
+subtest 'FAIL with the reason: rate-limited search, empty section, wrong top level, a seek that does not play on, a follow not listed' => sub {
+	my ( $url, $stop, $commands, $followed ) = fake_lms( @FULL, rate_limited => 1, empty_sport => 1, rename_top => [ 'News', 'Newsroom' ], seek_stuck => 1, hide_followed_rows => 1 );
 	my $r = smoke( [ $url, '00:00:00:00:00:01', '--skip-live' ], env => \%FAST );
 	is( $r->{code}, 1, 'exit 1' );
 	like( $r->{out}, qr/^FAIL  5\. Top level — expected: Home \| Radio \| Podcasts \| News \| .*; got: Home \| Radio \| Podcasts \| Newsroom \| /m, 'check 5: expected and got' );
+	like( $r->{out}, qr/^PASS  8\. Episode plays and seeks — Radio National › The Science Show › Mon 2 Oct – The Science Show, part 2: /m, 'check 8: an episode whose time stops at the seek target is not enough; the next one is played' );
 	like( $r->{out}, qr/^FAIL  11\. Search — 'science': needs Programs \(N\) and Episodes \(M\) with N, M >= 1; ABC is limiting requests \("ABC listen is busy right now\. Please try again in a few minutes\."\); try again later$/m, 'check 11: quotes the busy message' );
+	like( $r->{out}, qr/^FAIL  12\. Follow round trip — followed, but Followed programs \(1\) doesn't list The Science Show$/m, 'check 12: the followed program must be listed in Followed programs' );
+	is_deeply( $followed->(), [], '... and the test\'s follow is undone' );
 	like( $r->{out}, qr/^FAIL  14\. Sections non-empty — empty: Sport \(got: Nothing here right now; .*abc-endpoints-check\.sh\)$/m, 'check 14: names the empty section, suggests the endpoint check' );
 	unlike( $r->{out}, qr/^FAIL  13\./m, 'the other checks still pass' );
 	$stop->();
 };
 
-subtest 'an already-followed program: unfollowed, then followed again; the list is unchanged' => sub {
-	my $start = [ { path => '/listen/programs/science-show', title => 'The Science Show', followedAt => 1600000000 }, { path => '/listen/programs/other', title => 'Other', followedAt => 1600000001 } ];
-	my ( $url, $stop, $commands, $followed ) = fake_lms( @FULL, followed => $start );
-	my $r = smoke( [ $url, '00:00:00:00:00:01', '--skip-live' ], env => \%FAST );
-	is( $r->{code}, 0, 'exit 0' ) or diag $r->{out};
-	like( $r->{out}, qr/^PASS  12\. Follow round trip — The Science Show was already followed: Followed programs \(2\) → unfollowed \(1\) → followed again, listed \(2\); followed programs restored$/m, 'check 12: unfollow, then follow again' );
-	is_deeply( $followed->(), $start, 'followed programs as before' );
-	$stop->();
+subtest 'followed programs: an already-followed program, 200 followed, another client following at the same time' => sub {
+	my $before = [ { path => '/listen/programs/science-show', title => 'The Science Show', followedAt => 1600000000 }, { path => '/listen/programs/other', title => 'Other', followedAt => 1600000001 } ];
+	my @full   = map { { path => "/listen/programs/p$_", title => "P$_", followedAt => 1600000000 + $_ } } 1 .. 200;
+	my $other  = { path => '/listen/programs/other', title => 'Other', followedAt => 1700000099 };
+	my @lms    = (
+		[ fake_lms( @FULL, followed => $before ) ],
+		[ fake_lms( @FULL, cap => 200, followed => [@full] ) ],
+		[ fake_lms( @FULL, other_follow => $other ) ],
+	);
+	my @r = @{ smoke_all( map { [ [ $_->[0], '00:00:00:00:00:01', '--skip-live' ], env => \%FAST ] } @lms ) };
+
+	is( $r[0]{code}, 0, 'already followed: exit 0' ) or diag $r[0]{out};
+	like( $r[0]{out}, qr/^PASS  12\. Follow round trip — The Science Show was already followed: Followed programs \(2\) → unfollowed \(1\) → followed again, listed \(2\); followed programs restored \(2\)$/m, 'already followed: unfollowed, then followed again' );
+	is_deeply( $lms[0][3]->(), $before, 'already followed: the followed programs as before' );
+
+	is( $r[1]{code}, 0, '200 followed (the plugin\'s limit): exit 0' ) or diag $r[1]{out};
+	like( $r[1]{out}, qr/^PASS  12\. Follow round trip — The Science Show: Followed programs \(200\) → followed, listed \(200\) → unfollowed \(199\); the list was full, so the plugin dropped the oldest follow to make room; followed programs restored \(200\)$/m, '200 followed: check 12 PASS, with a note' );
+	is_deeply( $lms[1][3]->(), \@full, '200 followed: exactly as before, the oldest (P1, dropped by the plugin for the test) included' );
+
+	is( $r[2]{code}, 1, 'another client follows a program during check 12: exit 1' );
+	like( $r[2]{out}, qr/^FAIL  12\. Follow round trip — followed: Followed programs \(0\) → \(2\), expected \(1\)$/m, 'check 12 FAILs: the count changed by two' );
+	is_deeply( $lms[2][3]->(), [$other], 'the other client\'s follow is kept, and the test program is no longer followed' );
+
+	$_->[1]->() for @lms;
 };
 
 subtest 'interrupted during the follow check: the followed programs are put back' => sub {
-	my ( $url, $stop, $commands, $followed ) = fake_lms( @FULL, hang_after_follow => 2 );
-	my $flag = "$DIR/followed-" . ( $url =~ /:(\d+)\z/ )[0] . '.json.followed';
+	# interrupted while smoke.sh opens My ABC listen after the follow, or (before it knows the
+	# followed program's path) while it reads the followed programs right after the follow
+	for my $when (qw(hang_after_follow hang_pref_after_follow)) {
+		my ( $url, $stop, $commands, $followed ) = fake_lms( @FULL, $when => 2 );
+		my $flag = "$DIR/followed-" . ( $url =~ /:(\d+)\z/ )[0] . '.json.followed';
+
+		my $pid = fork // die "fork: $!";
+		if ( !$pid ) {
+			open( STDOUT, '>', "$DIR/int.out" ) or die;
+			open( STDERR, '>', "$DIR/int.err" ) or die;
+			$ENV{$_} = $FAST{$_} for keys %FAST;
+			exec( 'bash', $SCRIPT, $url, '00:00:00:00:00:01', '--skip-live' ) or die;
+		}
+		my $deadline = time + 20;
+		sleep 0.1 until -e $flag || time > $deadline;
+		ok( -e $flag, "$when: the follow check followed a program" );
+		is( scalar @{ $followed->() }, 1, "$when: ... which is in the list now" );
+		kill 'INT', $pid;
+		waitpid( $pid, 0 );
+		is( $? >> 8, 130, "$when: exit 130" );
+		my $err = do { local ( @ARGV, $/ ) = "$DIR/int.err"; <> };
+		like( $err, qr/smoke: interrupted/, "$when: says it was interrupted" );
+		is_deeply( $followed->(), [], "$when: the followed programs are back to []" );
+		my @c = $commands->();
+		is_deeply( [ map { $JSON->encode( $_->[1] ) } @c[ -3 .. -1 ] ], [ '["pref","plugin.abclisten:followed",[]]', '["stop"]', '["playlist","clear"]' ], "$when: cleanup: followed programs restored, then the player stopped and cleared" );
+		$stop->();
+	}
+};
+
+subtest 'interrupted before the test follows, while another client follows a program: nothing is written' => sub {
+	my $other = { path => '/listen/programs/other', title => 'Other', followedAt => 1700000099 };
+	my ( $url, $stop, $commands, $followed ) = fake_lms( @FULL, pre_change => $other );
+	my $flag = "$DIR/followed-" . ( $url =~ /:(\d+)\z/ )[0] . '.json.changed';
 
 	my $pid = fork // die "fork: $!";
 	if ( !$pid ) {
-		open( STDOUT, '>', "$DIR/int.out" ) or die;
-		open( STDERR, '>', "$DIR/int.err" ) or die;
+		open( STDOUT, '>', "$DIR/p3.out" ) or die;
+		open( STDERR, '>', "$DIR/p3.err" ) or die;
 		$ENV{$_} = $FAST{$_} for keys %FAST;
 		exec( 'bash', $SCRIPT, $url, '00:00:00:00:00:01', '--skip-live' ) or die;
 	}
 	my $deadline = time + 20;
 	sleep 0.1 until -e $flag || time > $deadline;
-	ok( -e $flag, 'the follow check followed a program' );
-	is( scalar @{ $followed->() }, 1, '... which is in the list now' );
+	ok( -e $flag, 'another client followed a program right after the test read the list' );
 	kill 'INT', $pid;
 	waitpid( $pid, 0 );
 	is( $? >> 8, 130, 'exit 130' );
-	my $err = do { local ( @ARGV, $/ ) = "$DIR/int.err"; <> };
-	like( $err, qr/smoke: interrupted/, 'says it was interrupted' );
-	is_deeply( $followed->(), [], 'the followed programs are back to []' );
-	my @c = $commands->();
-	is_deeply( [ map { $JSON->encode( $_->[1] ) } @c[ -3 .. -1 ] ], [ '["pref","plugin.abclisten:followed",[]]', '["stop"]', '["playlist","clear"]' ], 'cleanup: followed programs restored, then the player stopped and cleared' );
+	is_deeply( $followed->(), [$other], 'the other client\'s follow is kept' );
+	ok( !( grep { $_->[1][0] eq 'pref' && ref $_->[1][2] } $commands->() ), 'the followed programs were not written' );
 	$stop->();
 };
 

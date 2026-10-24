@@ -390,7 +390,7 @@ PLUGIN_ABCLISTEN_AUDIOBOOKS_AZ
 	EN	All audiobooks A–Z
 
 PLUGIN_ABCLISTEN_AUDIOBOOKS_AU_ONLY
-	EN	Audiobooks play only in Australia.
+	EN	Most audiobooks play only in Australia.
 
 # === D7 === All podcast categories; A–Z Other row
 

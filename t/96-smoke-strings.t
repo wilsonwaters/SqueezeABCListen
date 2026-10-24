@@ -36,7 +36,7 @@ my $script = slurp('scripts/smoke.sh');
 
 # STR_<NAME>='<text>'   # PLUGIN_ABCLISTEN_<TOKEN>   (or "<text>" for a text with an apostrophe)
 my %names;
-while ( $script =~ /^(STR_\w+)=(?:'([^']*)'|"([^"\$`\\]*)")\s+# (PLUGIN_ABCLISTEN_\w+)\s*$/mg ) {
+while ( $script =~ /^(STR_\w+)=(?:'([^']*)'|"([^"\$`\\]*)")\s+# (PLUGIN_ABCLISTEN(?:_\w+)?)\s*$/mg ) {
 	$names{$1} = { text => $2 // $3, token => $4 };
 }
 my %byToken = map { $names{$_}->{token} => $_ } keys %names;
@@ -48,6 +48,7 @@ my @BELOW = qw(LOCAL_RADIO BY_NETWORK AZ SEARCH_PROGRAMS SEARCH_EPISODES FOLLOWE
 
 subtest 'the names smoke.sh needs are all hard-coded' => sub {
 	ok( $byToken{"PLUGIN_ABCLISTEN_$_"}, "PLUGIN_ABCLISTEN_$_ is hard-coded" ) for @TOP, @BELOW;
+	ok( $byToken{PLUGIN_ABCLISTEN}, 'PLUGIN_ABCLISTEN (the title Now Playing shows without metadata) is hard-coded' );
 	is( scalar( () = $script =~ /^STR_\w+=/mg ), scalar keys %names, 'every STR_ line names its strings.txt token (no unannotated STR_)' );
 	my %seen;
 	my @dup = grep { $seen{ $names{$_}->{token} }++ } sort keys %names;
