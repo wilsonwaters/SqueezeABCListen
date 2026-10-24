@@ -5,7 +5,8 @@
 #   LMS_URL     the server; default $LMS_URL, else http://localhost:9000 (https and other ports work)
 #   PLAYER_MAC  the player to play on; default $PLAYER, else the only connected player
 #   --skip-live          skip the live-stream checks 6, 7 and 15 (servers that can't reach ABC's live streams)
-#   --station <ID>       the national station for check 6 (default TRIPLEJ)
+#   --station <ID>       the national station for check 6 (default TRIPLEJ); with a home state, its
+#                        row in Radio may play that state's time-zone version, which counts too
 #   --local <ID>         the local station for check 7 (default LOCAL_SYDNEY)
 #   Station ids are the ABC service ids in abclisten://live/<ID> links: A-Z, 0-9 and _ only.
 # Environment: LMS_USER and LMS_PASS for a password-protected server (HTTP basic auth).
@@ -127,6 +128,11 @@ lms="${lms%/}"
 player="${positional[1]:-${PLAYER:-}}"
 player="${player,,}"
 
+# until the checks start, the temporary directory is all there is to clean up (cleanup, below,
+# takes over then)
+tmp=""
+trap '[[ -z "$tmp" ]] || rm -rf "$tmp"' EXIT
+trap 'echo "smoke: interrupted" >&2; exit 130' INT TERM
 tmp="$(mktemp -d)" || die "can't create a temporary directory"
 curl_opts=(-sS -m "$CURL_TIMEOUT_S" --connect-timeout 10 -H 'Content-Type: application/json')
 if [[ -n "${LMS_USER:-}" ]]; then
@@ -321,17 +327,27 @@ advances() {
   return 1
 }
 
-# find_station LEVEL_JSON SERVICE_ID: "<id><US><name>" of the row whose menu-mode favourite is
-# abclisten://live/<SERVICE_ID>; sets any_fav when the level has station favourites at all
+# find_station LEVEL_JSON SERVICE_ID [versions]: "<id><US><name><US><service><US><title>" of the
+# row whose menu-mode favourite is abclisten://live/<SERVICE_ID>; with "versions", else of a row
+# that plays one of its time-zone versions, abclisten://live/<SERVICE_ID>_<state or capital> (with
+# a home state, Radio's network rows play that state's version under the network's name).
+# service, title = the favourite's service id and title.
 find_station() {
-  jq -r --arg u "abclisten://live/$2" 'first(.item_loop[]? | select(.presetParams.favorites_url? == $u)) | [(.params.item_id // .actions.go.params.item_id // .actions.play.params.item_id // "" | tostring), (.text // "" | split("\n")[0])] | join("\u001f")' <<<"$1"
+  jq -r --arg s "$2" --arg v "${3:-}" '
+    def svc: .presetParams.favorites_url? // "" | ltrimstr("abclisten://live/");
+    [.item_loop[]? | select(.presetParams.favorites_url? // "" | startswith("abclisten://live/"))] as $rows
+    | (first($rows[] | select(svc == $s))
+       // (if $v == "" then empty else first($rows[] | select(svc | test("^" + $s + "_(SA|QLD|NT|WA|ADELAIDE|BRISBANE|DARWIN|PERTH)$"))) end))
+    | [(.params.item_id // .actions.go.params.item_id // .actions.play.params.item_id // "" | tostring), (.text // "" | split("\n")[0]), svc, (.presetParams.favorites_title // "" | tostring | split("\n")[0] // "")]
+    | join("\u001f")' <<<"$1"
 }
 has_favs() { jq -e 'any(.item_loop[]?; .presetParams.favorites_url? // "" | startswith("abclisten://live/"))' <<<"$1" >/dev/null 2>&1; }
 
 # station_names LEVEL_JSON: the names of a menu-mode level's station rows (rows with a station
-# favourite, or playable rows on an LMS without favourite links), one per line
+# favourite, or playable rows on an LMS without favourite links) and their favourites' titles (a
+# time-zone version's own title, under a network's name), one per line
 station_names() {
-  jq -r '.item_loop[]? | select((.presetParams.favorites_url? // "" | startswith("abclisten://live/")) or .type == "playlist" or .type == "audio") | .text // "" | split("\n")[0]' <<<"$1"
+  jq -r '.item_loop[]? | select((.presetParams.favorites_url? // "" | startswith("abclisten://live/")) or .type == "playlist" or .type == "audio") | (.text, .presetParams.favorites_title?) | strings | split("\n")[0] // empty' <<<"$1"
 }
 
 # menu_links LEVEL_JSON: "<id><US><name>" of a menu-mode level's links (not station rows)
@@ -340,12 +356,14 @@ menu_links() {
 }
 
 # search_station LEVEL_ID SERVICE_ID: breadth-first through the menu-mode levels below LEVEL_ID
-# (two levels down, at most 20 requests) for the row whose favourite is abclisten://live/SERVICE_ID.
-# ST_ID, ST_NAME = that row; ST_WHERE = the links that lead to it; ST_NAMES = the names of every
-# station row seen (one per line); ST_FAVS set when any row had a station favourite.
+# (two levels down, at most 20 requests) for the row whose favourite is abclisten://live/SERVICE_ID,
+# or, in LEVEL_ID itself, for the row that plays one of its time-zone versions (find_station).
+# ST_ID, ST_NAME = that row; ST_SERVICE, ST_TITLE = its favourite's service id and title;
+# ST_WHERE = the links that lead to it; ST_NAMES = the names and favourite titles of every station
+# row seen (one per line); ST_FAVS set when any row had a station favourite.
 search_station() {
-  local queue=("$1"$'\x1f'0$'\x1f') entry id depth where child cname requests=0
-  ST_ID="" ST_NAME="" ST_WHERE="" ST_NAMES="" ST_FAVS="" ST_ERR=""
+  local queue=("$1"$'\x1f'0$'\x1f') entry id depth where child cname versions requests=0
+  ST_ID="" ST_NAME="" ST_SERVICE="" ST_TITLE="" ST_WHERE="" ST_NAMES="" ST_FAVS="" ST_ERR=""
   while [[ ${#queue[@]} -gt 0 ]] && ((requests < 20)); do
     entry="${queue[0]}"
     queue=("${queue[@]:1}")
@@ -354,14 +372,16 @@ search_station() {
     menu_items "$id" || { ST_ERR="${where:-$id}: $rpc_error"; continue; }
     has_favs "$R" && ST_FAVS=1
     ST_NAMES+="$(station_names "$R")"$'\n'
-    IFS=$'\x1f' read -r ST_ID ST_NAME <<<"$(find_station "$R" "$2")"
+    versions=""
+    ((depth > 0)) || versions=versions
+    IFS=$'\x1f' read -r ST_ID ST_NAME ST_SERVICE ST_TITLE <<<"$(find_station "$R" "$2" "$versions")"
     if [[ -n "$ST_ID" ]]; then ST_WHERE="$where"; return 0; fi
     ((depth < 2)) || continue
     while IFS=$'\x1f' read -r child cname; do
       [[ -n "$child" ]] && queue+=("$child"$'\x1f'$((depth + 1))$'\x1f'"${where:+$where › }$cname")
     done < <(menu_links "$R")
   done
-  ST_ID="" ST_NAME=""
+  ST_ID="" ST_NAME="" ST_SERVICE="" ST_TITLE=""
   return 1
 }
 
@@ -376,11 +396,12 @@ not_a_station_name() {
   return 0
 }
 
-# play_station ID NAME SERVICE_ID: play a station row (or its URL when ID is empty); why = detail
+# play_station ID NAME SERVICE_ID [PLAYS]: play a station row (or its URL when ID is empty); why =
+# detail; PLAYS = what the row plays when that is not the station its name says
 play_station() {
   local how
   if [[ -n "$1" ]]; then
-    how="\"$2\""
+    how="\"$2\"${4:+, which plays $4}"
     play "$1" || { why="play command failed: $rpc_error"; return 1; }
   else
     how="abclisten://live/$3 (played by URL)"
@@ -491,7 +512,6 @@ cleanup() {
   exit "$rc"
 }
 trap cleanup EXIT
-trap 'echo "smoke: interrupted" >&2; exit 130' INT TERM
 
 finish() {
   restore_player
@@ -604,12 +624,14 @@ elif needs_top 6 "National station plays with metadata"; then
   else
     # the station's row: in Radio itself, else in Sport, Local radio (each state) or Time-zone versions
     search_station "$W_ID" "$station"
-    st_id="$ST_ID" st_name="$ST_NAME" note=""
+    st_id="$ST_ID" st_name="$ST_NAME" note="" plays=""
     if [[ -z "$st_id" ]]; then
       if [[ -n "$ST_FAVS" ]]; then note=" ($station is not in $STR_RADIO${ST_ERR:+; $ST_ERR})"; else note=" (no station links in menu mode, older LMS?${ST_ERR:+; $ST_ERR})"; fi
       st_name="$station"
+    elif [[ "$ST_SERVICE" != "$station" ]]; then
+      plays="${ST_TITLE:-$ST_SERVICE} (your state's version)"
     fi
-    if ! play_station "$st_id" "$st_name" "$station"; then
+    if ! play_station "$st_id" "$st_name" "$station" "$plays"; then
       result FAIL 6 "National station plays with metadata" "$why$note"
     else
       # metadata: a title that is not a station's name (the station's own title is all LMS shows
@@ -643,7 +665,7 @@ elif needs_top 7 "Local station plays"; then
       [[ -n "$state_id" ]] || continue
       menu_items "$state_id" || { last="$state_name: $rpc_error"; continue; }
       has_favs "$R" && favs=1
-      IFS=$'\x1f' read -r st_id st_name <<<"$(find_station "$R" "$local_station")"
+      IFS=$'\x1f' read -r st_id st_name _ <<<"$(find_station "$R" "$local_station")"
       if [[ -n "$st_id" ]]; then st_state="$state_name"; break; fi
     done < <(item_list "$R" '.type == "link"')
     note=""
@@ -952,7 +974,7 @@ elif needs_top 15 "Kids listen live plays"; then
   if ! walk "$STR_KIDS" || ! menu_items "$W_ID"; then
     result FAIL 15 "Kids listen live plays" "${walk_error:-$rpc_error}"
   else
-    IFS=$'\x1f' read -r st_id st_name <<<"$(find_station "$R" KIDSLISTEN)"
+    IFS=$'\x1f' read -r st_id st_name _ <<<"$(find_station "$R" KIDSLISTEN)"
     note=""
     if [[ -z "$st_id" ]]; then
       if has_favs "$R"; then note=" (KIDSLISTEN is not in $STR_KIDS)"; else note=" (no station links in menu mode)"; fi

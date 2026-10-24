@@ -423,7 +423,8 @@ JSON-RPC, walks the ABC listen menus by name, and runs 15 checks:
 3. the plugin is enabled;
 4. the LMS Radio menu lists ABC listen;
 5. the top level has the ten entries, in order;
-6. a national station (triple j) plays from **Radio**, and Now Playing shows its program or song;
+6. a national station (triple j, or your state's time-zone version of it when you have set a home
+   state) plays from **Radio**, and Now Playing shows its program or song;
 7. a local station (702 ABC Sydney) plays from **Radio → Local radio**;
 8. an episode plays from **Programs → By network** and can be sought;
 9. **All programs A–Z** lists programs;

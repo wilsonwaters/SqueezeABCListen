@@ -3,9 +3,10 @@
 # network): --help, bad arguments, missing tools, unreachable or password-protected servers,
 # unknown or ambiguous players (exit 2), a server without the plugin (exit 1, checks 3-15 fail, the
 # player is left alone), and scripted runs through fake ABC listen menus: a full pass (15/15),
-# --skip-live (3 SKIP lines), a stuck live stream, geo-blocked episodes, a station found only by
-# URL, a rate-limited search, an already-followed program, and an interrupted follow check (the
-# followed programs are put back). The fake player's time runs faster than the clock, and the
+# --skip-live (3 SKIP lines), a stuck live stream, a home state's time-zone version, geo-blocked
+# episodes, a station found only by URL, a rate-limited search, an already-followed program, a
+# restore of the followed programs that doesn't take, and an interrupted follow check (the
+# followed programs are put back); the temporary directory with the credentials is always removed. The fake player's time runs faster than the clock, and the
 # test-only SMOKE_* timing overrides shorten the waits, so the file runs in well under a minute.
 # The real pass needs a real LMS and player: see the README's Self-test section. Needs curl and jq
 # (CI installs them).
@@ -104,6 +105,7 @@ sub verdicts { [ map { /^(PASS|FAIL|SKIP)  (\d+)\./ ? "$1 $2" : () } split /\n/,
 
 my %STATIONS = (
 	TRIPLEJ      => 'triple j',
+	TRIPLEJ_BRISBANE => 'triple j Brisbane',
 	RN           => 'Radio National',
 	LOCAL_SYDNEY => '702 ABC Sydney',
 	LOCAL_MELB   => 'ABC Melbourne',
@@ -219,6 +221,7 @@ sub handle {
 				Time::HiRes::sleep( delete $self->{hang_pref} ) if $self->{hang_pref};    # see hang_pref_after_follow
 				return { _p2 => $self->{followed} };
 			}
+			return {} if $self->{ignore_pref_set};    # LMS answers, but the followed programs stay as they are
 			$self->{followed} = $cmd->[2];
 			$self->_saveFollowed;
 			return {};
@@ -264,9 +267,9 @@ sub _player {
 	my $elapsed = $p->{frozen} ? 0 : $real * $self->{speed};
 	my $mode    = $p->{dead} ? 'stop' : $p->{mode};
 	my $time    = $mode ne 'play' ? 0 : $p->{station} && ( $self->{stuck} // '' ) eq $p->{station} ? 0.4 : $p->{offset} + $elapsed;
-	# a station shows its own name until the plugin has metadata (after meta_after seconds; never
-	# for the stations in no_meta), then a song
-	my $title = $p->{name};
+	# a station shows its own title (or pre_title) until the plugin has metadata (after meta_after
+	# seconds; never for the stations in no_meta), then a song
+	my $title = $p->{station} && defined $self->{pre_title} ? $self->{pre_title} : $p->{name};
 	$title = 'Some Song' if $p->{station} && $mode eq 'play' && !( grep { $_ eq $p->{station} } @{ $self->{no_meta} || [] } ) && $real >= ( $self->{meta_after} // 0 );
 	return {
 		mode            => $mode,
@@ -280,7 +283,7 @@ sub _player {
 sub _play {
 	my ( $self, $item ) = @_;
 	return {} unless $item;
-	my $p = { mode => 'play', at => Time::HiRes::time(), offset => 0, name => $item->{name} };
+	my $p = { mode => 'play', at => Time::HiRes::time(), offset => 0, name => $item->{title} // $item->{name} };
 	if ( $item->{station} ) {
 		$p->{station} = $item->{station};
 		$p->{dead}    = 1 if $item->{unknown};
@@ -300,7 +303,13 @@ sub _play {
 
 sub _link { my ( $name, $kids, %more ) = @_; return { name => $name, type => 'link', kids => $kids, %more } }
 sub _text { return { name => $_[0], type => 'text' } }
-sub _station { my $id = shift; return { name => $STATIONS{$id}, type => 'playlist', isaudio => 1, station => $id, kids => sub { [ { name => 'Listen live', type => 'audio', isaudio => 1, station => $id } ] } } }
+# a station row, named after the station or (name => ...) after its network, as Radio's rows are when
+# they play a home state's time-zone version
+sub _station {
+	my ( $id, %more ) = @_;
+	my %s = ( station => $id, title => $STATIONS{$id} );
+	return { name => $more{name} // $STATIONS{$id}, type => 'playlist', isaudio => 1, %s, kids => sub { [ { name => 'Listen live', type => 'audio', isaudio => 1, %s } ] } };
+}
 sub _episode { return { name => $_[0], type => 'link', isaudio => 1, episode => 1, kids => sub { [ { name => 'Play episode', type => 'audio', isaudio => 1, episode => 1 } ] } } }
 
 my @PROGRAMS = (
@@ -360,10 +369,10 @@ sub _top {
 		_link( 'Home', sub { [ _link( 'Featured', sub { [ map { _episode("Featured $_") } 1 .. 3 ] } ), _link( 'Popular now', sub { [ _episode('Popular 1') ] } ) ] } ),
 		_link( 'Radio', sub {
 			[
-				_station('RN'), _station('TRIPLEJ'),
+				_station('RN'), ( $self->{home} ? _station( 'TRIPLEJ_BRISBANE', name => 'triple j' ) : _station('TRIPLEJ') ),
 				_link( 'Sport',       sub { [] } ),
 				_link( 'Local radio', sub { [ _link( 'New South Wales', sub { [ _station('LOCAL_SYDNEY') ] } ), _link( 'Victoria', sub { [ _station('LOCAL_MELB') ] } ) ] } ),
-				_link( 'Time-zone versions', sub { [] } ),
+				_link( 'Time-zone versions', sub { [ _station('TRIPLEJ_BRISBANE') ] } ),
 			];
 		} ),
 		_link( 'Podcasts', sub { [ _link( 'New & Noteworthy', sub { [ map { $self->_program(@$_) } @PROGRAMS[ 0, 1 ] ] } ), _link( 'Browse by category', sub { [] } ) ] } ),
@@ -449,7 +458,7 @@ sub _menuRow {
 	if ( $r->{station} ) {
 		$row{text} .= "\nOn air: Some Program";
 		$row{params} = { item_id => $r->{id}, isContextMenu => 1 };
-		$row{presetParams} = { favorites_url => "abclisten://live/$r->{station}", favorites_title => $r->{name}, favorites_type => 'audio' } unless $self->{no_presets};
+		$row{presetParams} = { favorites_url => "abclisten://live/$r->{station}", favorites_title => $r->{title} // $r->{name}, favorites_type => 'audio' } unless $self->{no_presets};
 	}
 	elsif ( $r->{type} eq 'link' ) {
 		$row{actions} = { go => { params => { item_id => $r->{id}, menu => 'abclisten' } } };
@@ -572,6 +581,36 @@ subtest 'password-protected server: exit 2 with the LMS_USER hint; works with LM
 	$stop->();
 };
 
+subtest 'the temporary directory with the credentials is removed: after a run, an early stop, a failed write' => sub {
+	my ( $url, $stop ) = fake_lms( @FULL, auth => 'admin:s3cret' );
+	my %auth = ( LMS_USER => 'admin', LMS_PASS => 's3cret' );
+	my @tmp  = map { my $d = "$DIR/tmpdir-$_"; mkdir $d or die; $d } 0 .. 2;
+	# a mktemp that leaves a directory where auth.conf goes, so it can't be written
+	my $bin = "$DIR/mktempspy";
+	mkdir $bin;
+	my ($mktemp) = grep { -x "$_/mktemp" } split /:/, $ENV{PATH};
+	open( my $fh, '>', "$bin/mktemp" ) or die;
+	print $fh "#!/bin/sh\nd=\$('$mktemp/mktemp' \"\$@\") || exit 1\nmkdir \"\$d/auth.conf\"\necho \"\$d\"\n";
+	close $fh;
+	chmod 0755, "$bin/mktemp";
+
+	my @r = @{ smoke_all(
+		[ [ $url, '00:00:00:00:00:01', '--skip-live' ], env => { %FAST, %auth, TMPDIR => $tmp[0] } ],
+		[ [ $url, '00:00:00:00:00:99' ], env => { %auth, TMPDIR => $tmp[1] } ],
+		[ [ $url, '00:00:00:00:00:01' ], env => { %auth, TMPDIR => $tmp[2], PATH => "$bin:$ENV{PATH}" } ],
+	) };
+	my $left = sub { opendir( my $dh, $_[0] ) or die; return join ' ', grep { !/\A\.\.?\z/ } readdir $dh };
+
+	is( $r[0]{code}, 0, 'a full run with credentials: exit 0' ) or diag $r[0]{out}, $r[0]{err};
+	is( $left->( $tmp[0] ), '', '... its temporary directory is gone' );
+	is( $r[1]{code}, 2, 'an unknown player: exit 2' );
+	is( $left->( $tmp[1] ), '', '... its temporary directory is gone' );
+	is( $r[2]{code}, 2, 'auth.conf can\'t be written: exit 2' );
+	like( $r[2]{err}, qr/smoke: can't write \Q$tmp[2]\E\/\S+\/auth\.conf$/m, '... says so' );
+	is( $left->( $tmp[2] ), '', '... its temporary directory is gone' );
+	$stop->();
+};
+
 subtest 'unknown or ambiguous player: exit 2, players listed, player untouched' => sub {
 	my ( $url, $stop, $commands ) = fake_lms( players => [ $DEV, $GONE ] );
 
@@ -681,7 +720,7 @@ subtest 'a live stream whose time is stuck: check 6 FAIL, exit 1' => sub {
 	$stop->();
 };
 
-subtest 'check 6 needs program or song metadata, also for a station played by URL; stations are looked up below Radio' => sub {
+subtest 'check 6 needs program or song metadata, also for a station played by URL or a home state\'s version; stations are looked up below Radio' => sub {
 	my @fakes = (
 		# no favourite links (an older LMS), and no metadata: the only title is the station's own name
 		[ [ no_presets => 1, no_meta => ['RN'] ], [ '--station', 'RN' ] ],
@@ -693,6 +732,12 @@ subtest 'check 6 needs program or song metadata, also for a station played by UR
 		[ [], [ '--station', 'LOCAL_MELB', '--local', 'LOCAL_MELB' ] ],
 		# an unknown station
 		[ [], [ '--station', 'NOSUCHSTATION' ] ],
+		# home state QLD: Radio's "triple j" row plays triple j Brisbane
+		[ [ home => 'QLD' ], [] ],
+		# ... which shows only its own title, "triple j Brisbane" (the row's favourite title)
+		[ [ home => 'QLD', no_meta => ['TRIPLEJ_BRISBANE'] ], [] ],
+		# a station that shows only the plugin's name
+		[ [ pre_title => 'ABC listen', no_meta => ['TRIPLEJ'] ], [] ],
 	);
 	my @lms = map { [ fake_lms( @FULL, @{ $_->[0] } ) ] } @fakes;
 	my @r = @{ smoke_all( map { [ [ $lms[$_][0], '00:00:00:00:00:01', @{ $fakes[$_][1] } ], env => \%FAST ] } 0 .. $#fakes ) };
@@ -715,6 +760,18 @@ subtest 'check 6 needs program or song metadata, also for a station played by UR
 
 	is( $r[4]{code}, 1, 'an unknown --station: exit 1' );
 	like( $r[4]{out}, qr/^FAIL  6\. National station plays with metadata — abclisten:\/\/live\/NOSUCHSTATION \(played by URL\): stopped after \d+ s .*\(NOSUCHSTATION is not in Radio\)$/m, 'check 6: not in Radio, and it does not play' );
+
+	is( $r[5]{code}, 0, 'home state QLD: exit 0' ) or diag $r[5]{out};
+	like( $r[5]{out}, qr/^PASS  6\. National station plays with metadata — "triple j", which plays triple j Brisbane \(your state's version\): time [\d.]+ → [\d.]+ s in 0\.3 s; now playing 'Some Song'$/m, 'home state QLD: check 6 PASSes on the "triple j" row and names the version it plays' );
+	my @plays = grep { $_->[1][0] =~ /^(?:abclisten|playlist)$/ && ( $_->[1][1] // '' ) =~ /^(?:playlist|play)$/ } $lms[5][2]->();
+	like( $plays[0][1][3] // '', qr/^item_id:1\.1$/, 'home state QLD: the "triple j" row in Radio was played' );
+	ok( !( grep { $_->[1][0] eq 'playlist' && ( $_->[1][1] // '' ) eq 'play' } $lms[5][2]->() ), 'home state QLD: nothing played by URL' );
+
+	is( $r[6]{code}, 1, 'home state QLD, no metadata: exit 1' );
+	like( $r[6]{out}, qr/^FAIL  6\. National station plays with metadata — "triple j", which plays triple j Brisbane \(your state's version\): time .*, but no program or song title within 1 s \(title 'triple j Brisbane'\)$/m, 'check 6 FAILs: the title is the row\'s favourite title' );
+
+	is( $r[7]{code}, 1, 'the plugin\'s name as the title: exit 1' );
+	like( $r[7]{out}, qr/^FAIL  6\. National station plays with metadata — "triple j": time .*, but no program or song title within 1 s \(title 'ABC listen'\)$/m, 'check 6 FAILs: "ABC listen" is not a program or song' );
 
 	$_->[1]->() for @lms;
 };
@@ -748,7 +805,7 @@ subtest 'FAIL with the reason: rate-limited search, empty section, wrong top lev
 	$stop->();
 };
 
-subtest 'followed programs: an already-followed program, 200 followed, another client following at the same time' => sub {
+subtest 'followed programs: an already-followed program, 200 followed, another client following at the same time, a restore that does not take' => sub {
 	my $before = [ { path => '/listen/programs/science-show', title => 'The Science Show', followedAt => 1600000000 }, { path => '/listen/programs/other', title => 'Other', followedAt => 1600000001 } ];
 	my @full   = map { { path => "/listen/programs/p$_", title => "P$_", followedAt => 1600000000 + $_ } } 1 .. 200;
 	my $other  = { path => '/listen/programs/other', title => 'Other', followedAt => 1700000099 };
@@ -756,6 +813,7 @@ subtest 'followed programs: an already-followed program, 200 followed, another c
 		[ fake_lms( @FULL, followed => $before ) ],
 		[ fake_lms( @FULL, cap => 200, followed => [@full] ) ],
 		[ fake_lms( @FULL, other_follow => $other ) ],
+		[ fake_lms( @FULL, cap => 200, followed => [@full], ignore_pref_set => 1 ) ],
 	);
 	my @r = @{ smoke_all( map { [ [ $_->[0], '00:00:00:00:00:01', '--skip-live' ], env => \%FAST ] } @lms ) };
 
@@ -770,6 +828,9 @@ subtest 'followed programs: an already-followed program, 200 followed, another c
 	is( $r[2]{code}, 1, 'another client follows a program during check 12: exit 1' );
 	like( $r[2]{out}, qr/^FAIL  12\. Follow round trip — followed: Followed programs \(0\) → \(2\), expected \(1\)$/m, 'check 12 FAILs: the count changed by two' );
 	is_deeply( $lms[2][3]->(), [$other], 'the other client\'s follow is kept, and the test program is no longer followed' );
+
+	is( $r[3]{code}, 1, '200 followed, and LMS does not take the restored list: exit 1' );
+	like( $r[3]{out}, qr/^FAIL  12\. Follow round trip — The Science Show: Followed programs \(200\) → followed, listed \(200\) → unfollowed \(199\); the list was full, so the plugin dropped the oldest follow to make room; restored, but Followed programs \(199\), expected \(200\)$/m, 'check 12 FAILs: the count after the restore is not the count before' );
 
 	$_->[1]->() for @lms;
 };
