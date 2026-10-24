@@ -6,7 +6,7 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
 ## Issue map (task ID → GitHub issue)
 - foundation: F1 #1 · F2 #3 · F3 #7 · F4 #34 (bug) · F5 #37 (cardRef names) · F6 #41 (F4 follow-ups)
 - live: L1 #2 · L2 #4 · L3 #8 · L4 #10 · L5 #14
-- ondemand: O1 #12 · O2 #16 · O3 #18 · O4 #19 · O6 #30 · O7 #40 · O8 #48 (O7 follow-ups)
+- ondemand: O1 #12 · O2 #16 · O3 #18 · O4 #19 · O6 #30 · O7 #40 · O8 #48 (O7 follow-ups) · O9 #72 (Default-skin placeholder icons, after 1.0)
 - discovery: D1 #5 · D2 #6 · D3 #13 · D4 #22 · D5 #23 · D6 #44 (podcast A–Z groups) · D7 #51 (all categories) · D8 #56 (D7 follow-ups) · D9 #66 (search segments)
 - myabc: M1 #11 · M2 #20 · M3 #52 (settings/L5 follow-ups) · M4 #59 (Latest stale-id unfollow)
 - release: R1 #9 · R2 #15 · R3 #17 · R4 #62 (raw-hosted zips: LMS can't read GitHub's download redirect)
@@ -18,8 +18,7 @@ Phase 3/4 — task specs being filed; execution started with F1 (2026-10-19).
   from the public repo.xml on the testbed: downloaded + SHA1-verified, 0.3.0 installed, 10 top-level items, triple j
   played with song metadata; then uninstalled and dev link restored. #62 closed.
 - Next after R2: R3 (#17, amendment 2 posted) — v1.0.0 release, clean-profile install, final verification, pi14 checklist
-- #15 R2 smoke test + docs — PR #68 REQUEST_CHANGES (smoke check 6 vacuous on fallback; follow-restore merge not overwrite;
-  privacy hosts incl. CDNs; screenshot tab; AU-only string wording) — implementer fixing
+- #15 R2 smoke test + docs — PR #68 fixes pushed (ee38061: check-6 metadata rule, merge-based follow restore, docs) — focused re-review
 - Queued (cap 3): then v0.3.0 (system verification → release), R2, R3
 
 ## Interruptions
