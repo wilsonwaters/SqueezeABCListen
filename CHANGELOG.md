@@ -8,6 +8,8 @@ also the text of its GitHub Release (see [RELEASING.md](RELEASING.md)).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-24
+
 ### Added
 
 - **Audiobook chapters**: every audiobook's menu has **Chapters (N)**, the book in reading order ("1. Prologue:
@@ -183,7 +185,8 @@ also the text of its GitHub Release (see [RELEASING.md](RELEASING.md)).
 - Tested on LMS 9.1.1 with squeezelite. LMS 8.3 and later are expected to work but haven't been
   tested. Players (or the server, when it transcodes) need to be able to decode AAC.
 
-[unreleased]: https://github.com/wilsonwaters/SqueezeABCListen/compare/v0.3.0...HEAD
+[unreleased]: https://github.com/wilsonwaters/SqueezeABCListen/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/wilsonwaters/SqueezeABCListen/compare/v0.3.0...v1.0.0
 [0.3.0]: https://github.com/wilsonwaters/SqueezeABCListen/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/wilsonwaters/SqueezeABCListen/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/wilsonwaters/SqueezeABCListen/releases/tag/v0.1.0
