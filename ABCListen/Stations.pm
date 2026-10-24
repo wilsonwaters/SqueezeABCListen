@@ -46,6 +46,9 @@ package Plugins::ABCListen::Stations;
 #                                    L5, the live kind's onStream: once per play (per song), logs at INFO
 #                                    "using <family> instead of <family> for <ID>" when the stream that
 #                                    plays isn't the station's first candidate (F2 fell back to another).
+#                                    After a redirect the family is the candidate's (track redir), not
+#                                    the redirected host's. Songs are held weakly and forgotten once LMS
+#                                    drops them (M3, #52).
 #   Stations->eventStatus($id, $cb)  $cb->({ onAir => 0|1, sources => [aac urls] }) exactly once. One
 #                                    epgNowPlaying/<ID>/now request per service per 5 min (errors,
 #                                    `null`, {} and HLS-only sources count as off air and are cached
@@ -457,9 +460,11 @@ sub noteStream {
 	# the stream that plays, and (after a redirect) the candidate it came from
 	my $track = $song->can('currentTrack') ? $song->currentTrack : undef;
 	my $redir = $track && ref $track && $track->can('redir') ? $track->redir : undef;
-	return if grep { defined && !ref && $_ eq $preferred } $streamUrl, $redir;
+	$redir = undef if ref $redir;
+	return if grep { defined && $_ eq $preferred } $streamUrl, $redir;
 
-	my ( $from, $to ) = ( _family($preferred), _family($streamUrl) );
+	# M3 (#52): the family is the candidate's: a redirected stream may be on another host
+	my ( $from, $to ) = ( _family($preferred), _family( $redir // $streamUrl ) );
 	return if $from eq $to;
 
 	main::INFOLOG && $log->is_info && $log->info("Live stream fallback: using $to instead of $from for $id ($preferred could not be played; playing $streamUrl)");
@@ -720,6 +725,12 @@ sub _reset {
 	%PREFERRED      = ();
 	%CHECKED        = ();
 	return;
+}
+
+# test helper (M3, #52): noteStream's once-per-play guard as counts, without handing out a song
+# (a strong reference): (entries, entries that still hold a song)
+sub _checked {
+	return ( scalar keys %CHECKED, scalar grep { defined } values %CHECKED );
 }
 
 1;

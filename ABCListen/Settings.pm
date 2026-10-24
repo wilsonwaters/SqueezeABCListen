@@ -30,9 +30,17 @@ sub prefs {
 	return ( $prefs, qw(homeState liveQuality) );
 }
 
-# LMS's base handler puts a value its validator rejects into the page's warning ("... is not a valid
-# value for ...") without HTML-escaping it, so escape such values first. A rejected value stays rejected
-# once escaped, and valid values are passed on unchanged.
+# Before LMS's base handler saves the form (saveSettings), for each pref:
+#   * the field it saves is pref_<name>, or (core's fallback for old templates, which it logs as an
+#     error) an unprefixed <name>;
+#   * a field the POST leaves out gets the current value (M3, #52). The base handler sets every pref
+#     in prefs(), so it would set the missing one to undef, which the validator rejects with a
+#     spurious 'Invalid value "" for <name>' warning. Setting a pref to its current value is a no-op
+#     in LMS (no validation, no change callbacks), so the pref, even a hand-edited invalid value,
+#     stays as it is and no warning is shown;
+#   * a posted value its validator rejects is HTML-escaped, because the base handler puts it in the
+#     page's warning without escaping it. A rejected value stays rejected once escaped, and valid
+#     values are passed on unchanged.
 sub handler {
 	my ( $class, $client, $params, @args ) = @_;
 
@@ -40,9 +48,16 @@ sub handler {
 		my ( $namespace, @names ) = $class->prefs($client);
 
 		for my $name (@names) {
-			my $value = $params->{"pref_$name"};
-			next if !defined $value || ref $value || $namespace->validate( $name, $value );
-			( $params->{"pref_$name"} = $value ) =~ s/([&<>"'])/$HTML_ESCAPES{$1}/g;
+			my ($field) = grep { defined $params->{$_} } ( "pref_$name", $name );
+
+			if ( !defined $field ) {
+				$params->{"pref_$name"} = $namespace->get($name);
+				next;
+			}
+
+			my $value = $params->{$field};
+			next if ref $value || $namespace->validate( $name, $value );
+			( $params->{$field} = $value ) =~ s/([&<>"'])/$HTML_ESCAPES{$1}/g;
 		}
 	}
 
