@@ -1,7 +1,7 @@
 # Project Progress
 
 ## Phase
-Phase 6 — v1.0.0 released and verified (2026-10-24); handoff written (ai-state/HANDOFF.md); awaiting pi14 acceptance.
+v1.0.0 accepted by the stakeholder on pi14 (2026-10-25; #17 closed). Now: v1.1.0 — stakeholder feedback + HLS + backlog.
 
 ## Issue map (task ID → GitHub issue)
 - foundation: F1 #1 · F2 #3 · F3 #7 · F4 #34 (bug) · F5 #37 (cardRef names) · F6 #41 (F4 follow-ups)
@@ -12,6 +12,9 @@ Phase 6 — v1.0.0 released and verified (2026-10-24); handoff written (ai-state
 - release: R1 #9 · R2 #15 · R3 #17 · R4 #62 (raw-hosted zips: LMS can't read GitHub's download redirect) · R5 #75 (push-refusal match)
 
 ## Currently in flight
+- v1.1.0 (stakeholder feedback 2026-10-25): #83 U1 short description headers (Squeezer), #84 U2 continuous lists (no
+  "More…") — one agent, two PRs · #80 L6 HLS higher-quality live (Phase A spike first) · #76 F7 seenAt + #78 F8 log/cache
+  hygiene — one agent, two PRs. Queued: #77 R6 drift probe, #79 R7 docs, #72 O9 icons, then system check → 1.1.0.
 - #4 L2 program on air — PR #47 in review + runtime check
 - **v0.3.0 released and installable**: R4 (#63, squash 884d4c9) moved the zip to the orphan branch release-assets
   (raw.githubusercontent.com); repair run on main succeeded; repo.xml → raw URL, same SHA1. Orchestrator install check

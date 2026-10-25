@@ -49,6 +49,13 @@ Unresolved product/technical decisions and what they block. Resolved items move 
 
 ## Resolved
 
+- **ABC account login** (§1; stakeholder 2026-10-25 after pi14 testing): **no login** — "No login by default works well".
+  Follows stay local to LMS. ABC-account (Gigya) sync is not planned.
+- **Classical music artist** (§6; stakeholder 2026-10-25): show the artist **as ABC does itself** (the composer, "Last,
+  First"). No change.
+- **Official LMS repository** (RQ4; stakeholder 2026-10-25): the stakeholder will submit it (guide in
+  `docs/official-repository.md`) and delete the old remote feature branches.
+
 - **Commit authorship / attribution** (2026-10-19, stakeholder instruction): **never attribute any AI tool or vendor**
   anywhere — commits, PRs, issues, comments, docs or code. All commits are authored and committed as
   `Wilson Waters <wilsonwaters@users.noreply.github.com>` (including the release workflow's `repo.xml` commit); no
