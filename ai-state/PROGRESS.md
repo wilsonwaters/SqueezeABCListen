@@ -12,27 +12,16 @@ v1.0.0 accepted by the stakeholder on pi14 (2026-10-25; #17 closed). Now: v1.1.0
 - release: R1 #9 · R2 #15 · R3 #17 · R4 #62 (raw-hosted zips: LMS can't read GitHub's download redirect) · R5 #75 (push-refusal match)
 
 ## Currently in flight
-- PRs: #88 L6 HLS (192 kbps via own HLS reader; F2 change) — in review + runtime; #85 F7 + #87 F8 (stacked) — in review.
-  New: #89 F9 (404 WARN for removed followed program).
-- v1.1.0 (stakeholder feedback 2026-10-25): #83 U1 short description headers (Squeezer), #84 U2 continuous lists (no
-  "More…") — one agent, two PRs · #80 L6 HLS higher-quality live (Phase A spike first) · #76 F7 seenAt + #78 F8 log/cache
-  hygiene — one agent, two PRs. Queued: #77 R6 drift probe, #79 R7 docs, #72 O9 icons, then system check → 1.1.0.
-- #4 L2 program on air — PR #47 in review + runtime check
-- **v0.3.0 released and installable**: R4 (#63, squash 884d4c9) moved the zip to the orphan branch release-assets
-  (raw.githubusercontent.com); repair run on main succeeded; repo.xml → raw URL, same SHA1. Orchestrator install check
-  from the public repo.xml on the testbed: downloaded + SHA1-verified, 0.3.0 installed, 10 top-level items, triple j
-  played with song metadata; then uninstalled and dev link restored. #62 closed.
-- **v1.0.0 RELEASED** (PR #73 squash a6bf826; t/98 generalised first in #74): release v1.0.0 + asset; release-assets
-  ABCListen-1.0.0.zip (sha1 7a39ccee…); repo.xml 1.0.0 → raw URL, by Wilson Waters. Pre-release smoke 15/15 on main.
-- #17 R3 phase 2 DONE: release verified (asset = release-assets copy, sha1 7a39ccee…); clean-profile install from the raw
-  repo.xml → 1.0.0 enabled, smoke 15/15 (cold, 67 s), prefs only homeState/liveQuality/followed (+_ts_, _version), no
-  plugin log lines; 7 criteria: 1–6 PASS, 7 PARTIAL (no GitHub-native reviews — single-account repo; reviews were
-  review-agent dispatches recorded here and in the transcript; #61 #63 #64 #71 #73 #74 were orchestrator-reviewed: diff
-  read + merged-tree check.sh). Evidence + pi14 checklist posted on #17 (comments 6380815256, 6380828931).
-- Phase 6: final review vs brief — v1.0.0 delivers the brief (criterion 7 partial: pi14 acceptance pending; one
-  post-instruction commit with the old identity, 71e77b6). Backlog filed: #76 F7, #77 R6, #78 F8, #79 R7, #80 L6, #81 O5.
-  HANDOFF.md written. #75 R5 merged (PR #82, squash 9021af9: shared scripts/push-refused.sh; deterministic t/99).
-- Queued (cap 3): then v0.3.0 (system verification → release), R2, R3
+- v1.1.0 (stakeholder feedback 2026-10-25):
+  - #88 L6 HLS (192 kbps via own HLS reader; gated F2 change signed off by the orchestrator) — review REQUEST_CHANGES
+    (segment-failure counter, mid-play bad 200, truncated segments, fMP4 trun bound, scan deadline, H18 test); fixes in
+    progress. After merge: streams.md contract 4 (L6 flags `hls`) and contract 8 (`hls` value).
+  - #86 U1 short description headers (Squeezer) + #90 U2 continuous lists (no "More…") — in review. Merge #86 then #90;
+    strings.txt conflict with L6 = keep both sections.
+  - #77 R6 drift probe + weekly run — implementing.
+  - Queued: #79 R7 docs (README/CHANGELOG for U1/U2/L6/F7/F8, drop More-episodes text + unused token), #89 F9
+    (404 WARN + F7/F8 review test gaps + Tracks log nit), #72 O9 icons; then system check → 1.1.0 → pi14 re-check.
+  - P3 after 1.1.0: #91 L7 HLS title offset, #81 O5.
 
 ## Interruptions
 - 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
@@ -48,6 +37,12 @@ v1.0.0 accepted by the stakeholder on pi14 (2026-10-25; #17 closed). Now: v1.1.0
   (fixed), testbed restarted, R2 resumed.
 
 ## Last completions
+- #76 F7 merged (PR #85, squash c884ebf): seenAt = fetch time in Search + episode resolver; newer-meta guard; D5's
+  rule shared in Util. #78 F8 merged (PR #87, squash 5c613b6; orchestrator merged main into the stacked branch, t/11
+  conflict = F8 side): warnings rate-limited, unchanged meta not rewritten (re-walk 50 → 0 writes). One reviewer, both
+  APPROVE (no defects; 3 test gaps + 1 log nit → #89); merged-tree check.sh 830 tests.
+- Historical (v0.3.0 → v1.0.0): v0.3.0 released via R4 raw-hosted zips; v1.0.0 released (PR #73) and verified on a
+  clean profile (#17); stakeholder accepted on pi14 2026-10-25; #75 R5 merged (PR #82).
 - #15 R2 merged (PR #68, squash 47d2099): smoke.sh (15 checks; follows restored by merge), README (16 sections, 9
   screenshots), official-repository guide, CHANGELOG Unreleased, desc sync. REQUEST_CHANGES → fixes → re-review APPROVE.
 - O8/D9 review test gaps merged (PR #71, squash 4eeb267): tests only + one comment.
