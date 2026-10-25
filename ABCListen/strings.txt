@@ -430,10 +430,3 @@ PLUGIN_ABCLISTEN_ABOUT_STATION
 # The liveQuality option for ABC's HLS streams (the L5 setting)
 PLUGIN_ABCLISTEN_LIVE_QUALITY_HLS
 	EN	High quality (HLS)
-
-# === U2 === One continuous list instead of More pages
-
-# A row in a program's episode list where ABC's page holds no episode at that place (a card that
-# isn't an episode, or a list that got shorter than ABC said); it keeps the rows after it in place
-PLUGIN_ABCLISTEN_EPISODE_UNAVAILABLE
-	EN	Episode unavailable

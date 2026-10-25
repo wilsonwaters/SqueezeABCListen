@@ -150,16 +150,19 @@ package Plugins::ABCListen::OnDemand;
 # path ('<program path>/...'); otherwise O1 fills them at play time.
 # U2: the program menu is an LMS partial feed. XMLBrowser passes a code-ref feed index/quantity
 # (the rows a client lists, or index = the row it opens and quantity 1); the menu answers
-# { items => those rows, offset => index, total => all rows } and loads only the ABC pages of
-# EPISODE_PAGE (50) episodes those rows are on, at most PAGE_CONCURRENCY (4) at a time, plus page
-# 0, whose total (at most 250) sets the length; Programs->episodes caches each page 15 min. Without
-# index/quantity (playlist commands: Play all / Add all) it is the whole list, every page. The
-# total is page 0's for every window (U2 review): a page of 50 that fails is loaded again as pages
-# of SUB_PAGE (10); a place still without an episode keeps a text row (the failed page's error
-# text, or "Episode unavailable" where ABC's page holds fewer episodes than its total said), and a
-# failed page isn't asked for again for FAILURE_TTL (60 s). Row i is the same episode for as long
-# as the pages are cached (stable item ids: LMS keeps no browse session and re-walks menus by
-# index).
+# { items => those rows, offset => index, total => all rows }. Without index/quantity (playlist
+# commands: Play all / Add all) it is the whole list. U2 round 2: the rows are numbered by audio
+# episode over all of ABC's pages (ABC counts video cards in its total; Programs drops them, and
+# they get no row), so the menu loads every page the program has for any window: page 0 of
+# EPISODE_PAGE (50), whose total (at most 250) says which others there are, then the others, at
+# most PAGE_CONCURRENCY (4) at a time; Programs->episodes caches each page 15 min. total = the lead
+# rows + the episode rows, the same for every window. A page of 50 that fails is loaded again as
+# pages of SUB_PAGE (10): its first SUB_PROBE (2), then, once one of them has loaded, the rest;
+# each place still without an episode is a row of the failed page's error text. Page 0 failing:
+# its first 10 alone; when they fail too, nothing more is asked (the list is the header and the
+# error). A rate-limited page isn't asked for in smaller pages. A failed page isn't asked for
+# again for FAILURE_TTL (60 s). Row i is the same episode for as long as the pages are cached
+# (stable item ids: LMS keeps no browse session and re-walks menus by index).
 #
 # Episode menu (_episodeMenu; O4 extended it): synopsis (descriptionItems: the short textarea,
 # then "About this episode" when it was shortened) · "Play episode" (type audio,
@@ -226,16 +229,18 @@ use Plugins::ABCListen::Util;
 use constant ENDASH => "\x{2013}";
 use constant MIDDOT => "\x{B7}";
 
-use constant EPISODE_PAGE     => 50;     # ABC episodes per page (U2: the program menu loads the pages its window shows)
+use constant EPISODE_PAGE     => 50;     # ABC episodes per page (U2: the program menu loads every page, at most 5)
 use constant PAGE_CONCURRENCY => 4;      # U2: episode pages loading at once
 use constant LONG_LIST        => 100;    # U2: rows after the header from which Material hides it (_programHeader)
 use constant SUB_PAGE         => 10;     # U2 review: a failed page is loaded again as pages of this many episodes
-use constant MAX_ROUNDS       => 4;      # U2 review: rounds of page loads after the first (_programMenuItems)
+use constant SUB_PROBE        => 2;      # U2 round 2: a failed page's pages of 10 tried before the rest (_subPagesWanted)
+use constant MAX_ROUNDS       => 5;      # U2 review: rounds of page loads after page 0 (_programMenuItems; 4 are enough)
 use constant FAILURE_TTL      => 60;     # U2 review: seconds a failed episode page isn't asked for again
 use constant JIVE_CHUNK       => 200;    # U2 review: rows SqueezePlay/jivelite ask for at a time (DB.lua BLOCK_SIZE)
 use constant PROVIDER_TIMEOUT => 5;      # seconds
 use constant IMAGE_PX         => 300;
 use constant LOAD_FAILED      => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
+use constant RATE_LIMITED     => 'PLUGIN_ABCLISTEN_RATE_LIMITED';
 
 use constant SHORT_TEXT_MAX => 200;         # U1: characters in a menu's description header
 use constant ELLIPSIS       => "\x{2026}";
@@ -827,14 +832,14 @@ sub _window {
 	return { index => $index + 0, quantity => $quantity + 0 };
 }
 
-# Header, provider extras, then the episodes as one list (U2): only the rows of the window, from the
-# ABC pages of EPISODE_PAGE episodes that hold them, as a partial feed { items, offset, total }.
-# Page 0 (it gives the total) and the window's other pages, estimated from the header alone, load
-# with the providers, at most PAGE_CONCURRENCY at a time. Then, round by round (at most
-# MAX_ROUNDS): a page the estimate missed (provider rows, or more episodes than the program page
-# said), page 0's first SUB_PAGE episodes when page 0 failed (for the total), and the window's
-# SUB_PAGE pages of a page that failed (U2 review: ABC fails some pages of 50 every time while
-# their pages of 10 load).
+# Header, provider extras, then the episodes as one list (U2), as a partial feed { items, offset,
+# total } of the window's rows. U2 round 2: the rows are numbered by audio episode over all of
+# ABC's pages (Programs drops cards that aren't audio episodes, so a page can hold fewer than its
+# 50 places), so every page the program has is loaded for any window: at most 5 of EPISODE_PAGE,
+# each cached 15 min and coalesced by Programs::episodes. Page 0 loads with the providers; its
+# total says which other pages there are; then, round by round (_wantedPages, at most
+# MAX_ROUNDS): page 0's first SUB_PAGE when page 0 failed, the other pages (at most
+# PAGE_CONCURRENCY at a time), and the pages of SUB_PAGE of a page that failed.
 sub _programMenuItems {
 	my ( $client, $cb, $program, $detail, $window ) = @_;
 
@@ -852,40 +857,29 @@ sub _programMenuItems {
 	};
 
 	my %pages;    # "offset/size" => Programs::episodes' answer
-	my ( $extras, @lead );
+	my $extras = [];
 	my ( $pending, $rounds ) = ( 2, 0 );
 
 	my $step;
 	$step = sub {
 		_try( $client, $cb, sub {
-			# the rows before the episodes, now that the number of episodes is known
-			my $count = _episodeCount( \%pages, $detail );
-			@lead = ( _programHeader( $client, $detail, @$extras + ( $count || 1 ) ), @$extras );
-
-			my @wanted = defined $context->{collectionId} && $rounds++ < MAX_ROUNDS ? _wantedPages( \%pages, scalar @lead, $window, $count || 0 ) : ();
+			my @wanted = defined $context->{collectionId} && $rounds++ < MAX_ROUNDS ? _wantedPages( \%pages ) : ();
 			return _fetchPages( $context, \@wanted, \%pages, $step ) if @wanted;
 
 			undef $step;    # done: break the closure's reference to itself
-			_respondWindow( $client, $cb, sub { _programWindow( $client, $context, $detail, \@lead, \%pages, $window ) } );
+			_respondWindow( $client, $cb, sub { _programWindow( $client, $context, $detail, $extras, \%pages, $window ) } );
 		} );
 	};
 
 	my $done = sub { $step->() unless --$pending };
 
 	_runProviders( $client, \%merged, sub {
-		$extras = shift;
+		$extras = ref $_[0] eq 'ARRAY' ? $_[0] : [];
 		$done->();
 	} );
 
-	if ( defined $context->{collectionId} ) {
-		# the program page's count of episodes (unknown: one page) and the header alone
-		my $estimate = $detail->{total} || EPISODE_PAGE;
-		my @header   = _programHeader( $client, $detail, $estimate );
-		_fetchPages( $context, [ _wantedPages( \%pages, scalar @header, $window, $estimate ) ], \%pages, $done );
-	}
-	else {
-		$done->();
-	}
+	# page 0 (its total says which other pages there are) loads with the providers
+	defined $context->{collectionId} ? _fetchPages( $context, [ _wantedPages( \%pages ) ], \%pages, $done ) : $done->();
 }
 
 # Description (U1: the short textarea, then "About this program" when shortened), "Presented by
@@ -917,65 +911,81 @@ sub _programHeader {
 
 sub _pageKey { join '/', @_ }
 
-# How many episodes the list has: the total (ABC's, at most 250) of page 0, else of page 0's first
-# SUB_PAGE episodes; 0 when the one that answered has no episodes. Before either has answered: the
-# program page's count (an estimate). undef when both failed.
-sub _episodeCount {
-	my ( $pages, $detail ) = @_;
+sub _rateLimited { ( $_[0]->{error} || '' ) eq RATE_LIMITED }
+
+# The episode pages ("offset/size" keys) %$pages needs next:
+#   - page 0 (EPISODE_PAGE episodes); its total says which other pages there are;
+#   - page 0 failed: its first SUB_PAGE episodes alone (for the total); when those fail too, or
+#     page 0 was rate limited, nothing more (the list is the header and page 0's error text);
+#   - every other page of EPISODE_PAGE to ABC's total (at most 250 episodes: 5 pages);
+#   - for each page that failed, other than rate limited: its pages of SUB_PAGE (_subPagesWanted).
+# A rate-limited page isn't asked for in smaller pages: ABC asked us to slow down.
+sub _wantedPages {
+	my $pages = shift;
+
+	my $first = $pages->{ _pageKey( 0, EPISODE_PAGE ) } or return _pageKey( 0, EPISODE_PAGE );
+
+	if ( $first->{error} ) {
+		return () if _rateLimited($first);
+		my $sub = $pages->{ _pageKey( 0, SUB_PAGE ) } or return _pageKey( 0, SUB_PAGE );
+		return () if $sub->{error};
+	}
+
+	my $cards = _cardCount($pages);
+	my @wanted;
+	for ( my $offset = 0; $offset < $cards; $offset += EPISODE_PAGE ) {
+		my $page = $pages->{ _pageKey( $offset, EPISODE_PAGE ) };
+		if ( !$page ) {
+			push @wanted, _pageKey( $offset, EPISODE_PAGE );
+		}
+		elsif ( $page->{error} && !_rateLimited($page) ) {
+			push @wanted, _subPagesWanted( $pages, $offset, $cards );
+		}
+	}
+
+	return @wanted;
+}
+
+# A failed page's pages of SUB_PAGE still to ask for: its first SUB_PROBE (2) first; once one of
+# them has loaded (ABC fails that page on one episode, not on everything), all the others at
+# once; when both failed, none: the page's places keep its error text. So a page fails at most
+# twice more, and an open where every page fails asks ABC for page 0 and its first 10 only.
+sub _subPagesWanted {
+	my ( $pages, $offset, $cards ) = @_;
+
+	my @subs;
+	for ( my $sub = $offset; $sub < $offset + EPISODE_PAGE && $sub < $cards; $sub += SUB_PAGE ) {
+		push @subs, _pageKey( $sub, SUB_PAGE );
+	}
+
+	my @untried = grep { !$pages->{$_} } @subs;
+	my @tried   = grep { $pages->{$_} } @subs;
+
+	return @untried if grep { !$pages->{$_}->{error} } @tried;
+	return () if @tried >= SUB_PROBE;
+
+	my $more = SUB_PROBE - @tried;
+	return @untried > $more ? @untried[ 0 .. $more - 1 ] : @untried;
+}
+
+# ABC's number of cards (at most 250): page 0's total, else (page 0 failed) the total of its first
+# SUB_PAGE; undef when neither has answered with episodes.
+sub _cardCount {
+	my $pages = shift;
 
 	for my $key ( _pageKey( 0, EPISODE_PAGE ), _pageKey( 0, SUB_PAGE ) ) {
 		my $page = $pages->{$key};
-		next unless $page && !$page->{error};
-		return @{ $page->{items} || [] } ? $page->{total} || 0 : 0;
+		return $page->{total} || 0 if $page && !$page->{error};
 	}
 
-	return undef if $pages->{ _pageKey( 0, EPISODE_PAGE ) } && $pages->{ _pageKey( 0, SUB_PAGE ) };
-	return $detail->{total} || 0;
-}
-
-# The episode pages ("offset/size" keys) %$pages still needs for a window when $lead rows come
-# before $count episodes: page 0 (it gives the total), its first SUB_PAGE episodes when page 0
-# failed, the pages of the episodes in the window (the whole list without a window), and, for a
-# page that failed, the window's SUB_PAGE pages within it.
-sub _wantedPages {
-	my ( $pages, $lead, $window, $count ) = @_;
-
-	my @wanted = ( _pageKey( 0, EPISODE_PAGE ) );
-	my $first  = $pages->{ $wanted[0] };
-	push @wanted, _pageKey( 0, SUB_PAGE ) if $first && $first->{error};
-
-	my ( $from, $to ) = _episodeRange( $lead, $window, $count );
-	for my $page ( $from < $to ? int( $from / EPISODE_PAGE ) .. int( ( $to - 1 ) / EPISODE_PAGE ) : () ) {
-		my $key = _pageKey( $page * EPISODE_PAGE, EPISODE_PAGE );
-		push @wanted, $key;
-		next unless $pages->{$key} && $pages->{$key}->{error};
-
-		my $lo = $from > $page * EPISODE_PAGE ? $from : $page * EPISODE_PAGE;
-		my $hi = $to < ( $page + 1 ) * EPISODE_PAGE ? $to : ( $page + 1 ) * EPISODE_PAGE;
-		push @wanted, map { _pageKey( $_ * SUB_PAGE, SUB_PAGE ) } int( $lo / SUB_PAGE ) .. int( ( $hi - 1 ) / SUB_PAGE );
-	}
-
-	my %seen;
-	return grep { !$pages->{$_} && !$seen{$_}++ } @wanted;
-}
-
-# The episode indexes [first, last) a window shows when $lead rows come before $count episodes.
-sub _episodeRange {
-	my ( $lead, $window, $count ) = @_;
-
-	my ( $from, $to ) = $window ? ( $window->{index}, $window->{index} + $window->{quantity} ) : ( 0, $lead + $count );
-	my $first = $from > $lead ? $from - $lead : 0;
-	my $last  = $to > $lead ? $to - $lead : 0;
-	$last = $count if $last > $count;
-
-	return $first < $last ? ( $first, $last ) : ( 0, 0 );
+	return undef;
 }
 
 # Load the episode pages ("offset/size" keys) in @$wanted that %$pages doesn't hold yet
 # (Programs::episodes: its cache and coalescing), at most PAGE_CONCURRENCY at a time, each answer
 # (an error too) into $pages->{key}; $cb->() once, when all have answered. U2 review: a page that
-# failed is remembered for FAILURE_TTL (60 s) and not asked for again meanwhile (ABC fails some
-# pages every time, and API.pm caches only answers).
+# failed is remembered for FAILURE_TTL (60 s), per program, and not asked for again meanwhile (ABC
+# fails some pages every time, and API.pm caches only answers).
 sub _fetchPages {
 	my ( $context, $wanted, $pages, $cb ) = @_;
 
@@ -1029,72 +1039,98 @@ sub _fetchPages {
 	return;
 }
 
+# The program's episode rows, newest first, numbered by audio episode (U2 round 2): each page of
+# EPISODE_PAGE's episodes in ABC's order (a card that isn't an audio episode has no row); for a
+# page that failed, the episodes of its pages of SUB_PAGE that loaded, and one row of error text
+# for each place of one that failed or wasn't asked for. A row: [ episode ] or [ undef, token ].
+# undef when page 0 and its first SUB_PAGE both failed (no total).
+sub _episodeRows {
+	my $pages = shift;
+
+	my $cards = _cardCount($pages);
+	return undef unless defined $cards;
+
+	my @rows;
+	for ( my $offset = 0; $offset < $cards; $offset += EPISODE_PAGE ) {
+		my $page = $pages->{ _pageKey( $offset, EPISODE_PAGE ) };
+		if ( $page && !$page->{error} ) {
+			push @rows, map { [$_] } @{ $page->{items} || [] };
+			next;
+		}
+
+		for ( my $sub = $offset; $sub < $offset + EPISODE_PAGE && $sub < $cards; $sub += SUB_PAGE ) {
+			my $part = $pages->{ _pageKey( $sub, SUB_PAGE ) };
+			if ( $part && !$part->{error} ) {
+				push @rows, map { [$_] } @{ $part->{items} || [] };
+				next;
+			}
+
+			my $error = ( $part || $page || {} )->{error} || LOAD_FAILED;
+			push @rows, map { [ undef, $error ] } 1 .. ( $cards - $sub < SUB_PAGE ? $cards - $sub : SUB_PAGE );
+		}
+	}
+
+	return \@rows;
+}
+
 # The program menu's rows in the window, { items, offset, total }. The list: the lead rows (header,
 # provider extras), then
 #   - no episode collection: "No episodes available", except for a restricted program (ABC's
 #     audiobooks: D5's provider lists the chapters) that has lead rows: never an empty list;
 #   - page 0 (and its first SUB_PAGE episodes) failed: page 0's error text; no episodes: "No
 #     episodes available";
-#   - else the episodes, newest first, to page 0's total (_episodeWindow).
+#   - else the episode rows (_episodeRows, _episodeWindow).
+# The header depends on the number of rows (_programHeader), so it is built here, once every
+# page has answered.
 sub _programWindow {
-	my ( $client, $context, $detail, $lead, $pages, $window ) = @_;
+	my ( $client, $context, $detail, $extras, $pages, $window ) = @_;
 
-	my $count = defined $context->{collectionId} ? _episodeCount( $pages, $detail ) : 0;
+	my $rows  = defined $context->{collectionId} ? _episodeRows($pages) : [];
+	my $count = $rows ? scalar @$rows : 0;
+	my @lead  = ( _programHeader( $client, $detail, @$extras + ( $count || 1 ) ), @$extras );
 
 	my @tail;
 	if ( !defined $context->{collectionId} ) {
-		@tail = _textItem( $client, 'PLUGIN_ABCLISTEN_NO_EPISODES' ) unless $detail->{restricted} && @$lead;
+		@tail = _textItem( $client, 'PLUGIN_ABCLISTEN_NO_EPISODES' ) unless $detail->{restricted} && @lead;
 	}
-	elsif ( !defined $count ) {
-		@tail = _textItem( $client, $pages->{ _pageKey( 0, EPISODE_PAGE ) }->{error} );
+	elsif ( !$rows ) {
+		@tail = _textItem( $client, ( $pages->{ _pageKey( 0, EPISODE_PAGE ) } || {} )->{error} );
 	}
 	elsif ( !$count ) {
 		@tail = _textItem( $client, 'PLUGIN_ABCLISTEN_NO_EPISODES' );
 	}
 	else {
-		return _episodeWindow( $client, $context, $lead, $pages, $window, $count );
+		return _episodeWindow( $client, $context, \@lead, $rows, $window );
 	}
 
-	my @all = ( @$lead, @tail );
+	my @all = ( @lead, @tail );
 	my ( $from, $to ) = $window ? ( $window->{index}, $window->{index} + $window->{quantity} ) : ( 0, scalar @all );
 	$to = @all if $to > @all;
 
 	return { items => [ $from < $to ? @all[ $from .. $to - 1 ] : () ], offset => $from, total => scalar @all };
 }
 
-# The rows of the window when $count episodes follow the lead rows: total = lead + $count, the same
+# The rows of the window when the episode rows follow the lead rows: total = lead + rows, the same
 # for every window (U2 review: SqueezePlay/jivelite drop their rows when it changes, and the web UI
-# pages by it). Row i is always the same episode (or placeholder) while ABC's pages are cached.
+# pages by it). Row i is always the same episode (or error row) while ABC's pages are cached.
 sub _episodeWindow {
-	my ( $client, $context, $lead, $pages, $window, $count ) = @_;
+	my ( $client, $context, $lead, $rows, $window ) = @_;
 
-	my $total = @$lead + $count;
+	my $total = @$lead + @$rows;
 	my ( $from, $to ) = $window ? ( $window->{index}, $window->{index} + $window->{quantity} ) : ( 0, $total );
 	$to = $total if $to > $total;
 
-	my @items = map { $_ < @$lead ? $lead->[$_] : _episodeRow( $client, $context, $pages, $_ - @$lead ) } $from < $to ? $from .. $to - 1 : ();
+	my @items = map { $_ < @$lead ? $lead->[$_] : _episodeRow( $client, $context, $rows->[ $_ - @$lead ], $_ - @$lead ) } $from < $to ? $from .. $to - 1 : ();
 
 	return { items => \@items, offset => $from, total => $total };
 }
 
-# Episode n's row: its episodeItem, from its page of EPISODE_PAGE, else (that page failed) from its
-# page of SUB_PAGE. A placeholder text row keeps the position otherwise: the failed page's error text
-# (LOAD_FAILED, RATE_LIMITED), or "Episode unavailable" where ABC's page holds fewer episodes than
-# its total said (a card that isn't an episode, or a list that shrank).
+# Episode row n: its episodeItem, or the error text of a place that failed to load.
 sub _episodeRow {
-	my ( $client, $context, $pages, $n ) = @_;
+	my ( $client, $context, $row, $n ) = @_;
+	my ( $episode, $error ) = @$row;
 
-	my $page = $pages->{ _pageKey( int( $n / EPISODE_PAGE ) * EPISODE_PAGE, EPISODE_PAGE ) };
-	my $at   = $n % EPISODE_PAGE;
-
-	if ( !$page || $page->{error} ) {
-		my $sub = $pages->{ _pageKey( int( $n / SUB_PAGE ) * SUB_PAGE, SUB_PAGE ) };
-		return _textItem( $client, $sub && $sub->{error} ? $sub->{error} : $page ? $page->{error} : LOAD_FAILED ) unless $sub && !$sub->{error};
-		( $page, $at ) = ( $sub, $n % SUB_PAGE );
-	}
-
-	my $episode = ( $page->{items} || [] )->[$at];
-	return _textItem( $client, 'PLUGIN_ABCLISTEN_EPISODE_UNAVAILABLE' ) unless ref $episode eq 'HASH';
+	return _textItem( $client, $error ) unless ref $episode eq 'HASH';
 
 	my $item = eval { __PACKAGE__->episodeItem( $client, _withProgram( $context, $episode ) ) };
 	return $item if ref $item eq 'HASH';

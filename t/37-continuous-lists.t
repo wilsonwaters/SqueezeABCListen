@@ -3,18 +3,21 @@
 #
 # Program menus (OnDemand::_programMenu) are LMS partial feeds: Slim::Control::XMLBrowser and
 # Slim::Web::XMLBrowser pass a code-ref feed index/quantity (the rows a client lists, or the row it
-# opens with quantity 1), and the feed answers { items, offset, total }, loading only the ABC
-# episode pages (50 a page) the window shows, plus page 0 for the total. Covered here: the window
-# -> ABC page mapping (first open, scrolling, opening one row, the web UI's pages, the rows before
-# a window that XMLBrowser adds), total and offset, stable ids (row i is the same episode whatever
-# the window), the whole list without a window (Play all), at most 4 pages in flight, a window
-# past the end, no request past ABC's total, provider rows and a program page that undercounts (a
-# second round of pages), exactly one callback.
+# opens with quantity 1), and the feed answers { items, offset, total }. U2 round 2: rows are
+# numbered by audio episode over all of ABC's pages (50 a page; a video card has no row), so every
+# page the program has is loaded for any window: page 0 first (its total says which), then the
+# others. Covered here: the requests per open, scrolling from the cache, opening one row cold,
+# the web UI's pages, the rows before a window that XMLBrowser adds, total and offset, stable ids
+# (row i is the same episode whatever the window, with videos dropped across pages too), the
+# whole list without a window (Play all), at most 4 requests in flight, a window past the end, no
+# request past ABC's total, provider rows, a program page that over- or undercounts, exactly one
+# callback.
 # U2 review: menus of more than 200 rows have no leading textarea, so every 200-row chunk that
 # SqueezePlay/jivelite ask for counts the same (XMLBrowser's menu-mode count is emulated here);
-# a failed page of 50 is loaded again as pages of 10, positions that still fail (or that ABC's
-# page doesn't fill) keep a placeholder row, total is page 0's whatever the window, and a failed
-# page isn't asked for again for 60 s.
+# a failed page of 50 is loaded again as pages of 10 (the first two, then the rest once one
+# loads), places that still fail keep an error row, and a failed page isn't asked for again for
+# 60 s (per program). U2 round 2: when ABC fails everything, an open asks for page 0 and its
+# first 10 only; a rate-limited page isn't asked for in pages of 10.
 #
 # Collection menus (Collections::_collectionMenu) use the bounded full fetch: every page of the
 # collection to 200 cards, at most 4 requests at a time, within 4 s of the first page; a page that
@@ -63,7 +66,6 @@ my $JSON_TYPE   = { 'Content-Type' => 'application/json' };
 my $LOAD_FAILED = string('PLUGIN_ABCLISTEN_LOAD_FAILED');
 my $RATE        = string('PLUGIN_ABCLISTEN_RATE_LIMITED');
 my $EMPTY       = string('PLUGIN_ABCLISTEN_EMPTY_COLLECTION');
-my $UNAVAILABLE = string('PLUGIN_ABCLISTEN_EPISODE_UNAVAILABLE');
 my $MORE_EPS    = "More episodes\x{2026}";    # the row v1.0.0 listed (its token is gone)
 
 my $PROGRAM_MENU = \&Plugins::ABCListen::OnDemand::_programMenu;
@@ -129,6 +131,14 @@ sub route_science {
 	route( "$NEXT$SCIENCE.json", content => to_json($page), headers => $JSON_TYPE );
 }
 
+# Another program: The Science Show's page at $path, its episode collection $collection
+sub route_program {
+	my ( $path, $collection ) = @_;
+	my $page = JSON::PP::decode_json( fixture('ondemand/nextdata-program-scienceshow.trimmed.json') );
+	$page->{pageProps}->{programCollectionPrepared}->{id} = "$collection";
+	route( "$NEXT$path.json", content => to_json($page), headers => $JSON_TYPE );
+}
+
 my $TEMPLATE = JSON::PP::decode_json( fixture('ondemand/nextdata-program-scienceshow.trimmed.json') )->{pageProps}->{programCollectionPrepared}->{items}->[0];
 my $NEWEST   = timegm( 0, 0, 1, 17, 9, 2026 );
 
@@ -147,14 +157,16 @@ sub episode_card {
 }
 
 # ABC's episode pages by offset/size: %opt total (250), have (how many it really holds: total),
-# fail => { 'offset/size' or offset => code }, defer => { offset => 1 }, video => { n => 1 } (the
-# card at n is a video: Programs drops it, so its page holds one episode fewer)
+# fail => { 'offset/size' or offset => code }, defer => { 'offset/size' or offset => 1 },
+# video => { n => 1 } (the card at n is a video: Programs drops it, so its page holds one episode
+# fewer), collection (2885458, The Science Show's)
 sub route_episodes {
-	my %opt   = @_;
-	my $total = defined $opt{total} ? $opt{total} : 250;
-	my $have  = defined $opt{have}  ? $opt{have}  : $total;
+	my %opt        = @_;
+	my $total      = defined $opt{total} ? $opt{total} : 250;
+	my $have       = defined $opt{have}  ? $opt{have}  : $total;
+	my $collection = $opt{collection} || 2885458;
 
-	Slim::Networking::SimpleAsyncHTTP->addRoute( qr{\Q$EPS\E\?collectionId=2885458&}, sub {
+	Slim::Networking::SimpleAsyncHTTP->addRoute( qr{\Q$EPS\E\?collectionId=$collection&}, sub {
 		my $url = shift;
 		my ( $offset, $size ) = ( offset_of($url), $url =~ /size=([0-9]+)/ );
 		my $fail = $opt{fail} && ( $opt{fail}->{"$offset/$size"} || $opt{fail}->{$offset} );
@@ -163,8 +175,8 @@ sub route_episodes {
 		return {
 			code    => 200,
 			headers => $JSON_TYPE,
-			content => to_json( { collection => { id => '2885458', items => \@cards, pagination => { offset => $offset, size => $size + 0, total => $total } } } ),
-			( $opt{defer} && $opt{defer}->{$offset} ? ( defer => 1 ) : () ),
+			content => to_json( { collection => { id => "$collection", items => \@cards, pagination => { offset => $offset, size => $size + 0, total => $total } } } ),
+			( $opt{defer} && ( $opt{defer}->{"$offset/$size"} || $opt{defer}->{$offset} ) ? ( defer => 1 ) : () ),
 		};
 	} );
 }
@@ -176,7 +188,7 @@ sub episode_no { my $item = shift; return $item && ( $item->{name} // '' ) =~ /E
 # Program menu: the window -> ABC page mapping
 # ---------------------------------------------------------------------------
 
-subtest 'program menu, first open (menu:1 asks 0..99): rows 0..99 from pages 0 and 1; offset 0, total 253' => sub {
+subtest 'program menu, first open (menu:1 asks 0..99): every page (page 0, then the 4 others); rows 0..99; offset 0, total 253' => sub {
 	fresh();
 	route_science();
 	route_episodes();
@@ -189,11 +201,11 @@ subtest 'program menu, first open (menu:1 asks 0..99): rows 0..99 from pages 0 a
 	is( scalar @{ $feed->{items} }, 100, '100 rows' );
 	is_deeply( names( [ @{ $feed->{items} }[ 0 .. 2 ] ] ), [ 'About this program', 'Presented by Robyn Williams, Belinda Smith', 'ABC Radio National' ], 'the header rows first (no textarea: more than 200 rows)' );
 	is_deeply( [ map { episode_no($_) } @{ $feed->{items} }[ 3 .. 99 ] ], [ 0 .. 96 ], 'then episodes 0..96, newest first' );
-	is_deeply( [ episode_offsets() ], [ 0, 50 ], 'only the pages those rows are on: offsets 0 and 50 (of 0..200)' );
+	is_deeply( [ episode_pages() ], [ map {"$_/50"} 0, 50, 100, 150, 200 ], 'every page of 50 (rows are numbered by episode over all of them): 0, then 50..200' );
 	ok( !( grep { ( $_->{name} // '' ) eq $MORE_EPS } @{ $feed->{items} } ), 'no "More episodes…" row' );
 };
 
-subtest 'program menu, scrolling (rows 100..199 next): pages 1 (cached), 2 and 3; offset 100' => sub {
+subtest 'program menu, scrolling (rows 100..199, then 200..252): from the cached pages' => sub {
 	fresh();
 	route_science();
 	route_episodes();
@@ -203,12 +215,11 @@ subtest 'program menu, scrolling (rows 100..199 next): pages 1 (cached), 2 and 3
 	is( $feed->{offset}, 100,    'offset 100' );
 	is( $feed->{total},  $TOTAL, 'total 253' );
 	is_deeply( [ map { episode_no($_) } @{ $feed->{items} } ], [ 97 .. 196 ], 'episodes 97..196' );
-	is_deeply( [ episode_offsets() ], [ 0, 50, 100, 150 ], 'two more requests: offsets 100 and 150 (0 and 50 were cached)' );
 
 	$feed = answer( science( { index => 200, quantity => 100 } ) );
 	is_deeply( [ $feed->{offset}, $feed->{total}, scalar @{ $feed->{items} } ], [ 200, $TOTAL, 53 ], 'the last window: offset 200, 53 rows to the total' );
 	is( episode_no( $feed->{items}->[-1] ), 249, 'the last row: episode 249, ABC\'s 250th' );
-	is_deeply( [ episode_offsets() ], [ 0, 50, 100, 150, 200 ], 'one more request: offset 200; nothing at 250' );
+	is( scalar( episode_pages() ), 5, 'no request while scrolling (the 5 pages of the first open, cached 15 min)' );
 };
 
 subtest 'program menu, SqueezePlay/jivelite chunks of 200 (menu mode): the same count in every chunk (U2 review)' => sub {
@@ -237,7 +248,7 @@ subtest 'program menu, SqueezePlay/jivelite chunks of 200 (menu mode): the same 
 	}
 };
 
-subtest 'program menu, opening one row (index k, quantity 1): page 0 and k\'s page only; the same episode as in the whole list' => sub {
+subtest 'program menu, opening one row (index k, quantity 1) cold: the same episode as in the whole list' => sub {
 	fresh();
 	route_science();
 	route_episodes();
@@ -251,9 +262,8 @@ subtest 'program menu, opening one row (index k, quantity 1): page 0 and k\'s pa
 		my $feed = answer( science( { index => $k, quantity => 1 } ) );
 		is_deeply( [ $feed->{offset}, $feed->{total}, scalar @{ $feed->{items} } ], [ $k, $TOTAL, 1 ], "row $k: offset $k, total 253, one row" );
 		is_deeply( plays( $feed->{items} ), plays( [ $whole->[$k] ] ), "row $k is the whole list's row $k (stable id)" );
-		my $page = $k < $HEADER ? 0 : int( ( $k - $HEADER ) / 50 );
-		is_deeply( [ episode_offsets() ], [ $page ? ( 0, $page * 50 ) : 0 ], "row $k: requests " . join( ', ', $page ? ( 0, $page * 50 ) : 0 ) );
 	}
+	is( scalar( episode_pages() ), 5, 'a cold open of one row loads the program\'s 5 pages (to number the rows)' );
 };
 
 subtest 'program menu: XMLBrowser\'s extra rows before a window, and the web UI\'s pages of 50' => sub {
@@ -281,25 +291,90 @@ subtest 'program menu: XMLBrowser\'s extra rows before a window, and the web UI\
 	is( scalar @{ answer( science( { index => 3, quantity => 0 } ) )->{items} }, $TOTAL, 'quantity 0: the whole list' );
 };
 
-subtest 'program menu: no window (playlist commands: Play all / Add all) is the whole list; at most 4 pages in flight' => sub {
+subtest 'program menu: no window (playlist commands: Play all / Add all) is the whole list; page 0 first, then at most 4 at once' => sub {
 	fresh();
 	route_science();
 	route_episodes( defer => { map { $_ => 1 } 0, 50, 100, 150, 200 } );
 
 	my $c = science(undef);
 	is( $c->count, 0, 'waiting for ABC' );
-	is_deeply( [ map { offset_of($_) } Slim::Networking::SimpleAsyncHTTP->deferred ], [ 0, 50, 100, 150 ], '4 pages in flight (0, 50, 100, 150), the 5th waits' );
+	is_deeply( [ map { page_of($_) } Slim::Networking::SimpleAsyncHTTP->deferred ], ['0/50'], 'page 0 alone first (its total says which pages there are)' );
 	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
-	is_deeply( [ map { offset_of($_) } Slim::Networking::SimpleAsyncHTTP->deferred ], [200], 'one answered: the 5th (200) goes' );
+	is_deeply( [ map { page_of($_) } Slim::Networking::SimpleAsyncHTTP->deferred ], [ map {"$_/50"} 50, 100, 150, 200 ], 'then the 4 others at once' );
 	is( $c->count, 0, 'still waiting' );
 	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
 	is( $c->count, 1, 'then one callback' );
 	my $feed = answer($c);
 	is_deeply( [ $feed->{offset}, $feed->{total}, scalar @{ $feed->{items} } ], [ 0, $TOTAL, $TOTAL ], 'offset 0, total 253, every row' );
 	is( scalar( grep { $_->{play} } @{ $feed->{items} } ), 250, 'all 250 episodes playable (what Play all would queue)' );
+
+	# pages of 10 too: never more than 4 in flight
+	fresh();
+	route_science();
+	route_episodes( fail => { '50/50' => 500, '100/50' => 500 }, defer => { map { ( "$_/10" => 1 ) } map { $_ * 10 } 5 .. 14 } );
+	$c = science(undef);
+	is_deeply( [ map { page_of($_) } Slim::Networking::SimpleAsyncHTTP->deferred ], [ '50/10', '60/10', '100/10', '110/10' ], 'pages 50 and 100 failed: their first two pages of 10 (4 in flight)' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is_deeply( [ map { page_of($_) } Slim::Networking::SimpleAsyncHTTP->deferred ], [ '70/10', '80/10', '90/10', '120/10' ], '... then the rest, 4 at a time' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is_deeply( [ map { page_of($_) } Slim::Networking::SimpleAsyncHTTP->deferred ], [ '130/10', '140/10' ], '... and the last 2' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is_deeply( [ $c->count, scalar @{ answer($c)->{items} } ], [ 1, $TOTAL ], '... then one callback: every row' );
+	is_deeply( [ map { episode_no($_) } @{ answer($c)->{items} }[ $HEADER + 50 .. $HEADER + 149 ] ], [ 50 .. 149 ], '... episodes 50..149 from the pages of 10' );
 };
 
-subtest 'program menu: a failed page is loaded again as pages of 10; what still fails keeps its place; total never changes (U2 review)' => sub {
+subtest 'program menu: rows are numbered by audio episode; a card that isn\'t one (a video) has no row, and nothing takes its place (U2 round 2)' => sub {
+	# a video at 60 (Programs drops it): 249 episodes
+	fresh();
+	route_science();
+	route_episodes( video => { 60 => 1 } );
+	my $whole = answer( science( {} ) )->{items};
+	is( scalar @$whole, $TOTAL - 1, 'the whole list: 252 rows (3 header rows, 249 episodes)' );
+	is_deeply( [ map { episode_no($_) } @$whole[ $HEADER + 59, $HEADER + 60 ] ], [ 59, 61 ], 'the video at 60 has no row: 61 follows 59' );
+	is( episode_no( $whole->[ $HEADER + 99 ] ), 100, 'every later episode moves up one, across pages: row 99 is episode 100' );
+	is( episode_no( $whole->[-1] ), 249, '... to episode 249, last' );
+	is( scalar( grep { !defined episode_no($_) } @$whole[ $HEADER .. $#$whole ] ), 0, 'no row that isn\'t an episode' );
+	for my $k ( $HEADER + 59, $HEADER + 60, $HEADER + 99, $HEADER + 150, $#$whole ) {
+		fresh();
+		route_science();
+		route_episodes( video => { 60 => 1 } );
+		my $feed = answer( science( { index => $k, quantity => 1 } ) );
+		is_deeply( [ $feed->{total}, @{ plays( $feed->{items} ) } ], [ $TOTAL - 1, @{ plays( [ $whole->[$k] ] ) } ], "row $k opened alone, cold: total 252, the whole list's row $k" );
+	}
+
+	# Jazztrack on 2026-10-25: videos at 53 and 54 (in rows 53-54 of its page 1)
+	fresh();
+	route_science();
+	route_episodes( video => { 53 => 1, 54 => 1 } );
+	my ( $count0, $rows0 ) = menu_chunk( 0,   200 );
+	my ( $count1, $rows1 ) = menu_chunk( 200, 200 );
+	is_deeply( [ $count0, $count1, $rows0 + $rows1 ], [ $TOTAL - 2, $TOTAL - 2, $TOTAL - 2 ], 'videos at 53, 54: chunks 0..199 and 200..399 both count 251 and hold all 251 rows' );
+	is_deeply( [ map { episode_no($_) } @{ answer( science( { index => $HEADER + 52, quantity => 3 } ) )->{items} } ], [ 52, 55, 56 ], '... episodes 52, 55, 56 in rows 52..54' );
+
+	# The Grill: a block of 23 videos mid-list
+	fresh();
+	route_science();
+	route_episodes( video => { map { $_ => 1 } 90 .. 112 } );
+	my $feed = answer( science( {} ) );
+	is( $feed->{total}, $TOTAL - 23, 'a block of 23 videos (90..112): total 230' );
+	is_deeply( [ map { episode_no($_) } @{ $feed->{items} }[ $HEADER + 89, $HEADER + 90 ] ], [ 89, 113 ], '... episode 113 follows 89' );
+
+	# ABC's list shrank: it says 250, holds 230
+	fresh();
+	route_science();
+	route_episodes( total => 250, have => 230 );
+	$feed = answer( science( {} ) );
+	is_deeply( [ $feed->{total}, scalar @{ $feed->{items} }, episode_no( $feed->{items}->[-1] ) ], [ 233, 233, 229 ], 'ABC says 250 and holds 230: 233 rows, the last episode 229' );
+
+	# the 200-row rule counts episodes, not ABC's cards: 199 cards, 3 of them videos -> 200 rows with the textarea
+	fresh();
+	route_science( undef, 'Science, weekly.' );
+	route_episodes( total => 199, video => { 10 => 1, 70 => 1, 130 => 1 } );
+	$feed = answer( science( { index => 0, quantity => 200 } ) );
+	is_deeply( [ $feed->{total}, $feed->{items}->[0]->{type} ], [ 200, 'textarea' ], '199 cards, 3 videos: 196 episodes, 200 rows with the textarea first' );
+};
+
+subtest 'program menu: a failed page is loaded again as pages of 10; what still fails keeps its places; total never changes (U2 review)' => sub {
 	# RN Breakfast on 2026-10-25: ABC fails 150/50 (and 175/25, 190/10) every time, 150/10..180/10 load
 	fresh();
 	route_science();
@@ -310,7 +385,7 @@ subtest 'program menu: a failed page is loaded again as pages of 10; what still 
 	is_deeply( [ map { episode_no($_) } @rows[ 0 .. 39 ] ], [ 150 .. 189 ], 'episodes 150..189 from the pages of 10' );
 	is_deeply( names( [ @rows[ 40 .. 49 ] ] ), [ ($LOAD_FAILED) x 10 ], 'episodes 190..199 (their page of 10 failed too): 10 LOAD_FAILED rows in their places' );
 	is( episode_no( $feed->{items}->[ $HEADER + 200 ] ), 200, 'episode 200 in its place' );
-	is_deeply( [ grep {m{/10\z}} episode_pages() ], [ map {"$_/10"} 150, 160, 170, 180, 190 ], 'the failed page\'s 5 pages of 10' );
+	is_deeply( [ grep {m{/10\z}} episode_pages() ], [ map {"$_/10"} 150, 160, 170, 180, 190 ], 'the failed page\'s pages of 10: 150 and 160 first, then the other 3' );
 
 	# every window counts the same (the web UI pages by it; SqueezePlay/jivelite drop their rows when it changes)
 	for my $window ( [ 0, 50 ], [ 0, 200 ], [ 150, 50 ], [ 190, 10 ], [ 200, 56 ] ) {
@@ -331,13 +406,22 @@ subtest 'program menu: a failed page is loaded again as pages of 10; what still 
 	answer( science( { index => 150, quantity => 60 } ) );
 	is_deeply( { map { $_ => $asked->($_) - $before{$_} } '150/50', '190/10' }, { '150/50' => 1, '190/10' => 1 }, 'after 60 s: asked for once more each' );
 
-	# a rate-limited page and its pages of 10: their error text in each place
+	# the first page of 10 fails, the second loads: the rest are asked for
 	fresh();
 	route_science();
-	route_episodes( fail => { '50/50' => 429, '50/10' => 429 } );
-	$feed = answer( science( { index => 55, quantity => 10 } ) );
-	is_deeply( [ $feed->{offset}, $feed->{total} ], [ 55, $TOTAL ], 'a window on a rate-limited page: offset 55, total 253' );
-	is_deeply( [ map { episode_no($_) // $_->{name} } @{ $feed->{items} } ], [ ($RATE) x 8, 60, 61 ], '... episodes 52..59: RATE_LIMITED rows (their page of 10 failed too); 60 and 61 from theirs' );
+	route_episodes( fail => { '50/50' => 500, '50/10' => 500 } );
+	$feed = answer( science( { index => 0, quantity => 300 } ) );
+	is_deeply( [ grep {m{/10\z}} episode_pages() ], [ map {"$_/10"} 50, 60, 70, 80, 90 ], 'page 50 failed, 50/10 failed, 60/10 loaded: 70..90 asked for too' );
+	is_deeply( [ map { episode_no($_) // $_->{name} } @{ $feed->{items} }[ $HEADER + 49 .. $HEADER + 60 ] ], [ 49, ($LOAD_FAILED) x 10, 60 ], '... rows 50..59 LOAD_FAILED, 60 on: episodes' );
+
+	# a rate-limited page: not asked for in pages of 10; its 50 places show the rate-limit text
+	fresh();
+	route_science();
+	route_episodes( fail => { '50/50' => 429 } );
+	$feed = answer( science( { index => 0, quantity => 300 } ) );
+	is_deeply( [ grep {m{/10\z}} episode_pages() ], [], 'page 50 rate limited (429): no pages of 10' );
+	is_deeply( [ $feed->{total}, map { $_->{name} } @{ $feed->{items} }[ $HEADER + 50, $HEADER + 99 ] ], [ $TOTAL, $RATE, $RATE ], '... rows 50..99: the RATE_LIMITED text; total 253' );
+	is( episode_no( $feed->{items}->[ $HEADER + 100 ] ), 100, '... episode 100 in its place' );
 
 	# page 0 failed, its first 10 load: the total from them (not the program page's 100), the list as usual
 	fresh();
@@ -346,41 +430,57 @@ subtest 'program menu: a failed page is loaded again as pages of 10; what still 
 	$feed = answer( science( { index => 0, quantity => 20 } ) );
 	is( $feed->{total}, $TOTAL, 'page 0 failed, its first 10 loaded: total 253 (their total, not the program page\'s 100)' );
 	is_deeply( [ map { episode_no($_) } @{ $feed->{items} }[ 3 .. 19 ] ], [ 0 .. 16 ], '... episodes 0..16 from pages of 10' );
+	is_deeply( [ episode_pages() ], [ '0/50', '0/10', '10/10', '20/10', '30/10', '40/10', '50/50', '100/50', '150/50', '200/50' ], '... requests: 0/50, 0/10 alone, then page 0\'s other pages of 10 and the other pages' );
 	$feed = answer( science( { index => 120, quantity => 10 } ) );
 	is_deeply( [ $feed->{total}, map { episode_no($_) } @{ $feed->{items} } ], [ $TOTAL, 117 .. 126 ], '... a window past page 0: total 253, episodes 117..126' );
-
-	# page 0 and its first 10 failed: the header, then the error, whatever the window
-	fresh();
-	route_science();
-	route_episodes( fail => { 0 => 500 } );
-	$feed = answer( science( {} ) );
-	is_deeply( [ @{ names( $feed->{items} ) }[ -1 ], $feed->{total} ], [ $LOAD_FAILED, 5 ], 'page 0 and its first 10 failed: the header (textarea, About, presenters, network), then LOAD_FAILED: total 5' );
-	$feed = answer( science( { index => 100, quantity => 10 } ) );
-	is_deeply( [ $feed->{items}, $feed->{total} ], [ [], 5 ], '... a window at 100: no rows, total 5 (not the program page\'s 250)' );
 };
 
-subtest 'program menu: ABC\'s pages holding fewer episodes than its total keep every later row in place (U2 review)' => sub {
-	# a card that isn't an episode (Programs drops it): its page holds 49
-	fresh();
-	route_science();
-	route_episodes( video => { 60 => 1 } );
+subtest 'program menu: when ABC fails everything, an open asks for page 0 and its first 10 only (U2 round 2)' => sub {
+	my @windows = ( [ 'the whole list (Play all)', undef ], [ 'a Jive chunk (menu:1 0..199)', { index => 0, quantity => 200 } ], [ 'a web page (50..99)', { isWeb => 1, index => 50, quantity => 50 } ], [ 'one row (index 120)', { index => 120, quantity => 1 } ] );
+	for my $case (@windows) {
+		my ( $what, $window ) = @$case;
+		fresh();
+		route_science();
+		route_episodes( fail => { map { ( $_ * 10 ) => 500 } 0 .. 24 } );
+		my $feed = answer( science($window) );
+		is_deeply( [ episode_pages() ], [ '0/50', '0/10' ], "every page 500, $what: 2 requests (0/50, then 0/10 alone)" );
+		is_deeply( [ $feed->{total} ], [5], '... the list: the header (textarea, About, presenters, network) and LOAD_FAILED: total 5' );
+		answer( science($window) );
+		is( scalar( episode_pages() ), 2, '... opened again within 60 s: no request' );
+	}
 	my $feed = answer( science( {} ) );
-	is( $feed->{total}, $TOTAL, 'total 253' );
-	my @rows = @{ $feed->{items} };
-	is_deeply( [ map { episode_no($_) } @rows[ $HEADER + 59 .. $HEADER + 61 ] ], [ 59, 61, 62 ], 'the video at 60 is left out of its page: 61 follows 59' );
-	is( $rows[ $HEADER + 99 ]->{name}, $UNAVAILABLE, 'the page\'s last place (99) is "Episode unavailable"' );
-	is( episode_no( $rows[ $HEADER + 100 ] ), 100, 'episode 100 and the rest of the list in their places' );
-	is( episode_no( $rows[-1] ), 249, '... to episode 249' );
+	is( names( $feed->{items} )->[-1], $LOAD_FAILED, 'the last row: LOAD_FAILED' );
 
-	# ABC's list shrank: it says 250, holds 230
+	# page 0 rate limited: not even its first 10
 	fresh();
 	route_science();
-	route_episodes( total => 250, have => 230 );
+	route_episodes( fail => { 0 => 429 } );
 	$feed = answer( science( {} ) );
-	is_deeply( [ $feed->{total}, scalar @{ $feed->{items} } ], [ $TOTAL, $TOTAL ], 'a short last page: total 253 all the same' );
-	is( episode_no( $feed->{items}->[ $HEADER + 229 ] ), 229, '... episode 229' );
-	is_deeply( names( [ @{ $feed->{items} }[ $HEADER + 230 .. $TOTAL - 1 ] ] ), [ ($UNAVAILABLE) x 20 ], '... then 20 "Episode unavailable" rows' );
-	is( answer( science( { index => 240, quantity => 50 } ) )->{total}, $TOTAL, '... the same total for a window there' );
+	is_deeply( [ [ episode_pages() ], names( $feed->{items} )->[-1], $feed->{total} ], [ ['0/50'], $RATE, 5 ], 'page 0 rate limited (429): one request; the header and RATE_LIMITED' );
+
+	# page 0 loads, every other page and page of 10 fails: each failed page asks for its first two pages of 10, no more
+	fresh();
+	route_science();
+	route_episodes( fail => { map { ( $_ * 10 ) => 500 } 5 .. 24 } );
+	$feed = answer( science( { index => 0, quantity => 200 } ) );
+	is_deeply( [ episode_pages() ], [ ( map {"$_/50"} 0, 50, 100, 150, 200 ), ( map {"$_/10"} 50, 60, 100, 110, 150, 160, 200, 210 ) ], 'page 0 loads, the rest fails: 5 pages, then 2 pages of 10 for each failed page (13 requests, 12 failing)' );
+	is_deeply( [ $feed->{total}, episode_no( $feed->{items}->[ $HEADER + 49 ] ), $feed->{items}->[ $HEADER + 50 ]->{name} ], [ $TOTAL, 49, $LOAD_FAILED ], '... total 253: episodes 0..49, then LOAD_FAILED in every place' );
+	answer( science( { index => 0, quantity => 200 } ) );
+	is( scalar( episode_pages() ), 13, '... opened again within 60 s: no request' );
+};
+
+subtest 'program menu: the failure cache is per program (U2 round 2)' => sub {
+	fresh();
+	route_science();
+	route_episodes( fail => { '150/50' => 500, 150 => 500, 160 => 500 } );
+	route_program( '/listen/programs/other', 4242 );
+	route_episodes( collection => 4242 );
+
+	my $science = answer( science( {} ) );
+	is( $science->{items}->[ $HEADER + 150 ]->{name}, $LOAD_FAILED, 'The Science Show: page 150 failed (and its first two pages of 10)' );
+	my $other = answer( feed( $PROGRAM_MENU, {}, { title => 'Other', path => '/listen/programs/other' } ) );
+	is( scalar grep( { $_ eq '150/50' } map { page_of( $_->{url} ) } grep { $_->{url} =~ /collectionId=4242&/ } requests() ), 1, 'another program within 60 s: its page 150 is asked for' );
+	is( episode_no( $other->{items}->[ $HEADER + 150 ] ), 150, '... and listed' );
 };
 
 subtest 'program menu: never a request past ABC\'s total; a window past the end; a window in the header' => sub {
@@ -395,13 +495,14 @@ subtest 'program menu: never a request past ABC\'s total; a window past the end;
 	route_science(250);
 	route_episodes( total => 30 );
 	answer( science( { index => 0, quantity => 512 } ) );
-	is_deeply( [ episode_pages() ], [ map {"$_/50"} 0, 50, 100, 150, 200 ], 'the program page overcounting (250 for 30): the first round follows it (one round, 5 pages)' );
+	is_deeply( [ episode_pages() ], ['0/50'], 'the program page overcounting (250 for 30): page 0\'s total wins, one request' );
 
 	fresh();
 	route_science();
 	route_episodes( total => 120 );
 	$feed = answer( science( { index => 0, quantity => 25000 } ) );    # Material asks for everything at once
 	is_deeply( [ $feed->{total}, scalar @{ $feed->{items} } ], [ 124, 124 ], 'a program with 120 episodes, quantity 25000 (Material): 124 rows' );
+	is_deeply( [ episode_pages() ], [ map {"$_/50"} 0, 50, 100 ], '... pages 0, 50, 100' );
 	$feed = answer( science( { index => 0, quantity => 100 } ) );
 	is_deeply( [ $feed->{total}, scalar @{ $feed->{items} } ], [ 124, 100 ], '... rows 0..99: 100 rows of a total 124 (page 0\'s total, not the program page\'s 250)' );
 
@@ -415,20 +516,18 @@ subtest 'program menu: never a request past ABC\'s total; a window past the end;
 	route_science();
 	route_episodes();
 	$feed = answer( science( { index => 1, quantity => 1 } ) );
-	is_deeply( names( $feed->{items} ), ['Presented by Robyn Williams, Belinda Smith'], 'row 1: Presented by' );
-	is_deeply( [ episode_offsets() ], [0], '... only page 0 (for the total)' );
+	is_deeply( [ names( $feed->{items} ), $feed->{total} ], [ ['Presented by Robyn Williams, Belinda Smith'], $TOTAL ], 'row 1: Presented by; total 253' );
 };
 
-subtest 'program menu: provider rows and an undercounting program page need a second round of pages' => sub {
+subtest 'program menu: provider rows and a program page that undercounts' => sub {
 	fresh();
 	route_science();
 	route_episodes();
 	$OD->registerProgramMenuProvider( sub { $_[2]->( [ { name => 'Follow', type => 'text' }, { name => 'Hint', type => 'text' } ] ) } );
 
-	# header 3 + 2 provider rows: row 104 is episode 99 (page 1); the header alone estimates episode 101 (page 2)
+	# header 3 + 2 provider rows: row 104 is episode 99
 	my $feed = answer( science( { index => 104, quantity => 1 } ) );
 	is( episode_no( $feed->{items}->[0] ), 99, 'row 104: episode 99' );
-	is_deeply( [ episode_offsets() ], [ 0, 100, 50 ], 'pages 0 and 2 (the estimate), then 50 (the second round)' );
 	is( $feed->{total}, $TOTAL + 2, 'total 255 (5 rows before the episodes)' );
 
 	fresh();
@@ -436,7 +535,7 @@ subtest 'program menu: provider rows and an undercounting program page need a se
 	route_episodes();
 	$feed = answer( science( { index => 0, quantity => 500 } ) );
 	is_deeply( [ $feed->{total}, scalar @{ $feed->{items} } ], [ $TOTAL, $TOTAL ], 'the program page says 50: page 0\'s total (250) wins, every row' );
-	is_deeply( [ episode_offsets() ], [ 0, 50, 100, 150, 200 ], 'page 0 first (the estimate), then 50..200' );
+	is_deeply( [ episode_offsets() ], [ 0, 50, 100, 150, 200 ], 'page 0, then 50..200' );
 };
 
 subtest 'program menu: 100 or more rows after the description: "About this program" even for a short one (Material hides the header)' => sub {
@@ -492,14 +591,12 @@ subtest 'program menu: exactly one callback' => sub {
 	for my $slow ( 0, 1 ) {
 		fresh();
 		route_science();
-		route_episodes( defer => { 0 => $slow } );
+		route_episodes( defer => { 200 => $slow } );
 		no warnings 'redefine';
-		my $calls = 0;
-		my $header = \&Plugins::ABCListen::OnDemand::_programHeader;
-		local *Plugins::ABCListen::OnDemand::_programHeader = sub { die "header broke\n" if ++$calls > 1; goto &$header };
+		local *Plugins::ABCListen::OnDemand::_programHeader = sub { die "header broke\n" };
 		my $c = science( { index => 0, quantity => 10 } );
 		Slim::Networking::SimpleAsyncHTTP->completeDeferred;
-		my $how = $slow ? 'after ABC answers later (inside its callback)' : 'with the pages cached (at once)';
+		my $how = $slow ? 'after ABC answers later (inside its callback)' : 'with the pages answering at once';
 		is( $c->count, 1, "building the rows dies once the pages are in, $how: one callback" );
 		is_deeply( answer($c)->{items}, [ { name => $LOAD_FAILED, type => 'text' } ], '... the LOAD_FAILED row' );
 	}
@@ -661,6 +758,16 @@ subtest 'collection menu: program names are looked up only for the rows LMS asks
 	advanceTime(30);
 	is( answer($c)->{items}->[5]->{name}, 'Program 6', 'row 5 is Program 6 (card 21)' );
 	is_deeply( [ map { m{/p([0-9]+)\.json} ? $1 : () } map { $_->{url} } requests() ], [6], '... and only its name was looked up' );
+
+	# a program ref with a path off ABC's site (itemsFor lists no row for it) before the window
+	fresh();
+	my @refs = ( { type => 'program', id => '97', title => 'Elsewhere', path => 'https://example.com/listen/programs/p97' }, map { { type => 'program', id => "$_", title => "Program $_", path => "/listen/programs/p$_" } } 1 .. 10 );
+	my $got = collector();
+	Plugins::ABCListen::Collections->itemsFor( undef, \@refs, 1, $got->cb, { names => [ 2, 3 ] } );
+	advanceTime(30);
+	my ($items) = $got->args(0);
+	is_deeply( [ scalar @$items, $items->[2]->{name} ], [ 10, 'Program 3' ], 'refs: an off-site program path, then programs 1..10: 10 rows, row 2 is Program 3' );
+	is_deeply( [ map { m{/p([0-9]+)\.json} ? $1 : () } map { $_->{url} } requests() ], [3], '... rows [2, 3): only Program 3\'s name was looked up (the off-site ref is no row)' );
 };
 
 subtest 'collection menu: exactly one callback' => sub {
