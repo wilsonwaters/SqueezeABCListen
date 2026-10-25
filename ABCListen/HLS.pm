@@ -14,7 +14,8 @@ package Plugins::ABCListen::HLS;
 #                               aac, bitrate measured from the audio, sample rate, channels), or
 #                               (undef, $error) when the stream can't be played (an HTTP error such as a
 #                               geo-block 403, an encrypted or byte-range playlist, no AAC audio, a
-#                               timeout). The protocol handler then tries its next candidate (Icecast).
+#                               timeout, no audio within PREPARE_DEADLINE (12 s), a die in this code). The
+#                               protocol handler then tries its next candidate (Icecast).
 #                               The prepared stream is kept for HLS->new (at most PREPARED_MAX streams, for
 #                               PREPARED_TTL seconds), so playback starts with the audio already fetched.
 #   HLS->new(\%args)            the stream LMS reads (args->{url}: the HLS URL): the prepared stream for the
@@ -23,7 +24,8 @@ package Plugins::ABCListen::HLS;
 #                               with $! = EINTR while it waits for data (LMS tries again 0.4 s later), and
 #                               0 at the end of the stream. contentType is 'aac', bitrate the measured bps.
 #
-# Playback (pull-driven: nothing happens between LMS's reads, so there are no timers to leak)
+# Playback (pull-driven: nothing happens between LMS's reads; the only timer is the scan's PREPARE_DEADLINE,
+# killed when the scan answers or the stream closes)
 #   * A live playlist (no EXT-X-ENDLIST) starts LIVE_EDGE (3) segments before its end (HLS: no closer
 #     than three target durations), a finished one at its first segment.
 #   * At most one request at a time, each with a timeout (PLAYLIST_TIMEOUT, SEGMENT_TIMEOUT). The next
@@ -36,9 +38,14 @@ package Plugins::ABCListen::HLS;
 #     server puts a session id in the URLs, as StreamGuys' Nimble does for Sport Rapid).
 #   * If the next segment has left the live window (a long pause, a slow network) or the server restarted
 #     its numbering, the stream skips ahead to LIVE_EDGE segments before the end (logged at INFO). After a
-#     failed segment the playlist is reloaded before the retry; a segment that fails twice is skipped.
-#     EXT-X-DISCONTINUITY and a skip reset the demuxer. After MAX_FAILURES failed requests in a row
-#     (backing off 2, 4, 8 s) the stream ends; so does EXT-X-ENDLIST once its last segment is read.
+#     failed segment the playlist is reloaded before the retry; a segment that fails twice is skipped, and
+#     MAX_SKIPS (3) skipped segments in a row end the stream. EXT-X-DISCONTINUITY and a skip reset the
+#     demuxer. After MAX_FAILURES failed requests in a row (backing off 2, 4, 8 s) the stream ends; so does
+#     EXT-X-ENDLIST once its last segment is read.
+#   * A response shorter than its Content-Length counts as a failed request. A body that isn't a playlist
+#     (or has no AAC variant) ends a preparing stream; a playing one retries it like a failed request.
+#     Encrypted and byte-range playlists end it at once. The demuxers only ever output whole ADTS frames: a
+#     frame cut off with its segment is dropped, and so is a partial TS packet at the end of a segment.
 #   * close (LMS: stop, track change, power off) drops the buffers at once; a request still in flight is
 #     ignored when it answers (or times out).
 #
@@ -52,7 +59,8 @@ package Plugins::ABCListen::HLS;
 #                                      segments => [ { seq, url, duration, discontinuity, map } ] } | undef
 #   chooseVariant(\@variants)   -> the audio-only (mp4a or no CODECS) variant with the highest bandwidth, or undef
 #   adtsInfo($bytes)            -> { frames, bytes, sampleRate, channels, seconds, bitrate } of whole ADTS frames
-#   Plugins::ABCListen::HLS::TS, ::FMP4, ::Packed   the demuxers: new, feed($bytes) -> ADTS bytes, reset, error
+#   Plugins::ABCListen::HLS::TS, ::FMP4, ::Packed   the demuxers: new, feed($bytes) -> whole ADTS frames, reset
+#                               (a discontinuity), endSegment (a segment's last bytes were fed), error
 #
 # Owned by the live stream (L6).
 
@@ -66,6 +74,7 @@ use URI;
 
 use Slim::Utils::Errno;
 use Slim::Utils::Log;
+use Slim::Utils::Timers;
 
 use Plugins::ABCListen::HTTP;
 
@@ -77,6 +86,8 @@ use constant DEMUX_SLICE      => 64 * 1024;     # TS bytes demuxed per read
 use constant MAX_FAILURES     => 4;             # failed requests in a row that end the stream
 use constant MAX_BACKOFF      => 8;             # seconds between retries, at most
 use constant SEGMENT_TRIES    => 2;             # a segment that fails this often is skipped
+use constant MAX_SKIPS        => 3;             # skipped segments in a row that end the stream
+use constant PREPARE_DEADLINE => 12;            # seconds a scan may take (then the next candidate plays)
 use constant PREPARED_TTL     => 60;            # seconds a prepared stream waits for HLS->new
 use constant PREPARED_MAX     => 4;
 
@@ -103,10 +114,27 @@ sub scanUrl {
 
 	return $cb->( undef, 'HLS: not an HLS URL' ) unless $class->handles($url);
 
-	my $stream = $class->_stream($url);
+	# a die is a failed scan (the protocol handler plays its next candidate), never the caller's
+	if ( !eval { $class->_prepare( $url, $cb ); 1 } ) {
+		my $error = $@ || 'unknown error';
+		$log->warn("HLS: the scan of $url died: $error");
+		$cb->( undef, "HLS: the scan died: $error" );
+	}
 
-	_v($stream)->{prepared} = sub {
+	return;
+}
+
+# The scan's work: a new stream that loads up to its first segment, then answers $cb (once).
+sub _prepare {
+	my ( $class, $url, $cb ) = @_;
+
+	my $stream = $class->_stream($url);
+	my $v      = _v($stream);
+
+	$v->{prepared} = sub {
 		my $error = shift;
+
+		Slim::Utils::Timers::killSpecific( delete $v->{deadline} ) if $v->{deadline};
 
 		if ( defined $error ) {
 			main::INFOLOG && $log->is_info && $log->info("HLS stream $url can't be played: $error");
@@ -125,7 +153,14 @@ sub scanUrl {
 		$cb->($track);
 	};
 
-	$stream->_pump;
+	# a slow server (each request may take its whole timeout) mustn't hold up the next candidate
+	$v->{deadline} = Slim::Utils::Timers::setTimer( undef, Time::HiRes::time() + PREPARE_DEADLINE, sub {
+		delete $v->{deadline};
+		$stream->_failed( 'no audio within ' . PREPARE_DEADLINE . ' s', 1 ) if $v->{prepared};
+	} );
+
+	# a die here is a failed scan (the next candidate plays), never the protocol handler's
+	eval { $stream->_pump; 1 } or $stream->_died( 'the scan', $@ );
 	return;
 }
 
@@ -156,9 +191,12 @@ sub sysread {
 
 	return 0 if $v->{closed};
 
-	$self->_demux;
-	$self->_pump;
-	$self->_demux unless length $v->{out};    # a segment that just arrived
+	eval {
+		$self->_demux;
+		$self->_pump;
+		$self->_demux unless length $v->{out};    # a segment that just arrived
+		1;
+	} or $self->_died( 'a read', $@ );
 
 	if ( length $v->{out} ) {
 		$_[1] = substr( $v->{out}, 0, $max, '' );
@@ -185,8 +223,18 @@ sub close {
 	$v->{out} = $v->{pending} = '';
 	$v->{demux} = {};
 	delete $v->{prepared};
+	Slim::Utils::Timers::killSpecific( delete $v->{deadline} ) if $v->{deadline};
 
 	return 1;
+}
+
+# A die in this module's code: logged at WARN; it fails a preparing stream and ends a playing one.
+sub _died {
+	my ( $self, $where, $error ) = @_;
+	$error = 'unknown error' unless defined $error && length $error;
+	$log->warn( 'HLS: ' . _v($self)->{url} . ": $where died: $error" );
+	$self->_failed( "$where died", 1 );
+	return;
 }
 
 # ---------------------------------------------------------------------------
@@ -212,6 +260,7 @@ sub _stream {
 		busy       => 0,         # a request is in flight
 		failures   => 0,         # failed requests in a row
 		tries      => 0,         # failed attempts at the next segment
+		skips      => 0,         # segments skipped in a row
 		reloadAt   => 0,         # don't reload the playlist before this time
 		stale      => 0,         # reload the playlist before the next segment (one failed)
 		ended      => undef,     # why the stream ends (no more requests)
@@ -283,23 +332,30 @@ sub _loadPlaylist {
 
 	my $started = Time::HiRes::time();
 
-	# a failed reload of the media playlist: the next try starts again from the master playlist (a new
-	# session for servers that put a session id in the media playlist's URL, e.g. StreamGuys' Nimble)
-	my $remaster = sub {
-		return unless $v->{playlist} && $v->{mediaUrl} && $v->{mediaUrl} ne $v->{url};
-		$v->{mediaUrl} = undef;
-		$v->{stale}    = 1;
+	# A failed load: a preparing stream fails (_failed), a playing one tries again later. After a failed
+	# reload of the media playlist the next try starts again from the master playlist (a new session for
+	# servers that put a session id in the media playlist's URL, e.g. StreamGuys' Nimble).
+	my $fail = sub {
+		my ( $error, $fatal ) = @_;
+
+		if ( !$fatal && $v->{playlist} && $v->{mediaUrl} && $v->{mediaUrl} ne $v->{url} ) {
+			$v->{mediaUrl} = undef;
+			$v->{stale}    = 1;
+		}
+
+		return $self->_failed( $error, $fatal );
 	};
 
 	$self->_get( $url, PLAYLIST_TIMEOUT, sub {
 		my $body = shift;
 
-		my $playlist = parsePlaylist( $body, $url ) or return $self->_failed("not an HLS playlist ($url)", 1);
+		# not a playlist (an error page or a cut-off body served as a success): a failed request
+		my $playlist = parsePlaylist( $body, $url ) or return $fail->("not an HLS playlist ($url)");
 
 		if ( $playlist->{type} eq 'master' ) {
-			return $self->_failed("a master playlist inside a master playlist ($url)", 1) if $v->{mediaUrl};
+			return $fail->("a master playlist inside a master playlist ($url)") if $v->{mediaUrl};
 
-			my $variant = chooseVariant( $playlist->{variants} ) or return $self->_failed("no AAC audio variant ($url)", 1);
+			my $variant = chooseVariant( $playlist->{variants} ) or return $fail->("no AAC audio variant ($url)");
 
 			$v->{mediaUrl} = $variant->{url};
 			$v->{bitrate} //= $variant->{bandwidth};
@@ -308,15 +364,15 @@ sub _loadPlaylist {
 			return $self->_loadPlaylist( $variant->{url} );
 		}
 
-		return $self->_failed("encrypted stream (EXT-X-KEY $playlist->{encrypted}) not supported ($url)", 1) if $playlist->{encrypted};
-		return $self->_failed("byte-range segments not supported ($url)", 1) if $playlist->{byteRange};
+		return $fail->( "encrypted stream (EXT-X-KEY $playlist->{encrypted}) not supported ($url)", 1 ) if $playlist->{encrypted};
+		return $fail->( "byte-range segments not supported ($url)", 1 ) if $playlist->{byteRange};
 
 		my $old = $v->{playlist};
 		$v->{mediaUrl} ||= $url;
 		$v->{stale} = 0;
 
 		if ( !@{ $playlist->{segments} } ) {
-			return $self->_failed("the playlist has no segments ($url)") unless $old;
+			return $fail->("the playlist has no segments ($url)") unless $old;
 			$playlist = { %$old, endList => $playlist->{endList} };
 		}
 
@@ -328,7 +384,7 @@ sub _loadPlaylist {
 		$v->{reloadAt} = $started + $wait;
 
 		main::DEBUGLOG && $log->is_debug && $log->debug( "HLS: $url has segments " . $playlist->{segments}->[0]->{seq} . "-$last" . ( $changed ? '' : ' (unchanged)' ) );
-	}, $remaster );
+	}, $fail );
 
 	return;
 }
@@ -342,7 +398,7 @@ sub _loadMap {
 		my $init  = shift;
 		my $demux = Plugins::ABCListen::HLS::FMP4->new($init);
 
-		return $self->_failed( 'unsupported fragmented MP4 audio: ' . $demux->error . " ($segment->{map})", 1 ) if $demux->error;
+		return $self->_failed( 'unsupported fragmented MP4 audio: ' . $demux->error . " ($segment->{map})" ) if $demux->error;
 
 		$v->{demux}->{fmp4} = $demux;
 		$v->{mapUrl} = $segment->{map};
@@ -355,16 +411,38 @@ sub _loadSegment {
 	my ( $self, $segment ) = @_;
 	my $v = _v($self);
 
+	# A failed attempt: the playlist is reloaded before the next one (the segment may have left the
+	# window). A segment that fails SEGMENT_TRIES times is skipped; MAX_SKIPS skips in a row end the stream
+	# (only a segment that arrives resets that count: the playlist reloads in between succeed).
+	my $failed = sub {
+		my $error = shift;
+
+		$v->{stale} = 1;
+
+		if ( ++$v->{tries} >= SEGMENT_TRIES ) {
+			main::INFOLOG && $log->is_info && $log->info("HLS: skipping segment $segment->{seq} ($segment->{url})");
+			$v->{next}  = $segment->{seq} + 1;
+			$v->{tries} = 0;
+			$v->{reset} = 1;
+
+			return $self->_failed( "$error; $v->{skips} segments in a row could not be played", 1 ) if ++$v->{skips} >= MAX_SKIPS;
+		}
+
+		return $self->_failed($error);
+	};
+
 	$self->_get(
 		$segment->{url},
 		SEGMENT_TIMEOUT,
 		sub {
 			my $body = shift;
 
+			# not audio (an error page served as a success): a failed segment
+			my $format = defined $segment->{map} ? 'fmp4' : _format($body) or return $failed->("unsupported segment format ($segment->{url})");
+
 			$v->{next}  = $segment->{seq} + 1;
 			$v->{tries} = 0;
-
-			my $format = defined $segment->{map} ? 'fmp4' : _format($body) or return $self->_failed("unsupported segment format ($segment->{url})", 1);
+			$v->{skips} = 0;
 
 			$v->{reset} = 1 if $segment->{discontinuity};
 
@@ -381,17 +459,7 @@ sub _loadSegment {
 
 			$self->_preparedAudio if $v->{prepared};
 		},
-		sub {
-			# reload the playlist before trying again (the segment may have left the window); skip a
-			# segment that keeps failing
-			$v->{stale} = 1;
-			if ( ++$v->{tries} >= SEGMENT_TRIES ) {
-				main::INFOLOG && $log->is_info && $log->info("HLS: skipping segment $segment->{seq} ($segment->{url})");
-				$v->{next}  = $segment->{seq} + 1;
-				$v->{tries} = 0;
-				$v->{reset} = 1;
-			}
-		},
+		$failed,
 	);
 
 	return;
@@ -425,39 +493,61 @@ sub _preparedAudio {
 	return;
 }
 
-# GET $url; $ok->($body) on success, then the next request is started. A failure counts towards
-# MAX_FAILURES (the retries back off) and calls $retry; a preparing stream fails at once.
+# GET $url; $ok->($body) on success, then the next request is started. A failed request (an HTTP error,
+# a timeout, a body shorter than its Content-Length) calls $fail->($error), by default _failed: it counts
+# towards MAX_FAILURES (the retries back off), and a preparing stream fails at once.
 sub _get {
-	my ( $self, $url, $timeout, $ok, $retry ) = @_;
+	my ( $self, $url, $timeout, $ok, $fail ) = @_;
 	my $v = _v($self);
 
 	$v->{busy} = 1;
+	$fail ||= sub { $self->_failed(@_) };
 
 	Plugins::ABCListen::HTTP::get(
 		$url,
 		sub {
-			my $body = shift;
+			my ( $body, $http ) = @_;
 			$v->{busy} = 0;
 			return if $v->{closed};
 
+			$body = '' unless defined $body;
+
+			if ( my $short = _truncated( $body, $http ) ) {
+				return $fail->("$short ($url)");
+			}
+
 			$v->{failures} = 0;
 			$v->{retryAt}  = 0;
-			$ok->( defined $body ? $body : '' );
 
-			$self->_pump unless $v->{closed};
+			eval { $ok->($body); $self->_pump unless $v->{closed}; 1 } or $self->_died( "handling $url", $@ );
 		},
 		sub {
 			my $error = shift;
 			$v->{busy} = 0;
 			return if $v->{closed};
 
-			$retry->() if $retry;
-			$self->_failed( $error || "request failed ($url)" );
+			$fail->( $error || "request failed ($url)" );
 		},
 		{ timeout => $timeout, quiet => 1 },
 	);
 
 	return;
+}
+
+# 'truncated response: <n> of <m> bytes' when a body without a Content-Encoding is shorter than its
+# Content-Length (LMS hands a cut-off body to the success callback), else undef.
+sub _truncated {
+	my ( $body, $http ) = @_;
+
+	my $headers = eval { $http && $http->headers } or return undef;
+	my $expect  = eval { $headers->header('Content-Length') };
+	my $coding  = eval { $headers->header('Content-Encoding') };
+
+	my ($length) = defined $expect ? $expect =~ /\A\s*(\d+)\s*\z/ : ();
+	return undef unless defined $length;
+	return undef if defined $coding && $coding !~ /\A\s*(?:identity)?\s*\z/i;
+
+	return length($body) < $length ? sprintf( 'truncated response: %d of %d bytes', length $body, $length ) : undef;
 }
 
 # A failed step: a preparing stream fails; a playing one retries later, and ends after MAX_FAILURES
@@ -508,6 +598,7 @@ sub _demux {
 	my $take  = $v->{format} eq 'ts' ? ( $limit || DEMUX_SLICE ) : length $v->{pending};
 
 	$v->{out} .= $demux->feed( substr( $v->{pending}, 0, $take, '' ) );
+	$demux->endSegment unless length $v->{pending};
 
 	if ( defined $demux->error && !$v->{prepared} ) {
 		$v->{pending} = '';
@@ -742,6 +833,32 @@ sub _adtsHeader {
 		0xFC;
 }
 
+# Whole ADTS frames from the front of $$buf: bytes before a sync word are dropped, an incomplete last
+# frame stays in $$buf. Returns the frames.
+sub _wholeFrames {
+	my $buf = shift;
+	my ( $out, $at, $len ) = ( '', 0, length $$buf );
+
+	while ( $len - $at >= 7 ) {
+		my ( $b0, $b1, undef, $b3, $b4, $b5 ) = unpack 'C6', substr( $$buf, $at, 6 );
+		my $frame = ( ( $b3 & 0x03 ) << 11 ) | ( $b4 << 3 ) | ( $b5 >> 5 );
+
+		if ( $b0 != 0xFF || ( $b1 & 0xF6 ) != 0xF0 || $frame < 7 ) {
+			# not a frame: on to the next sync word (keep a last 0xFF, it may start one)
+			pos($$buf) = $at + 1;
+			$at = $$buf =~ /\xFF[\xF0\xF1\xF8\xF9]/g ? pos($$buf) - 2 : ( substr( $$buf, -1 ) eq "\xFF" ? $len - 1 : $len );
+			next;
+		}
+
+		last if $at + $frame > $len;
+		$out .= substr( $$buf, $at, $frame );
+		$at += $frame;
+	}
+
+	substr( $$buf, 0, $at, '' );
+	return $out;
+}
+
 # A segment's format from its first bytes: ts, packed (ADTS, maybe after an ID3 tag), or undef.
 sub _format {
 	my $data = shift;
@@ -769,22 +886,30 @@ use constant PACKET => 188;
 
 sub new { my $self = bless {}, shift; $self->reset; return $self }
 
-# Forget the stream layout and any partial packet (a discontinuity).
+# Forget the stream layout, any partial packet and any incomplete frame (a discontinuity).
 sub reset {
 	my $self = shift;
-	%$self = ( buf => '', pmt => undef, audio => undef, inPes => 0, sync => 1, error => undef );
+	%$self = ( buf => '', frame => '', pmt => undef, audio => undef, inPes => 0, sync => 1, error => undef );
+	return;
+}
+
+# The end of a segment: a partial packet left over (a truncated segment) is dropped; the stream layout
+# is kept. An incomplete frame is held back until the next PES shows whether it continues.
+sub endSegment {
+	my $self = shift;
+	$self->{buf} = '';
 	return;
 }
 
 sub error { $_[0]->{error} }
 
+# TS bytes -> whole ADTS frames (an incomplete last frame is held back for the next call).
 sub feed {
 	my ( $self, $data ) = @_;
 
 	$self->{buf} .= $data if defined $data;
 
 	my $buf = \$self->{buf};
-	my $out = '';
 	my $at  = 0;
 
 	while ( length($$buf) - $at >= PACKET ) {
@@ -793,13 +918,14 @@ sub feed {
 			next;
 		}
 
-		$out .= $self->_packet( substr( $$buf, $at, PACKET ) );
+		$self->{frame} .= $self->_packet( substr( $$buf, $at, PACKET ) );
 		$at += PACKET;
 	}
 
 	substr( $$buf, 0, $at, '' );
 
-	return $out;
+	my $out = delete( $self->{ready} ) // '';
+	return $out . Plugins::ABCListen::HLS::_wholeFrames( \$self->{frame} );
 }
 
 # The offset of the next sync byte from $from that is followed by another one a packet later (or is in
@@ -852,6 +978,13 @@ sub _packet {
 
 		$payload = substr( $payload, 9 + $headerLength );
 		$self->{inPes} = 1;
+
+		# a PES that starts with a frame while an incomplete one is held back: that one was cut off (a
+		# truncated segment); it is dropped, so the ADTS stream stays whole frames
+		if ( length $self->{frame} && $payload =~ /\A\xFF[\xF0\xF1\xF8\xF9]/ ) {
+			$self->{ready} .= Plugins::ABCListen::HLS::_wholeFrames( \$self->{frame} );
+			$self->{frame} = '';
+		}
 	}
 
 	return '' unless $self->{inPes};
@@ -925,10 +1058,14 @@ sub _pmt {
 
 package Plugins::ABCListen::HLS::Packed;
 
-sub new   { bless {}, shift }
-sub reset { }
+sub new   { bless { frame => '' }, shift }
+sub reset { $_[0]->{frame} = ''; return }
 sub error { undef }
 
+# The end of a segment: an incomplete last frame (a truncated segment) is dropped.
+sub endSegment { $_[0]->{frame} = ''; return }
+
+# A whole segment -> whole ADTS frames.
 sub feed {
 	my ( $self, $data ) = @_;
 	return '' unless defined $data;
@@ -940,7 +1077,8 @@ sub feed {
 		substr( $data, 0, $size > length $data ? length $data : $size, '' );
 	}
 
-	return $data;
+	$self->{frame} .= $data;
+	return Plugins::ABCListen::HLS::_wholeFrames( \$self->{frame} );
 }
 
 # ---------------------------------------------------------------------------
@@ -999,8 +1137,9 @@ sub new {
 	return $self;
 }
 
-sub reset { }
-sub error { $_[0]->{error} }
+sub reset      { }
+sub endSegment { }
+sub error      { $_[0]->{error} }
 
 sub _error {
 	my ( $self, $error ) = @_;
@@ -1073,6 +1212,9 @@ sub _moof {
 			my @fields = grep { $runFlags & $_ } ( 0x100, 0x200, 0x400, 0x800 );
 			my $stride = 4 * @fields;
 			return [] if $p + $count * $stride > $trun->[2];
+
+			# every sample has at least a byte (its default size without a size field) in this segment
+			return [] if $count * ( $runFlags & 0x200 ? 1 : ( $defaultSize || 1 ) ) > length $$data;
 
 			for my $i ( 0 .. $count - 1 ) {
 				my $size = $defaultSize;

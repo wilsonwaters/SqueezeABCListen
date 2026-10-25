@@ -19,8 +19,15 @@
 #     unchanged), skipping ahead when the next segment left the window, a discontinuity resets the
 #     demuxer, EXT-X-ENDLIST ends it, a failing segment is retried then skipped, failed reloads back off
 #     (2, 4, 8 s) and end the stream after MAX_FAILURES; close drops the buffers and ignores a response
-#     still in flight; no timers ever; the prepared streams are bounded (PREPARED_MAX, PREPARED_TTL);
-#     every request has a timeout; an fMP4 stream end to end.
+#     still in flight; the only timer is the scan's deadline; the prepared streams are bounded
+#     (PREPARED_MAX, PREPARED_TTL); every request has a timeout; an fMP4 stream end to end;
+#   * PR #88 review: every segment failing while the playlists load ends the stream after MAX_SKIPS
+#     skips in a row (a good segment resets the count); a bad 200 reload (empty, an error page, no AAC
+#     variant) or segment while playing is retried, an encrypted reload still ends it; a body shorter than
+#     its Content-Length fails; the demuxers output whole ADTS frames only (a cut-off frame and a partial
+#     packet are dropped; the raw PES payloads checked byte for byte; resync on two sync bytes a packet
+#     apart); a huge fMP4 sample count is refused at once; a die handling a response or in the scan fails
+#     the scan, a die during a read ends the stream; the 12 s prepare deadline; sysread's length.
 # Fixtures (t/data/hls): master-triplejnsw.m3u8 and media-triplejnsw-v0-221.m3u8 as ABC served them on
 # 2026-10-25; triplejnsw-head.ts, the first 40 TS packets (0.2 s of audio) of one triple j segment;
 # sine-*, a synthetic 440 Hz tone made with `ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100:duration=3
@@ -46,7 +53,9 @@ my $HLS = 'Plugins::ABCListen::HLS';
 
 # what `ffmpeg -c:a copy -f adts` gives for the fixtures (sine-0..2 as TS or as fMP4: the same audio)
 my $SINE_ADTS_SHA1 = 'd2095e16c954998ffdd9daa59955fe6a6099bfd2';
-my $HEAD_ADTS_SHA1 = '7c0e0b394e22bc72a2ecf72dc335c6070eb1e2b0';    # triplejnsw-head.ts
+# triplejnsw-head.ts: ffmpeg's output is 5705 bytes, whose first 9 frames (5325 bytes) are whole; the 10th is
+# cut off with the packets, and the demuxer holds it back
+my $HEAD_ADTS_SHA1 = '190e643b02aa302f697b5eb89f56f0711c452466';
 
 my $MASTER = 'https://streaming.abc-cdn.net.au/audio/hls/triplejnsw.m3u8';
 my $MEDIA  = 'https://mediaserviceslive.akamaized.net/hls/live/2109456/triplejnsw/v0-221.m3u8';
@@ -227,6 +236,14 @@ subtest 'TS -> ADTS: ffmpeg-made sine segments, fed in odd slices' => sub {
 	is( $info->{bitrate},    48000, 'about 48 kbps' );
 
 	is( concat_feed( Plugins::ABCListen::HLS::TS->new, "\x00garbage" . substr( $ts, 0, 3 ) . $ts ), $out, 'garbage and a broken packet before the stream: resynced, the same audio' );
+
+	# the PES payloads themselves, before the ADTS framer (which would hide junk before a frame)
+	no warnings 'redefine';
+	local *Plugins::ABCListen::HLS::_wholeFrames = sub { my $buf = shift; my $all = $$buf; $$buf = ''; return $all };
+	is( sha1_hex( concat_feed( Plugins::ABCListen::HLS::TS->new, slices( $ts, 1000, 5000 ) ) ), $SINE_ADTS_SHA1, 'the PES payloads (PES headers stripped) are the ADTS stream, byte for byte' );
+	is( sha1_hex( Plugins::ABCListen::HLS::TS->new->feed( "\x00garbage" . substr( $ts, 0, 3 ) . $ts ) ), $SINE_ADTS_SHA1, '... also after garbage and a broken packet' );
+	my $fromPat = substr( $ts, 188 );    # from the PAT on (the first packet is ffmpeg's SDT)
+	is( Plugins::ABCListen::HLS::TS->new->feed( "J\x47JJJ" . $fromPat ), Plugins::ABCListen::HLS::TS->new->feed($fromPat), '... a lone sync byte in the garbage is not taken for a packet: resynced on two sync bytes a packet apart (the PAT is kept)' );
 };
 
 subtest 'TS -> ADTS: a recorded triple j segment (first 40 packets: PAT, PMT, PCR PID, ADTS on PID 0xDD)' => sub {
@@ -235,7 +252,8 @@ subtest 'TS -> ADTS: a recorded triple j segment (first 40 packets: PAT, PMT, PC
 	is( $d->error, undef, 'no error' );
 	is( $d->{pmt},   0x100, 'PMT on PID 0x100' );
 	is( $d->{audio}, 0xDD,  'ADTS AAC (stream type 0x0F) on PID 0xDD' );
-	is( sha1_hex($out), $HEAD_ADTS_SHA1, 'byte for byte what ffmpeg gives' );
+	is( sha1_hex($out), $HEAD_ADTS_SHA1, 'byte for byte the whole frames ffmpeg gives (5325 of its 5705 bytes)' );
+	is( length $d->{frame}, 380, 'the cut-off 10th frame (380 bytes) is held back, not output' );
 	my $info = Plugins::ABCListen::HLS::adtsInfo($out);
 	is( $info->{frames}, 9, '9 whole AAC frames (the 10th is cut off with the packets)' );
 	is( $info->{sampleRate} . '/' . $info->{channels}, '44100/2', '44100 Hz stereo' );
@@ -658,5 +676,276 @@ subtest 'an fMP4 stream end to end (StreamGuys style: relative URIs, EXT-X-MAP)'
 	is( scalar( grep {/audio_1\.fmp4/} urls() ), 1, 'the init segment fetched once' );
 	ok( !( grep {/a_43_0/} urls() ), 'LL-HLS parts never fetched' );
 };
+
+# ---- PR #88 review: failure handling, truncation, bounds, scan robustness ----
+
+subtest 'every segment fails while the playlists load: the stream ends after MAX_SKIPS skipped segments' => sub {
+	reset_all();
+	my ( $first, $last, $segOk ) = ( 1, 6, 1 );
+	route( $MASTER, file => 'hls/master-triplejnsw.m3u8' );
+	Slim::Networking::SimpleAsyncHTTP->addRoute( $MEDIA, sub { { code => 200, content => media( $first, $last ) } } );
+	Slim::Networking::SimpleAsyncHTTP->addRoute( qr{\A\Q$BASE\Eseg(\d+)\.ts\z}, sub {
+		my ($n) = $_[0] =~ /seg(\d+)\.ts/;
+		return $segOk ? { code => 200, content => sine_ts( $n % 3 ) } : { code => 404 };
+	} );
+	scan();
+	my $stream = $HLS->new( { url => $MASTER } );
+	drain($stream);
+
+	$segOk = 0;
+	my $ended;
+	for my $t ( 1 .. 600 ) {
+		$first++;
+		$last++;
+		advanceTime(1);
+		my ( undef, $ret ) = drain($stream);
+		if ( defined $ret && $ret == 0 ) { $ended = $t; last }
+	}
+	ok( $ended && $ended < 60, "ended (after ${\ ( $ended // 'never' ) } s), well within a minute" );
+	is( scalar( grep { /skipping segment/ } map { $_->{message} } logged('INFO') ), Plugins::ABCListen::HLS::MAX_SKIPS, 'after MAX_SKIPS (3) skipped segments in a row' );
+	ok( logged_like( INFO => qr/ends after the buffered audio: .*3 segments in a row could not be played/ ), 'the end says why' );
+	my $requests = scalar requests();
+	advanceTime(60);
+	drain($stream);
+	is( scalar requests(), $requests, "no more requests once ended ($requests in all)" );
+
+	# a segment that arrives resets the count: one bad segment at a time never ends the stream
+	reset_all();
+	( $first, $last ) = ( 1, 6 );
+	my %bad;
+	route( $MASTER, file => 'hls/master-triplejnsw.m3u8' );
+	Slim::Networking::SimpleAsyncHTTP->addRoute( $MEDIA, sub { { code => 200, content => media( $first, $last ) } } );
+	Slim::Networking::SimpleAsyncHTTP->addRoute( qr{\A\Q$BASE\Eseg(\d+)\.ts\z}, sub {
+		my ($n) = $_[0] =~ /seg(\d+)\.ts/;
+		return $bad{$n} ? { code => 404 } : { code => 200, content => sine_ts( $n % 3 ) };
+	} );
+	scan();
+	$stream = $HLS->new( { url => $MASTER } );
+	drain($stream);
+	my $ret;
+	for my $t ( 1 .. 120 ) {
+		$first++;
+		$last++;
+		$bad{$last} = 1 if $last % 2;    # every other segment fails
+		advanceTime(1);
+		( undef, $ret ) = drain($stream);
+		last if defined $ret && $ret == 0;
+	}
+	ok( !( defined $ret && $ret == 0 ), 'every other segment failing (skipped, never 3 in a row): still playing after 2 min' );
+};
+
+subtest 'a bad 200 response while playing is retried (not the end); encrypted still ends it at once' => sub {
+	for my $body ( '', '<html>Service Unavailable</html>', qq{#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1,CODECS="avc1.4d401f"\nv.m3u8\n} ) {
+		reset_all();
+		my ( $first, $last, $bad ) = ( 1, 6, 0 );
+		route( $MASTER, file => 'hls/master-triplejnsw.m3u8' );
+		Slim::Networking::SimpleAsyncHTTP->addRoute( $MEDIA, sub { { code => 200, content => $bad ? $body : media( $first, $last ) } } );
+		Slim::Networking::SimpleAsyncHTTP->addRoute( qr{\A\Q$BASE\Eseg(\d+)\.ts\z}, sub { my ($n) = $_[0] =~ /seg(\d+)\.ts/; { code => 200, content => sine_ts( $n % 3 ) } } );
+		scan();
+		my $stream = $HLS->new( { url => $MASTER } );
+		drain($stream);
+
+		my $label = length $body ? substr( $body, 0, 20 ) : 'an empty body';
+		$bad = 1;
+		advanceTime(1.1);
+		drain($stream);
+		$bad = 0;
+		my $ret;
+		for ( 1 .. 30 ) {
+			$first++;
+			$last++;
+			advanceTime(1);
+			( undef, $ret ) = drain($stream);
+			last if defined $ret && $ret == 0;
+		}
+		ok( !( defined $ret && $ret == 0 ), "one reload answered 200 with $label: still playing 30 s later" );
+		ok( ( grep { $_ eq $MASTER } urls() ) >= 2, '... the retry went through the master playlist again' );
+	}
+
+	# a segment answered 200 with an error page once: a failed segment (retried), not the end
+	reset_all();
+	my ( $first, $last, $page ) = ( 1, 6, 0 );
+	route( $MASTER, file => 'hls/master-triplejnsw.m3u8' );
+	Slim::Networking::SimpleAsyncHTTP->addRoute( $MEDIA, sub { { code => 200, content => media( $first, $last ) } } );
+	Slim::Networking::SimpleAsyncHTTP->addRoute( qr{\A\Q$BASE\Eseg(\d+)\.ts\z}, sub {
+		my ($n) = $_[0] =~ /seg(\d+)\.ts/;
+		return { code => 200, content => '<html>Oops</html>' } if $n == 7 && !$page++;
+		{ code => 200, content => sine_ts( $n % 3 ) };
+	} );
+	scan();
+	my $playing = $HLS->new( { url => $MASTER } );
+	drain($playing);
+	my $ret;
+	for ( 1 .. 20 ) { $first++; $last++; advanceTime(1); ( undef, $ret ) = drain($playing); last if defined $ret && $ret == 0 }
+	ok( !( defined $ret && $ret == 0 ), 'a segment answered 200 with an error page once: still playing' );
+	is( scalar( grep {/seg7\.ts\z/} urls() ), 2, '... the segment was fetched again' );
+
+	reset_all();
+	my $key = 0;
+	route( $MASTER, file => 'hls/master-triplejnsw.m3u8' );
+	Slim::Networking::SimpleAsyncHTTP->addRoute( $MEDIA, sub { { code => 200, content => media( 1, 6, $key ? ( key => 'AES-128' ) : () ) } } );
+	Slim::Networking::SimpleAsyncHTTP->addRoute( qr{\A\Q$BASE\Eseg(\d+)\.ts\z}, sub { my ($n) = $_[0] =~ /seg(\d+)\.ts/; { code => 200, content => sine_ts( $n % 3 ) } } );
+	scan();
+	my $stream = $HLS->new( { url => $MASTER } );
+	drain($stream);
+	$key = 1;
+	advanceTime(1.1);
+	my ( undef, $ret ) = drain($stream);
+	is( $ret, 0, 'a reload that turns encrypted ends the stream at once' );
+};
+
+subtest 'truncated responses: a body shorter than its Content-Length fails; demuxing keeps whole frames' => sub {
+	reset_all();
+	my $full = sine_ts(1);
+	route( $MASTER, file => 'hls/master-triplejnsw.m3u8' );
+	route( $MEDIA, content => media( 1, 6 ) );
+	my $cut = 1;
+	Slim::Networking::SimpleAsyncHTTP->addRoute( qr{\A\Q$BASE\Eseg(\d+)\.ts\z}, sub {
+		my ($n) = $_[0] =~ /seg(\d+)\.ts/;
+		my $body = sine_ts( $n % 3 );
+		return { code => 200, content => substr( $body, 0, 188 * 20 + 100 ), headers => { 'Content-Length' => length $body } } if $n == 4 && $cut;
+		return { code => 200, content => $body, headers => { 'Content-Length' => length $body } };
+	} );
+	my ( $track, $error ) = scan()->args(0);
+	like( $error, qr/truncated response: 3860 of 7144 bytes/, 'a preparing stream: a cut-off first segment fails the scan' );
+
+	reset_all();
+	route( $MASTER, file => 'hls/master-triplejnsw.m3u8' );
+	route( $MEDIA, content => media( 1, 6 ) );
+	my $calls = 0;
+	Slim::Networking::SimpleAsyncHTTP->addRoute( qr{\A\Q$BASE\Eseg(\d+)\.ts\z}, sub {
+		my ($n) = $_[0] =~ /seg(\d+)\.ts/;
+		my $body = sine_ts( $n % 3 );
+		return { code => 200, content => substr( $body, 0, 188 * 20 + 100 ), headers => { 'Content-Length' => length $body } } if $n == 5 && !$calls++;
+		return { code => 200, content => $body, headers => { 'Content-Length' => length $body } };
+	} );
+	scan();
+	my $stream = $HLS->new( { url => $MASTER } );
+	drain($stream);
+	advanceTime(2.1);
+	my ($audio) = drain($stream);
+	is( scalar( grep {/seg5\.ts\z/} urls() ), 2, 'while playing: the cut-off segment 5 is fetched again' );
+	ok( logged_like( INFO => qr/truncated response: 3860 of 7144 bytes/ ), '... logged as a truncated response' );
+	is( Plugins::ABCListen::HLS::_truncated( 'abc', FakeHTTP->new( 'Content-Length' => 9, 'Content-Encoding' => 'gzip' ) ), undef, 'gzip-encoded body: not compared with Content-Length' );
+	like( Plugins::ABCListen::HLS::_truncated( 'abc', FakeHTTP->new( 'Content-Length' => 9 ) ), qr/3 of 9 bytes/, 'no Content-Encoding: compared' );
+	like( Plugins::ABCListen::HLS::_truncated( 'abc', FakeHTTP->new( 'Content-Length' => 9, 'Content-Encoding' => 'identity' ) ), qr/3 of 9 bytes/, 'Content-Encoding identity: compared' );
+	is( Plugins::ABCListen::HLS::_truncated( 'abcdefghi', FakeHTTP->new( 'Content-Length' => 9 ) ), undef, 'the whole body: fine' );
+	is( Plugins::ABCListen::HLS::_truncated( 'abc', FakeHTTP->new() ), undef, 'no Content-Length: not compared' );
+
+	# the demuxer alone, fed 20 packets + 100 bytes of a segment and then the next whole segment
+	my $d   = Plugins::ABCListen::HLS::TS->new;
+	my $cut1 = $d->feed( substr( sine_ts(0), 0, 188 * 20 + 100 ) );
+	my $next = $d->feed( sine_ts(1) );
+	my $alone = Plugins::ABCListen::HLS::adtsInfo( Plugins::ABCListen::HLS::TS->new->feed( sine_ts(1) ) )->{frames};
+	my $whole = Plugins::ABCListen::HLS::adtsInfo( $cut1 . $next );
+	# (fed straight on, the partial packet joins the next segment's first bytes: at most one damaged frame)
+	cmp_ok( $whole->{frames}, '>=', Plugins::ABCListen::HLS::adtsInfo($cut1)->{frames} + $alone, 'cut segment + whole segment fed straight on: every whole frame of both still parses' );
+	is( length( $cut1 . $next ), ( $whole->{bytes} + 7 * $whole->{frames} ), '... and nothing but whole frames' );
+
+	# with endSegment (the stream calls it): the partial packet is dropped too
+	$d = Plugins::ABCListen::HLS::TS->new;
+	$cut1 = $d->feed( substr( sine_ts(0), 0, 188 * 20 + 100 ) );
+	$d->endSegment;
+	is( $d->{buf}, '', 'endSegment drops the partial packet' );
+	ok( defined $d->{audio}, '... and keeps the stream layout (PMT)' );
+	my $after = $d->feed( sine_ts(1) );
+	is( Plugins::ABCListen::HLS::adtsInfo( $cut1 . $after )->{frames}, Plugins::ABCListen::HLS::adtsInfo($cut1)->{frames} + $alone, '... exactly the whole frames of both' );
+	is( $after, Plugins::ABCListen::HLS::TS->new->feed( sine_ts(1) ), '... the next segment\'s audio exactly as on its own: the cut-off frame was dropped when its first PES began with a frame' );
+
+	my $p = Plugins::ABCListen::HLS::Packed->new;
+	my $adts = Plugins::ABCListen::HLS::TS->new->feed( sine_ts(0) );
+	my $part = $p->feed( substr( $adts, 0, 1000 ) );
+	ok( Plugins::ABCListen::HLS::adtsInfo($part) && length $part < 1000, 'packed audio: only whole frames out' );
+	$p->endSegment;
+	is( $p->feed($adts), $adts, '... the cut-off frame dropped at the segment end' );
+};
+
+subtest 'fMP4: a trun with a huge sample count and no per-sample fields is refused at once' => sub {
+	my $demux = Plugins::ABCListen::HLS::FMP4->new( fixture('hls/sine-init.mp4') );
+	my $box   = sub { my ( $type, $payload ) = @_; pack( 'N', 8 + length $payload ) . $type . $payload };
+	my $moof  = $box->( 'moof', $box->( 'traf', $box->( 'tfhd', pack( 'N N N', 0x10, $demux->{track}, 100 ) ) . $box->( 'trun', pack( 'N N', 0, 3_000_000 ) ) ) );
+	my $t0    = Time::HiRes::time();
+	my $out   = $demux->feed( $moof . $box->( 'mdat', "\0" x 1000 ) );
+	clearTime();
+	my $real0 = Time::HiRes::time();
+	$demux->feed( $moof . $box->( 'mdat', "\0" x 1000 ) );
+	ok( Time::HiRes::time() - $real0 < 0.5, 'returns at once (3 000 000 samples of 100 bytes cannot be in 1 KB)' );
+	is( $out, '', 'no output' );
+};
+
+subtest 'scan robustness: a die handling a response, a die in the scan, the prepare deadline' => sub {
+	reset_all();
+	route_stream( media => media( 1, 6 ) );
+	my ( $track, $error );
+	{
+		no warnings 'redefine';
+		local *Plugins::ABCListen::HLS::parsePlaylist = sub { die "parser broke\n" };
+		( $track, $error ) = scan()->args(0);
+	}
+	is( $track, undef, 'a die while handling the master playlist: no track' );
+	like( $error, qr/\AHLS: handling \Q$MASTER\E died/, '... the scan fails (the next candidate plays)' );
+	is( scalar( grep { $_->{message} =~ /handling .* died: parser broke/ } logged('WARN') ), 1, '... logged at WARN once' );
+	is( $HLS->_prepared, 0, '... nothing kept' );
+	is( scalar( Slim::Utils::Timers::pending() ), 0, '... no timer left' );
+
+	reset_all();
+	{
+		no warnings 'redefine';
+		local *Plugins::ABCListen::HLS::_stream = sub { die "no memory\n" };
+		my $c = collector();
+		ok( eval { $HLS->scanUrl( $MASTER, { cb => $c->cb } ); 1 }, 'a die in the scan itself never reaches the caller' );
+		is( $c->count, 1, '... which is called back once' );
+		like( ( $c->args(0) )[1], qr/\AHLS: the scan died: no memory/, '... with the error' );
+	}
+
+	reset_all();
+	route( $MASTER, file => 'hls/master-triplejnsw.m3u8' );
+	route( $MEDIA, content => media( 1, 6 ), defer => 1 );    # a slow server
+	my $c = scan();
+	is( $c->count, 0, 'a slow media playlist: no answer yet' );
+	is( scalar( Slim::Utils::Timers::pending() ), 1, '... one timer, the prepare deadline' );
+	advanceTime(11.9);
+	is( $c->count, 0, '... none at 11.9 s' );
+	advanceTime(0.2);
+	is( $c->count, 1, 'answered at PREPARE_DEADLINE (12 s)' );
+	like( ( $c->args(0) )[1], qr/no audio within 12 s/, '... a failed scan: the protocol handler plays its next candidate' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is( scalar( grep {/seg\d/} urls() ), 0, 'the late playlist is ignored: no segment fetched' );
+	is( scalar( Slim::Utils::Timers::pending() ), 0, 'no timer left' );
+
+	reset_all();
+	route_stream( media => media( 1, 6 ) );
+	scan();
+	is( scalar( Slim::Utils::Timers::pending() ), 0, 'a scan that answers in time kills its deadline' );
+	my $stream = $HLS->new( { url => $MASTER } );
+	{
+		no warnings 'redefine';
+		local *Plugins::ABCListen::HLS::_pump = sub { die "pump broke\n" };
+		my $buf;
+		ok( eval { $stream->sysread( $buf, 100 ); 1 }, 'a die during a read never reaches LMS' );
+	}
+	my ( undef, $ret ) = drain($stream);
+	is( $ret, 0, '... the stream ends (after the audio it has)' );
+};
+
+subtest 'sysread returns at most the length asked for' => sub {
+	reset_all();
+	route_stream( media => media( 1, 6 ) );
+	scan();
+	my $stream = $HLS->new( { url => $MASTER } );
+	for my $max ( 1, 100, 4096 ) {
+		my $buf = '';
+		my $n   = $stream->sysread( $buf, $max );
+		is( $n, $max, "asked for $max: $max bytes" );
+		is( length $buf, $max, '... in the buffer' );
+	}
+};
+
+package FakeHTTP;
+
+sub new { my ( $class, %h ) = @_; return bless { h => Slim::Networking::SimpleAsyncHTTP::Headers->new(%h) }, $class }
+sub headers { $_[0]->{h} }
+
+package main;
 
 done_testing();
