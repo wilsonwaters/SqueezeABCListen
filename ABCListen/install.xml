@@ -3,7 +3,7 @@
 	<id>BB8E20A2-ED02-4A28-A017-56DA05CF312A</id>
 	<name>PLUGIN_ABCLISTEN</name>
 	<module>Plugins::ABCListen::Plugin</module>
-	<version>1.0.0</version>
+	<version>1.1.0</version>
 	<description>PLUGIN_ABCLISTEN_DESC</description>
 	<creator>Wilson Waters</creator>
 	<category>radio</category>

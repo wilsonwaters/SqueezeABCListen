@@ -8,6 +8,8 @@ also the text of its GitHub Release (see [RELEASING.md](RELEASING.md)).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-25
+
 ### Added
 
 - **High quality (HLS)**, a new Live stream quality option (Settings → Advanced → ABC listen): live stations play
@@ -44,6 +46,11 @@ also the text of its GitHub Release (see [RELEASING.md](RELEASING.md)).
     program**, because some apps (Material, Squeezebox players) don't show the description above long lists.
   - An ABC page that fails to load is tried again in smaller pieces. Episodes that still can't be loaded keep
     their place in the list, as "Couldn't load this from ABC listen. Please try again later." rows.
+  - A program's list appears within about 7 seconds even when one of ABC's pages is slow; that page's episodes
+    show as "Couldn't load" rows until the program is opened again.
+- **Artwork instead of grey placeholder icons** in the Default web interface: the text rows of program and
+  episode menus (About, Presented by, the network, Follow, …) and Program info show the program's or episode's
+  image. Other apps are unchanged.
 - The README now says how to check which version is installed, and where the settings file that uninstalling
   leaves behind is kept.
 
@@ -53,14 +60,20 @@ also the text of its GitHub Release (see [RELEASING.md](RELEASING.md)).
   from when they were shown, and an older cached answer no longer overwrites newer audio details.
 - **Fewer repeated warnings in the server log**: a followed program that ABC has removed gives one WARN a day,
   instead of warnings at every Latest episodes refresh (every 15 minutes while the list is in use), and an
-  unreadable song answer from ABC is logged as an error at most once an hour per station. The plugin also writes
-  its cache less often: showing the same episodes again no longer rewrites their cached details.
+  unreadable song answer from ABC is logged as an error at most once an hour per station. Episode pages that ABC
+  fails every time (some of RN Breakfast's older episodes, for example) are logged once a day per program instead
+  of at every open. The plugin also writes its cache less often: showing the same episodes again no longer
+  rewrites their cached details.
+- The ABC search service's app id no longer appears in the server log, even at DEBUG.
 
 ### Known limitations
 
 - With High quality (HLS) the audio runs about 30–40 seconds behind live, as on ABC's website, so Now Playing's
   song titles and programs change about 30–40 seconds before you hear the change.
-- ABC lists only a program's newest 250 episodes, so a program's list ends there.
+- ABC lists only a program's newest 250 episodes, so a program's list ends there. ABC fails some older pages of a
+  few long programs (RN Breakfast, The Radio National Hour) every time; those places show "Couldn't load" rows.
+- When ABC is slow, the first opening of a long program can show some "Couldn't load" rows; opening it again a
+  moment later fills them in.
 - Carried over from 1.0.0: most audiobooks and the restricted podcasts play only from an Australian internet
   connection; ABC mediahub may only work from Australia (with an automatic fallback); ABC's index still lists some
   programs that have stopped; a Latest episodes menu held open across its 15-minute refresh may open a different
@@ -244,7 +257,8 @@ also the text of its GitHub Release (see [RELEASING.md](RELEASING.md)).
 - Tested on LMS 9.1.1 with squeezelite. LMS 8.3 and later are expected to work but haven't been
   tested. Players (or the server, when it transcodes) need to be able to decode AAC.
 
-[unreleased]: https://github.com/wilsonwaters/SqueezeABCListen/compare/v1.0.0...HEAD
+[unreleased]: https://github.com/wilsonwaters/SqueezeABCListen/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/wilsonwaters/SqueezeABCListen/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/wilsonwaters/SqueezeABCListen/compare/v0.3.0...v1.0.0
 [0.3.0]: https://github.com/wilsonwaters/SqueezeABCListen/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/wilsonwaters/SqueezeABCListen/compare/v0.1.0...v0.2.0
