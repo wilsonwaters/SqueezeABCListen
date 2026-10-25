@@ -88,10 +88,10 @@ package Plugins::ABCListen::OnDemand;
 #   $shortened is 1 when $short is not the whole text (a later paragraph, or the cut), else 0.
 #   () for undef, a reference or text without a visible character.
 #
-# Plugins::ABCListen::OnDemand->descriptionItems($client, $text, $aboutToken) -> @items     (U1)
+# Plugins::ABCListen::OnDemand->descriptionItems($client, $text, $aboutToken[, $always]) -> @items  (U1)
 #   The rows that head a menu with a description (LMS menu rule 2: the textarea comes first):
 #     { name => $short, type => 'textarea' }                                  (shortText)
-#   and, only when the text was shortened, right after it:
+#   and, only when the text was shortened (U2: or $always is true), right after it:
 #     { name => cstring($aboutToken), type => 'link',
 #       items => [ { name => <the whole text, trimmed>, type => 'textarea' } ] }
 #   ("About this program" / "About this episode" / "About this station"; inline items, no feed,
@@ -138,14 +138,23 @@ package Plugins::ABCListen::OnDemand;
 #   Never dies ($cb dying is logged; it is not called again).
 #
 # Program menu (_programMenu) order: description (descriptionItems: the short textarea, then
-# "About this program" when it was shortened) · "Presented by A, B" · network
-# (Programs->program attribution title) · provider extras · the newest 50 episodes · "More
-# episodes…" (the next 50, to ABC's 250). No episodes: "No episodes available", except for a
-# restricted program without an episode collection (an ABC audiobook: D5's provider lists its
-# chapters) that has a header row or provider extras to show: the menu is never empty, so with
-# none of those it is "No episodes available" too. Episode rows get programImage, and
-# programTitle/programId only when the episode path is under the program path
-# ('<program path>/...'); otherwise O1 fills them at play time.
+# "About this program" when it was shortened, or (U2) when 100 or more rows follow the textarea:
+# Material hides the window header of such lists) · "Presented by A, B" · network
+# (Programs->program attribution title) · provider extras · every episode ABC lists, newest first
+# (to ABC's 250), as one list (U2, #84; before: 50, then "More episodes…"). No episodes: "No
+# episodes available", except for a restricted program without an episode collection (an ABC
+# audiobook: D5's provider lists its chapters) that has a header row or provider extras to show:
+# the menu is never empty, so with none of those it is "No episodes available" too. Episode rows
+# get programImage, and programTitle/programId only when the episode path is under the program
+# path ('<program path>/...'); otherwise O1 fills them at play time.
+# U2: the program menu is an LMS partial feed. XMLBrowser passes a code-ref feed index/quantity
+# (the rows a client lists, or index = the row it opens and quantity 1); the menu answers
+# { items => those rows, offset => index, total => all rows } and loads only the ABC pages of
+# EPISODE_PAGE (50) episodes those rows are on, at most PAGE_CONCURRENCY (4) at a time, plus page
+# 0, whose total (at most 250) sets the length; Programs->episodes caches each page 15 min. Without
+# index/quantity (playlist commands: Play all / Add all) it is the whole list, every page. A page
+# that fails ends the list with its error text row; row i is the same episode for as long as the
+# pages are cached (stable item ids: LMS keeps no browse session and re-walks menus by index).
 #
 # Episode menu (_episodeMenu; O4 extended it): synopsis (descriptionItems: the short textarea,
 # then "About this episode" when it was shortened) · "Play episode" (type audio,
@@ -211,7 +220,9 @@ use Plugins::ABCListen::Util;
 use constant ENDASH => "\x{2013}";
 use constant MIDDOT => "\x{B7}";
 
-use constant EPISODE_PAGE     => 50;
+use constant EPISODE_PAGE     => 50;     # ABC episodes per page (U2: the program menu loads the pages its window shows)
+use constant PAGE_CONCURRENCY => 4;      # U2: episode pages loading at once
+use constant LONG_LIST        => 100;    # U2: rows after the header from which Material hides it (_programHeader)
 use constant PROVIDER_TIMEOUT => 5;      # seconds
 use constant IMAGE_PX         => 300;
 use constant LOAD_FAILED      => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
@@ -695,14 +706,14 @@ sub shortText {
 }
 
 sub descriptionItems {
-	my ( $class, $client, $text, $token ) = @_;
+	my ( $class, $client, $text, $token, $always ) = @_;
 
 	my ( $short, $shortened ) = $class->shortText($text);
 	return () unless defined $short;
 
 	my @items = ( { name => $short, type => 'textarea' } );
 
-	if ($shortened) {
+	if ( $shortened || $always ) {
 		( my $full = $text ) =~ s/\A\s+|\s+\z//gu;
 		push @items, {
 			name  => cstring( $client, $token ),
@@ -779,6 +790,7 @@ sub _programMenu {
 	my $once = _once($cb);
 
 	$program = {} unless ref $program eq 'HASH';
+	my $window = _window($args);
 
 	_try( $client, $once, sub {
 		Plugins::ABCListen::Programs::program( $program->{path}, sub {
@@ -786,16 +798,35 @@ sub _programMenu {
 
 			return _textFeed( $client, $once, $detail->{error} ) if $detail->{error};
 
-			_try( $client, $once, sub { _programMenuItems( $client, $once, $program, $detail ) } );
+			_try( $client, $once, sub { _programMenuItems( $client, $once, $program, $detail, $window ) } );
 		} );
 	} );
 }
 
-# Header, provider extras and the first page of episodes, fetched at once.
-sub _programMenuItems {
-	my ( $client, $cb, $program, $detail ) = @_;
+# U2: the rows LMS asks a feed for, { index, quantity }, from XMLBrowser's index/quantity args (the
+# slice it lists, with up to 10 rows before it; or the row it opens, quantity 1); undef without them
+# (playlist commands, other callers): the whole list.
+sub _window {
+	my $args = shift;
+	return undef unless ref $args eq 'HASH';
 
-	my @header = _programHeader( $client, $detail );
+	my ($index)    = defined $args->{index}    && !ref $args->{index}    ? $args->{index}    =~ /\A([0-9]+)/   : ();
+	my ($quantity) = defined $args->{quantity} && !ref $args->{quantity} ? $args->{quantity} =~ /\A([0-9]+)\z/ : ();
+	return undef unless defined $index && defined $quantity && $quantity > 0;
+
+	return { index => $index + 0, quantity => $quantity + 0 };
+}
+
+# Header, provider extras, then the episodes as one list (U2): only the rows of the window, from the
+# ABC pages of EPISODE_PAGE episodes that hold them, as a partial feed { items, offset, total }.
+# Page 0 (it gives the total) and the window's other pages, estimated from the header alone, load
+# with the providers, at most PAGE_CONCURRENCY at a time; a page the estimate missed (provider
+# rows, or more episodes than the program page said) loads after them.
+sub _programMenuItems {
+	my ( $client, $cb, $program, $detail, $window ) = @_;
+
+	# provisional (for the first pages to load): the program page's count of episodes after it
+	my @header = _programHeader( $client, $detail, $detail->{total} || 1 );
 
 	my %merged = %$program;
 	for my $key (qw(id title template restricted episodeCollectionId)) {
@@ -810,21 +841,26 @@ sub _programMenuItems {
 		collectionId => $detail->{episodeCollectionId},
 	};
 
-	my ( $extras, $episodes );
-	my $pending = 2;
+	my %pages;    # page number => Programs::episodes' answer
+	my ( $extras, $pending, @lead ) = ( undef, 2 );
+
+	my $answer = sub {
+		_respondWindow( $client, $cb, sub { _programWindow( $client, $context, $detail, \@lead, \%pages, $window ) } );
+	};
 
 	my $done = sub {
 		return if --$pending;
 
-		_respond( $client, $cb, sub {
-			my @items = ( @header, @$extras, @$episodes );
+		# the rows before the episodes, now that the number of rows after the header is known
+		my $count = defined $context->{collectionId} ? _episodeCount( $pages{0}, $detail ) : 0;
+		@lead = ( _programHeader( $client, $detail, @$extras + ( $count || 1 ) ), @$extras );
 
-			# never an empty menu: a restricted program with no header rows, no provider extras
-			# (none registered, or they failed or timed out) and no episode list says so
-			@items = ( _textItem( $client, 'PLUGIN_ABCLISTEN_NO_EPISODES' ) ) unless @items;
+		return $answer->() unless defined $context->{collectionId};
 
-			return \@items;
-		} );
+		my @missing = grep { !$pages{$_} } _windowPages( scalar @lead, $window, $count );
+		return $answer->() unless @missing;
+
+		_try( $client, $cb, sub { _fetchPages( $context, \@missing, \%pages, $answer ) } );
 	};
 
 	_runProviders( $client, \%merged, sub {
@@ -833,86 +869,187 @@ sub _programMenuItems {
 	} );
 
 	if ( defined $context->{collectionId} ) {
-		_episodePage( $client, $context, 0, sub {
-			$episodes = shift;
-			$done->();
-		} );
+		# the program page's count of episodes (unknown: one page) and the header alone
+		_fetchPages( $context, [ _windowPages( scalar @header, $window, $detail->{total} || EPISODE_PAGE ) ], \%pages, $done );
 	}
 	else {
-		# ABC audiobooks have no episode list on the web: D5's provider lists the chapters
-		$episodes = $detail->{restricted} ? [] : [ _textItem( $client, 'PLUGIN_ABCLISTEN_NO_EPISODES' ) ];
 		$done->();
 	}
 }
 
 # Description (U1: the short textarea, then "About this program" when shortened), "Presented by
-# ...", network; each only when known.
+# ...", network; each only when known. $after: how many rows follow the header (provider rows,
+# episodes). U2: when the rows after the textarea reach LONG_LIST (100), "About this program" is
+# there even for a short description: Material shows the window header (the textarea) only for
+# lists of fewer than 100 rows (its LMS_MAX_NON_SCROLLER_ITEMS), so a long program list would
+# show no description at all.
 sub _programHeader {
-	my ( $client, $detail ) = @_;
-
-	my @items = __PACKAGE__->descriptionItems( $client, $detail->{description}, 'PLUGIN_ABCLISTEN_ABOUT_PROGRAM' );
+	my ( $client, $detail, $after ) = @_;
 
 	my @presenters = grep { _hasText($_) } @{ ref $detail->{presenters} eq 'ARRAY' ? $detail->{presenters} : [] };
-	push @items, { name => cstring( $client, 'PLUGIN_ABCLISTEN_PRESENTED_BY', join( ', ', @presenters ) ), type => 'text' } if @presenters;
+	my @rows;
+	push @rows, { name => cstring( $client, 'PLUGIN_ABCLISTEN_PRESENTED_BY', join( ', ', @presenters ) ), type => 'text' } if @presenters;
+	push @rows, { name => $detail->{network}, type => 'text' } if _hasText( $detail->{network} );
 
-	push @items, { name => $detail->{network}, type => 'text' } if _hasText( $detail->{network} );
+	my $long = @rows + ( $after || 0 ) >= LONG_LIST;
 
-	return @items;
+	return ( __PACKAGE__->descriptionItems( $client, $detail->{description}, 'PLUGIN_ABCLISTEN_ABOUT_PROGRAM', $long ), @rows );
 }
 
-# One page of episode rows from $offset, then "More episodes…" when ABC has more (to 250).
-# $cb->(\@items), once: episode rows (+ More), or one NO_EPISODES / error text item.
-sub _episodePage {
-	my ( $client, $context, $offset, $cb ) = @_;
+# How many episodes the list has: once page 0 has answered, its total (ABC's, at most 250; 0 when it
+# failed or had none), else the program page's count (an estimate).
+sub _episodeCount {
+	my ( $first, $detail ) = @_;
+	return $detail->{total} || 0 unless ref $first eq 'HASH';
+	return 0 if $first->{error} || !@{ $first->{items} || [] };
+	return $first->{total} || 0;
+}
 
-	Plugins::ABCListen::Programs::episodes( $context->{collectionId}, $offset, EPISODE_PAGE, sub {
-		my $result = shift;
+# The episode pages a window shows when $lead rows come before $count episodes: page 0 (it gives
+# the total), then the pages of the episodes in the window, in order. The whole list without a window.
+sub _windowPages {
+	my ( $lead, $window, $count ) = @_;
 
-		my $items = eval { _episodePageItems( $client, $context, $offset, $result ) };
+	my ( $first, $last ) = _episodeRange( $lead, $window, $count );
+	my @pages = (0);
+	push @pages, grep { $_ > 0 } int( $first / EPISODE_PAGE ) .. int( ( $last - 1 ) / EPISODE_PAGE ) if $first < $last;
 
-		if ( ref $items ne 'ARRAY' ) {
-			$log->error( 'Building the ABC listen episode list failed: ' . ( $@ || 'unknown error' ) );
-			$items = [ _textItem( $client, LOAD_FAILED ) ];
+	return @pages;
+}
+
+# The episode indexes [first, last) a window shows when $lead rows come before $count episodes.
+sub _episodeRange {
+	my ( $lead, $window, $count ) = @_;
+
+	my ( $from, $to ) = $window ? ( $window->{index}, $window->{index} + $window->{quantity} ) : ( 0, $lead + $count );
+	my $first = $from > $lead ? $from - $lead : 0;
+	my $last  = $to > $lead ? $to - $lead : 0;
+	$last = $count if $last > $count;
+
+	return $first < $last ? ( $first, $last ) : ( 0, 0 );
+}
+
+# Load the episode pages in @$wanted that %$pages doesn't hold yet (Programs::episodes: EPISODE_PAGE
+# episodes from page * EPISODE_PAGE, its cache and coalescing), at most PAGE_CONCURRENCY at a time,
+# each answer (an error too) into $pages->{page}; $cb->() once, when all have answered.
+sub _fetchPages {
+	my ( $context, $wanted, $pages, $cb ) = @_;
+
+	my @queue = grep { !$pages->{$_} } @$wanted;
+	my ( $active, $finished, $pumping, $pump ) = ( 0, 0, 0 );
+
+	$pump = sub {
+		return if $pumping;
+		$pumping = 1;
+
+		while ( $active < PAGE_CONCURRENCY && @queue ) {
+			my $page    = shift @queue;
+			my $settled = 0;
+			$active++;
+
+			my $done = sub {
+				return if $settled++;
+				$pages->{$page} = ref $_[0] eq 'HASH' ? $_[0] : { error => LOAD_FAILED };
+				$active--;
+				$pump->() if $pump;
+			};
+
+			eval { Plugins::ABCListen::Programs::episodes( $context->{collectionId}, $page * EPISODE_PAGE, EPISODE_PAGE, $done ); 1 } or do {
+				$log->error( 'Loading ABC listen episodes failed: ' . ( $@ || 'unknown error' ) );
+				$done->( { error => LOAD_FAILED } );
+			};
 		}
 
-		$cb->($items);
-	} );
+		$pumping = 0;
+
+		if ( !$active && !@queue && !$finished++ ) {
+			undef $pump;    # every page answered: break the closure's reference to itself
+			$cb->();
+		}
+
+		return;
+	};
+
+	$pump->();
+	return;
 }
 
-sub _episodePageItems {
-	my ( $client, $context, $offset, $result ) = @_;
+# The program menu's rows in the window, { items, offset, total }. The list: the lead rows (header,
+# provider extras), then
+#   - no episode collection: "No episodes available", except for a restricted program (ABC's
+#     audiobooks: D5's provider lists the chapters) that has lead rows: never an empty list;
+#   - page 0 failed: its error text; page 0 without episodes: "No episodes available";
+#   - else the episodes, newest first, to page 0's total (_episodeWindow).
+sub _programWindow {
+	my ( $client, $context, $detail, $lead, $pages, $window ) = @_;
 
-	return [ _textItem( $client, $result->{error} ) ] if $result->{error};
-
-	my @episodes = @{ $result->{items} || [] };
-	return [ _textItem( $client, 'PLUGIN_ABCLISTEN_NO_EPISODES' ) ] unless @episodes;
-
-	my @items = grep {defined} map { __PACKAGE__->episodeItem( $client, _withProgram( $context, $_ ) ) } @episodes;
-
-	my $next = $offset + EPISODE_PAGE;
-	if ( $next < ( $result->{total} || 0 ) ) {
-		push @items, {
-			name        => cstring( $client, 'PLUGIN_ABCLISTEN_MORE_EPISODES' ),
-			type        => 'link',
-			url         => \&_moreEpisodes,
-			passthrough => [ $context, $next ],
-		};
+	my @tail;
+	if ( !defined $context->{collectionId} ) {
+		@tail = _textItem( $client, 'PLUGIN_ABCLISTEN_NO_EPISODES' ) unless $detail->{restricted} && @$lead;
+	}
+	elsif ( !$pages->{0} || $pages->{0}->{error} ) {
+		@tail = _textItem( $client, $pages->{0} ? $pages->{0}->{error} : LOAD_FAILED );
+	}
+	elsif ( !_episodeCount( $pages->{0}, $detail ) ) {
+		@tail = _textItem( $client, 'PLUGIN_ABCLISTEN_NO_EPISODES' );
+	}
+	else {
+		return _episodeWindow( $client, $context, $lead, $pages, $window );
 	}
 
-	return \@items;
+	my @all = ( @$lead, @tail );
+	my ( $from, $to ) = $window ? ( $window->{index}, $window->{index} + $window->{quantity} ) : ( 0, scalar @all );
+	$to = @all if $to > @all;
+
+	return { items => [ $from < $to ? @all[ $from .. $to - 1 ] : () ], offset => $from, total => scalar @all };
 }
 
-# "More episodes…": the next page of a program's episodes.
-sub _moreEpisodes {
-	my ( $client, $cb, $args, $context, $offset ) = @_;
-	my $once = _once($cb);
+# The rows of the window when the episodes follow the lead rows: the lead rows, then one episodeItem
+# per episode (page = int(n / EPISODE_PAGE)), total = lead + page 0's total. Where the window meets
+# a page that failed, or a row that can't be built, the list ends with one error text row there
+# (total = that row + 1); where a page has fewer episodes than the total said (ABC's list shrank),
+# the list ends before that row. Row i is always the same episode while ABC's pages are cached.
+sub _episodeWindow {
+	my ( $client, $context, $lead, $pages, $window ) = @_;
 
-	_try( $client, $once, sub {
-		_episodePage( $client, $context, $offset, sub {
-			my $items = shift;
-			_respond( $client, $once, sub {$items} );
-		} );
-	} );
+	my $total = @$lead + $pages->{0}->{total};
+	my ( $from, $to ) = $window ? ( $window->{index}, $window->{index} + $window->{quantity} ) : ( 0, $total );
+	$to = $total if $to > $total;
+
+	my @items;
+	for my $i ( $from .. $to - 1 ) {
+		if ( $i < @$lead ) {
+			push @items, $lead->[$i];
+			next;
+		}
+
+		my $n    = $i - @$lead;
+		my $page = $pages->{ int( $n / EPISODE_PAGE ) };
+
+		if ( !$page || $page->{error} ) {
+			push @items, _textItem( $client, $page ? $page->{error} : LOAD_FAILED );
+			$total = $i + 1;
+			last;
+		}
+
+		my $episode = ( $page->{items} || [] )->[ $n % EPISODE_PAGE ];
+		if ( ref $episode ne 'HASH' ) {
+			$total = $i;
+			last;
+		}
+
+		my $item = eval { __PACKAGE__->episodeItem( $client, _withProgram( $context, $episode ) ) };
+		if ( ref $item ne 'HASH' ) {
+			$log->error( 'Building the ABC listen episode list failed: ' . ( $@ || "no row for episode $n" ) );
+			push @items, _textItem( $client, LOAD_FAILED );
+			$total = $i + 1;
+			last;
+		}
+
+		push @items, $item;
+	}
+
+	return { items => \@items, offset => $from, total => $total };
 }
 
 # The episode ref with the program's artwork as fallback, and the program's title and id when the
@@ -1294,6 +1431,22 @@ sub _respond {
 	}
 
 	$cb->( { items => $items } );
+}
+
+# U2: call back once with the partial feed $build returns ({ items, offset, total }: LMS lists
+# items as rows offset .. offset + #items - 1 of a list of total rows), or with the LOAD_FAILED item
+# if it dies.
+sub _respondWindow {
+	my ( $client, $cb, $build ) = @_;
+
+	my $feed = eval { $build->() };
+
+	if ( ref $feed ne 'HASH' || ref $feed->{items} ne 'ARRAY' ) {
+		$log->error( 'Building the ABC listen programs menu failed: ' . ( $@ || 'unknown error' ) );
+		return _textFeed( $client, $cb, LOAD_FAILED );
+	}
+
+	$cb->($feed);
 }
 
 sub _textFeed {

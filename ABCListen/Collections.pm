@@ -133,21 +133,35 @@ package Plugins::ABCListen::Collections;
 #       title and tagline are kept. Lookups still queued or in flight at the deadline carry on
 #       and warm the cache for the next open. Without lookups or event checks it calls back
 #       synchronously.
+#       U2: an optional 5th argument { names => [ $from, $to ] } looks up only the program refs at
+#       positions $from .. $to - 1 of \@refs (after de-duplication); the others keep cardRef's
+#       title. A collection menu passes the rows LMS asks for (see collectionItem): LMS shows only
+#       those, so the rest are never seen with their card titles.
 #
 #   collectionItem($client, { id, title, image, kind? }, $depth) -> link | undef
 #       A link listed at level $depth (0 at a page root) to the collection's menu at $depth + 1;
 #       undef when that passes MAX_DEPTH or without a numeric id. name = title, else
 #       PLUGIN_ABCLISTEN_FEATURED (never blank); image = imageUrl(image, 300), else the plugin icon.
-#       The menu: one page per menu (menuPage + itemsFor), then "More…" (PLUGIN_ABCLISTEN_MORE)
-#       while the page had cards and offset + count < total. Nothing to list: one
-#       PLUGIN_ABCLISTEN_EMPTY_COLLECTION text item; fetch error: the error token's text item.
-#       Every feed answers exactly once. The collection hash travels in the passthrough; its
-#       kind (D4) picks the fetcher (menuPage).
+#       The menu (U2, #84): the whole collection as one list, itemsFor of every card, no "More…"
+#       row (before U2: one page per menu, then "More…"). The cards come from a bounded full
+#       fetch (_collectionCards): the first page (menuPage), then, while ABC's total says there is
+#       more, the following pages, at most COLLECTION_CONCURRENCY (4) requests at a time, to
+#       MAX_COLLECTION_CARDS (200) cards, within COLLECTION_DEADLINE (4 s) of the first page; a
+#       page that failed, was empty or was late ends the list there (never a gap; late pages carry
+#       on and are cached for the next open). Collections are small (the largest seen, Music and
+#       Looking For Something New?, 97 and 100 cards), and itemsFor drops and de-duplicates cards,
+#       so a row's index can't be mapped to an ABC page without the pages before it: no partial
+#       feed here (the program menu has one). The program names (itemsFor, FQ4) are looked up only
+#       for the rows LMS asks for (XMLBrowser's index/quantity, + NAME_SLACK cards for the ones
+#       dropped before them): opening one row (quantity 1) looks up at most 1 + NAME_SLACK names,
+#       not the whole collection's. Nothing to list: one PLUGIN_ABCLISTEN_EMPTY_COLLECTION
+#       text item; first page error: the error token's text item. Every feed answers exactly once.
+#       The collection hash travels in the passthrough; its kind (D4) picks the fetcher (menuPage).
 #       Optional collection keys (D2):
 #         query        => \%extraQuery for the fetcher (MetaCollection sub-collections);
 #         fallbackPath => a site page (a podcast category's page): when the first page (offset 0)
-#                         fails or has no cards, the menu pages the first collection of
-#                         page(fallbackPath) instead, if its id differs (More… then pages that id).
+#                         fails or has no cards, the menu lists the first collection of
+#                         page(fallbackPath) instead, if its id differs (its later pages too).
 #                         Otherwise the first result stands.
 #
 #   menuPage(\%collection, $offset, $cb)                                                         (D4)
@@ -214,7 +228,8 @@ package Plugins::ABCListen::Collections;
 #       (collectionItem then uses the plugin icon). Lookups still queued or in flight at the
 #       deadline carry on and warm the cache for the menus.
 #
-# Owned by the discovery stream (D1 creates; D2, D4, D6, D7 and D8 extend additively).
+# Owned by the discovery stream (D1 creates; D2, D4, D6, D7 and D8 extend additively; U2 made the
+# collection menu one list).
 
 use strict;
 use warnings;
@@ -239,6 +254,7 @@ use constant AGGREGATION_PAGE_SIZE => 50;    # D4: program aggregations (All Kid
 use constant MAX_DEPTH        => 3;
 use constant NAME_CONCURRENCY => 4;
 use constant NAME_DEADLINE    => 3;       # seconds per page
+use constant NAME_SLACK       => 10;      # U2: names looked up past a collection menu's window (see collectionItem)
 use constant IMAGE_PX         => 300;
 
 use constant PODCASTS_PATH       => '/listen/podcasts';    # D2
@@ -254,9 +270,12 @@ use constant LAST_GOOD_TTL      => 7 * 86400;         # D8: API.pm keeps a last-
 # D7 categories(): cards per collection page (PAGE_SIZE; tests page smaller)
 our $CATEGORY_PAGE_SIZE = PAGE_SIZE;
 
+use constant MAX_COLLECTION_CARDS   => 200;    # U2: a collection menu lists at most this many cards
+use constant COLLECTION_CONCURRENCY => 4;      # U2: its pages loading at once
+use constant COLLECTION_DEADLINE    => 4;      # U2: seconds after the first page for the others
+
 use constant LOAD_FAILED => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
 use constant EMPTY       => 'PLUGIN_ABCLISTEN_EMPTY_COLLECTION';
-use constant MORE        => 'PLUGIN_ABCLISTEN_MORE';
 use constant FEATURED    => 'PLUGIN_ABCLISTEN_FEATURED';
 
 my $log = logger('plugin.abclisten');
@@ -561,7 +580,8 @@ sub collectionItem {
 	};
 }
 
-# A collection's menu (feed): PAGE_SIZE items from $offset, then "More…" while ABC has more.
+# A collection's menu (feed): the whole collection as one list (U2: _collectionCards, then itemsFor).
+# The passthrough's offset (0 from collectionItem) is where the list starts.
 sub _collectionMenu {
 	my ( $client, $cb, $args, $collection, $offset, $depth ) = @_;
 	my $once = _once($cb);
@@ -571,38 +591,131 @@ sub _collectionMenu {
 	$depth      = _level( $depth, 1 );
 
 	_try( $client, $once, sub {
-		_menuPage( $collection, $offset, sub {
-			my ( $result, $source ) = @_;
+		_collectionCards( $collection, $offset, sub {
+			my $result = shift;
 
 			return _textFeed( $client, $once, $result->{error} ) if $result->{error};
 
 			_try( $client, $once, sub {
 				__PACKAGE__->itemsFor( $client, $result->{cards}, $depth, sub {
 					my $items = shift;
-
-					_respond( $client, $once, sub {
-						my @items = @$items;
-
-						my $next = $offset + $result->{count};
-						my $more = $result->{count} > 0 && defined $result->{total} && $next < $result->{total};
-
-						push @items, _textItem( $client, EMPTY ) unless @items || $more;
-
-						push @items, {
-							name        => cstring( $client, MORE ),
-							type        => 'link',
-							url         => \&_collectionMenu,
-							passthrough => [ $source, $next, $depth ],
-						} if $more;
-
-						return \@items;
-					} );
-				} );
+					_respond( $client, $once, sub { @$items ? $items : [ _textItem( $client, EMPTY ) ] } );
+				}, { names => _nameWindow($args) } );
 			} );
 		} );
 	} );
 
 	return;
+}
+
+# U2: the cards of a whole collection, from $offset, for one continuous list (no "More…" rows):
+# its first page (_menuPage: its kind's fetcher and page size, D2's fallbackPath), then, while
+# ABC's total says there is more, the next pages of the collection that page came from, at
+# offsets first count + k * page size, until MAX_COLLECTION_CARDS cards, at most
+# COLLECTION_CONCURRENCY requests at a time (the same requests and cache entries as the menus'
+# pages before). $cb->({ cards }) once: the first page's cards, then each next page's in order up
+# to the first page that failed, had no cards or had not answered COLLECTION_DEADLINE seconds after
+# the first page did (anything after it is left out, so the list never has a gap; the late pages
+# carry on and are cached for the next open); or the first page's { error }.
+sub _collectionCards {
+	my ( $collection, $offset, $cb ) = @_;
+	my $once = _once($cb);
+
+	_menuPage( $collection, $offset, sub {
+		my ( $first, $source ) = @_;
+
+		return $once->($first) if $first->{error};
+
+		my @cards = @{ $first->{cards} || [] };
+		my $end   = $first->{count} > 0 && defined $first->{total} ? $first->{total} : 0;
+		$end = $offset + MAX_COLLECTION_CARDS if $end > $offset + MAX_COLLECTION_CARDS;
+
+		my @offsets;
+		for ( my $next = $offset + $first->{count}; $next < $end; $next += _pageSize($source) ) {
+			push @offsets, $next;
+		}
+
+		return $once->( { cards => \@cards } ) unless @offsets;
+
+		my ( %pages, $timer );
+		my ( $active, $finished, $pumping, $pump ) = ( 0, 0, 0 );
+		my @queue = @offsets;
+
+		my $finish = sub {
+			return if $finished++;
+
+			Slim::Utils::Timers::killSpecific($timer) if $timer;
+			undef $timer;
+
+			for my $next (@offsets) {
+				my $page = $pages{$next};
+				last unless $page && !$page->{error} && $page->{count};
+				push @cards, @{ $page->{cards} || [] };
+			}
+			splice @cards, MAX_COLLECTION_CARDS if @cards > MAX_COLLECTION_CARDS;
+
+			$once->( { cards => \@cards } );
+		};
+
+		$timer = Slim::Utils::Timers::setTimer( undef, Time::HiRes::time() + COLLECTION_DEADLINE, sub {
+			undef $timer;
+			main::INFOLOG && $log->is_info && $log->info( "ABC listen: collection $source->{id}: pages not all loaded within " . COLLECTION_DEADLINE . " s; listing the pages before the first missing one" );
+			$finish->();
+		} );
+
+		$pump = sub {
+			return if $pumping;
+			$pumping = 1;
+
+			while ( $active < COLLECTION_CONCURRENCY && @queue ) {
+				my $next    = shift @queue;
+				my $settled = 0;
+				$active++;
+
+				my $done = sub {
+					return if $settled++;
+					$pages{$next} = ref $_[0] eq 'HASH' ? $_[0] : { error => LOAD_FAILED };
+					$active--;
+					$pump->() if $pump;
+				};
+
+				eval { menuPage( $source, $next, $done ); 1 } or do {
+					$log->error( "ABC listen: loading collection $source->{id} from $next failed: " . ( $@ || 'unknown error' ) );
+					$done->( { error => LOAD_FAILED } );
+				};
+			}
+
+			$pumping = 0;
+
+			if ( !$active && !@queue ) {
+				undef $pump;    # every page answered: break the closure's reference to itself
+				$finish->();
+			}
+
+			return;
+		};
+
+		$pump->();
+	} );
+
+	return;
+}
+
+# U2: the card positions whose program names a collection menu looks up: the rows XMLBrowser asks
+# for (index/quantity args: the rows a client lists, or the row it opens with quantity 1), plus
+# NAME_SLACK cards (cards dropped before them push the rows later); undef (all) without them.
+sub _nameWindow {
+	my $args = _hash(shift);
+	my $index    = _isText( $args->{index} )    && $args->{index}    =~ /\A([0-9]+)/   ? $1 + 0 : undef;
+	my $quantity = _isText( $args->{quantity} ) && $args->{quantity} =~ /\A([0-9]+)\z/ ? $1 + 0 : undef;
+	return undef unless defined $index && $quantity;
+	return [ $index, $index + $quantity + NAME_SLACK ];
+}
+
+# The page size of a collection's kind (%FETCHERS).
+sub _pageSize {
+	my $kind = _hash(shift)->{kind};
+	return ( ( _isText($kind) && $FETCHERS{$kind} ) || $DEFAULT_FETCHER )->{size};
 }
 
 # D4: one page of a collection's menu, from $offset: its kind's fetcher and page size.
@@ -620,7 +733,7 @@ sub menuPage {
 # One page of a collection for its menu: menuPage() (its kind's fetcher, its query); at offset 0, when
 # that fails or has no cards and the collection has a fallbackPath, the first collection of
 # page(fallbackPath) if its id differs (D2: podcast categories). $cb->($result, $collection) once,
-# with the collection the result belongs to (More… pages it).
+# with the collection the result belongs to (U2: _collectionCards loads its later pages).
 sub _menuPage {
 	my ( $collection, $offset, $cb ) = @_;
 
@@ -1188,7 +1301,7 @@ sub _stationsAvailable {
 
 sub itemsFor {
 	shift if _isClass( $_[0] );
-	my ( $client, $refs, $depth, $cb ) = @_;
+	my ( $client, $refs, $depth, $cb, $opts ) = @_;
 	my $once = _once($cb);
 
 	my $fail = sub {
@@ -1213,7 +1326,7 @@ sub itemsFor {
 
 		my @stations = map { $_->{id} } grep { $_ && $_->{kind} eq 'station' } map { _target($_) } @refs;
 
-		_resolveNames( \@refs, sub { $named = shift; $build->() } );
+		_resolveNames( \@refs, sub { $named = shift; $build->() }, _hash($opts)->{names} );
 		checkOnAir( \@stations, $build );
 
 		1;
@@ -1266,10 +1379,11 @@ sub _isEventOnly {
 # Look up the names of the program refs that may carry a tagline (see itemsFor);
 # $cb->(\@refs) once, with copies renamed where a lookup succeeded before the deadline.
 sub _resolveNames {
-	my ( $refs, $cb ) = @_;
+	my ( $refs, $cb, $window ) = @_;
+	my ( $from, $to ) = ref $window eq 'ARRAY' ? @$window : ( 0, scalar @$refs );
 
 	my ( @queue, %queued );
-	for my $ref (@$refs) {
+	for my $ref ( @$refs[ grep { $_ >= $from && $_ < $to } 0 .. $#$refs ] ) {
 		next if $ref->{hero};
 		my $target = _target($ref) or next;
 		next unless $target->{kind} eq 'program';

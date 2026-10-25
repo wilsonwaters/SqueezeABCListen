@@ -160,6 +160,9 @@ PLUGIN_ABCLISTEN_PLAY_EPISODE
 PLUGIN_ABCLISTEN_NO_EPISODES
 	EN	No episodes available
 
+# Unused since U2 (#84: a program's episodes are one list, no "More episodes…" row). Kept only
+# because README's Programs section still names it and t/98-docs.t checks README against these
+# strings: remove it with that sentence in the next docs update.
 PLUGIN_ABCLISTEN_MORE_EPISODES
 	EN	More episodes…
 
@@ -234,9 +237,6 @@ PLUGIN_ABCLISTEN_DISCOVER
 
 PLUGIN_ABCLISTEN_FEATURED
 	EN	Featured
-
-PLUGIN_ABCLISTEN_MORE
-	EN	More…
 
 PLUGIN_ABCLISTEN_EMPTY_COLLECTION
 	EN	Nothing here right now

@@ -826,7 +826,7 @@ subtest 'through OnDemand\'s program menu: the follow rows after the header, bef
 	);
 	is( $items->[3]->{name}, 'ABC Radio National', 'item 4: the network row (after the description and About this program)' );
 	like( $items->[6]->{name}, qr/\ASat 17 Oct $ENDASH /, 'then the first episode' );
-	is( scalar @$items, 12, 'two extra rows: description, About this program, presenters, network, Follow, hint, 5 episodes, More episodes' );
+	is( scalar @$items, 11, 'two extra rows: description, About this program, presenters, network, Follow, hint, 5 episodes (the fixture\'s page holds 5: the list ends there; U2: no More row)' );
 
 	my $confirm = items_of( open_item( $items->[4] ) );
 	is_deeply( names($confirm), ['Following The Science Show'], 'opening it: the FOLLOWED_OK text' );
@@ -840,7 +840,7 @@ subtest 'through OnDemand\'s program menu: the follow rows after the header, bef
 	);
 	is( $items->[4]->{type}, 'text', '... the "✓ Following" row is plain text' );
 	like( $items->[6]->{name}, qr/\ASat 17 Oct $ENDASH /, '... the first episode has not moved' );
-	is( scalar @$items, 12, '... still 12 rows' );
+	is( scalar @$items, 11, '... still 11 rows' );
 
 	is_deeply( [ sort keys %{ prefs()->get('followed')->[0] } ], [qw(followedAt id image network path title)], 'stored keys' );
 };

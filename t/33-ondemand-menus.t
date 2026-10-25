@@ -4,7 +4,7 @@
 # menuWeights, its place among the other hooks' items); init still calls Episode->init;
 # _programsRoot and the network list; programItem / episodeItem exact keys (no on_select, play URL,
 # name/line2 formats, image fallbacks, meta-cache writes incl. the programTitle rule); the program
-# menu order (header -> provider extras -> episodes -> More) and paging to 250; the 8 s timeout on
+# menu order (header -> provider extras -> episodes, one list to 250: U2, partial feed in t/37); the 8 s timeout on
 # the menu's requests; NO_EPISODES / LOAD_FAILED states (restricted audiobooks without a
 # collection: no NO_EPISODES row, unless nothing else would be listed: never an empty list); the
 # provider registry (order, merged program detail, dying / silent / double / non-array providers);
@@ -58,11 +58,10 @@ my $WCMS        = 'https://live-production.wcms.abc-cdn.net.au';
 my $JSON_TYPE   = { 'Content-Type' => 'application/json' };
 my $LOAD_FAILED = string('PLUGIN_ABCLISTEN_LOAD_FAILED');
 my $NO_EPISODES = string('PLUGIN_ABCLISTEN_NO_EPISODES');
-my $MORE        = string('PLUGIN_ABCLISTEN_MORE_EPISODES');
+my $MORE        = string('PLUGIN_ABCLISTEN_MORE_EPISODES');    # U2: no longer listed anywhere
 
 my $PROGRAM_MENU = \&Plugins::ABCListen::OnDemand::_programMenu;
 my $EPISODE_MENU = \&Plugins::ABCListen::OnDemand::_episodeMenu;
-my $MORE_FEED    = \&Plugins::ABCListen::OnDemand::_moreEpisodes;
 
 my $SCIENCE_FIRST = 'The Science Show gives Australians unique insights into the latest scientific research and debate, from the physics of cricket to prime ministerial biorhythms.';
 my $SCIENCE_AIRS  = 'Airs Saturday 12pm, Monday 4am and 1.30pm and Tuesday 9.30pm.';
@@ -458,16 +457,19 @@ subtest 'episodeItem: exact keys, no on_select, play URL, formats, meta-cache wr
 	is( $OD->episodeItem( $client, { id => '1008', title => 'With client' } )->{play}, 'abclisten://episode/1008', 'with a client' );
 };
 
-subtest 'program menu (The Science Show): header, 50 episodes newest first, More' => sub {
+subtest 'program menu (The Science Show): header, then all 250 episodes newest first as one list (U2)' => sub {
 	fresh();
 	route_science();
 	route_episodes();
 
 	my $c = feed( $PROGRAM_MENU, undef, { title => 'The Science Show', path => $SCIENCE, network => 'Radio National' } );
 	is( $c->count, 1, 'one callback' );
+	my ($feed) = $c->args(0);
 	my $items = items_of($c);
 
-	is( scalar @$items, 55, 'count 55: description, About this program, presenters, network, 50 episodes, More (no providers)' );
+	is( scalar @$items, 254, 'count 254: description, About this program, presenters, network, 250 episodes (no providers), no More row' );
+	is( $feed->{offset}, 0,   'a partial feed: offset 0 (no window asked: the whole list)' );
+	is( $feed->{total},  254, '... total 254' );
 	is_deeply( $items->[0], { name => $SCIENCE_FIRST, type => 'textarea' }, 'item 1: the description\'s first paragraph as a textarea (exact keys; U1)' );
 	is_deeply(
 		$items->[1],
@@ -477,53 +479,26 @@ subtest 'program menu (The Science Show): header, 50 episodes newest first, More
 	is_deeply( $items->[2], text_item('Presented by Robyn Williams, Belinda Smith'), 'item 3: Presented by …' );
 	is_deeply( $items->[3], text_item('ABC Radio National'), 'item 4: the network (program page attribution)' );
 
-	my @episodes = @$items[ 4 .. 53 ];
-	is( scalar( grep { $_->{type} eq 'link' && $_->{url} == $EPISODE_MENU && $_->{play} =~ m{\Aabclisten://episode/[0-9]+\z} } @episodes ), 50, '50 episode rows: links with a play URL' );
-	is( scalar( grep { $_->{name} =~ $EPISODE_NAME } @episodes ), 50, 'episode names: "<Day> <d> <Mon>[ <year>] – <title>"' );
+	my @episodes = @$items[ 4 .. 253 ];
+	is( scalar( grep { $_->{type} eq 'link' && $_->{url} == $EPISODE_MENU && $_->{play} =~ m{\Aabclisten://episode/[0-9]+\z} } @episodes ), 250, '250 episode rows: links with a play URL' );
+	is( scalar( grep { $_->{name} =~ $EPISODE_NAME } @episodes ), 250, 'episode names: "<Day> <d> <Mon>[ <year>] – <title>"' );
 	is( $episodes[0]->{name}, "Sat 17 Oct \x{2013} Episode 0", 'newest first' );
+	is( scalar( keys %{ { map { $_->{play} => 1 } @episodes } } ), 250, 'no episode twice' );
 	my @dates = map { $_->{passthrough}->[0]->{date} } @episodes;
-	is( scalar( grep { $dates[$_] > $dates[ $_ - 1 ] } 1 .. $#dates ), 0, 'dates non-increasing' );
-	is( scalar( grep { $_->{image} } @episodes ), 50, 'every episode row has artwork' );
+	is( scalar( grep { $dates[$_] > $dates[ $_ - 1 ] } 1 .. $#dates ), 0, 'dates non-increasing, all 250' );
+	is( scalar( grep { $_->{image} } @episodes ), 250, 'every episode row has artwork' );
 	is( $episodes[0]->{line2}, "Sat 17 Oct \x{B7} 55 min", 'line2 = date · duration' );
+	like( $episodes[-1]->{name}, qr/ 2024 \x{2013} Episode 249\z/, 'the last row: ABC\'s 250th episode (older episodes carry the year)' );
+	ok( !( grep { ( $_->{name} // '' ) =~ /\AMore/ } @$items ), 'no "More episodes…" row' );
 
-	is_deeply(
-		$items->[54],
-		{ name => $MORE, type => 'link', url => $MORE_FEED, passthrough => $items->[54]->{passthrough} },
-		'item 55: "More episodes…" link'
-	);
-	is( $items->[54]->{name}, "More episodes\x{2026}", 'More text' );
-
-	is_deeply( [ map { $_->{fn} } @API_CALLS ], [qw(nextData bff)], 'one program page, one episode page' );
-	is_deeply( [ episode_requests() ], ["$EPS?collectionId=2885458&offset=0&size=50"], 'episodes 0..49 of collection 2885458' );
+	is_deeply( [ map { $_->{fn} } @API_CALLS ], [qw(nextData bff bff bff bff bff)], 'one program page, five episode pages' );
+	is_deeply( [ map { offset_of($_) . '/' . size_of($_) } episode_requests() ], [qw(0/50 50/50 100/50 150/50 200/50)], 'pages of 50 at 0, 50, 100, 150, 200 of collection 2885458; nothing at 250' );
 	is_deeply(
 		[ map { $_->{params}->{timeout} } grep { $_->{url} !~ m{/listen/search\z} } requests() ],
-		[ 8, 8 ],
+		[ (8) x 6 ],
 		'program page and episode page requests: 8 s timeout (a slow ABC answers the menu in time)'
 	);
 	check_names( $items, 'program menu' );
-
-	# More: 4 more pages of 50, the last without a More link (ABC's 250)
-	my $more  = $items->[54];
-	my $pages = 0;
-	my @all   = @episodes;
-	while ($more) {
-		$c = open_item($more);
-		is( $c->count, 1, 'More: one callback' );
-		my $page = items_of($c);
-		$pages++;
-		undef $more;
-		$more = pop @$page if $page->[-1]->{url} && $page->[-1]->{url} == $MORE_FEED;
-		is( scalar @$page, 50, "More #$pages: 50 episodes" );
-		push @all, @$page;
-		last if $pages > 6;
-	}
-	is( $pages, 4, 'four More pages, the 4th (episodes 200..249) has no further More link' );
-	is( scalar @all, 250, '250 episodes in all' );
-	is( scalar( keys %{ { map { $_->{play} => 1 } @all } } ), 250, 'no episode twice' );
-	is_deeply( [ map { offset_of($_) } episode_requests() ], [ 0, 50, 100, 150, 200 ], 'offsets 0, 50, 100, 150, 200; nothing at 250' );
-	@dates = map { $_->{passthrough}->[0]->{date} } @all;
-	is( scalar( grep { $dates[$_] > $dates[ $_ - 1 ] } 1 .. $#dates ), 0, 'all 250 newest first' );
-	like( $all[-1]->{name}, qr/ 2024 \x{2013} Episode 249\z/, 'older episodes carry the year' );
 };
 
 subtest 'program menu: programImage, and programTitle/programId only for the program\'s own episodes' => sub {
@@ -621,7 +596,7 @@ subtest 'program menu: empty and error states (one readable text item, never emp
 	route_science();
 	route_episodes();
 	$c = feed( $PROGRAM_MENU, $client, { title => 'The Science Show', path => $SCIENCE } );
-	is( scalar @{ items_of($c) }, 55, 'with a client: the same menu' );
+	is( scalar @{ items_of($c) }, 254, 'with a client: the same menu' );
 	is( items_of($c)->[1]->{name}, 'About this program', 'with a client: the About row in the client\'s language' );
 };
 
@@ -723,8 +698,8 @@ subtest 'registry: order, merged program detail, isolation' => sub {
 	my $items = items_of($c);
 	is_deeply( [ map { $_->{name} } @$items[ 4 .. 6 ] ], [ 'Extra A', 'Extra B', 'Extra C' ], 'extras after the header, in registration order (non-hash entries dropped)' );
 	like( $items->[7]->{name}, $EPISODE_NAME, 'then the episodes' );
-	is( $items->[-1]->{name}, $MORE, 'then More' );
-	is( scalar @$items, 58, 'count 55 + 3 extras' );
+	like( $items->[-1]->{name}, $EPISODE_NAME, 'then the episodes to the last (no More row)' );
+	is( scalar @$items, 257, 'count 254 + 3 extras' );
 
 	is_deeply(
 		$received[0],
@@ -761,7 +736,7 @@ subtest 'registry: order, merged program detail, isolation' => sub {
 	advanceTime(0.1);
 	is( $c->count, 1, 'answered after 5 s without the silent provider' );
 	is_deeply( [ map { $_->{name} } @{ items_of($c) }[ 4, 5 ] ], [ 'Twice 1', 'Good' ], 'dying, non-array and silent providers skipped; a second call back ignored' );
-	is( scalar @{ items_of($c) }, 57, 'count 55 + 2 extras' );
+	is( scalar @{ items_of($c) }, 256, 'count 254 + 2 extras' );
 
 	$late->( [ { name => 'Too late', type => 'text' } ] );
 	is( $c->count, 1, 'a late call back is ignored (no second answer)' );
