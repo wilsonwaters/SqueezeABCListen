@@ -40,6 +40,10 @@ version-bump commit (the only other file that commit may touch). If `repo.xml`'s
 longer describes what the plugin does, update it in the same way (never its `version`, `url` or
 `sha`).
 
+**Then check ABC.** Run `scripts/abc-endpoints-check.sh` (about 30 seconds) and release only when
+every family passes, or when you know why one fails; also check that no issue labelled
+`abc-drift` is open (see [Prerequisites and troubleshooting](#prerequisites-and-troubleshooting)).
+
 There are two ways to cut a release; both release the version currently in
 `ABCListen/install.xml` on `main`.
 
@@ -258,6 +262,20 @@ and checks the zip on every pull request anyway.
 - **"… a published zip is never replaced"**: `release-assets` already has a different
   `ABCListen-V.zip`. Don't change it (LMS may have installed it); bump the version and release
   again.
+- **An "ABC endpoint drift" issue.** The **ABC endpoint drift** workflow
+  (`.github/workflows/abc-drift.yml`) runs `scripts/abc-endpoints-check.sh` every Sunday at
+  19:17 UTC, and on demand (**Actions → ABC endpoint drift → Run workflow**). The script sends
+  each of its 19 endpoint families' requests the way the plugin does and checks the fields the
+  plugin reads; it prints one `PASS` or `FAIL` line per family. A failed run is tried once more
+  5 minutes later. If that fails too, the run fails and its `PASS`/`FAIL` lines are added as a
+  comment to the open issue labelled `abc-drift`, or, when none is open, to a new issue called
+  "ABC endpoint drift". A passing run changes nothing. The workflow uses only `GITHUB_TOKEN`
+  (`issues: write`), and the Algolia search key that the script reads from ABC's search page is
+  never in the issue or the log. To work on one: run the script locally to reproduce it, fix the
+  plugin (or the probe, if only the probe is wrong), then close the issue; the next failure opens
+  a new one. The header of the script lists its families, the plugin code that depends on each,
+  and switches that break one family on purpose (`ABC_CHECK_BREAK_PATH=<family>`,
+  `ABC_CHECK_BREAK_FIELD=<family>:<field>`), to see what that family's failure looks like.
 
 ## Rules
 

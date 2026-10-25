@@ -151,6 +151,14 @@ The mediahub block is about where this container's traffic exits (a US datacente
 it presumably works from an Australian home network, but that is **unverified** from here. The real
 plugin should treat a mediahub 403 as a possible failure and have a fallback (e.g. the StreamGuys URL).
 
+To check ABC's side without LMS, run `scripts/abc-endpoints-check.sh` (plain curl through
+`$HTTPS_PROXY`, no testbed lock needed, about 30 s): one PASS/FAIL line for each of its 19 endpoint
+families, in the shapes the plugin's parsers read. It passed 19/19 from this container on
+2026-10-25. GitHub Actions runs it weekly (`.github/workflows/abc-drift.yml`) and opens an
+`abc-drift` issue when it fails (RELEASING.md, "Prerequisites and troubleshooting"). To see one
+family fail, set `ABC_CHECK_BREAK_PATH=<family>` or `ABC_CHECK_BREAK_FIELD=<family>:<field>` (the
+script's header lists the families).
+
 ## Audio output (squeezelite)
 
 There's no sound card, and the ALSA `null` device doesn't keep real time, so squeezelite writes PCM
