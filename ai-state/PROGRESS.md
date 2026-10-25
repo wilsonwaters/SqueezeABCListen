@@ -18,9 +18,8 @@ v1.0.0 accepted by the stakeholder on pi14 (2026-10-25; #17 closed). Now: v1.1.0
     textarea above 200 rows; plus failed ABC page (RN Breakfast offset 150) → sub-page retry, stable total, 60 s
     failure cache; short page ≠ end; clamp test. Implementer fixing.
     Merge #86 then #90; strings.txt conflict with L6 = keep the U1 section, then L6's.
-  - #77 R6 drift probe + weekly run — implementing.
-  - Queued: #79 R7 docs (README/CHANGELOG for U1/U2/L6/F7/F8, drop More-episodes text + unused token), #89 F9
-    (404 WARN + F7/F8 review test gaps + Tracks log nit), #72 O9 icons; then system check → 1.1.0 → pi14 re-check.
+  - #89 F9 follow-ups (404 WARN, F7/F8 test gaps, Tracks log line) — implementing.
+  - Queued: #79 R7 docs (README/CHANGELOG for U1/U2/L6/F7/F8, drop More-episodes text + unused token), #72 O9 icons; then system check → 1.1.0 → pi14 re-check.
   - P3 after 1.1.0: #91 L7 HLS title offset, #81 O5.
 
 ## Interruptions
@@ -37,6 +36,12 @@ v1.0.0 accepted by the stakeholder on pi14 (2026-10-25; #17 closed). Now: v1.1.0
   (fixed), testbed restarted, R2 resumed.
 
 ## Last completions
+- #77 R6 merged (PR #92, squash 0980036): drift probe 12 → 19 families (all hard-coded collection ids, recommendations,
+  music now.json ×9, section pages, Algolia program index + chapters, station collections; PAPI dropped), breakage
+  switches + offline t/89; weekly workflow abc-drift.yml (Sun 19:17 UTC, retry after 5 min, abc-drift issue,
+  GITHUB_TOKEN only). Orchestrator review: diff read, merged-tree check.sh 883 tests, live run 19/19 with 0 key/app-id
+  occurrences in output; first workflow_dispatch run on main triggered. Also: research notes no longer hold ABC's
+  Algolia key/app id or the Gigya site key (f939933; still in git history — public site keys, history not rewritten).
 - #80 L6 merged (PR #88, squash b95ad87): liveQuality `hls` — own HLS reader (HLS.pm), 192 kbps AAC on music
   stations, fallback to Icecast, HLS-only services listed in hls mode; gated F2 hook (orchestrator sign-off). Review
   REQUEST_CHANGES ×2 (failure counters, mid-play bad 200, truncation, trun bound, deadline; then master-fetch reset

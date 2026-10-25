@@ -144,7 +144,7 @@ shellcheck curl jq` and runs check.sh on PRs and `main`.
     (`id` = `cardId` when numeric, else the `articleLink` leaf, else the `contentUri` id — curated `contentUri` ids are
     often teaser ids, some dynamic; program cards: name from `cardImagePrepared.alt` when `cardTitle` is an editorial
     tagline — FQ4); `sitePath($absOrRelUrl)` (accepts `www.abc.net.au` and `abc.net.au`).
-- `scripts/abc-endpoints-check.sh` (bash + curl + jq; manual, never in CI): one request per endpoint family (listen
+- `scripts/abc-endpoints-check.sh` (bash + curl + jq; manual, and since R6 #92 weekly in its own workflow `abc-drift.yml`, never in the CI test run): one request per endpoint family (listen
   search page/buildId, a `_next/data` program page, `episodesWithSegments`, `collection`, `epgNowPlaying`,
   `musicNowPlaying`/music API, `schedule`, PAPI services, Algolia query, one `.pls`) asserting the JSON paths our
   parsers rely on; prints PASS/FAIL per family. Used by the orchestrator to detect ABC drift.
@@ -179,7 +179,7 @@ shellcheck curl jq` and runs check.sh on PRs and `main`.
 - Packaging, `repo.xml`, release workflow, README/docs (release stream).
 - Settings page and prefs UI (M1); any ABC login/credential handling (OPEN-QUESTIONS #1).
 - Non-EN languages; Radio-vs-My-Apps placement toggle; menu customisation.
-- CI tests against live ABC endpoints (fixtures only; the drift probe is manual); runtime testing on LMS 8.x.
+- CI tests against live ABC endpoints (fixtures only; the drift probe runs weekly in its own workflow, R6); runtime testing on LMS 8.x.
 - HLS playback of any kind (L5 hands HLS to PlayHLS only; own handler is stretch L6).
 
 ## Open questions
