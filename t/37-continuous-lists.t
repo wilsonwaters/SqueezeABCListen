@@ -71,6 +71,7 @@ my $LOAD_FAILED = string('PLUGIN_ABCLISTEN_LOAD_FAILED');
 my $RATE        = string('PLUGIN_ABCLISTEN_RATE_LIMITED');
 my $EMPTY       = string('PLUGIN_ABCLISTEN_EMPTY_COLLECTION');
 my $MORE_EPS    = "More episodes\x{2026}";    # the row v1.0.0 listed (its token is gone)
+my $SCIENCE_IMG_300 = 'https://live-production.wcms.abc-cdn.net.au/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=300&height=300';    # O9: the rows' image
 
 my $PROGRAM_MENU = \&Plugins::ABCListen::OnDemand::_programMenu;
 my $COLL_MENU    = \&Plugins::ABCListen::Collections::_collectionMenu;
@@ -670,6 +671,52 @@ subtest 'program menu: 100 or more rows after the description: "About this progr
 	is( $feed->{total}, $TOTAL, '... total 253' );
 	is_deeply( names( answer( science( { index => 0, quantity => 1 } ) )->{items} ), ['About this program'], 'row 0 opened alone: About this program' );
 	is( episode_no( answer( science( { index => 3, quantity => 1 } ) )->{items}->[0] ), 0, 'row 3: episode 0' );
+};
+
+subtest 'program menu, the web UI: every row but the textarea has an image; CLI answers keep theirs; the counts don\'t change (O9)' => sub {
+	my $ICON = Plugins::ABCListen::Util::ICON;
+	my $provider = sub { $_[2]->( [ { name => 'Follow', type => 'link', url => sub { } }, { name => 'Hint', type => 'text' } ] ) };
+
+	# 60 episodes (the textarea, presenters, network), two provider rows, page 50 failing (10 places)
+	fresh();
+	route_science( undef, 'Science, weekly.' );
+	route_episodes( total => 60, fail => { 50 => 500 } );
+	$OD->registerProgramMenuProvider($provider);
+	my $web   = answer( science( { isWeb => 1, wantMetadata => 1, wantIndex => 1, index => 0, quantity => 100 } ) );
+	my @items = @{ $web->{items} };
+	is_deeply( [ map { $_->{name} } @items[ 0 .. 4 ] ], [ 'Science, weekly.', 'Presented by Robyn Williams, Belinda Smith', 'ABC Radio National', 'Follow', 'Hint' ], 'the web UI (isWeb): the header, then the provider rows' );
+	ok( !exists $items[0]->{image}, 'the textarea: no image (the window header)' );
+	is_deeply( [ map { $_->{image} } @items[ 1 .. 4 ] ], [ ($SCIENCE_IMG_300) x 4 ], 'Presented by, the network, Follow, Hint: the program\'s image' );
+	is_deeply( [ map { [ episode_no($_), $_->{image} ] } @items[ 5, 54 ] ], [ [ 0, $SCIENCE_IMG_300 ], [ 49, $SCIENCE_IMG_300 ] ], 'episodes 0..49 with their own image (here the program\'s)' );
+	is_deeply( [ map { [ $_->{name}, $_->{image} ] } @items[ 55, 64 ] ], [ ( [ $LOAD_FAILED, $SCIENCE_IMG_300 ] ) x 2 ], 'page 50\'s 10 error rows: the program\'s image' );
+	is( scalar( grep { !defined $_->{image} && !defined $_->{icon} } @items[ 1 .. $#items ] ), 0, 'every row but the textarea has an image' );
+	ok( !( grep { exists $_->{description} } @items[ 1 .. 4 ] ), 'no description on them (LMS menu rule 1)' );
+	is( $web->{total}, 65, 'total 65 (textarea, 2 header rows, 2 provider rows, 60 places)' );
+
+	# the CLI (menu mode: Material, Jive, Squeezer): the same rows, without the added images
+	my $cli = answer( science( { index => 0, quantity => 100 } ) );
+	is_deeply( [ map { $_->{name} } @{ $cli->{items} } ], [ map { $_->{name} } @items ], 'the CLI: the same rows in the same order' );
+	is( $cli->{total}, $web->{total}, '... the same total' );
+	is_deeply( [ map { exists $_->{image} ? 1 : 0 } @{ $cli->{items} }[ 1 .. 4, 55 ] ], [ (0) x 5 ], '... no image on the header, provider and error rows (Material: a row without one keeps the menu a list, not a grid of tiles)' );
+	my ($count) = menu_chunk( 0, 200 );
+	is( $count, 64, 'menu mode: count 64 (the textarea goes to the window)' );
+
+	# no program image: the plugin icon
+	fresh();
+	my $page = JSON::PP::decode_json( fixture('ondemand/nextdata-program-scienceshow.trimmed.json') );
+	delete $page->{pageProps}->{$_} for grep { /image/i } keys %{ $page->{pageProps} };
+	route( "$NEXT$SCIENCE.json", content => to_json($page), headers => $JSON_TYPE );
+	route_episodes( total => 30 );
+	my $feed = answer( feed( $PROGRAM_MENU, { isWeb => 1 }, { title => 'The Science Show', path => $SCIENCE } ) );
+	my ($presented) = grep { ( $_->{name} // '' ) =~ /\APresented by/ } @{ $feed->{items} };
+	is( $presented->{image}, $ICON, 'no program image known: the plugin icon' );
+
+	# a list of text rows only (no episode collection, a text provider row) gets them too on the web
+	fresh();
+	route( "$NEXT/listen/programs/minimal.json", file => 'ondemand/nextdata-program-minimal.synthetic.json', headers => $JSON_TYPE );
+	$OD->registerProgramMenuProvider( sub { $_[2]->( [ { name => 'Follow', type => 'text' } ] ) } );
+	$feed = answer( feed( $PROGRAM_MENU, { isWeb => 1 }, { title => 'Minimal', path => '/listen/programs/minimal' } ) );
+	is( scalar( grep { !defined $_->{image} } @{ $feed->{items} } ), 0, 'text rows only, the web UI: every row has an image (no grid in the web skins)' );
 };
 
 subtest 'program menu: exactly one callback' => sub {

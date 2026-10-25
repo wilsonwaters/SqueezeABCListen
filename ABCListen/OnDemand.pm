@@ -100,6 +100,16 @@ package Plugins::ABCListen::OnDemand;
 #   description there left no room for the list (#83). Whether the About row is there depends only
 #   on the text, so the rows after it keep their index. () without a description.
 #
+# Plugins::ABCListen::OnDemand->rowImages($image, @items) -> @items                        (O9)
+#   The Default skin (and the other web skins) show LMS's grey CD placeholder icon on a row
+#   without an image (#72). This gives each row without image or icon, other than a textarea (the
+#   menu's header), $image (a copy of the row; the others are returned as they are). Rows are not
+#   added, removed or moved, so the counts (Jive chunks, the textarea rule) are unchanged. @items
+#   unchanged without $image. For the web UI only (Slim::Web::XMLBrowser passes a feed
+#   isWeb => 1): Material, which browses through the CLI (menu mode), shows a list as a grid of
+#   tiles once every row has an image (LMS then sets windowStyle icon_list, and no row without one
+#   or untyped text row is left to keep it a list), so CLI answers keep their rows as they were.
+#
 # Plugins::ABCListen::OnDemand->programsByType($client, $cb, $typeKey)            (O3; used by D2, D4)
 #   The A–Z list of one type of program. Class method; $client may be undef. $typeKey is one of
 #   the six type keys (Plugins::ABCListen::ProgramIndex::typeKey of the program's programType),
@@ -147,7 +157,10 @@ package Plugins::ABCListen::OnDemand;
 # audiobook: D5's provider lists its chapters) that has a header row or provider extras to show:
 # the menu is never empty, so with none of those it is "No episodes available" too. Episode rows
 # get programImage, and programTitle/programId only when the episode path is under the program
-# path ('<program path>/...'); otherwise O1 fills them at play time.
+# path ('<program path>/...'); otherwise O1 fills them at play time. O9: for the web UI the rows
+# without an image (About, Presented by, the network, provider rows, error rows) get the program's
+# image, else the plugin icon (rowImages; the Default skin showed its grey placeholder); CLI and
+# menu-mode answers (Material, Jive, Squeezer) keep them without, so Material keeps a list.
 # U2: the program menu is an LMS partial feed. XMLBrowser passes a code-ref feed index/quantity
 # (the rows a client lists, or index = the row it opens and quantity 1); the menu answers
 # { items => those rows, offset => index, total => all rows }. Without index/quantity (playlist
@@ -198,8 +211,9 @@ package Plugins::ABCListen::OnDemand;
 #                              programPath, else Follow::programPathFor of its path) and a program
 #                              title (the episode's programTitle, else the meta cache's, written by
 #                              O1) are known.
-# No row has a description (LMS menu rule 1). Episode.pm's song info (O4) reuses _moreFromItem
-# and _tracklistRows.
+# No row has a description (LMS menu rule 1). O9: for the web UI the rows without an image get the
+# episode's (rowImages); the tracklist's own rows (an inline list) keep none. Episode.pm's song info
+# (O4) reuses _moreFromItem and _tracklistRows.
 #
 # Ownership: O2 creates everything; O3 then owns _programsRoot, O4 owns episodeItem/_episodeMenu
 # (and its private subs in the O4 section); programItem, _programMenu and the provider registry
@@ -800,6 +814,27 @@ sub _notSentenceEnd {
 
 # === end U1 ===
 
+# === O9 === Images for text rows (see the header)
+
+sub rowImages {
+	my ( $class, $image, @items ) = @_;
+	return @items unless _hasText($image);
+	return map { _withImage( $image, $_ ) } @items;
+}
+
+# Whether a feed was called by the web UI (Slim::Web::XMLBrowser: isWeb => 1 in its args).
+sub _isWeb { ref $_[0] eq 'HASH' && $_[0]->{isWeb} ? 1 : 0 }
+
+# $item with image $image when it has neither image nor icon and isn't a textarea (a copy), else
+# $item; $item unchanged without $image.
+sub _withImage {
+	my ( $image, $item ) = @_;
+	return $item unless defined $image && ref $item eq 'HASH' && ( $item->{type} // '' ) ne 'textarea' && !defined $item->{image} && !defined $item->{icon};
+	return { %$item, image => $image };
+}
+
+# === end O9 ===
+
 # ---------------------------------------------------------------------------
 # Program menu
 # ---------------------------------------------------------------------------
@@ -817,7 +852,7 @@ sub _programMenu {
 
 			return _textFeed( $client, $once, $detail->{error} ) if $detail->{error};
 
-			_try( $client, $once, sub { _programMenuItems( $client, $once, $program, $detail, $window ) } );
+			_try( $client, $once, sub { _programMenuItems( $client, $once, $program, $detail, $window, _isWeb($args) ) } );
 		} );
 	} );
 }
@@ -850,7 +885,7 @@ sub _window {
 # later changes nothing here (one answer) but fills Programs' cache for the next open. Without
 # the deadline one slow page held back every window: up to 8 s (API_TIMEOUT) a round, about 32 s.
 sub _programMenuItems {
-	my ( $client, $cb, $program, $detail, $window ) = @_;
+	my ( $client, $cb, $program, $detail, $window, $web ) = @_;
 
 	my %merged = %$program;
 	for my $key (qw(id title template restricted episodeCollectionId)) {
@@ -863,6 +898,7 @@ sub _programMenuItems {
 		programId    => defined $detail->{id} ? $detail->{id} : $program->{id},
 		programImage => $detail->{image} || $program->{image},
 		collectionId => $detail->{episodeCollectionId},
+		web          => $web,    # O9: the web UI asked (rowImages)
 	};
 
 	my %pages;    # "offset/size" => Programs::episodes' answer
@@ -1138,9 +1174,14 @@ sub _programWindow {
 	elsif ( !$count ) {
 		@tail = _textItem( $client, 'PLUGIN_ABCLISTEN_NO_EPISODES' );
 	}
-	else {
-		return _episodeWindow( $client, $context, \@lead, $rows, $window );
-	}
+
+	# O9, the web UI: the program's image (else the plugin icon) for the rows without one
+	# (rowImages): the header and provider rows, the error rows
+	my $image = $context->{web} ? Plugins::ABCListen::API::imageUrl( $context->{programImage}, IMAGE_PX ) || Plugins::ABCListen::Util::ICON : undef;
+	@lead = map { _withImage( $image, $_ ) } @lead;
+	@tail = map { _withImage( $image, $_ ) } @tail;
+
+	return _episodeWindow( $client, $context, \@lead, $rows, $window, $image ) if $count;
 
 	my @all = ( @lead, @tail );
 	my ( $from, $to ) = $window ? ( $window->{index}, $window->{index} + $window->{quantity} ) : ( 0, scalar @all );
@@ -1153,13 +1194,13 @@ sub _programWindow {
 # for every window (U2 review: SqueezePlay/jivelite drop their rows when it changes, and the web UI
 # pages by it). Row i is always the same episode (or error row) while ABC's pages are cached.
 sub _episodeWindow {
-	my ( $client, $context, $lead, $rows, $window ) = @_;
+	my ( $client, $context, $lead, $rows, $window, $image ) = @_;
 
 	my $total = @$lead + @$rows;
 	my ( $from, $to ) = $window ? ( $window->{index}, $window->{index} + $window->{quantity} ) : ( 0, $total );
 	$to = $total if $to > $total;
 
-	my @items = map { $_ < @$lead ? $lead->[$_] : _episodeRow( $client, $context, $rows->[ $_ - @$lead ], $_ - @$lead ) } $from < $to ? $from .. $to - 1 : ();
+	my @items = map { $_ < @$lead ? $lead->[$_] : _withImage( $image, _episodeRow( $client, $context, $rows->[ $_ - @$lead ], $_ - @$lead ) ) } $from < $to ? $from .. $to - 1 : ();
 
 	return { items => \@items, offset => $from, total => $total };
 }
@@ -1276,12 +1317,12 @@ sub _episodeMenu {
 	my $path = defined Plugins::ABCListen::Util::episodeUrl( $episode->{id} ) ? Plugins::ABCListen::API::sitePath( $episode->{path} ) : undef;
 
 	if ( !defined $path || $path eq '/' ) {
-		return _respond( $client, $once, sub { _episodeMenuItems( $client, $episode, undef ) } );
+		return _respond( $client, $once, sub { _episodeMenuItems( $client, $episode, undef, _isWeb($args) ) } );
 	}
 
 	my $answer = sub {
 		my $tracklist = shift;
-		_respond( $client, $once, sub { _episodeMenuItems( $client, $episode, $tracklist ) } );
+		_respond( $client, $once, sub { _episodeMenuItems( $client, $episode, $tracklist, _isWeb($args) ) } );
 	};
 
 	# a fetch that dies is a failed fetch: the menu still lists everything else
@@ -1296,7 +1337,7 @@ sub _episodeMenu {
 # The episode menu's items (see the header); $tracklist is Tracklist->fetch's answer, or undef
 # when nothing was fetched.
 sub _episodeMenuItems {
-	my ( $client, $episode, $tracklist ) = @_;
+	my ( $client, $episode, $tracklist, $web ) = @_;
 
 	my $url   = Plugins::ABCListen::Util::episodeUrl( $episode->{id} ) or die "no episode id\n";
 	my $title = _episodeTitle($episode);
@@ -1351,7 +1392,9 @@ sub _episodeMenuItems {
 	my $more = _moreFromItem( $client, $episode );
 	push @items, $more if $more;
 
-	return \@items;
+	# O9, the web UI: the episode's image for the rows without one (About, Broadcast, Presented by,
+	# Segments, Tracklist)
+	return $web ? [ __PACKAGE__->rowImages( $image, @items ) ] : \@items;
 }
 
 # ---------------------------------------------------------------------------
