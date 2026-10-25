@@ -12,12 +12,12 @@ v1.0.0 accepted by the stakeholder on pi14 (2026-10-25; #17 closed). Now: v1.1.0
 - release: R1 #9 · R2 #15 · R3 #17 · R4 #62 (raw-hosted zips: LMS can't read GitHub's download redirect) · R5 #75 (push-refusal match)
 
 ## Currently in flight
-- v1.1.0 (stakeholder feedback 2026-10-25):
-  - #95 U3 (U2 low follow-ups: overall load deadline, 429 stops split, P5/P9 tests) then #72 O9 (Default-skin icons):
-    one agent (U2's implementer), two PRs, sequential (same file OnDemand.pm).
-  - Then: system verification on main (journeys + smoke + HLS + Jive DB.lua sim) → CHANGELOG [1.1.0] + version bump →
-    release → install check → pi14 re-check (CPU in top, Cricket / Grandstand, 30+ min HLS play, Squeezer header,
-    long lists on piCorePlayer if available).
+- v1.1.0 (stakeholder feedback 2026-10-25): all feature PRs merged (main 7b64242).
+  - System verification SYS-1.1.0 — running (J1–J12: top level, stations std/HLS, HLS plays + CPU + fallback,
+    U1/U2/U3/O9 incl. Jive DB.lua sim, no leftover "More", podcasts, search, My ABC, sections, upgrade from 1.0.0,
+    hygiene, smoke).
+  - Then: CHANGELOG [1.1.0] + version bump → release → install check from repo.xml → pi14 re-check (CPU in top,
+    Cricket / Grandstand, 30+ min HLS play, Squeezer header, long lists on Jive/piCorePlayer if available).
   - P3 after 1.1.0: #91 L7 HLS title offset, #81 O5.
 
 ## Interruptions
@@ -36,6 +36,10 @@ v1.0.0 accepted by the stakeholder on pi14 (2026-10-25; #17 closed). Now: v1.1.0
   (fixed), testbed restarted, main re-linked, lock free; U2 and R7 resumed from saved state.
 
 ## Last completions
+- #95 U3 merged (PR #96, squash f48f7ab): 7 s load deadline after page 0, 429 stops a page's split, P5/P9 tests.
+  #72 O9 merged (PR #97, squash 7b64242): images on text rows for the web UI only (isWeb; Material turns image-only
+  menus into grids), program/episode menus + Program info, README screenshot refreshed. Both orchestrator-reviewed:
+  diff read, merged-tree check.sh (937 / 941 tests), screenshots checked.
 - #84 U2 merged (PR #90, squash 9a4fcb1): continuous lists (partial feeds), rows numbered by audio episode over all
   pages, no leading textarea above 200 rows (Jive count fix), bounded 10-page retries + 60 s failure cache. Reviews:
   R1 REQUEST_CHANGES (Jive endless reload, HIGH) → R2 REQUEST_CHANGES (placeholders for video cards, retry storm) →
