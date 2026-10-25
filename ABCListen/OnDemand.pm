@@ -160,9 +160,12 @@ package Plugins::ABCListen::OnDemand;
 # pages of SUB_PAGE (10): its first SUB_PROBE (2), then, once one of them has loaded, the rest;
 # each place still without an episode is a row of the failed page's error text. Page 0 failing:
 # its first 10 alone; when they fail too, nothing more is asked (the list is the header and the
-# error). A rate-limited page isn't asked for in smaller pages. A failed page isn't asked for
-# again for FAILURE_TTL (60 s). Row i is the same episode for as long as the pages are cached
-# (stable item ids: LMS keeps no browse session and re-walks menus by index).
+# error). A rate-limited page isn't asked for in smaller pages, and (U3) a page stops being split
+# once any of its pages of 10 is rate limited. A failed page isn't asked for again for FAILURE_TTL
+# (60 s). U3: the menu answers at the latest LOAD_DEADLINE (7 s) after page 0 has answered; a page
+# still out by then keeps its places as error rows for that answer, and fills the cache when it
+# comes. Row i is the same episode for as long as the pages are cached (stable item ids: LMS keeps
+# no browse session and re-walks menus by index).
 #
 # Episode menu (_episodeMenu; O4 extended it): synopsis (descriptionItems: the short textarea,
 # then "About this episode" when it was shortened) · "Play episode" (type audio,
@@ -236,6 +239,7 @@ use constant SUB_PAGE         => 10;     # U2 review: a failed page is loaded ag
 use constant SUB_PROBE        => 2;      # U2 round 2: a failed page's pages of 10 tried before the rest (_subPagesWanted)
 use constant MAX_ROUNDS       => 5;      # U2 review: rounds of page loads after page 0 (_programMenuItems; 4 are enough)
 use constant FAILURE_TTL      => 60;     # U2 review: seconds a failed episode page isn't asked for again
+use constant LOAD_DEADLINE    => 7;      # U3: seconds after page 0 answers that the program menu waits for its other pages
 use constant JIVE_CHUNK       => 200;    # U2 review: rows SqueezePlay/jivelite ask for at a time (DB.lua BLOCK_SIZE)
 use constant PROVIDER_TIMEOUT => 5;      # seconds
 use constant IMAGE_PX         => 300;
@@ -840,6 +844,11 @@ sub _window {
 # total says which other pages there are; then, round by round (_wantedPages, at most
 # MAX_ROUNDS): page 0's first SUB_PAGE when page 0 failed, the other pages (at most
 # PAGE_CONCURRENCY at a time), and the pages of SUB_PAGE of a page that failed.
+# U3: an overall deadline, LOAD_DEADLINE (7 s) after page 0 answers. Then the menu answers with
+# the pages it has; a page still out (or never asked for) keeps its places as error rows, as a
+# failed page does (_episodeRows), and no more requests start for this open. A page that answers
+# later changes nothing here (one answer) but fills Programs' cache for the next open. Without
+# the deadline one slow page held back every window: up to 8 s (API_TIMEOUT) a round, about 32 s.
 sub _programMenuItems {
 	my ( $client, $cb, $program, $detail, $window ) = @_;
 
@@ -858,28 +867,53 @@ sub _programMenuItems {
 
 	my %pages;    # "offset/size" => Programs::episodes' answer
 	my $extras = [];
-	my ( $pending, $rounds ) = ( 2, 0 );
+	my ( $pending, $rounds, $answered, $timer, $step ) = ( 2, 0, 0, undef, undef );
 
-	my $step;
+	# the one answer: stops the deadline, and (_fetchPages) the requests not started yet
+	my $reply = sub {
+		return if $answered++;
+		Slim::Utils::Timers::killSpecific($timer) if $timer;
+		undef $timer;
+		undef $step;    # break the step closure's reference to itself
+		$context->{stopped} = 1;
+		$cb->(@_);
+	};
+	my $answer = sub {
+		return if $answered;
+		_respondWindow( $client, $reply, sub { _programWindow( $client, $context, $detail, $extras, \%pages, $window ) } );
+	};
+
 	$step = sub {
-		_try( $client, $cb, sub {
+		return if $answered;    # answered at the deadline; a page that answers later changes nothing
+
+		_try( $client, $reply, sub {
 			my @wanted = defined $context->{collectionId} && $rounds++ < MAX_ROUNDS ? _wantedPages( \%pages ) : ();
 			return _fetchPages( $context, \@wanted, \%pages, $step ) if @wanted;
 
 			undef $step;    # done: break the closure's reference to itself
-			_respondWindow( $client, $cb, sub { _programWindow( $client, $context, $detail, $extras, \%pages, $window ) } );
+			$answer->();
 		} );
 	};
 
-	my $done = sub { $step->() unless --$pending };
+	my $done = sub { $step->() if !--$pending && $step };
 
 	_runProviders( $client, \%merged, sub {
 		$extras = ref $_[0] eq 'ARRAY' ? $_[0] : [];
 		$done->();
 	} );
 
-	# page 0 (its total says which other pages there are) loads with the providers
-	defined $context->{collectionId} ? _fetchPages( $context, [ _wantedPages( \%pages ) ], \%pages, $done ) : $done->();
+	return $done->() unless defined $context->{collectionId};
+
+	# page 0 (its total says which other pages there are) loads with the providers; the deadline
+	# starts when it has answered
+	_fetchPages( $context, [ _wantedPages( \%pages ) ], \%pages, sub {
+		$timer = Slim::Utils::Timers::setTimer( undef, Time::HiRes::time() + LOAD_DEADLINE, sub {
+			undef $timer;
+			main::DEBUGLOG && $log->is_debug && $log->debug( "ABC listen: program $context->{path}: not every episode page answered within " . LOAD_DEADLINE . ' s; answering with the pages there are' );
+			_try( $client, $reply, $answer );
+		} ) unless $answered;
+		$done->();
+	} );
 }
 
 # Description (U1: the short textarea, then "About this program" when shortened), "Presented by
@@ -950,6 +984,7 @@ sub _wantedPages {
 # them has loaded (ABC fails that page on one episode, not on everything), all the others at
 # once; when both failed, none: the page's places keep its error text. So a page fails at most
 # twice more, and an open where every page fails asks ABC for page 0 and its first 10 only.
+# U3: none either once any of them was rate limited (429): ABC asked us to slow down.
 sub _subPagesWanted {
 	my ( $pages, $offset, $cards ) = @_;
 
@@ -961,6 +996,7 @@ sub _subPagesWanted {
 	my @untried = grep { !$pages->{$_} } @subs;
 	my @tried   = grep { $pages->{$_} } @subs;
 
+	return () if grep { _rateLimited( $pages->{$_} ) } @tried;
 	return @untried if grep { !$pages->{$_}->{error} } @tried;
 	return () if @tried >= SUB_PROBE;
 
@@ -996,6 +1032,8 @@ sub _fetchPages {
 	$pump = sub {
 		return if $pumping;
 		$pumping = 1;
+
+		@queue = () if $context->{stopped};    # U3: the open has answered (its deadline): nothing more
 
 		while ( $active < PAGE_CONCURRENCY && @queue ) {
 			my $key = shift @queue;
@@ -1042,7 +1080,8 @@ sub _fetchPages {
 # The program's episode rows, newest first, numbered by audio episode (U2 round 2): each page of
 # EPISODE_PAGE's episodes in ABC's order (a card that isn't an audio episode has no row); for a
 # page that failed, the episodes of its pages of SUB_PAGE that loaded, and one row of error text
-# for each place of one that failed or wasn't asked for. A row: [ episode ] or [ undef, token ].
+# for each place of one that failed or wasn't asked for (U3: or was still out at the deadline:
+# LOAD_FAILED). A row: [ episode ] or [ undef, token ].
 # undef when page 0 and its first SUB_PAGE both failed (no total).
 sub _episodeRows {
 	my $pages = shift;

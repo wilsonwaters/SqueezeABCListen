@@ -18,6 +18,10 @@
 # loads), places that still fail keep an error row, and a failed page isn't asked for again for
 # 60 s (per program). U2 round 2: when ABC fails everything, an open asks for page 0 and its
 # first 10 only; a rate-limited page isn't asked for in pages of 10.
+# U3 (#95): the answer comes at the latest 7 s after page 0 (a slow page keeps its places as error
+# rows; the count is the same in every window; it fills the cache when it comes); a 429 on a page
+# of 10 stops its page's split; a failed last page reserves only the places ABC has (P5); no
+# request at offset == total (P9).
 #
 # Collection menus (Collections::_collectionMenu) use the bounded full fetch: every page of the
 # collection to 200 cards, at most 4 requests at a time, within 4 s of the first page; a page that
@@ -467,6 +471,107 @@ subtest 'program menu: when ABC fails everything, an open asks for page 0 and it
 	is_deeply( [ $feed->{total}, episode_no( $feed->{items}->[ $HEADER + 49 ] ), $feed->{items}->[ $HEADER + 50 ]->{name} ], [ $TOTAL, 49, $LOAD_FAILED ], '... total 253: episodes 0..49, then LOAD_FAILED in every place' );
 	answer( science( { index => 0, quantity => 200 } ) );
 	is( scalar( episode_pages() ), 13, '... opened again within 60 s: no request' );
+};
+
+subtest 'program menu: a slow page: the answer comes at the deadline, 7 s after page 0, once; its places are reserved; it fills the cache when it comes (U3)' => sub {
+	fresh();
+	route_science();
+	route_episodes( defer => { '100/50' => 1 } );
+
+	my $c = science( { index => 0, quantity => 200 } );
+	is( $c->count, 0, 'page 100 is slow: no answer yet' );
+	advanceTime(6);
+	is( $c->count, 0, '... none 6 s after page 0 answered' );
+	advanceTime(1);
+	is( $c->count, 1, '... the answer at 7 s' );
+	my $feed = answer($c);
+	is( $feed->{total}, $TOTAL, 'total 253: page 100\'s 50 places are reserved' );
+	is_deeply( [ map { episode_no($_) // $_->{name} } @{ $feed->{items} }[ $HEADER + 99, $HEADER + 100, $HEADER + 149, $HEADER + 150 ] ], [ 99, $LOAD_FAILED, $LOAD_FAILED, 150 ], '... episode 99, LOAD_FAILED in places 100..149, episode 150' );
+
+	# another window while the page is still out: its own deadline, the same count
+	my $c2 = science( { index => 200, quantity => 200 } );
+	is( $c2->count, 0, 'chunk 200..399 while page 100 is still out: waiting' );
+	advanceTime(7);
+	is_deeply( [ $c2->count, answer($c2)->{total}, scalar @{ answer($c2)->{items} } ], [ 1, $TOTAL, 53 ], '... answered at its deadline: total 253 (the same count), 53 rows' );
+
+	# the slow page answers: nothing more for either open; the next open has it from the cache
+	my $asked = scalar episode_pages();
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	advanceTime(30);
+	is_deeply( [ $c->count, $c2->count ], [ 1, 1 ], 'page 100 answers late: no second answer to either open' );
+	$feed = answer( science( { index => 0, quantity => 200 } ) );
+	is( scalar( episode_pages() ), $asked, 'opened again: no request (the late page is in the cache)' );
+	is_deeply( [ $feed->{total}, episode_no( $feed->{items}->[ $HEADER + 100 ] ) ], [ $TOTAL, 100 ], '... total 253, episode 100 in its place' );
+
+	# requests not started by the deadline are not started after it
+	fresh();
+	route_science();
+	route_episodes( fail => { '50/50' => 500, '100/50' => 500, '150/50' => 500 }, defer => { map { ( "$_/10" => 1 ) } 50, 60, 100, 110, 150, 160 } );
+	$c = science( {} );
+	is_deeply( [ map { page_of($_) } Slim::Networking::SimpleAsyncHTTP->deferred ], [ '50/10', '60/10', '100/10', '110/10' ], 'pages 50, 100 and 150 failed: 4 of their 6 first pages of 10 are out, 150/10 and 160/10 wait' );
+	advanceTime(7);
+	is( $c->count, 1, '... the answer at the deadline' );
+	is_deeply( [ answer($c)->{total}, map { $_->{name} } @{ answer($c)->{items} }[ $HEADER + 50, $HEADER + 199 ] ], [ $TOTAL, $LOAD_FAILED, $LOAD_FAILED ], '... total 253: places 50..199 LOAD_FAILED' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	is_deeply( [ grep {m{/10\z}} episode_pages() ], [ '50/10', '60/10', '100/10', '110/10' ], 'they answer later: 150/10 and 160/10 are not started, nor any other page of 10' );
+	is( $c->count, 1, '... and no second answer' );
+
+	# every page in time: no wait for the deadline, and it is gone (nothing fires later)
+	fresh();
+	route_science();
+	route_episodes();
+	$c = science( { index => 0, quantity => 10 } );
+	is( $c->count, 1, 'every page at once: the answer at once' );
+	is( scalar @Slim::Utils::Timers::TIMERS, 0, '... and its deadline timer is gone' );
+	advanceTime(60);
+	is( $c->count, 1, '... nothing more later' );
+};
+
+subtest 'program menu: a 429 on a page of 10 stops its page\'s split (U3)' => sub {
+	fresh();
+	route_science();
+	route_episodes( fail => { '100/50' => 500, '100/10' => 429 } );
+	my $feed = answer( science( {} ) );
+	is_deeply( [ grep {m{/10\z}} episode_pages() ], [ '100/10', '110/10' ], 'page 100 failed; 100/10 rate limited, 110/10 loaded: 120..140 not asked for' );
+	is_deeply( [ $feed->{total}, map { episode_no($_) // $_->{name} } @{ $feed->{items} }[ map { $HEADER + $_ } 100, 109, 110, 119, 120, 149, 150 ] ], [ $TOTAL, $RATE, $RATE, 110, 119, $LOAD_FAILED, $LOAD_FAILED, 150 ], '... total 253: places 100..109 RATE_LIMITED, 110..119 episodes, 120..149 page 100\'s LOAD_FAILED, 150 on episodes' );
+
+	# the loaded probe answering first changes nothing
+	fresh();
+	route_science();
+	route_episodes( fail => { '100/50' => 500, '110/10' => 429 } );
+	$feed = answer( science( {} ) );
+	is_deeply( [ grep {m{/10\z}} episode_pages() ], [ '100/10', '110/10' ], '100/10 loaded, 110/10 rate limited: no more pages of 10 either' );
+};
+
+subtest 'program menu: a failed last page reserves only the places ABC has (U3, P5)' => sub {
+	# 245 cards: the last page of 50 holds 45, its last page of 10 holds 5
+	fresh();
+	route_science();
+	route_episodes( total => 245, fail => { '200/50' => 500, '240/10' => 500 } );
+	my $feed = answer( science( {} ) );
+	is_deeply( [ $feed->{total}, scalar @{ $feed->{items} } ], [ $HEADER + 245, $HEADER + 245 ], '245 cards, page 200 failed and 240/10 too: 248 rows' );
+	is_deeply( [ map { episode_no($_) // $_->{name} } @{ $feed->{items} }[ $HEADER + 239 .. $HEADER + 244 ] ], [ 239, ($LOAD_FAILED) x 5 ], '... episode 239, then 5 LOAD_FAILED places (240..244), not 10' );
+
+	# its first two pages of 10 failing too: the page's 45 places
+	fresh();
+	route_science();
+	route_episodes( total => 245, fail => { 200 => 500, 210 => 500 } );
+	$feed = answer( science( {} ) );
+	is( $feed->{total}, $HEADER + 245, '245 cards, page 200 and its first two pages of 10 failed: 248 rows' );
+	is_deeply( [ map { $_->{name} } @{ $feed->{items} }[ $HEADER + 200 .. $HEADER + 244 ] ], [ ($LOAD_FAILED) x 45 ], '... 45 LOAD_FAILED places (200..244)' );
+};
+
+subtest 'program menu: the pages asked for at totals of 50, 100, 150 and 200: none at offset == total (U3, P9)' => sub {
+	for my $n ( 50, 100, 150, 200 ) {
+		fresh();
+		route_science();
+		route_episodes( total => $n );
+		my $feed = answer( science( { index => 0, quantity => 512 } ) );
+		my @pages = map { $_ * 50 } 0 .. $n / 50 - 1;
+		is_deeply( [ episode_pages() ], [ map {"$_/50"} @pages ], "$n episodes: pages " . join( ', ', @pages ) . ", none at $n" );
+		my $lead = $n + 4 > 200 ? 3 : 4;    # textarea, About, presenters, network; no textarea past 200 rows
+		is_deeply( [ $feed->{total}, episode_no( $feed->{items}->[-1] ) ], [ $lead + $n, $n - 1 ], '... ' . ( $lead + $n ) . " rows, the last episode $n - 1" );
+	}
 };
 
 subtest 'program menu: the failure cache is per program (U2 round 2)' => sub {
