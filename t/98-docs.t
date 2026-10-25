@@ -192,16 +192,16 @@ subtest 'README: now playing and limitations' => sub {
 	like( $np, qr/\*\*Episodes\*\*.*title, the program, the episode's artwork and its duration.*sought/s, 'Now playing: episodes' );
 
 	my $l = flat( $section{Limitations} );
-	like( $l, qr/\*\*Live streams are 56 kbps HE-AAC by default\.\*\*.*ABC mediahub AAC.*falls back/s, 'Limitations: 56 kbps, mediahub and its fallback' );
-	like( $l, qr/HLS aren't listed\*\*.*Sport Rapid, RLWC Rapid.*PlayHLS.*Kids listen time-zone\s+versions are hidden/s, 'Limitations: HLS-only stations, Kids listen time-zone versions' );
-	# there is no HLS option (L5 ships Standard and mediahub only): HLS is a limitation, never a feature
-	for my $part ( 'About', 'Features', 'Usage', 'Now playing', 'Compatibility' ) {
-		unlike( $section{$part}, qr/HLS/i, "$part: no HLS or PlayHLS claim" );
-	}
-	unlike( $readme, qr/HLS (?:option|setting|quality)|quality[^.\n]*HLS|PlayHLS plugin \+ ffmpeg/i, 'no HLS quality option anywhere' );
+	my $hls = en('LIVE_QUALITY_HLS');
+	like( $l, qr/\*\*Live streams are 56 kbps HE-AAC by default\.\*\* .*\*\*\Q$hls\E\*\*.*192 kbps.*CPU.*ABC mediahub AAC.*falls back/s, 'Limitations: 56 kbps by default; HLS (192 kbps, CPU); mediahub and its fallback' );
+	like( $l, qr/\*\*Stations that ABC streams only as HLS are listed only with \Q$hls\E\*\*: the Sport Rapid, RLWC Rapid and ABC Cricket streams and the Kids listen time-zone versions\. They have no standard stream/, 'Limitations: HLS-only stations, listed only with High quality (HLS), no fallback' );
+	like( $l, qr/\*\*With \Q$hls\E, Now Playing is ahead of the audio\.\*\* .*30–40 seconds/, 'Limitations: the HLS title offset (#91)' );
+	# L6: the plugin plays HLS itself, so the docs never send anyone to PlayHLS
+	unlike( $readme, qr/PlayHLS/, 'no PlayHLS: the plugin plays HLS itself' );
 	my %usage = subsections( $section{Usage} );
-	my @qualities = $usage{Settings} =~ /\*\*((?:Standard|ABC mediahub)[^*]*)\*\*/g;
-	is_deeply( \@qualities, [ map { en($_) } qw(LIVE_QUALITY_STANDARD LIVE_QUALITY_MEDIAHUB) ], 'Settings: exactly the two live stream qualities' );
+	my @qualities = $usage{Settings} =~ /\*\*((?:Standard|High quality|ABC mediahub)[^*]*)\*\*/g;
+	is_deeply( \@qualities, [ map { en($_) } qw(LIVE_QUALITY_STANDARD LIVE_QUALITY_HLS LIVE_QUALITY_MEDIAHUB) ], 'Settings: the three live stream qualities, in the settings page\'s order' );
+	like( flat( $usage{Settings} ), qr/\*\*\Q$hls\E\*\*: .*192 kbps AAC on the music stations and 64 kbps on talk stations.*falls back to the standard stream.*Sport Rapid, RLWC Rapid and ABC Cricket.*Kids listen.*more CPU.*Raspberry Pi.*30–40 seconds behind live/, 'Settings: High quality (HLS): bitrates, fallback, HLS-only stations, CPU, the delay' );
 	like( $l, qr/\*\*Only the newest 250 episodes\*\*/,                                    'Limitations: newest 250 episodes' );
 	like( $l, qr/about\s+28 days; podcast \(MP3\) episodes stay/,                          'Limitations: catch-up AAC expiry, MP3 stays' );
 	like( $l, qr/Most audiobooks play only from an Australian internet\s+connection.*The Wind in the Willows, The Wonderful Wizard of Oz, Persuasion, My Brilliant Career,\s+Frankenstein and Animal Farm.*Bluey Listen Along/s, 'Limitations: Australia-only audiobooks, the six classics, restricted podcasts' );
@@ -224,7 +224,7 @@ subtest 'README: troubleshooting' => sub {
 	like( $ts, qr/\*\*a\. ABC listen isn't in the Radio menu.*restart LMS.*about 5 minutes/s,  'a: restart; repository files cached ~5 min' );
 	like( $ts, qr/\*\*b\. "unable to download ABCListen … Header line too long".*Since v0\.3\.0.*raw\.githubusercontent\.com.*install or update again/s, 'b: the Header line too long download error' );
 	like( $ts, qr/\*\*c\. .*HE-AAC.*`faad`.*Settings →\s+Advanced → File Types/s,              'c: older players need faad' );
-	like( $ts, qr/\*\*d\. .*\*\*ABC mediahub AAC\*\*.*back to \*\*Standard\*\*/s,               'd: a failing live stream: back to Standard' );
+	like( $ts, qr/\*\*d\. .*\*\*\Q${\ en('LIVE_QUALITY_HLS')}\E\*\* or \*\*ABC mediahub AAC\*\*.*back to \*\*Standard\*\*.*"\Q${\ en('LIVE_HLS_ONLY')}\E"/s, 'd: a failing live stream: back to Standard; the HLS-only message, word for word' );
 	like( $ts, qr/\*\*e\. "\Q${\ en('EPISODE_GEO')}\E", "\Q${\ en('EPISODE_RESTRICTED')}\E" or "\Q${\ en('EPISODE_EXPIRED')}\E"\*\*/, 'e: the Australia-only, restricted and expired messages, word for word' );
 	like( $ts, qr/\*\*f\. "\Q${\ en('RATE_LIMITED')}\E"\*\*/,                                 'f: the busy (rate-limited) message, word for word' );
 	like( $ts, qr/\*\*g\. .*"\Q${\ en('LOAD_FAILED')}\E".*"\Q${\ en('ERROR')}\E"/s,            'g: the load-failed messages, word for word' );

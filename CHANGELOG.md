@@ -8,6 +8,65 @@ also the text of its GitHub Release (see [RELEASING.md](RELEASING.md)).
 
 ## [Unreleased]
 
+### Added
+
+- **High quality (HLS)**, a new Live stream quality option (Settings → Advanced → ABC listen): live stations play
+  ABC's HLS streams, the ones ABC's website plays, with **192 kbps AAC on the music stations** instead of 56 kbps,
+  and 64 kbps on talk stations. The plugin plays HLS itself, so there is nothing else to install. If a station's
+  HLS stream can't be played (some play only in Australia), the same play falls back to the standard stream by
+  itself. Now Playing, favourites and menus work as before.
+  - LMS fetches the audio itself in this mode, so it uses more CPU on the server than Standard, whose streams go
+    straight to the player: about 4–6% of one core on an x86 test server. A Raspberry Pi hasn't been measured yet.
+- **The stations ABC streams only in HLS** are listed with High quality (HLS): the Sport Rapid, RLWC Rapid and ABC
+  Cricket streams under Sport, and the Northern Territory, Queensland, South Australia and Western Australia
+  versions of ABC KIDS listen under Kids listen. They have no standard stream to fall back to, and ABC Cricket
+  (possibly the Rapid streams too) may play only in Australia. With another quality, a favourite of one says
+  "This station is only streamed in HLS. To play it, set Live stream quality to High quality (HLS) in the ABC
+  listen settings."
+- A weekly check of every ABC page and service the plugin reads (`scripts/abc-endpoints-check.sh`) opens an issue
+  labelled `abc-drift` on GitHub when ABC changes something the plugin relies on.
+
+### Changed
+
+- **Short descriptions at the top of program and episode menus**: the first paragraph, at most about 200
+  characters, cut at the end of a sentence or a word with "…". Apps such as Squeezer show the description as a
+  fixed header above the list, where a long one filled the screen and hid the episodes. When the description is
+  cut, a new row right below it, **About this program** or **About this episode**, opens the whole text. Song
+  info's Episode notes still shows all of it.
+- **One continuous list instead of "More episodes…" pages:**
+  - A program's episodes (up to the newest 250, all that ABC lists) and every collection (Home, Podcasts, Browse
+    by category, News, Sport, Kids listen and Audiobooks) are one list each. Lists no longer end in "More…" or
+    "More episodes…"; the Default web interface pages them with its own page links.
+  - **Play all / Add all** on a program queues all its episodes (up to 250), not just the first 50.
+  - Collections no longer list a program twice when ABC has it on two of its pages.
+  - Programs with more than 200 rows (most daily programs) show no description at the top of the list. They
+    start with **About this program**, which opens it. Lists of 100 rows or more always have **About this
+    program**, because some apps (Material, Squeezebox players) don't show the description above long lists.
+  - An ABC page that fails to load is tried again in smaller pieces. Episodes that still can't be loaded keep
+    their place in the list, as "Couldn't load this from ABC listen. Please try again later." rows.
+- The README now says how to check which version is installed, and where the settings file that uninstalling
+  leaves behind is kept.
+
+### Fixed
+
+- Episode audio links from Search results and episode look-ups are trusted for 6 hours from when ABC answered, not
+  from when they were shown, and an older cached answer no longer overwrites newer audio details.
+- **Fewer repeated warnings in the server log**: a followed program that ABC has removed gives one WARN a day,
+  instead of warnings at every Latest episodes refresh (every 15 minutes while the list is in use), and an
+  unreadable song answer from ABC is logged as an error at most once an hour per station. The plugin also writes
+  its cache less often: showing the same episodes again no longer rewrites their cached details.
+
+### Known limitations
+
+- With High quality (HLS) the audio runs about 30–40 seconds behind live, as on ABC's website, so Now Playing's
+  song titles and programs change about 30–40 seconds before you hear the change.
+- ABC lists only a program's newest 250 episodes, so a program's list ends there.
+- Carried over from 1.0.0: most audiobooks and the restricted podcasts play only from an Australian internet
+  connection; ABC mediahub may only work from Australia (with an automatic fallback); ABC's index still lists some
+  programs that have stopped; a Latest episodes menu held open across its 15-minute refresh may open a different
+  episode; Program info, Recently played and Sport event times use your LMS server's time zone; Material skin's
+  own search box doesn't list ABC listen.
+
 ## [1.0.0] - 2026-10-24
 
 ### Added
