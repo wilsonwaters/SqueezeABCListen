@@ -7,7 +7,9 @@ package Plugins::ABCListen::ProtocolHandler;
 # which a feature module registers here. The handler itself knows nothing about ABC.
 #
 # FROZEN after F2 (ai-state/streams.md contract 4, parallel-work rule 1): kinds plug in through
-# registerKind from their own module; changes to this file need orchestrator sign-off.
+# registerKind from their own module; changes to this file need orchestrator sign-off. L6 (#80)
+# added the HLS path, marked === L6 ===: it applies only to candidates flagged hls => 1, which no
+# kind sent before L6, so every other candidate scans, opens and streams as before.
 #
 # Kind registry contract
 # ======================
@@ -34,9 +36,9 @@ package Plugins::ABCListen::ProtocolHandler;
 #                                               (default PLUGIN_ABCLISTEN_STREAM_FAILED)
 #     A candidate is a URL string or { url => $url, hls => 1 }. Undef, empty and duplicate
 #     candidates are dropped, and so is every URL matching /\.m3u8(\?|$)/i that isn't flagged
-#     hls => 1: LMS can't play HLS, so only the PlayHLS path (L5) may flag one. No candidate
-#     left: failToken. Each candidate is scanned by the core remote scanner (SUPER::scanUrl) in
-#     turn; the first that scans plays.
+#     hls => 1: LMS can't play HLS itself. No candidate left: failToken. Each candidate is scanned
+#     in turn, by the core remote scanner (SUPER::scanUrl), or (L6) an hls-flagged one by
+#     Plugins::ABCListen::HLS->scanUrl; the first that scans plays.
 #     Candidates must be direct audio streams, never .pls/.m3u (or other) playlists: LMS plays
 #     a scanned playlist's entries as tracks of their own, with their own protocol handler, so
 #     the per-kind dispatch (metadata, onStream, onStop) stops working for that play.
@@ -77,7 +79,9 @@ package Plugins::ABCListen::ProtocolHandler;
 #                 die in LMS's callback is logged at WARN as LMS's and contained. Neither is
 #                 reported as a resolve failure.
 #   new           opens $song->streamUrl, except after a redirect (proxied streaming), where it
-#                 keeps the redirected URL to avoid a redirect loop.
+#                 keeps the redirected URL to avoid a redirect loop. L6: an HLS streamUrl
+#                 (Plugins::ABCListen::HLS->handles) is read through Plugins::ABCListen::HLS->new,
+#                 and canDirectStreamSong is 0 for it, so the player never fetches the playlist.
 #   getMetadataFor  synchronous, no network, never dies. For abclisten:// URLs, these layers
 #                 merged, later ones winning: { title => PLUGIN_ABCLISTEN, cover and icon =>
 #                 Util::ICON } < the meta of the URL's last resolve (kept for the last META_MAX
@@ -99,6 +103,7 @@ use Slim::Utils::Log;
 use Slim::Utils::Strings;
 use Slim::Utils::Timers;
 
+use Plugins::ABCListen::HLS;    # === L6 ===
 use Plugins::ABCListen::Util;
 
 use constant RESOLVE_TIMEOUT => 20;     # seconds a kind's resolve may take
@@ -278,7 +283,8 @@ sub _play {
 	_rememberMeta( $url, $result->{meta} ) if ref $result->{meta} eq 'HASH';
 
 	my $failToken  = _isText( $result->{failToken} ) ? $result->{failToken} : STREAM_FAILED;
-	my @candidates = _candidates( $url, $result );
+	my %hls;    # === L6 === the candidates flagged hls
+	my @candidates = _candidates( $url, $result, \%hls );
 
 	return _fail( $cb, $url, $failToken ) unless @candidates;
 
@@ -288,6 +294,7 @@ sub _play {
 
 	$state->{base}       = \%base;
 	$state->{candidates} = \@candidates;
+	$state->{hls}        = \%hls;    # === L6 ===
 	$state->{failToken}  = $failToken;
 
 	$class->_scan( $state, $args, 0 );
@@ -296,9 +303,9 @@ sub _play {
 }
 
 # The usable candidate URLs, in order: url, then the alternates; no undef, empty or duplicate
-# ones, and no .m3u8 unless flagged hls.
+# ones, and no .m3u8 unless flagged hls. L6: the URLs flagged hls are also keys of %$hls.
 sub _candidates {
-	my ( $url, $result ) = @_;
+	my ( $url, $result, $hlsFlagged ) = @_;
 
 	my ( @candidates, %seen );
 
@@ -312,7 +319,9 @@ sub _candidates {
 			next;
 		}
 
-		push @candidates, $streamUrl unless $seen{$streamUrl}++;
+		next if $seen{$streamUrl}++;
+		push @candidates, $streamUrl;
+		$hlsFlagged->{$streamUrl} = 1 if $hls && $hlsFlagged;    # === L6 ===
 	}
 
 	return @candidates;
@@ -336,7 +345,12 @@ sub _scan {
 		return;
 	};
 
-	_guard( $state, "Scanning $streamUrl", sub { $class->SUPER::scanUrl( $streamUrl, $args ) } );
+	# === L6 === an hls-flagged candidate is scanned (prepared) by Plugins::ABCListen::HLS
+	my $scan = $state->{hls} && $state->{hls}->{$streamUrl}
+		? sub { Plugins::ABCListen::HLS->scanUrl( $streamUrl, $args ) }
+		: sub { $class->SUPER::scanUrl( $streamUrl, $args ) };
+
+	_guard( $state, "Scanning $streamUrl", $scan );
 
 	return;
 }
@@ -398,7 +412,19 @@ sub new {
 	# stream the resolved URL; after a redirect, keep the redirected URL to avoid a loop
 	$args->{url} = $args->{song}->streamUrl if $args->{song} && !$args->{redir};
 
+	# === L6 === an HLS stream is read (fetched and demuxed) by Plugins::ABCListen::HLS
+	return Plugins::ABCListen::HLS->new($args) if Plugins::ABCListen::HLS->handles( $args->{url} );
+
 	return $class->SUPER::new($args);
+}
+
+# === L6 === the player can't play an HLS playlist itself: never direct-stream one
+sub canDirectStreamSong {
+	my ( $class, $client, $song ) = @_;
+
+	return 0 if $song && Plugins::ABCListen::HLS->handles( $song->streamUrl );
+
+	return $class->SUPER::canDirectStreamSong( $client, $song );
 }
 
 sub onStream {

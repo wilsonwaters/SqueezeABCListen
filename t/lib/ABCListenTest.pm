@@ -99,7 +99,7 @@ sub resetStubs {
 		Slim::Networking::SimpleAsyncHTTP Slim::Utils::Timers Slim::Formats::RemoteMetadata
 		Slim::Player::ProtocolHandlers Slim::Player::Playlist Slim::Utils::Scanner::Remote
 		Slim::Music::Info Slim::Control::Request Slim::Menu::TrackInfo Slim::Utils::Prefs
-		Slim::Menu::GlobalSearch Slim::Web::Settings
+		Slim::Menu::GlobalSearch Slim::Web::Settings Slim::Schema
 	)) {
 		$class->reset if $class->can('reset');
 	}

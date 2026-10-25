@@ -1,7 +1,8 @@
 # Strings for the ABC listen plugin (English only).
 # Format: a TOKEN line, then one line per language: <TAB>EN<TAB>text
 # Each task edits only inside its own section below (new tokens are appended to the owner's section).
-# Sections are in wave order: F1 | F2 F3 R1 M1 | L1 O1 O2 | L2 L5 O3 D1 D3 M2 | L3 L4 O4 D2 | R2 | R3.
+# Sections are in wave order: F1 | F2 F3 R1 M1 | L1 O1 O2 | L2 L5 O3 D1 D3 M2 | L3 L4 O4 D2 | R2 | R3, then
+# later tasks appended in merge order (D4 D7 D5 L6).
 # Station names (triple j, Radio National, ...) are ABC proper nouns and are not string tokens.
 
 # === F1 === Foundation: plugin name, description, generic error, top-level menu names
@@ -117,8 +118,9 @@ PLUGIN_ABCLISTEN_CITY_TIME
 PLUGIN_ABCLISTEN_LIVE_FAILED
 	EN	Couldn't play this live stream. Please try again later.
 
+# Reworded by L6: HLS-only stations play when Live stream quality is High quality (HLS)
 PLUGIN_ABCLISTEN_LIVE_HLS_ONLY
-	EN	This station is only streamed in a format Lyrion can't play without the PlayHLS plugin
+	EN	This station is only streamed in HLS. To play it, set Live stream quality to High quality (HLS) in the ABC listen settings.
 
 PLUGIN_ABCLISTEN_LIVE_OFF_AIR
 	EN	This station is off air right now
@@ -183,8 +185,9 @@ PLUGIN_ABCLISTEN_PROGRAM_INFO
 PLUGIN_ABCLISTEN_LIVE_QUALITY
 	EN	Live stream quality
 
+# Reworded by L6 (the HLS option)
 PLUGIN_ABCLISTEN_LIVE_QUALITY_DESC
-	EN	Standard plays ABC's Icecast streams, which work everywhere. ABC mediahub AAC tries ABC's higher-quality stream first and falls back to the standard stream if it can't be played.
+	EN	Standard plays ABC's Icecast streams, which work everywhere. High quality (HLS) plays ABC's HLS streams, as ABC's website does (192 kbps AAC on music stations), and also lists the stations ABC streams only in HLS. ABC mediahub AAC tries ABC's mediahub stream. When a higher-quality stream can't be played, the standard stream plays instead, except on the stations ABC streams only in HLS, which have none.
 
 PLUGIN_ABCLISTEN_LIVE_QUALITY_STANDARD
 	EN	Standard: 56 kbps, works everywhere
@@ -412,3 +415,9 @@ PLUGIN_ABCLISTEN_CHAPTERS_N
 # known (%s = how many; before that O2's PLUGIN_ABCLISTEN_EPISODES "Episodes")
 PLUGIN_ABCLISTEN_EPISODES_N
 	EN	Episodes (%s)
+
+# === L6 === High-quality live audio via HLS
+
+# The liveQuality option for ABC's HLS streams (the L5 setting)
+PLUGIN_ABCLISTEN_LIVE_QUALITY_HLS
+	EN	High quality (HLS)

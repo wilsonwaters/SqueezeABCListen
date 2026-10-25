@@ -77,8 +77,10 @@ package Plugins::ABCListen::Live;
 #
 # Public builder (ai-state/streams.md contract 7):
 #   Live->stationItem($client, $serviceId) -> a station row (opens + plays, above), or undef for
-#   unknown, hidden, HLS-only and off-air (or not yet known) event services. Never fetches;
-#   consumers that override line2 do so on their copy (every call builds a new hash).
+#   unknown and unplayable ids (Stations->playable): HLS-only services (L6: unless liveQuality is
+#   'hls'; the hidden Kids listen versions are HLS-only) and off-air (or not yet known) event
+#   services. Never fetches; consumers that override line2 do so on their copy (every call builds a
+#   new hash).
 #
 # live kind
 #   resolve   Stations->streamCandidates: { url => first, alternates => [rest], failToken =>
@@ -89,13 +91,16 @@ package Plugins::ABCListen::Live;
 #             stations), polled per master player and pushed to Now Playing. Its station fallback is
 #             _metadata here: { title => station name, artist => "ABC listen", cover => logo
 #             (~600 px), bitrate => "56kbps CBR" } (no bitrate when the stream playing isn't
-#             StreamGuys Icecast); synchronous, no network, never dies. onStream (_onStream) also
+#             StreamGuys Icecast: an HLS stream's bitrate is its track's, measured by
+#             Plugins::ABCListen::HLS (L6); nor, with liveQuality 'hls', for a station that isn't
+#             playing); synchronous, no network, never dies. onStream (_onStream) also
 #             logs a fallback to another stream family once per play (L5: Stations->noteStream);
 #             a LiveMetadata onStream that dies is logged and doesn't stop it.
 # Song info: LiveMetadata->trackInfo ("Program info") and, after it, LiveMetadata->recentInfo
 # ("Recently played", L3), registered as Slim::Menu::TrackInfo providers.
 #
-# Pref liveQuality (L5): initialised and validated in init; Stations reads it at play time.
+# Pref liveQuality (L5; L6 adds 'hls'): initialised and validated in init; Stations reads it at
+# play time.
 #
 # Owned by the live stream: L1 creates; L2 owns _stationItem text (line2), L4 its type, the station
 # menu and the day lists (data: Plugins::ABCListen::Schedule).
@@ -152,7 +157,7 @@ my @HOME_VARIANT_NETWORKS = qw(RN TRIPLEJ DOUBLEJ CLASSIC);
 sub init {
 	$METADATA->init( stationMeta => \&_metadata );
 
-	# === L5 === the liveQuality pref ('standard' | 'mediahub'; validator in Stations.pm)
+	# === L5 === the liveQuality pref ('standard' | 'mediahub' | 'hls' (L6); validator in Stations.pm)
 	$prefs->init( { liveQuality => 'standard' } );
 	$prefs->setValidate( { validator => \&Plugins::ABCListen::Stations::validateLiveQuality }, 'liveQuality' );
 	# === /L5 ===
@@ -200,8 +205,8 @@ sub stationItem {
 
 	return undef unless $STATIONS->playable($id);
 
+	# L6: hidden records (the HLS-only Kids listen versions) are listed when playable, with 'hls'
 	my $rec = $STATIONS->get($id) or return undef;
-	return undef if $rec->{group} eq 'hidden';
 
 	return _stationItem( $client, $rec );
 }
@@ -707,8 +712,9 @@ sub _metadata {
 }
 
 # StreamGuys Icecast is 56 kbps HE-AAC. undef when the station plays another stream: the client's
-# current song for this URL streams from elsewhere (a mediahub alternate), or the station has no
-# Icecast stream at all.
+# current song for this URL streams from elsewhere (a mediahub alternate, or L6 an HLS stream, whose
+# track has the measured bitrate), or the station has no Icecast stream at all; L6: also undef for a
+# station that isn't playing when liveQuality is 'hls' (HLS is tried first).
 sub _bitrate {
 	my ( $client, $url, $rec ) = @_;
 
@@ -721,6 +727,7 @@ sub _bitrate {
 		return $streamUrl =~ m{\Ahttps?://abc\.streamguys1\.com/}i ? ICECAST_BITRATE : undef;
 	}
 
+	return undef if $STATIONS->liveQuality eq 'hls';    # L6
 	return $rec->{mount} || $rec->{eventOnly} ? ICECAST_BITRATE : undef;
 }
 

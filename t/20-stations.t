@@ -508,7 +508,8 @@ subtest 'event-only: off air (null, {}, no sources, HLS-only sources, errors) an
 
 		my $c = collector();
 		$S->eventStatus( 'SPORT_BBL', $c->cb );
-		is_deeply( [ $c->args(0) ], [ { onAir => 0, sources => [] } ], "$case: off air" );
+		my @hls = $case eq 'HLS/HDS-only' ? ('https://mediaserviceslive.akamaized.net/hls/live/2118991/sportitinerant/index.m3u8') : ();
+		is_deeply( [ $c->args(0) ], [ { onAir => 0, sources => [], hls => \@hls } ], "$case: off air (L6: the hls sources kept)" );
 		is( $S->playable('SPORT_BBL'), 0, "$case: not playable (hidden)" );
 
 		$c = candidates('SPORT_BBL');
@@ -528,7 +529,7 @@ subtest 'event-only: off air (null, {}, no sources, HLS-only sources, errors) an
 	reset_all();
 	my $c = collector();
 	$S->eventStatus( 'TRIPLEJ', $c->cb );
-	is_deeply( [ $c->args(0) ], [ { onAir => 0, sources => [] } ], 'eventStatus of a service that is not event-only: off air, no request' );
+	is_deeply( [ $c->args(0) ], [ { onAir => 0, sources => [], hls => [] } ], 'eventStatus of a service that is not event-only: off air, no request' );
 	is( scalar( requests() ), 0, '... no request' );
 	is( $S->playable('SPORT_BBL'), 0, 'unknown status: not playable' );
 	is( scalar( requests() ), 0, 'playable never fetches' );
@@ -541,7 +542,7 @@ subtest 'event-only: on air' => sub {
 
 	my $c = collector();
 	$S->eventStatus( 'SPORT_BBL', $c->cb );
-	is_deeply( [ $c->args(0) ], [ { onAir => 1, sources => ['https://www.abc.net.au/res/streaming/audio-live/shout-aac/grandstand.pls?source=web'] } ], 'an aac .pls source: on air' );
+	is_deeply( [ $c->args(0) ], [ { onAir => 1, sources => ['https://www.abc.net.au/res/streaming/audio-live/shout-aac/grandstand.pls?source=web'], hls => ['https://streaming.abc-cdn.net.au/audio/hls/sport.m3u8?source=web'] } ], 'an aac .pls source: on air (L6: its hls source kept)' );
 	is( $S->playable('SPORT_BBL'), 1, 'playable while on air' );
 	is_deeply( [ candidates('SPORT_BBL')->args(0) ], [ [ ice('sport') ] ], 'candidates: the .pls resolved to Icecast' );
 	is( http_count(qr{epgNowPlaying}), 1, 'the status is cached' );
