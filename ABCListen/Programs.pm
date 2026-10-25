@@ -43,7 +43,7 @@ package Plugins::ABCListen::Programs;
 #   sortKey($title) -> the program list sort key: lower case, accents folded, a leading "The "
 #       ignored, whitespace collapsed ('' for undef). O3 and M2 reuse it.
 #
-#   program($path, $cb) -> $cb->(\%detail) | $cb->({ error => TOKEN })
+#   program($path, $cb[, \%opts]) -> $cb->(\%detail) | $cb->({ error => TOKEN })
 #       API::nextData($path) (ttl 6 h, stale_ok, timeout 8 s; stale buildIds and __N_REDIRECT are
 #       handled there),
 #       pageProps ->
@@ -60,7 +60,7 @@ package Plugins::ABCListen::Programs;
 #           restricted          1 | 0 (webDistributionRestricted) }
 #       ABC audiobooks: template 'audiobook' (or 'default'), restricted 1, no episodeCollectionId.
 #
-#   episodes($collectionId, $offset, $size, $cb) -> $cb->({ items => [episode refs], total, offset })
+#   episodes($collectionId, $offset, $size, $cb[, \%opts]) -> $cb->({ items => [episode refs], total, offset })
 #                                                   | $cb->({ error => TOKEN })
 #       API::bff('episodesWithSegments/x', {collectionId, offset, size}) (ttl 15 min, timeout 8 s),
 #       newest first. ABC lists only the newest 250: total = min(pagination.total, 250); size is
@@ -75,6 +75,13 @@ package Plugins::ABCListen::Programs;
 #       contentUri when the card has no docType); title = cardTitle; path = sitePath(articleLink).
 #       Segment refs have the same keys (segments => []) plus label (contentLabelPrepared.labelText,
 #       e.g. '1 of 5'). Cards that aren't audio documents, or without an id, are skipped.
+#
+#   F9: \%opts of program() and episodes(): quiet => 1 is for a caller that logs the failure itself
+#       (My ABC listen's Latest episodes logs a program it skips at WARN once a day). API.pm then
+#       logs that call's failures and stale serves at DEBUG instead of WARN (API.pm's quiet), and
+#       the failure also carries message, API.pm's readable detail, for the caller's log line:
+#       { error => TOKEN, message => '...' }. A request shared with a caller that isn't quiet is
+#       still logged at WARN. Without \%opts (every other caller), or with quiet false: as before.
 #
 # Owned by the ondemand stream (O2).
 
@@ -283,8 +290,9 @@ sub _sortPrograms {
 
 sub program {
 	shift if _isClass( $_[0] );
-	my ( $path, $cb ) = @_;
-	my $once = _once($cb);
+	my ( $path, $cb, $opts ) = @_;
+	my $once  = _once($cb);
+	my $quiet = _isQuiet($opts);
 
 	Plugins::ABCListen::API::nextData(
 		$path,
@@ -292,8 +300,8 @@ sub program {
 			my $pageProps = shift;
 			_guard( $once, sub { $once->( _programDetail($pageProps) ) } );
 		},
-		sub { $once->( { error => _token(shift) } ) },
-		{ ttl => PROGRAM_TTL, stale_ok => 1, timeout => API_TIMEOUT },
+		sub { $once->( _failure( shift, $quiet ) ) },
+		{ ttl => PROGRAM_TTL, stale_ok => 1, timeout => API_TIMEOUT, ( $quiet ? ( quiet => 1 ) : () ) },
 	);
 
 	return;
@@ -348,8 +356,9 @@ sub _programDetail {
 
 sub episodes {
 	shift if _isClass( $_[0] );
-	my ( $collectionId, $offset, $size, $cb ) = @_;
-	my $once = _once($cb);
+	my ( $collectionId, $offset, $size, $cb, $opts ) = @_;
+	my $once  = _once($cb);
+	my $quiet = _isQuiet($opts);
 
 	$offset = 0 unless defined $offset && !ref $offset && $offset =~ /\A[0-9]+\z/;
 	$offset += 0;
@@ -382,8 +391,8 @@ sub episodes {
 				$once->( { items => \@items, total => min( $total, MAX_EPISODES ), offset => $offset } );
 			} );
 		},
-		sub { $once->( { error => _token(shift) } ) },
-		{ ttl => EPISODES_TTL, timeout => API_TIMEOUT },
+		sub { $once->( _failure( shift, $quiet ) ) },
+		{ ttl => EPISODES_TTL, timeout => API_TIMEOUT, ( $quiet ? ( quiet => 1 ) : () ) },
 	);
 
 	return;
@@ -456,6 +465,19 @@ sub _token {
 	my $error = shift;
 	my $token = ref $error eq 'HASH' ? $error->{error} : undef;
 	return defined $token && !ref $token && $token =~ /\APLUGIN_ABCLISTEN_[A-Z0-9_]+\z/ ? $token : LOAD_FAILED;
+}
+
+# F9: the caller logs failures itself (see the header)
+sub _isQuiet { ref $_[0] eq 'HASH' && $_[0]->{quiet} ? 1 : 0 }
+
+# An API.pm error -> our failure: { error => TOKEN }, plus (F9, for a quiet caller) API.pm's message.
+sub _failure {
+	my ( $error, $quiet ) = @_;
+
+	my %failure = ( error => _token($error) );
+	$failure{message} = $error->{message} if $quiet && ref $error eq 'HASH' && defined $error->{message} && !ref $error->{message};
+
+	return \%failure;
 }
 
 sub _text {

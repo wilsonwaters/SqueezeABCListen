@@ -5,6 +5,10 @@
 # refs, segments, the 250 cap and no request at offset >= 250; the ttl / stale_ok / timeout (8 s)
 # options passed to API.pm; { error => TOKEN } on failure; exactly one callback on every path, also
 # when the consumer's callback dies.
+# F9 (#89): program() and episodes() with { quiet => 1 } (My ABC listen's Latest episodes, which logs
+# a program it skips itself): API.pm's quiet (failures and stale serves at DEBUG), the failure carries
+# API.pm's message; without the option, or with quiet false, the options, the failure hash and the
+# WARN are as before; a request shared with a caller that isn't quiet is still a WARN.
 #
 # Fixtures in t/data/ondemand/ (raw response bodies as served; research copies from
 # ai-state/research/abc-samples/ with the {_fixture_note, data} wrapper stripped and _next/data
@@ -635,6 +639,126 @@ subtest 'program() and episodes(): a consumer callback that dies is called once,
 	fresh();
 	$run->( 'episodes(), offset 250 (no request, synchronous)', 'episodes', '2885458', 250, 50 );
 	$run->( 'episodes(), bad collection id (synchronous)', 'episodes', 'abc', 0, 50 );
+};
+
+# ---------------------------------------------------------------------------
+# F9 (#89): the quiet option
+# ---------------------------------------------------------------------------
+
+# Call a Programs function with a collector callback and \%opts after it; returns the collector.
+sub call_opts {
+	my ( $fn, $opts, @args ) = @_;
+	my $c = collector();
+	$P->can($fn)->( @args, $c->cb, $opts );
+	return $c;
+}
+
+# How many plugin.abclisten lines at $level match $re.
+sub logged_like {
+	my ( $level, $re ) = @_;
+	return scalar grep { $_->{message} =~ $re } Slim::Utils::Log->messages( category => 'plugin.abclisten', level => $level );
+}
+
+my $REMOVED     = '/listen/programs/removed';
+my $REMOVED_404 = qr{\AHTTP request failed: 404 Not Found \(\Q$NEXT$REMOVED.json\E\)};
+my $PAGE_FAILED = qr{\AnextData \Q$REMOVED\E: HTTP request failed: 404 };
+my $EPS_URL     = "$EPS?collectionId=404&offset=0&size=5";
+my $EPS_404     = qr{\AHTTP request failed: 404 Not Found \(\Q$EPS_URL\E\)};
+my $EPS_FAILED  = qr{\AGET \Q$EPS_URL\E: HTTP request failed: 404 };
+
+subtest 'F9: program() with quiet => 1: API.pm\'s quiet, the failure carries API.pm\'s message; without it, as before' => sub {
+	fresh();
+	local $Slim::Utils::Log::CATEGORIES{'plugin.abclisten'}->{defaultLevel} = 'DEBUG';    # record DEBUG lines too
+	route( "$NEXT$REMOVED.json", code => 404, content => '{}' );
+
+	my $c = call_opts( 'program', { quiet => 1 }, $REMOVED );
+	is( $c->count, 1, 'quiet: one callback' );
+	my $r = result($c);
+	is_deeply( [ sort keys %$r ], [qw(error message)], 'quiet: { error, message }' );
+	is( $r->{error}, $LOAD_FAILED, '... error: the token, as before' );
+	like( $r->{message}, $REMOVED_404, '... message: API.pm\'s detail (the 404 and the URL)' );
+	is_deeply( $API_CALLS[-1]->{opts}, { ttl => 6 * 3600, stale_ok => 1, timeout => 8, quiet => 1 }, '... API::nextData with quiet => 1 added to the usual options' );
+	is( logged_like( WARN => $PAGE_FAILED ), 0, '... no WARN from API.pm (the caller logs it)' );
+	is( logged_like( DEBUG => $PAGE_FAILED ), 1, '... API.pm logged it at DEBUG' );
+
+	for my $case ( [ 'no options', undef ], [ 'quiet => 0', { quiet => 0 } ], [ 'other options only', {} ] ) {
+		my ( $name, $opts ) = @$case;
+		Slim::Utils::Log->resetMessages;
+		$c = defined $opts ? call_opts( 'program', $opts, $REMOVED ) : call( 'program', $REMOVED );
+		is( $c->count, 1, "$name: one callback" );
+		is_deeply( result($c), { error => $LOAD_FAILED }, "$name: { error => LOAD_FAILED } only, as before" );
+		is_deeply( $API_CALLS[-1]->{opts}, { ttl => 6 * 3600, stale_ok => 1, timeout => 8 }, "$name: the options as before (no quiet)" );
+		is( logged_like( WARN => $PAGE_FAILED ), 1, "$name: API.pm's WARN, as before" );
+	}
+	is( scalar( grep {m{/removed\.json\z}} urls() ), 4, 'every call asked ABC (a failure is not cached)' );
+};
+
+subtest 'F9: episodes() with quiet => 1: API.pm\'s quiet, the failure carries API.pm\'s message; without it, as before' => sub {
+	fresh();
+	local $Slim::Utils::Log::CATEGORIES{'plugin.abclisten'}->{defaultLevel} = 'DEBUG';
+	route( $EPS_URL, code => 404, content => '{}' );
+
+	my $c = call_opts( 'episodes', { quiet => 1 }, '404', 0, 5 );
+	is( $c->count, 1, 'quiet: one callback' );
+	my $r = result($c);
+	is_deeply( [ sort keys %$r ], [qw(error message)], 'quiet: { error, message }' );
+	is( $r->{error}, $LOAD_FAILED, '... error: the token, as before' );
+	like( $r->{message}, $EPS_404, '... message: API.pm\'s detail (the 404 and the URL)' );
+	is_deeply( $API_CALLS[-1]->{opts}, { ttl => 900, timeout => 8, quiet => 1 }, '... API::bff with quiet => 1 added to the usual options' );
+	is( logged_like( WARN => $EPS_FAILED ), 0, '... no WARN from API.pm (the caller logs it)' );
+	is( logged_like( DEBUG => $EPS_FAILED ), 1, '... API.pm logged it at DEBUG' );
+
+	for my $case ( [ 'no options', undef ], [ 'quiet => 0', { quiet => 0 } ] ) {
+		my ( $name, $opts ) = @$case;
+		Slim::Utils::Log->resetMessages;
+		$c = defined $opts ? call_opts( 'episodes', $opts, '404', 0, 5 ) : call( 'episodes', '404', 0, 5 );
+		is_deeply( result($c), { error => $LOAD_FAILED }, "$name: { error => LOAD_FAILED } only, as before" );
+		is_deeply( $API_CALLS[-1]->{opts}, { ttl => 900, timeout => 8 }, "$name: the options as before (no quiet)" );
+		is( logged_like( WARN => $EPS_FAILED ), 1, "$name: API.pm's WARN, as before" );
+	}
+
+	# a success is the same either way
+	fresh();
+	route( qr{\Q$EPS\E\?}, file => 'ondemand/bff-episodesWithSegments-scienceshow.json', headers => $JSON_TYPE );
+	my $loud = result( call( 'episodes', '2885458', 240, 10 ) );
+	is_deeply( result( call_opts( 'episodes', { quiet => 1 }, '2885458', 240, 10 ) ), $loud, 'a success: the same answer with quiet' );
+	route( "$NEXT/listen/programs/scienceshow.json", file => 'ondemand/nextdata-program-scienceshow.trimmed.json', headers => $JSON_TYPE );
+	$loud = result( call( 'program', '/listen/programs/scienceshow' ) );
+	is_deeply( result( call_opts( 'program', { quiet => 1 }, '/listen/programs/scienceshow' ) ), $loud, '... and for program()' );
+};
+
+subtest 'F9: a 404 shared by a quiet and a loud caller is still a WARN; each gets its own failure' => sub {
+	fresh();
+	route( "$NEXT$REMOVED.json", code => 404, content => '{}', defer => 1 );
+
+	my $quiet = call_opts( 'program', { quiet => 1 }, $REMOVED );
+	my $loud  = call( 'program', $REMOVED );
+	is( $quiet->count + $loud->count, 0, 'both wait for the one request in flight' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+
+	is( scalar( grep {m{/removed\.json\z}} urls() ), 1, 'one request for both' );
+	like( result($quiet)->{message}, $REMOVED_404, 'the quiet caller: { error, message }' );
+	is_deeply( result($loud), { error => $LOAD_FAILED }, 'the loud caller: { error } only' );
+	is( logged_like( WARN => $PAGE_FAILED ), 1, 'API.pm\'s WARN, for the caller that isn\'t quiet' );
+};
+
+subtest 'F9: quiet program(): a stale serve is logged at DEBUG (the last good page is the answer); a loud caller\'s at WARN' => sub {
+	fresh();
+	local $Slim::Utils::Log::CATEGORIES{'plugin.abclisten'}->{defaultLevel} = 'DEBUG';
+	route( "$NEXT/listen/programs/scienceshow.json", file => 'ondemand/nextdata-program-scienceshow.trimmed.json', headers => $JSON_TYPE );
+	call( 'program', '/listen/programs/scienceshow' );
+
+	Slim::Networking::SimpleAsyncHTTP->reset;
+	route( "$SITE/listen/search", file => 'foundation/listen-search.trimmed.html' );
+	route( qr{/_next/data/}, code => 404, content => '{}' );
+	setTime( $T0 + 6 * 3600 + 1 );
+	Slim::Utils::Log->resetMessages;
+
+	my $stale = qr{\AnextData /listen/programs/scienceshow: serving the last good copy};
+	is( result( call_opts( 'program', { quiet => 1 }, '/listen/programs/scienceshow' ) )->{title}, 'The Science Show', 'quiet: the last good page' );
+	is_deeply( [ logged_like( WARN => $stale ), logged_like( DEBUG => $stale ) ], [ 0, 1 ], '... its stale serve logged at DEBUG' );
+	is( result( call( 'program', '/listen/programs/scienceshow' ) )->{title}, 'The Science Show', 'loud: the last good page' );
+	is( logged_like( WARN => $stale ), 1, '... its stale serve logged at WARN, as before' );
 };
 
 done_testing();

@@ -25,6 +25,9 @@
 # so the 6 h shortcut ends 6 h after the fetch); an hour-old answer never overwrites newer meta
 # (windows closed since, a seed stored while the resolve waited); a restricted cached document
 # closes the windows at its fetch time; one freshness window (Util's = SEEN_MAX_AGE).
+# F9 (#89), two F7 rules pinned: the page a search hit names replaces the lookup's fetch info (a
+# cached lookup from T, its page fetched at T + 59 min: seenAt T + 59 min); the newer-data guard
+# also holds on the restricted path (a seed from T + 30 min outlives a restricted document from T).
 #
 # Fixtures in t/data/ondemand/ are raw response bodies as served:
 #   nextdata-episode-scienceshow-mp3.trimmed.json   GET /_next/data/<buildId>/listen/programs/scienceshow/trees-potatoes-brendan-may-step/107266790.json
@@ -1300,6 +1303,61 @@ subtest 'F7: a restricted document from the 1 h cache closes the windows at its 
 	is( scalar( data_requests() ), 1, '(the second answer came from API.pm\'s cache)' );
 	is_deeply( [ @{ getEpisodeMeta($SCIENCE) }{qw(availableTo downloadAvailableTo)} ], [ $T, $T ], 'still closed at the fetch time T, not at now (T + 59 min)' );
 	is( Plugins::ABCListen::Util::episodeMetaIsNewer( $SCIENCE, $T + 30 * 60 ), 0, 'so a search answer fetched at T + 30 min is newer and may reopen them' );
+};
+
+# ---- F9 (#89): two F7 rules no test pinned (tests only) ----
+
+# A search index hit for the Science Show episode without renditions: it names the episode's page.
+my $PAGE_HIT = { hits => [ { objectID => "coremedia://audioepisode/$SCIENCE", canonicalURL => "$SITE$SCIENCE_PATH" } ], nbHits => 1 };
+
+subtest 'F9: the page a search hit names replaces the lookup\'s fetch info: seenAt is the page\'s fetch time' => sub {
+	fresh();
+	serve_algolia($PAGE_HIT);
+	Plugins::ABCListen::API::algolia(    # the lookup Episode sends, answered and cached at T
+		{
+			query                => '',
+			filters              => join( ' OR ', map {qq{objectID:"coremedia://$_/$SCIENCE"}} qw(audioepisode audio audiosegment) ),
+			hitsPerPage          => 1,
+			attributesToRetrieve => [qw(objectID canonicalURL title programTitle programID duration dates mediaRenditions defaultThumbnail)],
+		},
+		sub { }, sub { }, { timeout => 6 },
+	);
+	is( scalar( algolia_requests() ), 1, 'T: the lookup is in API.pm\'s cache (a hit without renditions, naming the page)' );
+
+	setTime( $T + 59 * 60 );
+	serve( "/listen/programs/x/x/$SCIENCE", fixture('ondemand/nextdata-generic-1-404.json'), code => 404 );
+	serve( $SCIENCE_PATH, doc('nextdata-episode-scienceshow-mp3.trimmed.json') );
+	is_deeply( candidates( answer( resolve_id($SCIENCE), 'generic 404, the cached lookup, its page' ) ), [$SCIENCE_MP3], 'plays the MP3 from the page' );
+	is( scalar( algolia_requests() ), 1, '(the lookup came from API.pm\'s cache, fetched at T)' );
+	is( ( data_requests() )[-1]->{url}, data_url($SCIENCE_PATH), '(the page was fetched now, T + 59 min)' );
+	is( getEpisodeMeta($SCIENCE)->{seenAt}, $T + 59 * 60, 'seenAt = the page\'s fetch time (T + 59 min), not the lookup\'s (T): the page\'s renditions are the ones stored' );
+};
+
+subtest 'F9: a restricted document from the 1 h cache never overwrites a newer seed: its windows and seenAt are kept' => sub {
+	fresh();
+	serve( $SCIENCE_PATH, edit_doc( sub { $_[0]->{webDistributionRestricted} = JSON::PP::true } ) );
+	Plugins::ABCListen::API::nextData( $SCIENCE_PATH, sub { }, sub { }, { ttl => 3600, timeout => 6 } );    # the document Episode fetches, answered and cached at T
+	is( scalar( data_requests() ), 1, 'T: the restricted document is in API.pm\'s cache' );
+
+	setTime( $T + 59 * 60 );
+	serve_algolia($PAGE_HIT);
+	serve( "/listen/programs/x/x/$SCIENCE", fixture('ondemand/nextdata-generic-1-404.json'), code => 404, defer => 1 );
+	my $c = resolve_id($SCIENCE);
+
+	# a seed (a search answer fetched at T + 30 min) lands while the resolve waits for ABC
+	my $seed = { renditions => [ { url => $SCIENCE_MP3, mime => 'audio/mpeg', bitrate => 192 } ], availableTo => $OPEN_END, downloadAvailableTo => $OPEN_END, seenAt => $T + 30 * 60 };
+	setEpisodeMeta( $SCIENCE, dclone($seed) );
+
+	for ( 1 .. 5 ) { last if $c->count; Slim::Networking::SimpleAsyncHTTP->completeDeferred }
+	is_deeply( answer( $c, 'generic 404, the lookup, the cached restricted document' ), { error => $RESTRICTED }, 'RESTRICTED: the answer is the document\'s' );
+	is( scalar( grep { $_->{url} eq data_url($SCIENCE_PATH) } requests() ), 1, '(the document came from API.pm\'s cache, fetched at T)' );
+	my $m = getEpisodeMeta($SCIENCE);
+	is_deeply(
+		[ @$m{qw(availableTo downloadAvailableTo seenAt renditions)} ],
+		[ $OPEN_END, $OPEN_END, $T + 30 * 60, $seed->{renditions} ],
+		'the seed\'s windows, seenAt and renditions are kept: the document (T) is older than the seed (T + 30 min), so it closes nothing'
+	);
+	is( $m->{title}, $SCIENCE_TITLE, 'the rest of the document is merged as before' );
 };
 
 done_testing();

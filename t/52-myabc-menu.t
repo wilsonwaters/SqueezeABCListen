@@ -3,6 +3,10 @@
 # Australia/Sydney). F8 (#78): a 50-row Latest walk writes the episode meta cache only for what
 # changed (50 new entries, then none; renewed once a day); a followed program ABC removed is a WARN
 # once a day, DEBUG on the other rebuilds.
+# F9 (#89): Latest's fetches are quiet, so a followed program whose page (or episode list) 404s on
+# three rebuilds gives exactly one WARN in all (MyABC's, carrying API.pm's 404), not one more from
+# API.pm per rebuild; the program menu still logs API.pm's WARN on every 404; the WARN interval is a
+# day (not less) and the remembered programs are only those warned about in the last day.
 #   * the top-level "My ABC listen" item (exact keys, weight, menuWeights, last among the hooks' items);
 #   * My ABC listen: the empty state (one instructional text item), "Latest episodes" and
 #     "Followed programs (N)" (N counts follows, not tombstones; both rows stay while only
@@ -1562,6 +1566,106 @@ subtest 'F8: a followed program ABC removed: one WARN a day, DEBUG on every othe
 	feed( $LATEST, undef );
 	is( scalar( grep { m{skipped the program Also Removed} } warnings_logged() ), 1, 'another removed program: its own WARN' );
 	is( $logged->('WARN'), 2, '... and none more for the first' );
+};
+
+# ---------------------------------------------------------------------------
+# F9 (#89): one WARN in all for a removed followed program (Latest's fetches are quiet)
+# ---------------------------------------------------------------------------
+
+my $REMOVED = '/listen/programs/removed';
+
+sub debug_logged { map { $_->{message} } grep { $_->{level} eq 'DEBUG' } Slim::Utils::Log->messages( category => 'plugin.abclisten' ) }
+
+subtest 'F9: a followed program whose page 404s on 3 Latest rebuilds: exactly 1 WARN in all (MyABC\'s, with API.pm\'s 404)' => sub {
+	fresh();
+	local $Slim::Utils::Log::CATEGORIES{'plugin.abclisten'}->{defaultLevel} = 'DEBUG';    # record DEBUG lines too
+	$F->follow( route_generated(1) );
+	route( "$NEXT$REMOVED.json", code => 404, content => '{}' );
+	$F->follow( { title => 'Removed Program', path => $REMOVED } );
+
+	for my $rebuild ( 1 .. 3 ) {
+		is( scalar @{ items_of( feed( $LATEST, undef ) ) }, 5, "rebuild $rebuild: Generated 1's five episodes" );
+		advanceTime(901);
+	}
+	is( scalar( grep {m{/removed\.json\z}} map { $_->{url} } requests() ), 3, 'three rebuilds, each asked ABC for the removed page (404)' );
+
+	my @warnings = warnings_logged();
+	is( scalar @warnings, 1, 'exactly one WARN in all (before F9: four, API.pm\'s nextData 404 on every rebuild plus MyABC\'s)' );
+	like(
+		$warnings[0],
+		qr{\ALatest episodes: skipped the program Removed Program \(\Q$REMOVED\E\): HTTP request failed: 404 Not Found \(\Q$NEXT$REMOVED.json\E\).* \(repeats are logged at DEBUG for a day\)\z},
+		'... MyABC\'s, carrying API.pm\'s detail (the 404 and the URL)'
+	);
+	is( scalar( grep {m{\AnextData \Q$REMOVED\E: HTTP request failed: 404 }} debug_logged() ), 3, 'API.pm logged each 404 at DEBUG' );
+	is( scalar( grep {m{skipped the program Removed Program .*\(again; a WARN at most once a day\)\z}} debug_logged() ), 2, 'MyABC logged the other two rebuilds at DEBUG' );
+	is( scalar( errors_logged() ), 0, 'no ERROR' );
+};
+
+subtest 'F9: a followed program whose episode list 404s on 3 Latest rebuilds: exactly 1 WARN in all' => sub {
+	fresh();
+	local $Slim::Utils::Log::CATEGORIES{'plugin.abclisten'}->{defaultLevel} = 'DEBUG';
+	$F->follow( route_generated(1) );
+	route( "$EPS?collectionId=91000002&offset=0&size=5", code => 404, content => '{}' );    # before route_generated: the first route wins
+	$F->follow( route_generated(2) );
+
+	for my $rebuild ( 1 .. 3 ) {
+		is( scalar @{ items_of( feed( $LATEST, undef ) ) }, 5, "rebuild $rebuild: Generated 1's five episodes" );
+		advanceTime(901);
+	}
+	is( scalar( grep {/collectionId=91000002&/} episode_requests() ), 3, 'three rebuilds, each asked ABC for the episode list (404)' );
+
+	my @warnings = warnings_logged();
+	is( scalar @warnings, 1, 'exactly one WARN in all (before F9: four)' );
+	like( $warnings[0], qr{\ALatest episodes: skipped the program Generated 2 \(/listen/programs/gen-2\): HTTP request failed: 404 Not Found \(\Q$EPS\E\?collectionId=91000002&offset=0&size=5\)}, '... MyABC\'s, carrying API.pm\'s detail' );
+	is( scalar( grep {m{\AGET \Q$EPS\E\?collectionId=91000002&offset=0&size=5: HTTP request failed: 404 }} debug_logged() ), 3, 'API.pm logged each 404 at DEBUG' );
+};
+
+subtest 'F9: only Latest is quiet: the removed program\'s menu logs API.pm\'s 404 WARN on every open' => sub {
+	fresh();
+	route( "$NEXT$REMOVED.json", code => 404, content => '{}' );
+	$F->follow( { title => 'Removed Program', path => $REMOVED } );
+
+	feed( $LATEST, undef );
+	is( scalar( warnings_logged() ), 1, 'Latest: one WARN (MyABC\'s)' );
+
+	my $page404 = qr{\AnextData \Q$REMOVED\E: HTTP request failed: 404 };
+	for my $open ( 1 .. 3 ) {
+		my $items = items_of( feed( $PROGRAM, undef, { title => 'Removed Program', path => $REMOVED } ) );
+		is_deeply( $items, [ text_item($LOAD_FAILED) ], "program menu, open $open: LOAD_FAILED" );
+		is( scalar( grep { $_ =~ $page404 } warnings_logged() ), $open, "... API.pm's WARN for the 404, every time ($open)" );
+		advanceTime(61);
+	}
+};
+
+subtest 'F9 pins: the skipped-program WARN is once a day, not more often; only programs warned about in the last day are remembered' => sub {
+	fresh();
+	$F->follow( route_generated(1) );
+	route( "$NEXT$REMOVED.json",               code => 404, content => '{}' );
+	route( "$NEXT/listen/programs/removed-too.json", code => 404, content => '{}' );
+	my $warned = sub { my $title = shift; scalar grep {m{skipped the program \Q$title\E }} warnings_logged() };
+
+	$F->follow( { title => 'Removed Program', path => $REMOVED } );
+	feed( $LATEST, undef );
+	is( $warned->('Removed Program'), 1, 'T0: Removed Program, WARN' );
+
+	setTime( $T0 + 3600 );
+	$F->follow( { title => 'Also Removed', path => '/listen/programs/removed-too' } );
+	feed( $LATEST, undef );
+	is_deeply( [ $warned->('Removed Program'), $warned->('Also Removed') ], [ 1, 1 ], 'T0 + 1 h: Also Removed, WARN; Removed Program, no WARN (an hour after its WARN)' );
+	is_deeply( [ Plugins::ABCListen::MyABC::_skipWarnedPaths() ], [ $REMOVED, '/listen/programs/removed-too' ], '... both remembered (warned about in the last day)' );
+	$F->unfollow($REMOVED);    # its tombstone (and so its fetches) ends 30 min later
+
+	for my $later ( 2 * 3600, 6 * 3600, 12 * 3600, 86400 - 1 ) {
+		setTime( $T0 + 3600 + $later );
+		feed( $LATEST, undef );
+		is( $warned->('Also Removed'), 1, sprintf( 'Also Removed, rebuilt %d s after its WARN: DEBUG, no WARN', $later ) );
+	}
+
+	setTime( $T0 + 3600 + 86400 );
+	_cache()->remove( Plugins::ABCListen::MyABC::_latestKey( [ $F->listWithUnfollowed ] ) );    # rebuilt a second ago: rebuild again
+	feed( $LATEST, undef );
+	is( $warned->('Also Removed'), 2, 'a day after its WARN: WARN again' );
+	is_deeply( [ Plugins::ABCListen::MyABC::_skipWarnedPaths() ], ['/listen/programs/removed-too'], '... and Removed Program, warned about more than a day ago (unfollowed since), is forgotten' );
 };
 
 done_testing();

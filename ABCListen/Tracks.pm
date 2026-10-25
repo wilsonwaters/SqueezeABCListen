@@ -75,7 +75,8 @@ package Plugins::ABCListen::Tracks;
 # bad JSON) -> ERROR_TTL (30 s), logged at WARN once per run of consecutive failures, then at DEBUG.
 # A response that can't be read (the parser dies) is also logged at ERROR, F8: at most once an hour
 # per station and request (now / recently played; PARSE_ERROR_INTERVAL), else at DEBUG, since the
-# poll asks again every 20-120 s while the station plays.
+# poll asks again every 20-120 s while the station plays. F9: the parser's die message is used
+# without its trailing newline, so each of these is one log line.
 # Identical requests are coalesced: one upstream request per service for every caller. API.pm is
 # called with quiet => 1 (its own logging at DEBUG only) and without a ttl (no second cache).
 #
@@ -409,7 +410,7 @@ sub _settleNow {
 				1;
 			};
 			if ( !$parsed ) {
-				$error = 'could not read the response: ' . ( $@ || 'unknown problem' );
+				$error = 'could not read the response: ' . _problem($@);
 				_parseError( $key, "Song for $id", $error );
 				undef $song;
 			}
@@ -471,7 +472,7 @@ sub _settleRecent {
 	else {
 		$plays = eval { parseRecent( $result->{data}, RECENT_LIMIT ) };
 		if ( ref $plays ne 'ARRAY' ) {
-			$error = 'could not read the response: ' . ( $@ || 'unknown problem' );
+			$error = 'could not read the response: ' . _problem($@);
 			_parseError( $key, "Recently played for $id", $error );
 			undef $plays;
 		}
@@ -663,6 +664,15 @@ sub _once {
 		eval { $cb->(@_); 1 } or $log->error( "Tracks: $what callback died: " . ( $@ || 'unknown problem' ) );
 		return;
 	};
+}
+
+# F9: a die's message ($@) for a log line: trailing whitespace removed (a die ends it with "\n",
+# which put the rest of the line on a second line), as LiveMetadata::_unexpected does.
+sub _problem {
+	my $problem = shift;
+	$problem = '' unless defined $problem;
+	$problem =~ s/\s+\z//;
+	return length $problem ? $problem : 'unknown problem';
 }
 
 # Entity-decoded text with whitespace collapsed and trimmed, or undef when empty.

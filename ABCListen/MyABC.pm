@@ -27,9 +27,13 @@ package Plugins::ABCListen::MyABC;
 #     unfollowed in the last 30 min keeps its episodes, in their places, until its tombstone
 #     expires (M4; see "Follow / Unfollow"); no follows and no tombstones -> the help text. At
 #     most 4 programs in flight; a program that fails is skipped (WARN; F8: once a day per program,
-#     else DEBUG, since a program ABC removed fails on every rebuild). After 25 s (XMLBrowser
-#     gives a feed 35 s) the feed answers with what has arrived (WARN with the number of programs
-#     left out) and ignores later results.
+#     else DEBUG, since a program ABC removed fails on every rebuild). F9: both fetches are quiet
+#     (Programs' quiet option): API.pm logs their failures, and a program page served from its
+#     last-good copy (listed as before), at DEBUG, so this WARN, with API.pm's detail (e.g. the
+#     404), is the only one: a removed program is one WARN a day, not one more per rebuild. Every
+#     other caller of Programs (the program menus, ...) still gets API.pm's WARN for each failure.
+#     After 25 s (XMLBrowser gives a feed 35 s) the feed answers with what has arrived (WARN with
+#     the number of programs left out) and ignores later results.
 #     Merge: one row per episode id (the program the episode belongs to wins, else the first A-Z),
 #     newest first, then by program (Programs::sortKey), then by id; undated episodes last; the newest
 #     50. Rows are OnDemand->episodeItem rows (programImage = the followed entry's image;
@@ -380,8 +384,11 @@ sub _logSkipped {
 # test helper: forget which programs were logged (a restarted LMS starts like this)
 sub _reset { %skipWarned = (); return }
 
+# test helper (F9): the program paths whose "skipped" WARN is remembered
+sub _skipWarnedPaths { sort keys %skipWarned }
+
 # One program's newest episodes (a followed program or a tombstone): $cb->({ entry, detail, episodes })
-# or $cb->({ error }), once.
+# or $cb->({ error, message? }), once. F9: both fetches are quiet; _logSkipped reports a failure.
 sub _programLatest {
 	my ( $entry, $cb ) = @_;
 
@@ -391,7 +398,7 @@ sub _programLatest {
 	eval {
 		Plugins::ABCListen::Programs::program( $entry->{path}, sub {
 			my $detail = shift;
-			return $answer->( { error => _error($detail) } ) if ref $detail ne 'HASH' || $detail->{error};
+			return $answer->( _failure($detail) ) if ref $detail ne 'HASH' || $detail->{error};
 
 			# no episode list (an ABC audiobook): nothing to add
 			my $collectionId = $detail->{episodeCollectionId};
@@ -399,15 +406,24 @@ sub _programLatest {
 
 			Plugins::ABCListen::Programs::episodes( $collectionId, 0, LATEST_PER_PROGRAM, sub {
 				my $result = shift;
-				return $answer->( { error => _error($result) } ) if ref $result ne 'HASH' || $result->{error};
+				return $answer->( _failure($result) ) if ref $result ne 'HASH' || $result->{error};
 
 				$answer->( { entry => $entry, detail => $detail, episodes => ref $result->{items} eq 'ARRAY' ? $result->{items} : [] } );
-			} );
-		} );
+			}, { quiet => 1 } );
+		}, { quiet => 1 } );
 		1;
 	} or $answer->( { error => LOAD_FAILED, message => $@ || 'unknown error' } );
 
 	return;
+}
+
+# A failed fetch -> { error => TOKEN, message? }: F9, the detail a quiet Programs call passes on
+# (API.pm logged it at DEBUG only), for _logSkipped's WARN.
+sub _failure {
+	my $result  = shift;
+	my %failure = ( error => _error($result) );
+	$failure{message} = $result->{message} if ref $result eq 'HASH' && _hasText( $result->{message} );
+	return \%failure;
 }
 
 # The results -> [ { program => <program title>, episode => <episodeItem input> } ], newest first.

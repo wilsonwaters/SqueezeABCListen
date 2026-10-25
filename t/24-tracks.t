@@ -12,6 +12,8 @@
 # limit, 60 s cache, main stations only); Tracks' own coalescing (one settle, one miss, for every
 # caller); a dying callback doesn't stop the other callers; exactly one callback on every path.
 # F8 (#78): an unreadable response is an ERROR at most once an hour per station and request.
+# F9 (#89): that ERROR (and the error passed on) is one line: the parser's die message without its
+# trailing newline.
 #
 # Fixtures in t/data/live/ are raw response bodies (the research {_fixture_note, data} wrapper
 # stripped; lists trimmed, shapes unedited):
@@ -582,6 +584,48 @@ subtest 'F8: an unreadable response is an ERROR at most once an hour per station
 	advanceTime(31);
 	$T->recent( 'TRIPLEJ', 10, sub { } );
 	is( $errors->(qr/^Recently played for TRIPLEJ: could not read/), 1, '... and DEBUG within the hour' );
+};
+
+subtest 'F9: the unreadable-response ERROR is one line: the die message without its trailing newline' => sub {
+	reset_all();
+	route( $TJ_NOW_URL, file => 'live/music-abcradio-plays-triplej-now.json' );
+	route( "${MUSIC}plays/search.json?limit=10&order=desc&station=triplej", file => 'live/music-abcradio-plays-search-triplej.json' );
+
+	no warnings 'redefine';
+	local *Plugins::ABCListen::Tracks::parseNow    = sub { die "unexpected shape\n" };
+	local *Plugins::ABCListen::Tracks::parseRecent = sub { die "unexpected list\n" };
+
+	my $c = now_cb('TRIPLEJ');
+	my $recent;
+	$T->recent( 'TRIPLEJ', 10, sub { $recent = [@_] } );
+
+	my @lines = map { $_->{message} } grep { $_->{message} =~ /could not read the response/ } logged('ERROR'), logged('WARN');
+	is( scalar @lines, 4, 'the ERROR and the "unavailable" WARN, for the song and for recently played' );
+	is_deeply( [ grep {/\n/} @lines ], [], 'no line holds a newline' );
+	is_deeply(
+		[ grep { /^(?:Song|Recently played) for TRIPLEJ: could not read/ } @lines ],
+		[
+			'Song for TRIPLEJ: could not read the response: unexpected shape (repeats are logged at DEBUG for an hour)',
+			'Recently played for TRIPLEJ: could not read the response: unexpected list (repeats are logged at DEBUG for an hour)',
+		],
+		'the ERROR lines: the reason, then the note, on one line'
+	);
+	is( ( $c->args(0) )[1], 'could not read the response: unexpected shape', 'the error passed on (song) has no trailing newline' );
+	is( $recent->[1], 'could not read the response: unexpected list', '... nor the one for recently played' );
+
+	# a die without "\n" (Perl adds " at <file> line <n>.\n"), and an empty one
+	reset_all();
+	route( $TJ_NOW_URL, file => 'live/music-abcradio-plays-triplej-now.json' );
+	local *Plugins::ABCListen::Tracks::parseNow = sub { die "unexpected shape" };
+	now_cb('TRIPLEJ');
+	my ($line) = map { $_->{message} } logged('ERROR');
+	like( $line, qr/\ASong for TRIPLEJ: could not read the response: unexpected shape at \S+ line \d+\. \(repeats are logged at DEBUG for an hour\)\z/, 'a die with its location: one line' );
+
+	reset_all();
+	route( $TJ_NOW_URL, file => 'live/music-abcradio-plays-triplej-now.json' );
+	local *Plugins::ABCListen::Tracks::parseNow = sub { die "\n" };
+	now_cb('TRIPLEJ');
+	is_deeply( [ map { $_->{message} } logged('ERROR') ], ['Song for TRIPLEJ: could not read the response: unknown problem (repeats are logged at DEBUG for an hour)'], 'a die with only a newline: "unknown problem"' );
 };
 
 done_testing();
