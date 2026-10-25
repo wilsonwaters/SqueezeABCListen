@@ -521,28 +521,65 @@ subtest 'failures while playing: a segment retried then skipped; reloads back of
 	drain($stream);
 	is_deeply( [ seq_of( segment_requests() ) ], [ 4, 5, 5, 6 ], 'then segment 6' );
 
-	# the playlist goes away (an outage)
+	# the playlists go away (an outage)
 	Slim::Networking::SimpleAsyncHTTP->reset;
-	route( $MEDIA, error => 'Timed out waiting for data' );
+	route( $_, error => 'Timed out waiting for data' ) for $MEDIA, $MASTER;
+	my $tries = sub { [ grep { $_ eq $MEDIA || $_ eq $MASTER } urls() ] };
 	advanceTime(1.1);
 	drain($stream);
-	is( $loads->(), 1, 'reload 1 failed' );
+	is_deeply( $tries->(), [$MEDIA], 'reload 1 (the media playlist) failed' );
 	advanceTime(1.9);
 	drain($stream);
-	is( $loads->(), 1, '... next try not before 2 s' );
+	is( scalar @{ $tries->() }, 1, '... next try not before 2 s' );
 	advanceTime(0.2);
 	drain($stream);
-	is( $loads->(), 2, 'reload 2 after 2 s (failed)' );
+	is_deeply( $tries->(), [ $MEDIA, $MASTER ], 'try 2 after 2 s, through the master playlist (failed)' );
 	advanceTime(4.1);
 	drain($stream);
-	is( $loads->(), 3, 'reload 3 after 4 s (failed)' );
+	is( scalar @{ $tries->() }, 3, 'try 3 after 4 s (failed)' );
 	advanceTime(8.1);
 	my ( undef, $ret ) = drain($stream);
-	is( $loads->(), 4, 'reload 4 after 8 s (failed)' );
+	is_deeply( $tries->(), [ $MEDIA, $MASTER, $MASTER, $MASTER ], 'try 4 after 8 s (failed)' );
 	is( $ret, 0, 'after MAX_FAILURES (4) failed requests in a row the stream ends: sysread 0' );
 	advanceTime(60);
 	drain($stream);
-	is( $loads->(), 4, 'no more requests' );
+	is( scalar @{ $tries->() }, 4, 'no more requests' );
+	is( scalar( logged('WARN') ) + scalar( logged('ERROR') ), 0, 'no WARN or ERROR' );
+};
+
+subtest 'a failed reload goes through the master playlist again: a new session (StreamGuys Nimble)' => sub {
+	reset_all();
+	my $master  = 'https://abc-hls.streamguys1.com/hls/sport-sync/playlist.m3u8';
+	my $base    = 'https://abc-hls.streamguys1.com/hls/sport-sync/';
+	my $session = 0;
+	my %dead;
+	Slim::Networking::SimpleAsyncHTTP->addRoute( $master, sub { $session++; { code => 200, content => qq{#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=66981,CODECS="mp4a.40.2"\naudio.m3u8?nimblesessionid=$session\n} } } );
+	my ( $first, $last ) = ( 1, 6 );
+	Slim::Networking::SimpleAsyncHTTP->addRoute( qr{audio\.m3u8\?nimblesessionid=(\d+)\z}, sub {
+		my ($s) = $_[0] =~ /=(\d+)\z/;
+		return { code => 403 } if $dead{$s};
+		{ code => 200, content => join( '', "#EXTM3U\n#EXT-X-TARGETDURATION:1\n#EXT-X-MEDIA-SEQUENCE:$first\n", map {"#EXTINF:1.0,\nseg$_.ts?nimblesessionid=$s\n"} $first .. $last ) };
+	} );
+	Slim::Networking::SimpleAsyncHTTP->addRoute( qr{seg(\d+)\.ts\?nimblesessionid=(\d+)\z}, sub {
+		my ( $n, $s ) = $_[0] =~ /seg(\d+)\.ts\?nimblesessionid=(\d+)/;
+		return { code => 403 } if $dead{$s};
+		{ code => 200, content => sine_ts( $n % 3 ) };
+	} );
+
+	scan($master);
+	my $stream = $HLS->new( { url => $master } );
+	drain($stream);
+	is( $session, 1, 'one session' );
+
+	$dead{1} = 1;    # the session expires
+	$last = 7;
+	advanceTime(1.1);
+	drain($stream);
+	advanceTime(2.1);
+	my ($audio) = drain($stream);
+	is( $session, 2, 'after the failed reload: the master playlist again, a new session' );
+	ok( ( grep {/seg7\.ts\?nimblesessionid=2\z/} urls() ), 'segment 7 fetched with the new session' );
+	ok( length $audio, '... and played' );
 	is( scalar( logged('WARN') ) + scalar( logged('ERROR') ), 0, 'no WARN or ERROR' );
 };
 

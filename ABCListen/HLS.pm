@@ -31,7 +31,9 @@ package Plugins::ABCListen::HLS;
 #     most about one segment ahead of the player (whose own buffer smooths playback). TS segments are
 #     demuxed DEMUX_SLICE bytes per read, so no read takes long on a slow CPU.
 #   * The media playlist is reloaded when the known segments run out: not before its target duration
-#     after a reload that brought new segments, half of it after one that didn't (RFC 8216 6.3.4).
+#     after a reload that brought new segments, half of it after one that didn't (RFC 8216 6.3.4). After
+#     a failed reload the next try goes through the master playlist again (a new session where the
+#     server puts a session id in the URLs, as StreamGuys' Nimble does for Sport Rapid).
 #   * If the next segment has left the live window (a long pause, a slow network) or the server restarted
 #     its numbering, the stream skips ahead to LIVE_EDGE segments before the end (logged at INFO). After a
 #     failed segment the playlist is reloaded before the retry; a segment that fails twice is skipped.
@@ -281,6 +283,14 @@ sub _loadPlaylist {
 
 	my $started = Time::HiRes::time();
 
+	# a failed reload of the media playlist: the next try starts again from the master playlist (a new
+	# session for servers that put a session id in the media playlist's URL, e.g. StreamGuys' Nimble)
+	my $remaster = sub {
+		return unless $v->{playlist} && $v->{mediaUrl} && $v->{mediaUrl} ne $v->{url};
+		$v->{mediaUrl} = undef;
+		$v->{stale}    = 1;
+	};
+
 	$self->_get( $url, PLAYLIST_TIMEOUT, sub {
 		my $body = shift;
 
@@ -292,7 +302,7 @@ sub _loadPlaylist {
 			my $variant = chooseVariant( $playlist->{variants} ) or return $self->_failed("no AAC audio variant ($url)", 1);
 
 			$v->{mediaUrl} = $variant->{url};
-			$v->{bitrate}  = $variant->{bandwidth};
+			$v->{bitrate} //= $variant->{bandwidth};
 			main::INFOLOG && $log->is_info && $log->info( "HLS: $url -> $variant->{url} (" . ( $variant->{codecs} // 'no codecs' ) . ", $variant->{bandwidth} bps)" );
 
 			return $self->_loadPlaylist( $variant->{url} );
@@ -318,7 +328,7 @@ sub _loadPlaylist {
 		$v->{reloadAt} = $started + $wait;
 
 		main::DEBUGLOG && $log->is_debug && $log->debug( "HLS: $url has segments " . $playlist->{segments}->[0]->{seq} . "-$last" . ( $changed ? '' : ' (unchanged)' ) );
-	} );
+	}, $remaster );
 
 	return;
 }
