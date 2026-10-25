@@ -194,8 +194,8 @@ subtest 'settings form: a POST that leaves a field out shows no warning (M3, #52
 	$params = $post->( pref_homeState => '<b>x</b>' );
 	is( $params->{warning}, 'Invalid value "&lt;b&gt;x&lt;/b&gt;" for homeState<br/>', 'POST a rejected homeState alone: one warning, for homeState, escaped' );
 	is_deeply( $both->(), [qw(VIC mediahub)], '... both unchanged' );
-	$params = $post->( pref_liveQuality => 'hls' );
-	is( $params->{warning}, 'Invalid value "hls" for liveQuality<br/>', 'POST a rejected liveQuality alone: one warning, for liveQuality' );
+	$params = $post->( pref_liveQuality => 'HLS' );
+	is( $params->{warning}, 'Invalid value "HLS" for liveQuality<br/>', 'POST a rejected liveQuality alone: one warning, for liveQuality' );
 
 	# a hand-edited invalid value of the field left out: kept as it is, no warning (also not escaped
 	# and re-validated as a posted value would be)
@@ -206,10 +206,10 @@ subtest 'settings form: a POST that leaves a field out shows no warning (M3, #52
 		is_deeply( $both->(), [ $stored, 'standard' ], '... homeState kept as it is, liveQuality saved' );
 	}
 	prefs()->set( homeState => 'WA' );
-	prefs()->{prefs}->{liveQuality} = 'hls';
+	prefs()->{prefs}->{liveQuality} = 'HLS';
 	$params = $post->( pref_homeState => 'QLD' );
-	is( $params->{warning}, undef, "stored liveQuality 'hls' (hand-edited), POST pref_homeState alone: no warning" );
-	is_deeply( $both->(), [qw(QLD hls)], '... liveQuality kept as it is, homeState saved' );
+	is( $params->{warning}, undef, "stored liveQuality 'HLS' (hand-edited), POST pref_homeState alone: no warning" );
+	is_deeply( $both->(), [qw(QLD HLS)], '... liveQuality kept as it is, homeState saved' );
 	prefs()->set( liveQuality => 'standard' );
 
 	# core's fallback for templates without the pref_ prefix (logged as an error by LMS) still saves,

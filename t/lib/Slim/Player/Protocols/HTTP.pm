@@ -6,7 +6,8 @@ package Slim::Player::Protocols::HTTP;
 #   scanUrl($url, \%args) -> Slim::Utils::Scanner::Remote->scanURL($url, \%args)
 #   getMetadataFor($client, $url, $forceCurrent) -> provider result or {}
 #   canSeek($client, $song) -> true when the song has bitrate and duration
-#   canDirectStream($client, $url, $inType)      getIcon($url, $noFallback)
+#   canDirectStream($client, $url, $inType)      canDirectStreamSong($client, $song)
+#   getIcon($url, $noFallback)
 # No sockets are opened.
 
 use strict;
@@ -47,6 +48,13 @@ sub canSeek {
 sub canDirectStream {
 	my ( $class, $client, $url ) = @_;
 	return $url;
+}
+
+# The real one also checks the song's processors (headers to add); here: canDirectStream of the
+# song's streamUrl.
+sub canDirectStreamSong {
+	my ( $class, $client, $song ) = @_;
+	return $class->canDirectStream( $client, $song->streamUrl );
 }
 
 sub getIcon {

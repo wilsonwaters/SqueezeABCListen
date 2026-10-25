@@ -21,9 +21,10 @@ package Plugins::ABCListen::Stations;
 #                                    '/' are ignored. abc.net.au/news (the ABC News website) is not
 #                                    NewsRadio.
 #   Stations->playable($id)          1 if the station can be listed and played: known; not HLS-only
-#                                    unless it has a mediahub stream; event-only services only while
-#                                    the cached event status says on air (unknown = 0). The same in
-#                                    every liveQuality (HLS-only services wait for L6).
+#                                    unless it has a mediahub stream, or (L6) liveQuality is 'hls' and
+#                                    it has an HLS stream (hlsUrl); event-only services only while the
+#                                    cached event status says on air (unknown = 0); L6: with 'hls', an
+#                                    event whose only sources are HLS streams counts as on air too.
 #   Stations->streamCandidates($id, $cb)
 #                                    calls $cb exactly once with \@urls (ordered, direct audio streams,
 #                                    never .pls/.m3u8/.f4m) or { error => TOKEN }:
@@ -37,22 +38,32 @@ package Plugins::ABCListen::Stations;
 #                                    resolved to Icecast first); unknown id -> PLUGIN_ABCLISTEN_UNAVAILABLE.
 #                                    L5: with liveQuality 'mediahub' the mediahub streams come first and
 #                                    Icecast is the alternate (no mediahub stream: Icecast only).
-#   Stations->liveQuality            L5: the effective live quality, read at play time: 'mediahub' when
-#                                    the pref liveQuality is 'mediahub', else 'standard' (undef or any
-#                                    other stored value).
-#   validateLiveQuality($pref, $new) L5: the liveQuality validator, true for exactly 'standard' or
-#                                    'mediahub'. There is no HLS option until L6 (#14).
+#                                    L6: with liveQuality 'hls' the station's HLS stream comes first, as
+#                                    { url => <.m3u8>, hls => 1 } (the protocol handler plays it with
+#                                    Plugins::ABCListen::HLS), then the 'standard' candidates as
+#                                    alternates; an HLS-only station: its HLS stream (then mediahub); an
+#                                    on-air event: its epg hls sources first.
+#   Stations->hlsUrl($id)            L6: the station's HLS master playlist: StationData's hls, else
+#                                    https://streaming.abc-cdn.net.au/audio/hls/<hlsSlug>.m3u8; undef
+#                                    without either (event-only services: their epg hls sources).
+#   Stations->liveQuality            L5: the effective live quality, read at play time: 'mediahub' or
+#                                    (L6) 'hls' when the pref liveQuality is that, else 'standard' (undef
+#                                    or any other stored value).
+#   validateLiveQuality($pref, $new) L5: the liveQuality validator, true for exactly 'standard',
+#                                    'mediahub' or (L6) 'hls'.
 #   Stations->noteStream($client, $song, $id)
 #                                    L5, the live kind's onStream: once per play (per song), logs at INFO
 #                                    "using <family> instead of <family> for <ID>" when the stream that
 #                                    plays isn't the station's first candidate (F2 fell back to another).
+#                                    Families: Icecast, mediahub, HLS (L6).
 #                                    After a redirect the family is the candidate's (track redir), not
 #                                    the redirected host's. Songs are held weakly and forgotten once LMS
 #                                    drops them (M3, #52).
-#   Stations->eventStatus($id, $cb)  $cb->({ onAir => 0|1, sources => [aac urls] }) exactly once. One
-#                                    epgNowPlaying/<ID>/now request per service per 5 min (errors,
-#                                    `null`, {} and HLS-only sources count as off air and are cached
-#                                    too), at most EVENT_CONCURRENCY (6) requests at a time.
+#   Stations->eventStatus($id, $cb)  $cb->({ onAir => 0|1, sources => [aac urls], hls => [hls urls] })
+#                                    exactly once. One epgNowPlaying/<ID>/now request per service per 5 min
+#                                    (errors, `null`, {} and HLS-only sources count as off air and are
+#                                    cached too), at most EVENT_CONCURRENCY (6) requests at a time. onAir
+#                                    is about the aac sources; L6 keeps the hls sources for 'hls' mode.
 #   Stations->checkOnAir(\@ids, $cb) eventStatus for each id; $cb->() once all are known.
 #   Stations->enrich()               starts the lazy BFF enrichment (national + 8 state collections,
 #                                    cached 24 h, stale_ok): cached collections apply at once, others
@@ -65,7 +76,7 @@ package Plugins::ABCListen::Stations;
 #                                    for anything not an AAC stream on *.mediahubaustralia.com.
 #   parsePls($body)                  File1 when it is https://abc.streamguys1.com/live/..., else undef.
 #
-# Owned by the live stream (L1; L5 extends playable/streamCandidates).
+# Owned by the live stream (L1; L5 and L6 extend playable/streamCandidates).
 
 use strict;
 use warnings;
@@ -82,6 +93,7 @@ use Plugins::ABCListen::Util;
 
 use constant PLS_URL     => 'https://streaming.abc-cdn.net.au/audio/ice/%s.pls';
 use constant ICECAST_URL => 'https://abc.streamguys1.com/live/%s/icecast.audio';
+use constant HLS_URL     => 'https://streaming.abc-cdn.net.au/audio/hls/%s.m3u8';    # L6
 
 use constant PLS_TTL           => 86400;    # resolved .pls (or its fallback), seconds
 use constant PLS_TIMEOUT       => 8;
@@ -142,7 +154,7 @@ my @EVENT_QUEUE;
 my $eventsRunning = 0;
 
 # === L5 ===
-my %LIVE_QUALITIES = map { $_ => 1 } qw(standard mediahub);
+my %LIVE_QUALITIES = map { $_ => 1 } qw(standard mediahub hls);    # L6: hls
 my %PREFERRED;    # id => the first candidate of its last streamCandidates answer (noteStream)
 my %CHECKED;      # refaddr of a song noteStream has checked => that song (weak), so once per play
                   # without writing to the song
@@ -212,11 +224,14 @@ sub playable {
 	my ( $class, $id ) = @_;
 	my $rec = defined $id && !ref $id && $BY_ID{$id} or return 0;
 
+	my $quality = $class->liveQuality;
+
 	if ( $rec->{eventOnly} ) {
 		my $status = _eventCached($id);
-		return $status && $status->{onAir} ? 1 : 0;
+		return $status && _onAir( $status, $quality ) ? 1 : 0;
 	}
 
+	return 1 if $quality eq 'hls' && _hlsUrl($rec);    # L6
 	return 0 if ( $rec->{hlsOnly} || !$rec->{mount} ) && !normaliseMediahub( $rec->{mediahub} );
 	return 1;
 }
@@ -309,39 +324,60 @@ sub streamCandidates {
 	if ( $rec->{eventOnly} ) {
 		return $class->eventStatus( $id, sub {
 			my $status = shift;
-			return $answer->( { error => OFF_AIR } ) unless $status && $status->{onAir};
-			_eventCandidates( $id, $status->{sources}, $quality, $answer );
+			return $answer->( { error => OFF_AIR } ) unless $status && _onAir( $status, $quality );
+			_eventCandidates( $id, $status, $quality, $answer );
 		} );
 	}
 
 	my $mediahub = normaliseMediahub( $rec->{mediahub} );
+	my @hls      = $quality eq 'hls' ? _hlsCandidates( _hlsUrl($rec) ) : ();    # L6
 
 	if ( $rec->{hlsOnly} || !$rec->{mount} ) {
-		return $answer->( $mediahub ? [$mediahub] : { error => HLS_ONLY } );
+		my @candidates = grep { defined } @hls, $mediahub;
+		return $answer->( @candidates ? \@candidates : { error => HLS_ONLY } );
 	}
 
 	_icecast(
 		sprintf( PLS_URL, $rec->{hlsSlug} || $rec->{mount} ),
 		sprintf( ICECAST_URL, $rec->{mount} ),
-		sub { $answer->( [ _ordered( $quality, $_[0], $mediahub ) ] ) },
+		sub { $answer->( [ @hls, _ordered( $quality, $_[0], $mediahub ) ] ) },
 	);
 
 	return;
 }
 
+# L6: the station's HLS master playlist URL, or undef.
+sub hlsUrl {
+	my ( $class, $id ) = @_;
+	my $rec = defined $id && !ref $id && $BY_ID{$id} or return undef;
+	return _hlsUrl($rec);
+}
+
+sub _hlsUrl {
+	my $rec = shift;
+	return $rec->{hls} if _isHlsUrl( $rec->{hls} );
+	return defined $rec->{hlsSlug} && $rec->{hlsSlug} =~ /\A[A-Za-z0-9_-]+\z/ ? sprintf( HLS_URL, $rec->{hlsSlug} ) : undef;
+}
+
+# L6: HLS URLs as protocol-handler candidates (flagged hls).
+sub _hlsCandidates { map { { url => $_, hls => 1 } } grep { defined } @_ }
+
 # An on-air event service's candidates from its epg aac sources: the first .pls resolved to Icecast,
-# then the mediahub streams (L5: the mediahub streams first with liveQuality 'mediahub').
+# then the mediahub streams (L5: the mediahub streams first with liveQuality 'mediahub'; L6: with
+# 'hls', its hls sources first).
 sub _eventCandidates {
-	my ( $id, $sources, $quality, $answer ) = @_;
+	my ( $id, $status, $quality, $answer ) = @_;
 
 	my ( @pls, @mediahub );
-	for my $source ( @{ $sources || [] } ) {
+	for my $source ( @{ $status->{sources} || [] } ) {
 		if    ( my $mh = normaliseMediahub($source) ) { push @mediahub, $mh }
 		elsif ( _isPlsUrl($source) )                  { push @pls, $source }
 	}
 
+	my @hls = $quality eq 'hls' ? _hlsCandidates( @{ $status->{hls} || [] } ) : ();
+
 	my $done = sub {
-		my @candidates = _ordered( $quality, $_[0], @mediahub );
+		my @candidates = ( @hls, _ordered( $quality, $_[0], @mediahub ) );
 		$answer->( @candidates ? \@candidates : { error => LIVE_FAILED } );
 	};
 
@@ -418,6 +454,20 @@ sub _isPlsUrl {
 
 sub _isPlaylistUrl { $_[0] =~ /\.(?:m3u8|f4m|pls|m3u)(?:[?#]|\z)/i }
 
+# L6: an ABC HLS playlist URL: https on ABC's streaming hosts, a path ending .m3u8.
+sub _isHlsUrl {
+	my $url = shift;
+	return 0 unless defined $url && !ref $url;
+	return $url =~ m{\Ahttps://(?:streaming\.abc-cdn\.net\.au|mediaserviceslive\.akamaized\.net|abc-hls\.streamguys1\.com)/[^\s?#]+\.m3u8(?:\?[^\s#]*)?\z}i ? 1 : 0;
+}
+
+# L6: an event is on air with an aac source, or (liveQuality 'hls') an hls one.
+sub _onAir {
+	my ( $status, $quality ) = @_;
+	return 1 if $status->{onAir};
+	return $quality eq 'hls' && @{ $status->{hls} || [] } ? 1 : 0;
+}
+
 # ---------------------------------------------------------------------------
 # === L5 === live quality (pref liveQuality) and the fallback log
 # ---------------------------------------------------------------------------
@@ -427,12 +477,12 @@ sub validateLiveQuality {
 	return defined $new && !ref $new && $LIVE_QUALITIES{$new} ? 1 : 0;
 }
 
-# Any stored value other than 'mediahub' (undef, hand-edited) plays as 'standard'. There is no HLS
-# option until L6: PlayHLS (v1.01) hands ffmpeg the track's own URL ($FILE$), which F2's handler sets
-# back to abclisten:// after the scan (#14).
+# Any stored value other than 'mediahub' or 'hls' (undef, hand-edited) plays as 'standard'. L6: 'hls'
+# plays through the plugin's own HLS reader (Plugins::ABCListen::HLS), not PlayHLS, which can't play
+# abclisten:// stations (#14).
 sub liveQuality {
 	my $quality = eval { $prefs->get('liveQuality') };
-	return defined $quality && !ref $quality && $quality eq 'mediahub' ? 'mediahub' : 'standard';
+	return defined $quality && !ref $quality && $LIVE_QUALITIES{$quality} ? $quality : 'standard';
 }
 
 # The candidates in $quality's order: Icecast first ('standard'), or the mediahub streams first.
@@ -454,6 +504,7 @@ sub noteStream {
 	weaken( $CHECKED{$key} = $song );
 
 	my $preferred = $PREFERRED{$id};
+	$preferred = $preferred->{url} if ref $preferred eq 'HASH';    # L6: an hls-flagged candidate
 	my $streamUrl = $song->streamUrl;
 	return unless defined $preferred && defined $streamUrl && !ref $streamUrl && $streamUrl =~ m{\Ahttps?://}i;
 
@@ -473,6 +524,7 @@ sub noteStream {
 
 sub _family {
 	my $url = shift;
+	return 'HLS'      if $url =~ m{\Ahttps?://[^/?#]+/[^?#]*\.m3u8(?:[?#]|\z)}i;    # L6
 	return 'Icecast'  if $url =~ m{\Ahttps?://abc\.streamguys1\.com/}i;
 	return 'mediahub' if $url =~ m{\Ahttps?://[A-Za-z0-9.-]+\.mediahubaustralia\.com/}i;
 	return 'another stream';
@@ -495,7 +547,7 @@ sub eventStatus {
 	$cb = _once($cb);
 
 	my $rec = defined $id && !ref $id && $BY_ID{$id};
-	return $cb->( { onAir => 0, sources => [] } ) unless $rec && $rec->{eventOnly};
+	return $cb->( { onAir => 0, sources => [], hls => [] } ) unless $rec && $rec->{eventOnly};
 
 	if ( my $status = _eventCached($id) ) {
 		return $cb->( _statusCopy($status) );
@@ -548,38 +600,46 @@ sub _pumpEvents {
 				"epgNowPlaying/$id/now",
 				{ imageRatio => '1x1' },
 				sub { $done->( _parseEventStatus( $_[0] ) ) },
-				sub { $done->( { onAir => 0, sources => [] } ) },    # error, 429, `null`: off air (cached EVENT_TTL)
+				sub { $done->( { onAir => 0, sources => [], hls => [] } ) },    # error, 429, `null`: off air (cached EVENT_TTL)
 				{ quiet => 1, ttl => EVENT_TTL, timeout => EVENT_TIMEOUT },
 			);
 			1;
 		} or do {
 			$log->error( "Event status request for $id failed: " . ( $@ || 'unknown error' ) );
-			$done->( { onAir => 0, sources => [] } );
+			$done->( { onAir => 0, sources => [], hls => [] } );
 		};
 	}
 
 	return;
 }
 
-# epgNowPlaying JSON -> { onAir, sources }: on air when an aac source is a .pls or a mediahub stream.
+# epgNowPlaying JSON -> { onAir, sources, hls }: on air when an aac source is a .pls or a mediahub
+# stream. L6: hls lists the hls sources on ABC's streaming hosts (for liveQuality 'hls').
 sub _parseEventStatus {
 	my $data = shift;
 
-	my @sources;
+	my ( @sources, @hls );
 	if ( ref $data eq 'HASH' && ref $data->{sources} eq 'ARRAY' ) {
 		for my $source ( @{ $data->{sources} } ) {
-			next unless ref $source eq 'HASH' && lc( $source->{type} // '' ) eq 'aac';
+			next unless ref $source eq 'HASH';
+			my $type = lc( $source->{type} // '' );
 			my $file = $source->{file};
-			push @sources, $file if normaliseMediahub($file) || _isPlsUrl($file);
+
+			if ( $type eq 'aac' ) {
+				push @sources, $file if normaliseMediahub($file) || _isPlsUrl($file);
+			}
+			elsif ( $type eq 'hls' ) {
+				push @hls, $file if _isHlsUrl($file);
+			}
 		}
 	}
 
-	return { onAir => @sources ? 1 : 0, sources => \@sources };
+	return { onAir => @sources ? 1 : 0, sources => \@sources, hls => \@hls };
 }
 
 sub _statusCopy {
 	my $status = shift;
-	return { onAir => $status->{onAir}, sources => [ @{ $status->{sources} || [] } ] };
+	return { onAir => $status->{onAir}, sources => [ @{ $status->{sources} || [] } ], hls => [ @{ $status->{hls} || [] } ] };
 }
 
 # ---------------------------------------------------------------------------

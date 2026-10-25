@@ -10,6 +10,9 @@
 # resolve meta < kind metadata), its bounded meta map and its rate-limited WARN for a dying kind
 # metadata, getCurrentTitle/getIcon/isRemote, and onStream/onStop dispatch. Also Live->init registers the `live` kind
 # (since L1 for the full catalogue, see t/20-stations.t): Icecast URL at play time, name, logo and bitrate as metadata.
+# L6 (#80): an hls-flagged candidate is scanned by Plugins::ABCListen::HLS->scanUrl (never the core scanner), and
+# its failure falls back to the next candidate in the same play; new() reads an HLS streamUrl through
+# Plugins::ABCListen::HLS and every other stream as before; canDirectStreamSong is 0 for HLS only.
 
 use strict;
 use warnings;
@@ -97,6 +100,25 @@ sub scanner {
 }
 
 sub scanned { map { $_->{url} } @Slim::Utils::Scanner::Remote::SCANS }
+
+# ---- L6: hls-flagged candidates (Plugins::ABCListen::HLS) ----
+
+# Plugins::ABCListen::HLS->scanUrl replaced by a recorder: [ $url, $args ] in @HLS_SCANS; it answers
+# like the core scanner (a new track for the URL), or fails when the URL is in fail => [...].
+our @HLS_SCANS;
+our %HLS_FAIL;
+{
+	no warnings 'redefine';
+	*Plugins::ABCListen::HLS::scanUrl = sub {
+		my ( $class, $url, $args ) = @_;
+		push @HLS_SCANS, [ $url, $args ];
+		push @Slim::Utils::Scanner::Remote::SCANS, { url => $url, args => $args, hls => 1 };    # keeps scanned() in order
+		return $args->{cb}->( undef, 'HLS: 403 Forbidden' ) if $HLS_FAIL{$url};
+		return $args->{cb}->( FakeTrack->new( url => $url, title => $url, cover => 1 ), undef );
+	};
+}
+
+sub core_scanned { map { $_->{url} } grep { !$_->{hls} } @Slim::Utils::Scanner::Remote::SCANS }
 
 # scanUrl($url) with a fresh fake song and player; returns (collector, song, args).
 sub scan {
@@ -343,19 +365,94 @@ subtest '.m3u8 candidates are skipped unless flagged hls' => sub {
 	my @hls = ( 'https://example.test/x.m3u8', 'https://example.test/x.M3U8', 'https://example.test/x.m3u8?source=web' );
 	my @ok  = ( 'https://example.test/d.m3u8', 'https://example.test/x.m3u8.aac', 'https://example.test/m3u8/x.aac' );
 	register_kind( { url => $hls[0], alternates => [ $hls[1], { url => $ok[0], hls => 1 }, $hls[2], $ok[1], { url => $ok[2] } ] } );
+	@HLS_SCANS = ();
+	%HLS_FAIL  = ( $ok[0] => 1 );
 
 	scan($LIVE);
+	%HLS_FAIL = ();
 	is_deeply( [ scanned() ], \@ok, 'only the hls-flagged .m3u8 and the non-HLS URLs are scanned, in order' );
 	for my $url (@hls) {
 		ok( !( grep { $_ eq $url } scanned() ), "$url never handed to SUPER::scanUrl" );
 	}
 
+	is_deeply( [ map { $_->[0] } @HLS_SCANS ], [ $ok[0] ], 'L6: the hls-flagged .m3u8 is scanned by Plugins::ABCListen::HLS' );
+	ok( !( grep { $_ eq $ok[0] } core_scanned() ), '... never by SUPER::scanUrl' );
+};
+
+my $HLS_URL = 'https://streaming.abc-cdn.net.au/audio/hls/triplejnsw.m3u8';
+
+subtest 'L6: an hls-flagged candidate is prepared by HLS->scanUrl and becomes the streamUrl' => sub {
 	reset_all();
+	@HLS_SCANS = ();
+	%HLS_FAIL  = ();
 	scanner();
-	register_kind( { url => { url => $ok[0], hls => 1 } } );
+	register_kind( { url => { url => $HLS_URL, hls => 1 }, alternates => [$A] } );
+
+	my ( $c, $song, $args ) = scan($LIVE);
+	is( scalar @HLS_SCANS, 1, 'HLS->scanUrl called once' );
+	is( $HLS_SCANS[0]->[0], $HLS_URL, '... with the .m3u8' );
+	is( $HLS_SCANS[0]->[1]->{song}, $song, '... and the song in the args' );
+	is_deeply( [ core_scanned() ], [], 'the core scanner is not used' );
+	is( $c->count, 1, 'LMS callback once' );
+	my ($track) = $c->args(0);
+	is( $song->streamUrl, $HLS_URL, 'streamUrl = the HLS URL' );
+	is( $track->url, $LIVE, 'the track is the abclisten:// URL again' );
+	is( $track->cover, 0, 'stream cover dropped' );
+};
+
+subtest 'L6: a failed HLS scan falls back to the next candidate (Icecast) in the same play' => sub {
+	reset_all();
+	@HLS_SCANS = ();
+	%HLS_FAIL  = ( $HLS_URL => 1 );
+	scanner();
+	register_kind( { url => { url => $HLS_URL, hls => 1 }, alternates => [ $A, $B ] } );
+
 	my ( $c, $song ) = scan($LIVE);
-	is_deeply( [ scanned() ], [ $ok[0] ], 'an hls-flagged url passes through' );
-	is( $song->streamUrl, $ok[0], '... and becomes the streamUrl' );
+	is_deeply( [ scanned() ], [ $HLS_URL, $A ], 'HLS first, then the Icecast alternate' );
+	is_deeply( [ core_scanned() ], [$A], 'the alternate is scanned by the core scanner' );
+	is( $c->count, 1, 'LMS callback once' );
+	ok( $c->args(0) && ( $c->args(0) )[0], 'a track' );
+	is( $song->streamUrl, $A, 'streamUrl = the Icecast stream' );
+	ok( logged_like( INFO => qr/Scan of \Q$HLS_URL\E for \Q$LIVE\E failed: HLS: 403 Forbidden/ ), 'the failed HLS scan is logged at INFO' );
+
+	%HLS_FAIL = ();
+};
+
+subtest 'L6: the same .m3u8 without the hls flag is still dropped' => sub {
+	reset_all();
+	@HLS_SCANS = ();
+	scanner();
+	register_kind( { url => $HLS_URL, alternates => [$A] } );
+	my ( $c, $song ) = scan($LIVE);
+	is_deeply( [ scanned() ], [$A], 'only the Icecast stream is scanned' );
+	is( scalar @HLS_SCANS, 0, 'HLS->scanUrl not called' );
+};
+
+subtest 'L6: new() reads an HLS streamUrl with Plugins::ABCListen::HLS; other streams as before' => sub {
+	reset_all();
+	my $song = FakeSong->new($LIVE);
+	$song->streamUrl($HLS_URL);
+
+	my $sock = $PH->new( { url => $LIVE, song => $song, client => $song->master } );
+	isa_ok( $sock, 'Plugins::ABCListen::HLS' );
+	ok( !$sock->isa('Slim::Player::Protocols::HTTP'), 'not an HTTP socket' );
+	is( $sock->contentType, 'aac', 'contentType aac' );
+	ok( !$sock->opened, 'no file descriptor (LMS does not set it non-blocking)' );
+	$sock->close;
+
+	$song->streamUrl($A);
+	$sock = $PH->new( { url => $LIVE, song => $song, client => $song->master } );
+	isa_ok( $sock, $PH, 'an Icecast streamUrl' );
+	is( $sock->{url}, $A, '... opened by the base class' );
+};
+
+subtest 'L6: canDirectStreamSong is 0 for an HLS stream, the base class answer otherwise' => sub {
+	my $song = FakeSong->new($LIVE);
+	$song->streamUrl($HLS_URL);
+	is( $PH->canDirectStreamSong( $song->master, $song ), 0, 'HLS: never direct' );
+
+	$song->streamUrl($A);
+	is( $PH->canDirectStreamSong( $song->master, $song ), $A, 'Icecast: the base class answer' );
 };
 
 subtest 'duplicate candidates are scanned once' => sub {

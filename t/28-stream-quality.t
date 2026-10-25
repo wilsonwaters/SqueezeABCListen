@@ -1,14 +1,19 @@
 #!/usr/bin/perl
-# L5 (#14): the liveQuality pref and the live stream order, offline.
+# L5 (#14) and L6 (#80): the liveQuality pref and the live stream order, offline.
 #   * the pref: Live->init default 'standard' (stored values kept), the validator truth table (named
-#     sub and through the prefs stub's set: exactly 'standard' and 'mediahub'; 'hls' is rejected, there
-#     is no HLS option until L6), HTML-escaped forms of rejected values rejected too, and the effective
-#     quality (undef and any other stored value, e.g. a hand-edited 'hls', play as 'standard');
+#     sub and through the prefs stub's set: exactly 'standard', 'mediahub' and (L6) 'hls'),
+#     HTML-escaped forms of rejected values rejected too, and the effective quality (undef and any
+#     other stored value, e.g. a hand-edited 'HLS', play as 'standard');
 #   * Stations->streamCandidates per quality x {network with mediahub, variant without, Wide Bay,
 #     HLS-only with and without mediahub, event-only on air / off air, unknown}; over the whole
 #     catalogue x every quality: never .m3u8/.f4m/.pls, https only, unknown values = 'standard';
-#   * listing: playable, Radio -> Sport and stationItem are the same in every quality (HLS-only and
-#     Kids listen versions hidden); favourites keep abclisten://live/<ID>;
+#   * listing: playable, Radio -> Sport and stationItem are the same in standard and mediahub (HLS-only
+#     and Kids listen versions hidden); favourites keep abclisten://live/<ID>;
+#   * L6, liveQuality 'hls': the HLS stream first (flagged hls), then the standard candidates; HLS-only
+#     services (Sport Rapid, RLWC Rapid, ABC Cricket, the four Kids listen versions) listed and
+#     playable only in 'hls'; on-air events with hls sources; the whole catalogue (every station with an
+#     HLS stream starts with it, never an unflagged .m3u8, no .m3u8 fetched while resolving); the
+#     fallback line names HLS;
 #   * the live kind: resolve order in 'mediahub'; onStream's fallback INFO line, once per play, through
 #     ProtocolHandler->onStream (none when the first candidate plays, after a redirect, or within a
 #     family; nothing written to the song); one onStream also starts L2's metadata poll, and onStop
@@ -16,8 +21,8 @@
 #     check (L3); M3 (#52): after a redirect the line names the candidate's family, and the
 #     once-per-play guard holds songs weakly (a dropped song is freed, undef entries are pruned);
 #   * the settings page: Settings->prefs (homeState, then liveQuality), saves and partial POSTs, rejected
-#     and HTML values; the template's L5 section (name/id, aria-label, 2 options, no HLS), every token
-#     defined;
+#     and HTML values; the template's L5 section (name/id, aria-label, 3 options: standard, hls (L6),
+#     mediahub; no PlayHLS note or disabled state), every token defined;
 #   * main::WEBUI false: the pref is still initialised and validated.
 
 use strict;
@@ -70,11 +75,12 @@ my $OFF_AIR     = 'PLUGIN_ABCLISTEN_LIVE_OFF_AIR';
 my $LIVE_FAILED = 'PLUGIN_ABCLISTEN_LIVE_FAILED';
 my $UNAVAILABLE = 'PLUGIN_ABCLISTEN_UNAVAILABLE';
 
-my @QUALITIES = qw(standard mediahub);
-my @INVALID   = ( 'hls', 'HLS', 'Standard', 'STANDARD', 'MediaHub', ' mediahub', 'mediahub ', "mediahub\n", 'foo', '', '0', 'standard,mediahub', '<script>alert(1)</script>', 'mediahub"><b>', q{mediahub'&}, 'standard&' );
+my @QUALITIES = qw(standard mediahub);         # L5's orders (L6's 'hls' has its own subtests)
+my @VALID     = qw(standard hls mediahub);     # L6: every valid value, in the page's order
+my @INVALID   = ( 'HLS', 'Hls', ' hls', 'hls ', 'Standard', 'STANDARD', 'MediaHub', ' mediahub', 'mediahub ', "mediahub\n", 'foo', '', '0', 'standard,mediahub', '<script>alert(1)</script>', 'mediahub"><b>', q{mediahub'&}, 'standard&' );
 my @INVALID_REFS = ( [], {}, ['mediahub'], { mediahub => 1 }, \'mediahub' );
 
-my @L5_TOKENS = map {"PLUGIN_ABCLISTEN_LIVE_QUALITY$_"} ( '', qw(_DESC _STANDARD _MEDIAHUB) );
+my @L5_TOKENS = map {"PLUGIN_ABCLISTEN_LIVE_QUALITY$_"} ( '', qw(_DESC _STANDARD _HLS _MEDIAHUB) );    # _HLS: L6
 
 my %MH = (
 	RN      => 'https://live-radio01.mediahubaustralia.com/2RNW/aac/',
@@ -83,6 +89,19 @@ my %MH = (
 	TENNIS  => 'https://live-radio02.mediahubaustralia.com/TENW/aac/',
 	ITONE   => 'https://live-radio01.mediahubaustralia.com/IT1W/aac/',
 );
+
+# L6: HLS master playlists
+my %HLS = (
+	RN       => 'https://streaming.abc-cdn.net.au/audio/hls/rnnsw.m3u8',
+	TRIPLEJ  => 'https://streaming.abc-cdn.net.au/audio/hls/triplejnsw.m3u8',
+	CLASSIC2 => 'https://mediaserviceslive.akamaized.net/hls/live/2038317/classic2/index.m3u8',
+	RAPID    => 'https://abc-hls.streamguys1.com/hls/sport-sync/playlist.m3u8',
+	CRICKET  => 'https://streaming.abc-cdn.net.au/audio/hls/itinerantfour.m3u8',
+	KIDS_NT  => 'https://streaming.abc-cdn.net.au/audio/hls/abckidsnt.m3u8',
+	SPORT    => 'https://streaming.abc-cdn.net.au/audio/hls/sport.m3u8?source=web',
+);
+
+sub hls { +{ url => shift, hls => 1 } }
 
 my @RECORDS = Plugins::ABCListen::StationData::records();
 my %RECORD  = map { $_->{id} => $_ } @RECORDS;
@@ -129,7 +148,7 @@ sub events_off_air { route( qr{epgNowPlaying/}, file => 'live/bff-epgNowPlaying-
 # Store a quality: valid values through the validator, anything else as a hand-edited prefs file would.
 sub set_quality {
 	my $q = shift;
-	if ( defined $q && !ref $q && grep { $_ eq $q } @QUALITIES ) {
+	if ( defined $q && !ref $q && grep { $_ eq $q } @VALID ) {
 		my ( undef, $ok ) = $prefs->set( liveQuality => $q );
 		die "could not set liveQuality '$q'" unless $ok;
 	}
@@ -183,14 +202,19 @@ subtest 'Live->init: liveQuality default standard, validator registered, stored 
 
 	set_quality('hls');
 	Plugins::ABCListen::Live->init;
-	is( $prefs->get('liveQuality'), 'hls', 'init does not touch a stored unknown value (hand-edited hls)' );
+	is( $prefs->get('liveQuality'), 'hls', 'L6: init keeps a stored hls' );
+	is( $S->liveQuality, 'hls', '... which plays as hls' );
+
+	set_quality('HLS');
+	Plugins::ABCListen::Live->init;
+	is( $prefs->get('liveQuality'), 'HLS', 'init does not touch a stored unknown value (hand-edited HLS)' );
 	is( $S->liveQuality, 'standard', '... which plays as standard' );
 	is( scalar( logged('ERROR') ) + scalar( logged('WARN') ), 0, 'nothing logged at WARN or ERROR' );
 };
 
-subtest 'validator truth table (named sub): standard and mediahub only; escaped forms rejected too' => sub {
+subtest 'validator truth table (named sub): standard, hls (L6) and mediahub only; escaped forms rejected too' => sub {
 	my $v = \&Plugins::ABCListen::Stations::validateLiveQuality;
-	ok( $v->( 'liveQuality', $_ ), "valid: '$_'" ) for @QUALITIES;
+	ok( $v->( 'liveQuality', $_ ), "valid: '$_'" ) for @VALID;
 	ok( !$v->( 'liveQuality', $_ ), 'invalid: ' . show($_) ) for @INVALID, @INVALID_REFS, undef;
 
 	my @escaped = grep { $_ ne html_escape($_) } @INVALID;
@@ -202,7 +226,7 @@ subtest 'validator truth table (named sub): standard and mediahub only; escaped 
 subtest 'validator through the prefs layer (set: JSON-RPC pref command, settings form)' => sub {
 	reset_all();
 
-	for my $q (@QUALITIES) {
+	for my $q (@VALID) {
 		my ( $value, $ok ) = $prefs->set( liveQuality => $q );
 		ok( $ok && $prefs->get('liveQuality') eq $q, "set '$q' is stored" );
 	}
@@ -217,11 +241,11 @@ subtest 'validator through the prefs layer (set: JSON-RPC pref command, settings
 
 subtest 'effective quality: read at play time; undef and any other stored value play as standard' => sub {
 	reset_all();
-	for my $q (@QUALITIES) {
+	for my $q (@VALID) {
 		set_quality($q);
 		is( $S->liveQuality, $q, "stored '$q' -> $q" );
 	}
-	for my $q ( undef, 'hls', 'foo', '', 'MEDIAHUB', ['mediahub'], { mediahub => 1 } ) {
+	for my $q ( undef, 'HLS', 'foo', '', 'MEDIAHUB', ['mediahub'], { mediahub => 1 }, ['hls'] ) {
 		set_quality($q);
 		is( $S->liveQuality, 'standard', 'stored ' . show($q) . ' -> standard' );
 	}
@@ -251,7 +275,7 @@ subtest 'candidates: network with mediahub, variant without, Wide Bay, unknown' 
 	}
 };
 
-subtest 'candidates: HLS-only services (with and without mediahub) in every quality' => sub {
+subtest 'candidates: HLS-only services (with and without mediahub) in standard and mediahub' => sub {
 	for my $q (@QUALITIES) {
 		reset_all();
 		set_quality($q);
@@ -295,9 +319,9 @@ subtest 'candidates: event-only services on air (.pls + mediahub sources) and of
 subtest 'whole catalogue x every quality: direct streams only, never .m3u8; unknown values = standard' => sub {
 	my %answers;
 
-	for my $q ( @QUALITIES, 'unset', 'hls (hand-edited)' ) {
+	for my $q ( @QUALITIES, 'unset', 'HLS (hand-edited)' ) {
 		reset_all();
-		set_quality( $q eq 'unset' ? undef : $q =~ /^hls/ ? 'hls' : $q );
+		set_quality( $q eq 'unset' ? undef : $q =~ /^HLS/ ? 'HLS' : $q );
 		route( qr{epgNowPlaying/}, content => $EVENT_MIXED );    # every event service on air
 		route( qr{grandstand\.pls}, content => "[playlist]\nFile1=" . ice('sport') . "\n" );
 
@@ -316,7 +340,7 @@ subtest 'whole catalogue x every quality: direct streams only, never .m3u8; unkn
 		is( scalar( grep { $_->{url} =~ /\.m3u8/ } requests() ), 0, "$q: no .m3u8 request" );
 	}
 
-	is_deeply( $answers{$_}, $answers{standard}, "$_: the same candidates as standard" ) for 'unset', 'hls (hand-edited)';
+	is_deeply( $answers{$_}, $answers{standard}, "$_: the same candidates as standard" ) for 'unset', 'HLS (hand-edited)';
 
 	my @wrong;
 	for my $rec (@RECORDS) {
@@ -353,12 +377,12 @@ sub sport_ids {
 	return map { ( $_->{play} // $_->{url} // '' ) =~ m{\Aabclisten://live/(\w+)\z} ? $1 : '?' } @{ ( $c->args(0) )[0]->{items} };
 }
 
-subtest 'listing: playable, Radio -> Sport and stationItem are the same in every quality' => sub {
+subtest 'listing: playable, Radio -> Sport and stationItem are the same in standard and mediahub' => sub {
 	my %playable;
-	for my $q ( @QUALITIES, 'hls (hand-edited)' ) {
+	for my $q ( @QUALITIES, 'HLS (hand-edited)' ) {
 		reset_all();
 		events_off_air();
-		set_quality( $q =~ /^hls/ ? 'hls' : $q );
+		set_quality( $q =~ /^HLS/ ? 'HLS' : $q );
 		$playable{$q} = { map { $_->{id} => $S->playable( $_->{id} ) } @RECORDS };
 
 		my @sport = sport_ids();
@@ -373,7 +397,7 @@ subtest 'listing: playable, Radio -> Sport and stationItem are the same in every
 		is( $item->{favorites_url}, 'abclisten://live/TRIPLEJ', "$q: favourites keep abclisten://live/TRIPLEJ" );
 		is( scalar( grep { !ref && /streamguys1|mediahubaustralia|streaming\.abc-cdn|\.m3u8|\.pls/ } values %$item ), 0, "$q: no stream URL in the row" );
 	}
-	is_deeply( $playable{$_}, $playable{standard}, "$_: playable as in standard for every station" ) for 'mediahub', 'hls (hand-edited)';
+	is_deeply( $playable{$_}, $playable{standard}, "$_: playable as in standard for every station" ) for 'mediahub', 'HLS (hand-edited)';
 };
 
 # ---- the live kind ----
@@ -389,10 +413,15 @@ subtest 'live kind resolve: mediahub first with Icecast as the alternate' => sub
 	Plugins::ABCListen::Live::_resolve( undef, 'TRIPLEJ_PERTH', $c->cb );
 	is_deeply( [ $c->args(0) ], [ { url => ice( $RECORD{TRIPLEJ_PERTH}->{mount} ), alternates => [], failToken => $LIVE_FAILED } ], 'no mediahub stream: Icecast, no alternate' );
 
+	set_quality('HLS');
+	$c = collector();
+	Plugins::ABCListen::Live::_resolve( undef, 'RN', $c->cb );
+	is_deeply( [ $c->args(0) ], [ { url => ice('rnnsw'), alternates => [ $MH{RN} ], failToken => $LIVE_FAILED } ], 'a hand-edited HLS: as standard' );
+
 	set_quality('hls');
 	$c = collector();
 	Plugins::ABCListen::Live::_resolve( undef, 'RN', $c->cb );
-	is_deeply( [ $c->args(0) ], [ { url => ice('rnnsw'), alternates => [ $MH{RN} ], failToken => $LIVE_FAILED } ], 'a hand-edited hls: as standard' );
+	is_deeply( [ $c->args(0) ], [ { url => { url => $HLS{RN}, hls => 1 }, alternates => [ ice('rnnsw'), $MH{RN} ], failToken => $LIVE_FAILED } ], 'L6, hls: url the HLS stream (flagged hls), alternates Icecast then mediahub' );
 };
 
 # a song as LMS hands it to onStream after F2's scan: current track = the abclisten:// URL (redir: the
@@ -580,6 +609,152 @@ subtest 'onStream: a LiveMetadata::onStream that dies is logged and the fallback
 	is( scalar( grep { $_->{message} =~ /Live metadata onStream failed: metadata broke/ } logged('WARN') ), 1, 'the die is logged at WARN' );
 };
 
+# ---- L6: liveQuality 'hls' ----
+
+subtest 'L6 candidates: the HLS stream first (flagged hls), then the standard candidates' => sub {
+	reset_all();
+	set_quality('hls');
+
+	is_deeply( answer('RN'),            [ hls( $HLS{RN} ), ice('rnnsw'), $MH{RN} ],                'RN: HLS, Icecast, mediahub' );
+	is_deeply( answer('TRIPLEJ'),       [ hls( $HLS{TRIPLEJ} ), ice('triplejnsw'), $MH{TRIPLEJ} ], 'TRIPLEJ: HLS, Icecast, mediahub' );
+	is_deeply( answer('CLASSIC2'),      [ hls( $HLS{CLASSIC2} ), ice('classic2'), 'https://live-radio01.mediahubaustralia.com/FM2W/aac/' ], 'CLASSIC2: StationData\'s own hls master first' );
+	is_deeply( answer('TRIPLEJ_PERTH'), [ hls('https://streaming.abc-cdn.net.au/audio/hls/triplejwa.m3u8'), ice( $RECORD{TRIPLEJ_PERTH}->{mount} ) ], 'TRIPLEJ_PERTH (no mediahub): HLS, Icecast' );
+	is_deeply( answer('NOPE'), { error => $UNAVAILABLE }, 'unknown id: UNAVAILABLE' );
+	is( $S->hlsUrl('TRIPLEJ'), $HLS{TRIPLEJ}, 'hlsUrl: from hlsSlug' );
+	is( $S->hlsUrl('ABCSPORTSYNC'), $HLS{RAPID}, 'hlsUrl: StationData\'s hls (StreamGuys)' );
+	is( $S->hlsUrl($_), undef, 'hlsUrl ' . show($_) . ': undef' ) for 'SPORT_BBL', 'NOPE', undef;
+	is( scalar( grep { $_->{url} =~ /\.m3u8/ } requests() ), 0, 'resolving fetches no .m3u8 (the protocol handler\'s HLS scan does)' );
+};
+
+subtest 'L6: HLS-only services are playable, resolvable and listed only with hls' => sub {
+	my %want = (
+		ABCSPORTSYNC   => [ hls( $HLS{RAPID} ) ],
+		ABC_AFL_RAPID  => [ hls('https://abc-hls.streamguys1.com/hls/sport-sync-afl/playlist.m3u8') ],
+		ITINERANT_FOUR => [ hls( $HLS{CRICKET} ) ],
+		KIDSLISTEN_NT  => [ hls( $HLS{KIDS_NT} ) ],
+		KIDSLISTEN_QLD => [ hls('https://streaming.abc-cdn.net.au/audio/hls/abckidsqld.m3u8') ],
+		KIDSLISTEN_SA  => [ hls('https://streaming.abc-cdn.net.au/audio/hls/abckidssa.m3u8') ],
+		KIDSLISTEN_WA  => [ hls('https://streaming.abc-cdn.net.au/audio/hls/abckidswa.m3u8') ],
+	);
+
+	reset_all();
+	events_off_air();
+	set_quality('hls');
+	for my $id ( sort keys %want ) {
+		is( $S->playable($id), 1, "hls, $id: playable" );
+		is_deeply( answer($id), $want{$id}, "hls, $id: its HLS stream" );
+		my $item = Plugins::ABCListen::Live->stationItem( undef, $id );
+		is( $item && $item->{play}, "abclisten://live/$id", "hls, $id: a stationItem row (D4's Sport and Kids listen list it)" );
+		is( $item && $item->{favorites_url}, "abclisten://live/$id", "hls, $id: favourites keep abclisten://live/$id" );
+	}
+	is_deeply( [ sport_ids() ], [qw(GRANDSTAND ITINERANT_THREE ITINERANT_ONE ITINERANT_TWO ABCSPORTSYNC ABC_AFL_RAPID ITINERANT_FOUR)], 'hls: Radio -> Sport adds Sport Rapid, RLWC Rapid and ABC Cricket' );
+
+	# an HLS-only record with a mediahub stream: HLS, then mediahub
+	$S->_setRecords( { %{ $RECORD{LOCAL_WIDEBAY} }, mount => undef, hlsOnly => 1 } );
+	is_deeply( answer('LOCAL_WIDEBAY'), [ hls( $RECORD{LOCAL_WIDEBAY}->{hls} ), $MH{WIDEBAY} ], 'hls, HLS-only with mediahub: HLS, then mediahub' );
+	$S->_setRecords( { %{ $RECORD{KIDSLISTEN_NT} }, hlsSlug => undef } );
+	is( $S->playable('KIDSLISTEN_NT'), 0, 'hls, an HLS-only record without an HLS stream: not playable' );
+	is_deeply( answer('KIDSLISTEN_NT'), { error => $HLS_ONLY }, '... LIVE_HLS_ONLY' );
+	$S->_setRecords();
+
+	for my $q (@QUALITIES) {
+		reset_all();
+		events_off_air();
+		set_quality($q);
+		for my $id ( sort keys %want ) {
+			is( $S->playable($id), 0, "$q, $id: not playable" );
+			is( Plugins::ABCListen::Live->stationItem( undef, $id ), undef, "$q, $id: not listed" );
+			is_deeply( answer($id), { error => $HLS_ONLY }, "$q, $id: LIVE_HLS_ONLY" );
+		}
+	}
+	like( Slim::Utils::Strings::string($HLS_ONLY), qr/High quality \(HLS\)/, 'LIVE_HLS_ONLY tells the user which setting plays it' );
+};
+
+subtest 'L6 events: hls sources first; an event with only hls sources is on air only with hls' => sub {
+	reset_all();
+	set_quality('hls');
+	route( "${BFF}epgNowPlaying/SPORT_BBL/now?imageRatio=1x1", content => $EVENT_MIXED );
+	route( "${BFF}epgNowPlaying/SPORT_CRICKET/now?imageRatio=1x1", file => 'live/epg-event-hls-only.json' );
+	route( 'https://www.abc.net.au/res/streaming/audio-live/shout-aac/grandstand.pls', content => "[playlist]\nFile1=" . ice('sport') . "\n" );
+	events_off_air();
+
+	is_deeply( answer('SPORT_BBL'), [ hls( $HLS{SPORT} ), ice('sport'), $MH{TENNIS} ], 'hls, on air (.pls + mediahub + hls): HLS, Icecast, mediahub' );
+	my $sportitinerant = 'https://mediaserviceslive.akamaized.net/hls/live/2118991/sportitinerant/index.m3u8';
+	is_deeply( answer('SPORT_CRICKET'), [ hls($sportitinerant) ], 'hls, hls (and hds) sources only: on air, the HLS stream (the .f4m ignored)' );
+	is( $S->playable('SPORT_CRICKET'), 1, '... playable' );
+	is_deeply( answer('SPORT_AFL'), { error => $OFF_AIR }, 'hls, no sources: LIVE_OFF_AIR' );
+
+	set_quality('standard');
+	is( $S->playable('SPORT_CRICKET'), 0, 'standard: the hls-only event is off air (cached status, no new request)' );
+	is_deeply( answer('SPORT_CRICKET'), { error => $OFF_AIR }, 'standard: LIVE_OFF_AIR' );
+	is_deeply( answer('SPORT_BBL'), [ ice('sport'), $MH{TENNIS} ], 'standard: no HLS candidate' );
+	is( scalar( grep { $_->{url} =~ m{epgNowPlaying/SPORT_CRICKET} } requests() ), 1, 'one epg request for the event (cached across qualities)' );
+};
+
+subtest 'L6 whole catalogue with hls: the HLS stream first where there is one, then the standard candidates' => sub {
+	my %answers;
+	for my $q (qw(standard hls)) {
+		reset_all();
+		set_quality($q);
+		route( qr{epgNowPlaying/}, content => $EVENT_MIXED );    # every event service on air
+		route( qr{grandstand\.pls}, content => "[playlist]\nFile1=" . ice('sport') . "\n" );
+		$answers{$q}{ $_->{id} } = answer( $_->{id} ) for @RECORDS;
+		is( scalar( grep { $_->{url} =~ /\.m3u8/ } requests() ), 0, "$q: no .m3u8 request" );
+	}
+
+	my ( @wrong, $withHls );
+	for my $rec (@RECORDS) {
+		my ( $std, $hls ) = ( $answers{standard}{ $rec->{id} }, $answers{hls}{ $rec->{id} } );
+		if ( ref $hls ne 'ARRAY' ) {
+			push @wrong, "$rec->{id}: error in hls" ;
+			next;
+		}
+		my @flagged = grep { ref $_ eq 'HASH' } @$hls;
+		my @plain   = grep { !ref $_ } @$hls;
+		push @wrong, "$rec->{id}: a flagged candidate after a plain one" if @flagged && ref $hls->[0] ne 'HASH';
+		push @wrong, map {"$rec->{id}: bad hls candidate $_->{url}"} grep { !$_->{hls} || $_->{url} !~ m{\Ahttps://[^?#]+\.m3u8(?:\?|\z)} } @flagged;
+		push @wrong, map {"$rec->{id}: unflagged $_"} grep { /\.(?:m3u8|f4m|pls|m3u)(?:[?#]|\z)/i || !m{\Ahttps://} } @plain;
+		push @wrong, "$rec->{id}: [@plain] is not standard's" if ref $std eq 'ARRAY' && "@plain" ne "@$std";
+		push @wrong, "$rec->{id}: no HLS stream" unless @flagged;
+		$withHls++ if @flagged;
+	}
+	is_deeply( \@wrong, [], 'hls: every station starts with its HLS stream, then exactly the standard candidates' );
+	is( $withHls, scalar @RECORDS, "hls: all $withHls stations (and on-air events) have an HLS stream" );
+};
+
+subtest 'L6 onStream: an HLS fallback is logged once per play ("using Icecast instead of HLS")' => sub {
+	reset_all();
+	set_quality('hls');
+	my $player = ABCListenTest::FakeClient->new( '00:00:00:00:00:01', song => undef );
+
+	candidates('TRIPLEJ');
+	$PH->onStream( $player, play_song( TRIPLEJ => ice('triplejnsw') ) );
+	my @lines = fallback_lines();
+	is( scalar @lines, 1, 'HLS failed, Icecast plays: one INFO line' );
+	like( $lines[0] && $lines[0]->{message}, qr/using Icecast instead of HLS for TRIPLEJ \(\Q$HLS{TRIPLEJ}\E could not be played/, '... "using Icecast instead of HLS for TRIPLEJ (<the .m3u8> could not be played"' );
+
+	$PH->onStream( $player, play_song( TRIPLEJ => $HLS{TRIPLEJ} ) );
+	is( scalar( fallback_lines() ), 1, 'HLS plays: nothing logged' );
+
+	$PH->onStream( $player, play_song( TRIPLEJ => $MH{TRIPLEJ} ) );
+	like( ( fallback_lines() )[-1]->{message}, qr/using mediahub instead of HLS for TRIPLEJ\b/, 'HLS and Icecast failed, mediahub plays: "using mediahub instead of HLS"' );
+	is( scalar( logged('WARN') ) + scalar( logged('ERROR') ), 0, 'nothing at WARN or ERROR' );
+};
+
+subtest 'L6 bitrate: the station fallback metadata claims no Icecast bitrate with hls' => sub {
+	reset_all();
+	is( Plugins::ABCListen::Live::_metadata( undef, 'abclisten://live/TRIPLEJ', 'TRIPLEJ' )->{bitrate}, '56kbps CBR', 'standard, not playing: 56kbps CBR (Icecast)' );
+	set_quality('hls');
+	is( Plugins::ABCListen::Live::_metadata( undef, 'abclisten://live/TRIPLEJ', 'TRIPLEJ' )->{bitrate}, undef, 'hls, not playing: no bitrate (HLS is tried first)' );
+
+	my $player = ABCListenTest::FakeClient->new( '00:00:00:00:00:01', song => undef );
+	my $song   = play_song( TRIPLEJ => $HLS{TRIPLEJ}, owner => $player );
+	$player->setSong($song);
+	is( Plugins::ABCListen::Live::_metadata( $player, 'abclisten://live/TRIPLEJ', 'TRIPLEJ' )->{bitrate}, undef, 'hls, playing HLS: none from the kind (LMS shows the track\'s measured bitrate)' );
+	$song->{streamUrl} = ice('triplejnsw');
+	is( Plugins::ABCListen::Live::_metadata( $player, 'abclisten://live/TRIPLEJ', 'TRIPLEJ' )->{bitrate}, '56kbps CBR', 'hls, fell back to Icecast: 56kbps CBR' );
+};
+
 # ---- the settings page ----
 
 subtest 'Settings: prefs list, saves, partial POSTs, rejected and HTML values' => sub {
@@ -605,7 +780,13 @@ subtest 'Settings: prefs list, saves, partial POSTs, rejected and HTML values' =
 	$P->handler( undef, { saveSettings => 1, pref_homeState => 'SA', pref_liveQuality => 'standard' } );
 	is( $prefs->get('liveQuality'), 'standard', 'POST of both fields (the browser form) saves both' );
 
-	for my $bad ( 'hls', 'foo', 'Mediahub', q{<script>alert("x")</script>&'}, 'mediahub"><img src=x>' ) {
+	$params = { saveSettings => 1, pref_liveQuality => 'hls' };
+	$P->handler( undef, $params );
+	is( $prefs->get('liveQuality'), 'hls', 'L6: POST pref_liveQuality=hls saves hls' );
+	is( $params->{prefs}->{pref_liveQuality}, 'hls', '... and the page shows hls' );
+	$P->handler( undef, { saveSettings => 1, pref_liveQuality => 'standard' } );
+
+	for my $bad ( 'HLS', 'foo', 'Mediahub', q{<script>alert("x")</script>&'}, 'mediahub"><img src=x>' ) {
 		$params = { saveSettings => 1, pref_liveQuality => $bad };
 		$P->handler( undef, $params );
 		is( $prefs->get('liveQuality'), 'standard', 'POST ' . show($bad) . ' is rejected' );
@@ -639,16 +820,17 @@ subtest 'template: the L5 section' => sub {
 
 	my ($options) = $l5 =~ m{<select\b[^>]*>(.*?)</select>}s;
 	my @opts = ( $options // '' ) =~ /(<option\b[^>]*>.*?<\/option>)/gs;
-	is_deeply( [ map { /\bvalue="([^"]*)"/ ? $1 : '?' } @opts ], [@QUALITIES], '2 options in order: standard, mediahub (no HLS until L6)' );
-	is_deeply( [ map { /\[% '(PLUGIN_ABCLISTEN_\w+)' \| string \| html %\]/ ? $1 : '?' } @opts ], [ map {"PLUGIN_ABCLISTEN_LIVE_QUALITY_\U$_"} @QUALITIES ], 'their labels (HTML-escaped strings)' );
-	for my $q (@QUALITIES) {
+	is_deeply( [ map { /\bvalue="([^"]*)"/ ? $1 : '?' } @opts ], [@VALID], '3 options in order: standard, hls (L6), mediahub' );
+	is_deeply( [ map { /\[% '(PLUGIN_ABCLISTEN_\w+)' \| string \| html %\]/ ? $1 : '?' } @opts ], [ map {"PLUGIN_ABCLISTEN_LIVE_QUALITY_\U$_"} @VALID ], 'their labels (HTML-escaped strings)' );
+	is( Slim::Utils::Strings::string('PLUGIN_ABCLISTEN_LIVE_QUALITY_HLS'), 'High quality (HLS)', 'L6: the hls option reads "High quality (HLS)"' );
+	for my $q (@VALID) {
 		like( $options, qr/<option value="$q"\[% IF prefs\.pref_liveQuality == '$q' %\] selected="selected"\[% END %\]>/, "$q selected from prefs.pref_liveQuality (an unknown value selects nothing)" );
 	}
 	( my $markup = $l5 ) =~ s/\[%#.*?%\]//gs;    # without template comments
-	unlike( $markup, qr/\bdisabled\b|\bhls\b|PlayHLS/i, 'no HLS option, note or disabled state' );
+	unlike( $markup, qr/\bdisabled\b|PlayHLS/i, 'L6: the HLS option needs no PlayHLS note or disabled state (always offered)' );
 
 	# M3 (#52): the select is described by a hidden, id-bearing copy of the setting's description,
-	# and by nothing else (no HLS note); core's description div (WRAPPER desc) is unchanged
+	# and by nothing else (no PlayHLS note); core's description div (WRAPPER desc) is unchanged
 	is_deeply( [ $markup =~ /\baria-describedby="([^"]*)"/g ], ['liveQuality-desc'], 'one aria-describedby, on the select: liveQuality-desc' );
 	like( $select, qr/\baria-describedby="liveQuality-desc"/, '... the select is described by liveQuality-desc' );
 	my @desc;
@@ -661,9 +843,9 @@ subtest 'template: the L5 section' => sub {
 	like( $before // '', qr/desc="PLUGIN_ABCLISTEN_LIVE_QUALITY_DESC" %\]\s*\z/, '... first in the WRAPPER content, which still passes desc to core' );
 
 	my %tokens = map { $_ => 1 } $l5 =~ /\b(PLUGIN_ABCLISTEN\w*)/g;
-	is_deeply( [ sort keys %tokens ], [ sort @L5_TOKENS ], 'the section uses the four L5 tokens' );
+	is_deeply( [ sort keys %tokens ], [ sort @L5_TOKENS ], 'the section uses the five tokens (L5\'s four, L6\'s _HLS)' );
 	ok( Slim::Utils::Strings::stringExists($_) && length Slim::Utils::Strings::string($_), "$_ has EN text" ) for @L5_TOKENS;
-	ok( !Slim::Utils::Strings::stringExists($_), "$_ is gone from strings.txt" ) for qw(PLUGIN_ABCLISTEN_LIVE_QUALITY_HLS PLUGIN_ABCLISTEN_LIVE_QUALITY_NO_PLAYHLS);
+	ok( !Slim::Utils::Strings::stringExists($_), "$_ is gone from strings.txt" ) for qw(PLUGIN_ABCLISTEN_LIVE_QUALITY_NO_PLAYHLS);
 };
 
 subtest 'main::WEBUI false (LMS --noweb): liveQuality still initialised and validated' => sub {
@@ -678,9 +860,10 @@ require Plugins::ABCListen::Live;
 my $ok = eval { Plugins::ABCListen::Live->init(); 1 } ? 1 : 0;
 my $p  = preferences('plugin.abclisten');
 my $default = $p->get('liveQuality');
+my (undef, $setBad) = $p->set( liveQuality => 'HLS' );
 my (undef, $setHls) = $p->set( liveQuality => 'hls' );
 my (undef, $setMh)  = $p->set( liveQuality => 'mediahub' );
-print join( "\n", "initOk=$ok", "default=$default", "setHls=$setHls", "setMh=$setMh", 'value=' . $p->get('liveQuality') ), "\n";
+print join( "\n", "initOk=$ok", "default=$default", "setBad=$setBad", "setHls=$setHls", "setMh=$setMh", 'value=' . $p->get('liveQuality') ), "\n";
 PERL
 	open( my $ph, '-|', $^X, "-I$lib", '-e', $code ) or die "Can't run $^X: $!";
 	my %out = map { chomp; split /=/, $_, 2 } <$ph>;
@@ -688,7 +871,8 @@ PERL
 	is( $?, 0, 'child perl exited cleanly' );
 	is( $out{initOk},  1,          'Live->init does not die' );
 	is( $out{default}, 'standard', 'liveQuality initialised to standard' );
-	is( $out{setHls},  0,          'hls rejected' );
+	is( $out{setBad},  0,          'HLS rejected' );
+	is( $out{setHls},  1,          'L6: hls accepted' );
 	is( $out{setMh},   1,          'mediahub accepted' );
 	is( $out{value},   'mediahub', 'liveQuality is mediahub' );
 };
