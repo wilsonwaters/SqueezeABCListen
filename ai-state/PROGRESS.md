@@ -13,12 +13,11 @@ v1.0.0 accepted by the stakeholder on pi14 (2026-10-25; #17 closed). Now: v1.1.0
 
 ## Currently in flight
 - v1.1.0 (stakeholder feedback 2026-10-25):
-  - #90 U2 continuous lists — re-review REQUEST_CHANGES: "Episode unavailable" placeholders for ABC video cards
-    (54 rows over 6 of 71 sampled programs; The Grill 24) → number rows by audio episode across all ≤5 pages; all-500
-    retry storm (5 → 30 requests) → stop after 0/10 fails; tests N8/N13. Implementer fixing; rebase onto main (U1 squashed).
-  - #79 R7 docs + CHANGELOG [Unreleased] for 1.1.0 — implementing (U2 bullets grouped for adjustment).
-  - Queued: #72 O9 icons (after U2: same file); then system check → 1.1.0 → pi14 re-check (CPU in top, Cricket /
-    Grandstand, 30+ min HLS play, Squeezer header + long lists).
+  - #95 U3 (U2 low follow-ups: overall load deadline, 429 stops split, P5/P9 tests) then #72 O9 (Default-skin icons):
+    one agent (U2's implementer), two PRs, sequential (same file OnDemand.pm).
+  - Then: system verification on main (journeys + smoke + HLS + Jive DB.lua sim) → CHANGELOG [1.1.0] + version bump →
+    release → install check → pi14 re-check (CPU in top, Cricket / Grandstand, 30+ min HLS play, Squeezer header,
+    long lists on piCorePlayer if available).
   - P3 after 1.1.0: #91 L7 HLS title offset, #81 O5.
 
 ## Interruptions
@@ -37,6 +36,13 @@ v1.0.0 accepted by the stakeholder on pi14 (2026-10-25; #17 closed). Now: v1.1.0
   (fixed), testbed restarted, main re-linked, lock free; U2 and R7 resumed from saved state.
 
 ## Last completions
+- #84 U2 merged (PR #90, squash 9a4fcb1): continuous lists (partial feeds), rows numbered by audio episode over all
+  pages, no leading textarea above 200 rows (Jive count fix), bounded 10-page retries + 60 s failure cache. Reviews:
+  R1 REQUEST_CHANGES (Jive endless reload, HIGH) → R2 REQUEST_CHANGES (placeholders for video cards, retry storm) →
+  R3 APPROVE (5 low → #95). Live sample 71 programs: 0 placeholders; DB.lua sim clean.
+- #79 R7 merged (PR #94, squash 65399e0): README/CHANGELOG [Unreleased]/RELEASING for 1.1.0; t/98 updated for HLS
+  docs. Orchestrator added U2's Play all/Add all, no-repeat collections, About on ≥100-row lists; merged-tree check.sh
+  933 tests.
 - #89 F9 merged (PR #93, squash 62e98b3): Programs quiet opts; Latest 404 → 1 WARN/day; F7/F8 test gaps (13/13 caught);
   Tracks log line. Orchestrator review: diff read, merged-tree check.sh 895 tests (+U2 trial merge 931 tests).
 - #83 U1 merged (PR #86, squash f6abcd1): short description headers + About row. Review REQUEST_CHANGES (pos() bug,
