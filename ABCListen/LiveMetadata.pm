@@ -44,7 +44,9 @@ package Plugins::ABCListen::LiveMetadata;
 #                                  whole text when it was shortened), "On air: <program> · <time slot>",
 #                                  "Presented by <presenters>", "Next: <program> · <time slot>"
 #                                  (NowPlaying->programNext, fetched only here); rows without data
-#                                  are left out (the station name when nothing is known).
+#                                  are left out (the station name when nothing is known). O9: for the
+#                                  web UI (isWeb) the rows get the program's image, else the
+#                                  station logo, else the plugin icon (OnDemand->rowImages).
 #   recentInfo($client, $url, ...) Slim::Menu::TrackInfo provider (L3, registered by Live->init
 #                                  after "Program info"): for the main music stations
 #                                  (Tracks->station; not talk stations, not time-zone versions), a
@@ -97,6 +99,7 @@ use Slim::Utils::Log;
 use Slim::Utils::Strings qw(cstring);
 use Slim::Utils::Timers;
 
+use Plugins::ABCListen::API;
 use Plugins::ABCListen::NowPlaying;
 use Plugins::ABCListen::OnDemand;
 use Plugins::ABCListen::Stations;
@@ -108,6 +111,7 @@ use constant MIN_DELAY      => 60;
 use constant MAX_DELAY      => 900;
 use constant ERROR_DELAY    => 30;
 use constant INFO_DEADLINE  => 3;     # seconds for the Program info and Recently played feeds
+use constant INFO_IMAGE_PX  => 300;   # O9: Program info's row images in the web UI
 use constant RECENT_ROWS    => 10;
 
 use constant PUSHED_KEY => 'liveMetaPushed';
@@ -508,6 +512,11 @@ sub _programInfo {
 			$items = [ { name => cstring( $client, 'PLUGIN_ABCLISTEN_ERROR' ), type => 'text' } ];
 		}
 
+		# O9: in the web UI (isWeb) the rows get the program's image, else the station's logo, else
+		# the plugin icon (OnDemand->rowImages: the Default skin shows a grey placeholder otherwise;
+		# CLI answers keep their rows, so Material doesn't turn them into a grid)
+		$items = [ Plugins::ABCListen::OnDemand->rowImages( _infoImage($id), @$items ) ] if ref $args eq 'HASH' && $args->{isWeb};
+
 		$cb->( { items => $items } );
 	};
 
@@ -534,6 +543,15 @@ sub _programInfo {
 	} );
 
 	return;
+}
+
+# O9: the image for Program info's rows in the web UI.
+sub _infoImage {
+	my $id  = shift;
+	my $rec = Plugins::ABCListen::Stations->get($id) || {};
+	my $now = $NOW_PLAYING->cached($id) || $NOW_PLAYING->lastGood($id);
+	my $art = ref $now eq 'HASH' && _isText( $now->{image} ) ? $now->{image} : $rec->{logo};
+	return Plugins::ABCListen::API::imageUrl( $art, INFO_IMAGE_PX ) || Plugins::ABCListen::Util::ICON;
 }
 
 sub _programInfoItems {

@@ -497,9 +497,9 @@ sub program_info {
 }
 
 sub open_info {
-	my ( $client, $item ) = @_;
+	my ( $client, $item, $args ) = @_;
 	my $c = collector();
-	$item->{url}->( $client, $c->cb, {}, @{ $item->{passthrough} || [] } );
+	$item->{url}->( $client, $c->cb, $args || {}, @{ $item->{passthrough} || [] } );
 	return $c;
 }
 
@@ -557,6 +557,34 @@ subtest 'song info: synopsis, On air, presenters, Next' => sub {
 	$S->_setRecords( { %{ $S->get('RN') }, synopsis => undef } );
 	$c = open_info( undef, program_info( undef, $RN_URL ) );
 	is_deeply( ( $c->args(0) )[0]->{items}, [ { type => 'text', name => 'Radio National' } ], 'nothing at all: the station name' );
+	$S->_setRecords();
+};
+
+subtest 'song info, the web UI (O9): Program info rows get an image; CLI answers keep theirs' => sub {
+	reset_all();
+	$PH->getMetadataFor( undef, $RN_URL );
+	my $now   = Plugins::ABCListen::NowPlaying->cached('RN');
+	my $image = Plugins::ABCListen::API::imageUrl( $now->{image} || $S->get('RN')->{logo}, 300 ) || Plugins::ABCListen::Util::ICON;
+	ok( $image, "(the image: $image)" );
+
+	my $c     = open_info( undef, program_info( undef, $RN_URL ), { isWeb => 1, wantMetadata => 1 } );
+	my $items = ( $c->args(0) )[0]->{items};
+	is( $c->count, 1, 'answers once' );
+	is_deeply( [ map { $_->{type} } @$items ], [qw(textarea text text text)], 'the same rows: synopsis, On air, Presented by, Next' );
+	ok( !exists $items->[0]->{image}, 'the textarea: no image' );
+	is_deeply( [ map { $_->{image} } @$items[ 1 .. 3 ] ], [ ($image) x 3 ], '... On air, Presented by, Next: the program\'s image (else the station\'s logo, else the icon)' );
+
+	reset_all();
+	$PH->getMetadataFor( undef, $RN_URL );
+	$c = open_info( undef, program_info( undef, $RN_URL ) );
+	ok( !( grep { exists $_->{image} } @{ ( $c->args(0) )[0]->{items} } ), 'the CLI: no images (Material would show four text rows with images as a grid)' );
+
+	reset_all();
+	$EPG{'RN/now'}  = { code => 500 };
+	$EPG{'RN/next'} = { code => 500 };
+	$S->_setRecords( { %{ $S->get('RN') }, synopsis => undef, logo => undef } );
+	$c = open_info( undef, program_info( undef, $RN_URL ), { isWeb => 1 } );
+	is_deeply( ( $c->args(0) )[0]->{items}, [ { type => 'text', name => 'Radio National', image => Plugins::ABCListen::Util::ICON } ], 'nothing known, the web UI: the station name with the plugin icon' );
 	$S->_setRecords();
 };
 
