@@ -4,6 +4,8 @@
 # HTML::Entities), the URL contract (streams.md contract 2) and the episode metadata cache
 # contract (streams.md contract 3).
 # F8 (#78): setEpisodeMeta writes only what changes the entry, and renews an unchanged one once a day.
+# F9 (#89): a key dropped inside a rendition is a change on its own (_same's key count); a write
+# time after now (the clock went back) renews an unchanged entry.
 # F7 (#76): episodeSeenAt (the fetch time of a fresh answer younger than 6 h, else undef) and
 # episodeMetaIsNewer (a later seenAt, or windows closed later; ties are not newer).
 
@@ -456,9 +458,15 @@ subtest 'F8: setEpisodeMeta writes only what changes the entry (and renews an un
 		[ 'a newer seenAt',                  { seenAt => $t0 + 60 } ],
 		[ 'another bitrate in a rendition', { renditions => [ { url => 'https://example.test/a.mp3', mime => 'audio/mpeg', bitrate => 192, fileSize => 1000 } ] } ],
 		[ 'one more rendition',              { renditions => [ @{ $meta{renditions} }, { url => 'https://example.test/a.aac', mime => 'audio/aac' } ] } ],
-		[ 'a key inside a rendition',        { renditions => [ { url => 'https://example.test/a.mp3', mime => 'audio/mpeg', bitrate => 128 } ] } ],
+		# F9: from the same one-rendition list, with only fileSize dropped: just the key count differs
+		[ 'a key inside a rendition',        { renditions => [ { url => 'https://example.test/a.mp3', mime => 'audio/mpeg', bitrate => 128 } ] }, { renditions => $meta{renditions} } ],
 	) {
-		my ( $name, $new ) = @$change;
+		my ( $name, $new, $from ) = @$change;
+		if ($from) {
+			setEpisodeMeta( '107266790', $from );
+			$writes->();
+			is_deeply( getEpisodeMeta('107266790')->{renditions}, $from->{renditions}, "$name: starting from that one-rendition list" );
+		}
 		setEpisodeMeta( '107266790', $new );
 		is( $writes->(), 1, "$name: written" );
 		is_deeply( getEpisodeMeta('107266790')->{ ( keys %$new )[0] }, ( values %$new )[0], "$name: stored" );
@@ -497,6 +505,29 @@ subtest 'F8: setEpisodeMeta writes only what changes the entry (and renews an un
 	is( $writes->(), 1, 'an entry from before F8: written once' );
 	setEpisodeMeta( '7', { title => 'Old entry' } );
 	is( $writes->(), 0, '... then no more' );
+
+	clearTime();
+};
+
+subtest 'F9: setEpisodeMeta - a write time after now (the clock went back) renews an unchanged entry' => sub {
+	resetStubs();
+	my $t0 = at('2026-10-19T12:00:00+11:00');
+	setTime($t0);
+
+	my @writes;
+	no warnings 'redefine';
+	my $set = \&Slim::Utils::Cache::set;
+	local *Slim::Utils::Cache::set = sub { push @writes, $_[1]; $set->(@_) };
+	my $writes = sub { my $n = scalar @writes; @writes = (); return $n };
+
+	setEpisodeMeta( '107266790', { title => 'Episode' } );
+	is( $writes->(), 1, 'stored at t0' );
+
+	setTime( $t0 - 3600 );
+	setEpisodeMeta( '107266790', { title => 'Episode' } );
+	is( $writes->(), 1, 'unchanged, with the clock an hour before that write: written again (a write time in the future is not "less than a day ago")' );
+	setEpisodeMeta( '107266790', { title => 'Episode' } );
+	is( $writes->(), 0, '... then, written at the new time, no more' );
 
 	clearTime();
 };
