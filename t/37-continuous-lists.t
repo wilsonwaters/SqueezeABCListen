@@ -376,16 +376,18 @@ subtest 'program menu: exactly one callback' => sub {
 		is( names( answer($c)->{items} )->[-1], $LOAD_FAILED, '... with the first answer' );
 	}
 
-	fresh();
-	route_science();
-	route_episodes();
-	{
+	for my $slow ( 0, 1 ) {
+		fresh();
+		route_science();
+		route_episodes( defer => { 0 => $slow } );
 		no warnings 'redefine';
 		my $calls = 0;
 		my $header = \&Plugins::ABCListen::OnDemand::_programHeader;
 		local *Plugins::ABCListen::OnDemand::_programHeader = sub { die "header broke\n" if ++$calls > 1; goto &$header };
 		my $c = science( { index => 0, quantity => 10 } );
-		is( $c->count, 1, 'building the rows dies once the pages are in: one callback' );
+		Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+		my $how = $slow ? 'after ABC answers later (inside its callback)' : 'with the pages cached (at once)';
+		is( $c->count, 1, "building the rows dies once the pages are in, $how: one callback" );
 		is_deeply( answer($c)->{items}, [ { name => $LOAD_FAILED, type => 'text' } ], '... the LOAD_FAILED row' );
 	}
 
