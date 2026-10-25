@@ -195,9 +195,9 @@ Material) queues every chapter in order.
 
 A program's page shows its description, "Presented by …", its network, the follow rows (see
 [My ABC listen](#my-abc-listen)) and then its episodes, newest first, named with their broadcast
-date and title ("Fri 23 Oct – Mental health and the manosphere"). Long lists end with
-**More episodes…**. Programs use ABC's current titles, such as "Radio National Breakfast" and
-"If You're Listening".
+date and title ("Fri 23 Oct – Mental health and the manosphere"), as one list back to the oldest
+episode ABC lists (its newest 250). Programs use ABC's current titles, such as "Radio National
+Breakfast" and "If You're Listening".
 
 ![A program's page in the Default web interface: All In the Mind's presenter, network and Follow row, then its episodes, newest first, each named with its date and title](docs/images/default-program-episodes.png)
 

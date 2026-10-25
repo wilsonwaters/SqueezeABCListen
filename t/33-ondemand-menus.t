@@ -58,7 +58,7 @@ my $WCMS        = 'https://live-production.wcms.abc-cdn.net.au';
 my $JSON_TYPE   = { 'Content-Type' => 'application/json' };
 my $LOAD_FAILED = string('PLUGIN_ABCLISTEN_LOAD_FAILED');
 my $NO_EPISODES = string('PLUGIN_ABCLISTEN_NO_EPISODES');
-my $MORE        = string('PLUGIN_ABCLISTEN_MORE_EPISODES');    # U2: no longer listed anywhere
+my $MORE        = "More episodes\x{2026}";    # U2: no longer listed anywhere (the token is gone)
 
 my $PROGRAM_MENU = \&Plugins::ABCListen::OnDemand::_programMenu;
 my $EPISODE_MENU = \&Plugins::ABCListen::OnDemand::_episodeMenu;
@@ -457,7 +457,7 @@ subtest 'episodeItem: exact keys, no on_select, play URL, formats, meta-cache wr
 	is( $OD->episodeItem( $client, { id => '1008', title => 'With client' } )->{play}, 'abclisten://episode/1008', 'with a client' );
 };
 
-subtest 'program menu (The Science Show): header, then all 250 episodes newest first as one list (U2)' => sub {
+subtest 'program menu (The Science Show): header, then all 250 episodes newest first as one list (U2; no textarea above 200 rows)' => sub {
 	fresh();
 	route_science();
 	route_episodes();
@@ -467,19 +467,19 @@ subtest 'program menu (The Science Show): header, then all 250 episodes newest f
 	my ($feed) = $c->args(0);
 	my $items = items_of($c);
 
-	is( scalar @$items, 254, 'count 254: description, About this program, presenters, network, 250 episodes (no providers), no More row' );
+	is( scalar @$items, 253, 'count 253: About this program, presenters, network, 250 episodes (no providers), no More row' );
 	is( $feed->{offset}, 0,   'a partial feed: offset 0 (no window asked: the whole list)' );
-	is( $feed->{total},  254, '... total 254' );
-	is_deeply( $items->[0], { name => $SCIENCE_FIRST, type => 'textarea' }, 'item 1: the description\'s first paragraph as a textarea (exact keys; U1)' );
+	is( $feed->{total},  253, '... total 253' );
+	ok( !( grep { ( $_->{type} // '' ) eq 'textarea' } @$items ), 'no textarea row: more than 200 rows (U2 review: SqueezePlay/jivelite page by 200 and need the same count in every chunk)' );
 	is_deeply(
-		$items->[1],
+		$items->[0],
 		{ name => 'About this program', type => 'link', items => [ { name => "$SCIENCE_FIRST\n\n$SCIENCE_AIRS", type => 'textarea' } ] },
-		'item 2: "About this program" with the whole description (U1: the header was shortened)'
+		'item 1: "About this program" with the whole description'
 	);
-	is_deeply( $items->[2], text_item('Presented by Robyn Williams, Belinda Smith'), 'item 3: Presented by …' );
-	is_deeply( $items->[3], text_item('ABC Radio National'), 'item 4: the network (program page attribution)' );
+	is_deeply( $items->[1], text_item('Presented by Robyn Williams, Belinda Smith'), 'item 2: Presented by …' );
+	is_deeply( $items->[2], text_item('ABC Radio National'), 'item 3: the network (program page attribution)' );
 
-	my @episodes = @$items[ 4 .. 253 ];
+	my @episodes = @$items[ 3 .. 252 ];
 	is( scalar( grep { $_->{type} eq 'link' && $_->{url} == $EPISODE_MENU && $_->{play} =~ m{\Aabclisten://episode/[0-9]+\z} } @episodes ), 250, '250 episode rows: links with a play URL' );
 	is( scalar( grep { $_->{name} =~ $EPISODE_NAME } @episodes ), 250, 'episode names: "<Day> <d> <Mon>[ <year>] – <title>"' );
 	is( $episodes[0]->{name}, "Sat 17 Oct \x{2013} Episode 0", 'newest first' );
@@ -596,8 +596,8 @@ subtest 'program menu: empty and error states (one readable text item, never emp
 	route_science();
 	route_episodes();
 	$c = feed( $PROGRAM_MENU, $client, { title => 'The Science Show', path => $SCIENCE } );
-	is( scalar @{ items_of($c) }, 254, 'with a client: the same menu' );
-	is( items_of($c)->[1]->{name}, 'About this program', 'with a client: the About row in the client\'s language' );
+	is( scalar @{ items_of($c) }, 253, 'with a client: the same menu' );
+	is( items_of($c)->[0]->{name}, 'About this program', 'with a client: the About row in the client\'s language' );
 };
 
 subtest 'program menu: a restricted program with nothing else to list says "No episodes available" (never an empty list)' => sub {
@@ -696,10 +696,10 @@ subtest 'registry: order, merged program detail, isolation' => sub {
 	is( $c->count, 1, 'then one callback' );
 
 	my $items = items_of($c);
-	is_deeply( [ map { $_->{name} } @$items[ 4 .. 6 ] ], [ 'Extra A', 'Extra B', 'Extra C' ], 'extras after the header, in registration order (non-hash entries dropped)' );
-	like( $items->[7]->{name}, $EPISODE_NAME, 'then the episodes' );
+	is_deeply( [ map { $_->{name} } @$items[ 3 .. 5 ] ], [ 'Extra A', 'Extra B', 'Extra C' ], 'extras after the header, in registration order (non-hash entries dropped)' );
+	like( $items->[6]->{name}, $EPISODE_NAME, 'then the episodes' );
 	like( $items->[-1]->{name}, $EPISODE_NAME, 'then the episodes to the last (no More row)' );
-	is( scalar @$items, 257, 'count 254 + 3 extras' );
+	is( scalar @$items, 256, 'count 253 + 3 extras' );
 
 	is_deeply(
 		$received[0],
@@ -735,8 +735,8 @@ subtest 'registry: order, merged program detail, isolation' => sub {
 	is( $c->count, 0, 'still waiting at 4.9 s' );
 	advanceTime(0.1);
 	is( $c->count, 1, 'answered after 5 s without the silent provider' );
-	is_deeply( [ map { $_->{name} } @{ items_of($c) }[ 4, 5 ] ], [ 'Twice 1', 'Good' ], 'dying, non-array and silent providers skipped; a second call back ignored' );
-	is( scalar @{ items_of($c) }, 256, 'count 254 + 2 extras' );
+	is_deeply( [ map { $_->{name} } @{ items_of($c) }[ 3, 4 ] ], [ 'Twice 1', 'Good' ], 'dying, non-array and silent providers skipped; a second call back ignored' );
+	is( scalar @{ items_of($c) }, 255, 'count 253 + 2 extras' );
 
 	$late->( [ { name => 'Too late', type => 'text' } ] );
 	is( $c->count, 1, 'a late call back is ignored (no second answer)' );

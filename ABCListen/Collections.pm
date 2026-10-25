@@ -133,10 +133,12 @@ package Plugins::ABCListen::Collections;
 #       title and tagline are kept. Lookups still queued or in flight at the deadline carry on
 #       and warm the cache for the next open. Without lookups or event checks it calls back
 #       synchronously.
-#       U2: an optional 5th argument { names => [ $from, $to ] } looks up only the program refs at
-#       positions $from .. $to - 1 of \@refs (after de-duplication); the others keep cardRef's
-#       title. A collection menu passes the rows LMS asks for (see collectionItem): LMS shows only
-#       those, so the rest are never seen with their card titles.
+#       U2: an optional 5th argument { names => [ $from, $to ] } looks up only the program refs
+#       listed as rows $from .. $to - 1 (rows counted over the de-duplicated refs that map to an
+#       item: _target, and a program path on www.abc.net.au; an event station off air still counts,
+#       so after one the window may be a row late); the others keep cardRef's title. A collection
+#       menu passes the rows LMS asks for (see collectionItem): LMS shows only those, so the rest
+#       are never seen with their card titles.
 #
 #   collectionItem($client, { id, title, image, kind? }, $depth) -> link | undef
 #       A link listed at level $depth (0 at a page root) to the collection's menu at $depth + 1;
@@ -152,9 +154,10 @@ package Plugins::ABCListen::Collections;
 #       Looking For Something New?, 97 and 100 cards), and itemsFor drops and de-duplicates cards,
 #       so a row's index can't be mapped to an ABC page without the pages before it: no partial
 #       feed here (the program menu has one). The program names (itemsFor, FQ4) are looked up only
-#       for the rows LMS asks for (XMLBrowser's index/quantity, + NAME_SLACK cards for the ones
-#       dropped before them): opening one row (quantity 1) looks up at most 1 + NAME_SLACK names,
-#       not the whole collection's. Nothing to list: one PLUGIN_ABCLISTEN_EMPTY_COLLECTION
+#       for the rows LMS asks for (XMLBrowser's index/quantity): opening one row (quantity 1)
+#       looks up at most one name, not the whole collection's. The cap equals SqueezePlay/
+#       jivelite's chunk of 200 rows, so they get every collection in one request and its count
+#       never changes between chunks. Nothing to list: one PLUGIN_ABCLISTEN_EMPTY_COLLECTION
 #       text item; first page error: the error token's text item. Every feed answers exactly once.
 #       The collection hash travels in the passthrough; its kind (D4) picks the fetcher (menuPage).
 #       Optional collection keys (D2):
@@ -254,7 +257,6 @@ use constant AGGREGATION_PAGE_SIZE => 50;    # D4: program aggregations (All Kid
 use constant MAX_DEPTH        => 3;
 use constant NAME_CONCURRENCY => 4;
 use constant NAME_DEADLINE    => 3;       # seconds per page
-use constant NAME_SLACK       => 10;      # U2: names looked up past a collection menu's window (see collectionItem)
 use constant IMAGE_PX         => 300;
 
 use constant PODCASTS_PATH       => '/listen/podcasts';    # D2
@@ -701,15 +703,15 @@ sub _collectionCards {
 	return;
 }
 
-# U2: the card positions whose program names a collection menu looks up: the rows XMLBrowser asks
-# for (index/quantity args: the rows a client lists, or the row it opens with quantity 1), plus
-# NAME_SLACK cards (cards dropped before them push the rows later); undef (all) without them.
+# U2: the rows whose program names a collection menu looks up: the rows XMLBrowser asks for
+# (index/quantity args: the rows a client lists, or the row it opens with quantity 1); undef (all)
+# without them.
 sub _nameWindow {
 	my $args = _hash(shift);
 	my $index    = _isText( $args->{index} )    && $args->{index}    =~ /\A([0-9]+)/   ? $1 + 0 : undef;
 	my $quantity = _isText( $args->{quantity} ) && $args->{quantity} =~ /\A([0-9]+)\z/ ? $1 + 0 : undef;
 	return undef unless defined $index && $quantity;
-	return [ $index, $index + $quantity + NAME_SLACK ];
+	return [ $index, $index + $quantity ];
 }
 
 # The page size of a collection's kind (%FETCHERS).
@@ -1383,10 +1385,13 @@ sub _resolveNames {
 	my ( $from, $to ) = ref $window eq 'ARRAY' ? @$window : ( 0, scalar @$refs );
 
 	my ( @queue, %queued );
-	for my $ref ( @$refs[ grep { $_ >= $from && $_ < $to } 0 .. $#$refs ] ) {
-		next if $ref->{hero};
+	my $row = 0;    # the row a ref is listed as (itemFor: refs that map to nothing are left out)
+	for my $ref (@$refs) {
 		my $target = _target($ref) or next;
-		next unless $target->{kind} eq 'program';
+		next if $target->{kind} eq 'program' && !defined Plugins::ABCListen::API::sitePath( $ref->{path} );
+		my $listed = $row++;
+		next if $listed < $from || $listed >= $to;
+		next if $ref->{hero} || $target->{kind} ne 'program';
 		push @queue, $ref->{path} unless $queued{ $ref->{path} }++;
 	}
 

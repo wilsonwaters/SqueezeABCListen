@@ -139,7 +139,8 @@ package Plugins::ABCListen::OnDemand;
 #
 # Program menu (_programMenu) order: description (descriptionItems: the short textarea, then
 # "About this program" when it was shortened, or (U2) when 100 or more rows follow the textarea:
-# Material hides the window header of such lists) · "Presented by A, B" · network
+# Material hides the window header of such lists; no textarea at all when the menu has more than
+# JIVE_CHUNK (200) rows: see _programHeader) · "Presented by A, B" · network
 # (Programs->program attribution title) · provider extras · every episode ABC lists, newest first
 # (to ABC's 250), as one list (U2, #84; before: 50, then "More episodes…"). No episodes: "No
 # episodes available", except for a restricted program without an episode collection (an ABC
@@ -152,9 +153,13 @@ package Plugins::ABCListen::OnDemand;
 # { items => those rows, offset => index, total => all rows } and loads only the ABC pages of
 # EPISODE_PAGE (50) episodes those rows are on, at most PAGE_CONCURRENCY (4) at a time, plus page
 # 0, whose total (at most 250) sets the length; Programs->episodes caches each page 15 min. Without
-# index/quantity (playlist commands: Play all / Add all) it is the whole list, every page. A page
-# that fails ends the list with its error text row; row i is the same episode for as long as the
-# pages are cached (stable item ids: LMS keeps no browse session and re-walks menus by index).
+# index/quantity (playlist commands: Play all / Add all) it is the whole list, every page. The
+# total is page 0's for every window (U2 review): a page of 50 that fails is loaded again as pages
+# of SUB_PAGE (10); a place still without an episode keeps a text row (the failed page's error
+# text, or "Episode unavailable" where ABC's page holds fewer episodes than its total said), and a
+# failed page isn't asked for again for FAILURE_TTL (60 s). Row i is the same episode for as long
+# as the pages are cached (stable item ids: LMS keeps no browse session and re-walks menus by
+# index).
 #
 # Episode menu (_episodeMenu; O4 extended it): synopsis (descriptionItems: the short textarea,
 # then "About this episode" when it was shortened) · "Play episode" (type audio,
@@ -206,6 +211,7 @@ use warnings;
 
 use Time::HiRes ();
 
+use Slim::Utils::Cache;
 use Slim::Utils::Log;
 use Slim::Utils::Strings qw(cstring);
 use Slim::Utils::Timers;
@@ -223,6 +229,10 @@ use constant MIDDOT => "\x{B7}";
 use constant EPISODE_PAGE     => 50;     # ABC episodes per page (U2: the program menu loads the pages its window shows)
 use constant PAGE_CONCURRENCY => 4;      # U2: episode pages loading at once
 use constant LONG_LIST        => 100;    # U2: rows after the header from which Material hides it (_programHeader)
+use constant SUB_PAGE         => 10;     # U2 review: a failed page is loaded again as pages of this many episodes
+use constant MAX_ROUNDS       => 4;      # U2 review: rounds of page loads after the first (_programMenuItems)
+use constant FAILURE_TTL      => 60;     # U2 review: seconds a failed episode page isn't asked for again
+use constant JIVE_CHUNK       => 200;    # U2 review: rows SqueezePlay/jivelite ask for at a time (DB.lua BLOCK_SIZE)
 use constant PROVIDER_TIMEOUT => 5;      # seconds
 use constant IMAGE_PX         => 300;
 use constant LOAD_FAILED      => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
@@ -820,13 +830,13 @@ sub _window {
 # Header, provider extras, then the episodes as one list (U2): only the rows of the window, from the
 # ABC pages of EPISODE_PAGE episodes that hold them, as a partial feed { items, offset, total }.
 # Page 0 (it gives the total) and the window's other pages, estimated from the header alone, load
-# with the providers, at most PAGE_CONCURRENCY at a time; a page the estimate missed (provider
-# rows, or more episodes than the program page said) loads after them.
+# with the providers, at most PAGE_CONCURRENCY at a time. Then, round by round (at most
+# MAX_ROUNDS): a page the estimate missed (provider rows, or more episodes than the program page
+# said), page 0's first SUB_PAGE episodes when page 0 failed (for the total), and the window's
+# SUB_PAGE pages of a page that failed (U2 review: ABC fails some pages of 50 every time while
+# their pages of 10 load).
 sub _programMenuItems {
 	my ( $client, $cb, $program, $detail, $window ) = @_;
-
-	# provisional (for the first pages to load): the program page's count of episodes after it
-	my @header = _programHeader( $client, $detail, $detail->{total} || 1 );
 
 	my %merged = %$program;
 	for my $key (qw(id title template restricted episodeCollectionId)) {
@@ -841,29 +851,26 @@ sub _programMenuItems {
 		collectionId => $detail->{episodeCollectionId},
 	};
 
-	my %pages;    # page number => Programs::episodes' answer
-	my ( $extras, $pending, @lead ) = ( undef, 2 );
+	my %pages;    # "offset/size" => Programs::episodes' answer
+	my ( $extras, @lead );
+	my ( $pending, $rounds ) = ( 2, 0 );
 
-	my $answer = sub {
-		_respondWindow( $client, $cb, sub { _programWindow( $client, $context, $detail, \@lead, \%pages, $window ) } );
-	};
-
-	my $done = sub {
-		return if --$pending;
-
+	my $step;
+	$step = sub {
 		_try( $client, $cb, sub {
-			# the rows before the episodes, now that the number of rows after the header is known
-			my $count = defined $context->{collectionId} ? _episodeCount( $pages{0}, $detail ) : 0;
+			# the rows before the episodes, now that the number of episodes is known
+			my $count = _episodeCount( \%pages, $detail );
 			@lead = ( _programHeader( $client, $detail, @$extras + ( $count || 1 ) ), @$extras );
 
-			return $answer->() unless defined $context->{collectionId};
+			my @wanted = defined $context->{collectionId} && $rounds++ < MAX_ROUNDS ? _wantedPages( \%pages, scalar @lead, $window, $count || 0 ) : ();
+			return _fetchPages( $context, \@wanted, \%pages, $step ) if @wanted;
 
-			my @missing = grep { !$pages{$_} } _windowPages( scalar @lead, $window, $count );
-			return $answer->() unless @missing;
-
-			_fetchPages( $context, \@missing, \%pages, $answer );
+			undef $step;    # done: break the closure's reference to itself
+			_respondWindow( $client, $cb, sub { _programWindow( $client, $context, $detail, \@lead, \%pages, $window ) } );
 		} );
 	};
+
+	my $done = sub { $step->() unless --$pending };
 
 	_runProviders( $client, \%merged, sub {
 		$extras = shift;
@@ -872,7 +879,9 @@ sub _programMenuItems {
 
 	if ( defined $context->{collectionId} ) {
 		# the program page's count of episodes (unknown: one page) and the header alone
-		_fetchPages( $context, [ _windowPages( scalar @header, $window, $detail->{total} || EPISODE_PAGE ) ], \%pages, $done );
+		my $estimate = $detail->{total} || EPISODE_PAGE;
+		my @header   = _programHeader( $client, $detail, $estimate );
+		_fetchPages( $context, [ _wantedPages( \%pages, scalar @header, $window, $estimate ) ], \%pages, $done );
 	}
 	else {
 		$done->();
@@ -881,10 +890,16 @@ sub _programMenuItems {
 
 # Description (U1: the short textarea, then "About this program" when shortened), "Presented by
 # ...", network; each only when known. $after: how many rows follow the header (provider rows,
-# episodes). U2: when the rows after the textarea reach LONG_LIST (100), "About this program" is
-# there even for a short description: Material shows the window header (the textarea) only for
-# lists of fewer than 100 rows (its LMS_MAX_NON_SCROLLER_ITEMS), so a long program list would
-# show no description at all.
+# episodes).
+#   - U2: when the rows after the textarea reach LONG_LIST (100), "About this program" is there even
+#     for a short description: Material shows the window header (the textarea) only for lists of
+#     fewer than 100 rows (its LMS_MAX_NON_SCROLLER_ITEMS).
+#   - U2 review: no leading textarea when the whole menu has more than JIVE_CHUNK (200) rows.
+#     SqueezePlay, Jive players and jivelite (piCorePlayer) ask for 200 rows at a time; in menu
+#     mode LMS's XMLBrowser takes the textarea out of the chunk that holds it and counts one row
+#     fewer there, and their DB.lua drops everything it has whenever the count changes, so they
+#     re-requested both chunks forever. Without the textarea every chunk counts the same. "About
+#     this program" (there from 100 rows on) still opens the description.
 sub _programHeader {
 	my ( $client, $detail, $after ) = @_;
 
@@ -893,30 +908,55 @@ sub _programHeader {
 	push @rows, { name => cstring( $client, 'PLUGIN_ABCLISTEN_PRESENTED_BY', join( ', ', @presenters ) ), type => 'text' } if @presenters;
 	push @rows, { name => $detail->{network}, type => 'text' } if _hasText( $detail->{network} );
 
-	my $long = @rows + ( $after || 0 ) >= LONG_LIST;
+	my $rest = @rows + ( $after || 0 );
+	my @description = __PACKAGE__->descriptionItems( $client, $detail->{description}, 'PLUGIN_ABCLISTEN_ABOUT_PROGRAM', $rest >= LONG_LIST );
+	shift @description if @description && @description + $rest > JIVE_CHUNK;
 
-	return ( __PACKAGE__->descriptionItems( $client, $detail->{description}, 'PLUGIN_ABCLISTEN_ABOUT_PROGRAM', $long ), @rows );
+	return ( @description, @rows );
 }
 
-# How many episodes the list has: once page 0 has answered, its total (ABC's, at most 250; 0 when it
-# failed or had none), else the program page's count (an estimate).
+sub _pageKey { join '/', @_ }
+
+# How many episodes the list has: the total (ABC's, at most 250) of page 0, else of page 0's first
+# SUB_PAGE episodes; 0 when the one that answered has no episodes. Before either has answered: the
+# program page's count (an estimate). undef when both failed.
 sub _episodeCount {
-	my ( $first, $detail ) = @_;
-	return $detail->{total} || 0 unless ref $first eq 'HASH';
-	return 0 if $first->{error} || !@{ $first->{items} || [] };
-	return $first->{total} || 0;
+	my ( $pages, $detail ) = @_;
+
+	for my $key ( _pageKey( 0, EPISODE_PAGE ), _pageKey( 0, SUB_PAGE ) ) {
+		my $page = $pages->{$key};
+		next unless $page && !$page->{error};
+		return @{ $page->{items} || [] } ? $page->{total} || 0 : 0;
+	}
+
+	return undef if $pages->{ _pageKey( 0, EPISODE_PAGE ) } && $pages->{ _pageKey( 0, SUB_PAGE ) };
+	return $detail->{total} || 0;
 }
 
-# The episode pages a window shows when $lead rows come before $count episodes: page 0 (it gives
-# the total), then the pages of the episodes in the window, in order. The whole list without a window.
-sub _windowPages {
-	my ( $lead, $window, $count ) = @_;
+# The episode pages ("offset/size" keys) %$pages still needs for a window when $lead rows come
+# before $count episodes: page 0 (it gives the total), its first SUB_PAGE episodes when page 0
+# failed, the pages of the episodes in the window (the whole list without a window), and, for a
+# page that failed, the window's SUB_PAGE pages within it.
+sub _wantedPages {
+	my ( $pages, $lead, $window, $count ) = @_;
 
-	my ( $first, $last ) = _episodeRange( $lead, $window, $count );
-	my @pages = (0);
-	push @pages, grep { $_ > 0 } int( $first / EPISODE_PAGE ) .. int( ( $last - 1 ) / EPISODE_PAGE ) if $first < $last;
+	my @wanted = ( _pageKey( 0, EPISODE_PAGE ) );
+	my $first  = $pages->{ $wanted[0] };
+	push @wanted, _pageKey( 0, SUB_PAGE ) if $first && $first->{error};
 
-	return @pages;
+	my ( $from, $to ) = _episodeRange( $lead, $window, $count );
+	for my $page ( $from < $to ? int( $from / EPISODE_PAGE ) .. int( ( $to - 1 ) / EPISODE_PAGE ) : () ) {
+		my $key = _pageKey( $page * EPISODE_PAGE, EPISODE_PAGE );
+		push @wanted, $key;
+		next unless $pages->{$key} && $pages->{$key}->{error};
+
+		my $lo = $from > $page * EPISODE_PAGE ? $from : $page * EPISODE_PAGE;
+		my $hi = $to < ( $page + 1 ) * EPISODE_PAGE ? $to : ( $page + 1 ) * EPISODE_PAGE;
+		push @wanted, map { _pageKey( $_ * SUB_PAGE, SUB_PAGE ) } int( $lo / SUB_PAGE ) .. int( ( $hi - 1 ) / SUB_PAGE );
+	}
+
+	my %seen;
+	return grep { !$pages->{$_} && !$seen{$_}++ } @wanted;
 }
 
 # The episode indexes [first, last) a window shows when $lead rows come before $count episodes.
@@ -931,12 +971,15 @@ sub _episodeRange {
 	return $first < $last ? ( $first, $last ) : ( 0, 0 );
 }
 
-# Load the episode pages in @$wanted that %$pages doesn't hold yet (Programs::episodes: EPISODE_PAGE
-# episodes from page * EPISODE_PAGE, its cache and coalescing), at most PAGE_CONCURRENCY at a time,
-# each answer (an error too) into $pages->{page}; $cb->() once, when all have answered.
+# Load the episode pages ("offset/size" keys) in @$wanted that %$pages doesn't hold yet
+# (Programs::episodes: its cache and coalescing), at most PAGE_CONCURRENCY at a time, each answer
+# (an error too) into $pages->{key}; $cb->() once, when all have answered. U2 review: a page that
+# failed is remembered for FAILURE_TTL (60 s) and not asked for again meanwhile (ABC fails some
+# pages every time, and API.pm caches only answers).
 sub _fetchPages {
 	my ( $context, $wanted, $pages, $cb ) = @_;
 
+	my $cache = Slim::Utils::Cache->new( Plugins::ABCListen::Util::CACHE_NAMESPACE );
 	my @queue = grep { !$pages->{$_} } @$wanted;
 	my ( $active, $finished, $pumping, $pump ) = ( 0, 0, 0 );
 
@@ -945,18 +988,28 @@ sub _fetchPages {
 		$pumping = 1;
 
 		while ( $active < PAGE_CONCURRENCY && @queue ) {
-			my $page    = shift @queue;
+			my $key = shift @queue;
+			my ( $offset, $size ) = split m{/}, $key;
+			my $failKey = "episodesFailed/$context->{collectionId}/$key";
+
+			if ( my $error = $cache->get($failKey) ) {
+				$pages->{$key} = { error => $error };
+				next;
+			}
+
 			my $settled = 0;
 			$active++;
 
 			my $done = sub {
 				return if $settled++;
-				$pages->{$page} = ref $_[0] eq 'HASH' ? $_[0] : { error => LOAD_FAILED };
+				my $result = ref $_[0] eq 'HASH' ? $_[0] : { error => LOAD_FAILED };
+				$cache->set( $failKey, $result->{error}, FAILURE_TTL ) if $result->{error};
+				$pages->{$key} = $result;
 				$active--;
 				$pump->() if $pump;
 			};
 
-			eval { Plugins::ABCListen::Programs::episodes( $context->{collectionId}, $page * EPISODE_PAGE, EPISODE_PAGE, $done ); 1 } or do {
+			eval { Plugins::ABCListen::Programs::episodes( $context->{collectionId}, $offset, $size, $done ); 1 } or do {
 				$log->error( 'Loading ABC listen episodes failed: ' . ( $@ || 'unknown error' ) );
 				$done->( { error => LOAD_FAILED } );
 			};
@@ -980,23 +1033,26 @@ sub _fetchPages {
 # provider extras), then
 #   - no episode collection: "No episodes available", except for a restricted program (ABC's
 #     audiobooks: D5's provider lists the chapters) that has lead rows: never an empty list;
-#   - page 0 failed: its error text; page 0 without episodes: "No episodes available";
+#   - page 0 (and its first SUB_PAGE episodes) failed: page 0's error text; no episodes: "No
+#     episodes available";
 #   - else the episodes, newest first, to page 0's total (_episodeWindow).
 sub _programWindow {
 	my ( $client, $context, $detail, $lead, $pages, $window ) = @_;
+
+	my $count = defined $context->{collectionId} ? _episodeCount( $pages, $detail ) : 0;
 
 	my @tail;
 	if ( !defined $context->{collectionId} ) {
 		@tail = _textItem( $client, 'PLUGIN_ABCLISTEN_NO_EPISODES' ) unless $detail->{restricted} && @$lead;
 	}
-	elsif ( !$pages->{0} || $pages->{0}->{error} ) {
-		@tail = _textItem( $client, $pages->{0} ? $pages->{0}->{error} : LOAD_FAILED );
+	elsif ( !defined $count ) {
+		@tail = _textItem( $client, $pages->{ _pageKey( 0, EPISODE_PAGE ) }->{error} );
 	}
-	elsif ( !_episodeCount( $pages->{0}, $detail ) ) {
+	elsif ( !$count ) {
 		@tail = _textItem( $client, 'PLUGIN_ABCLISTEN_NO_EPISODES' );
 	}
 	else {
-		return _episodeWindow( $client, $context, $lead, $pages, $window );
+		return _episodeWindow( $client, $context, $lead, $pages, $window, $count );
 	}
 
 	my @all = ( @$lead, @tail );
@@ -1006,52 +1062,45 @@ sub _programWindow {
 	return { items => [ $from < $to ? @all[ $from .. $to - 1 ] : () ], offset => $from, total => scalar @all };
 }
 
-# The rows of the window when the episodes follow the lead rows: the lead rows, then one episodeItem
-# per episode (page = int(n / EPISODE_PAGE)), total = lead + page 0's total. Where the window meets
-# a page that failed, or a row that can't be built, the list ends with one error text row there
-# (total = that row + 1); where a page has fewer episodes than the total said (ABC's list shrank),
-# the list ends before that row. Row i is always the same episode while ABC's pages are cached.
+# The rows of the window when $count episodes follow the lead rows: total = lead + $count, the same
+# for every window (U2 review: SqueezePlay/jivelite drop their rows when it changes, and the web UI
+# pages by it). Row i is always the same episode (or placeholder) while ABC's pages are cached.
 sub _episodeWindow {
-	my ( $client, $context, $lead, $pages, $window ) = @_;
+	my ( $client, $context, $lead, $pages, $window, $count ) = @_;
 
-	my $total = @$lead + $pages->{0}->{total};
+	my $total = @$lead + $count;
 	my ( $from, $to ) = $window ? ( $window->{index}, $window->{index} + $window->{quantity} ) : ( 0, $total );
 	$to = $total if $to > $total;
 
-	my @items;
-	for my $i ( $from .. $to - 1 ) {
-		if ( $i < @$lead ) {
-			push @items, $lead->[$i];
-			next;
-		}
-
-		my $n    = $i - @$lead;
-		my $page = $pages->{ int( $n / EPISODE_PAGE ) };
-
-		if ( !$page || $page->{error} ) {
-			push @items, _textItem( $client, $page ? $page->{error} : LOAD_FAILED );
-			$total = $i + 1;
-			last;
-		}
-
-		my $episode = ( $page->{items} || [] )->[ $n % EPISODE_PAGE ];
-		if ( ref $episode ne 'HASH' ) {
-			$total = $i;
-			last;
-		}
-
-		my $item = eval { __PACKAGE__->episodeItem( $client, _withProgram( $context, $episode ) ) };
-		if ( ref $item ne 'HASH' ) {
-			$log->error( 'Building the ABC listen episode list failed: ' . ( $@ || "no row for episode $n" ) );
-			push @items, _textItem( $client, LOAD_FAILED );
-			$total = $i + 1;
-			last;
-		}
-
-		push @items, $item;
-	}
+	my @items = map { $_ < @$lead ? $lead->[$_] : _episodeRow( $client, $context, $pages, $_ - @$lead ) } $from < $to ? $from .. $to - 1 : ();
 
 	return { items => \@items, offset => $from, total => $total };
+}
+
+# Episode n's row: its episodeItem, from its page of EPISODE_PAGE, else (that page failed) from its
+# page of SUB_PAGE. A placeholder text row keeps the position otherwise: the failed page's error text
+# (LOAD_FAILED, RATE_LIMITED), or "Episode unavailable" where ABC's page holds fewer episodes than
+# its total said (a card that isn't an episode, or a list that shrank).
+sub _episodeRow {
+	my ( $client, $context, $pages, $n ) = @_;
+
+	my $page = $pages->{ _pageKey( int( $n / EPISODE_PAGE ) * EPISODE_PAGE, EPISODE_PAGE ) };
+	my $at   = $n % EPISODE_PAGE;
+
+	if ( !$page || $page->{error} ) {
+		my $sub = $pages->{ _pageKey( int( $n / SUB_PAGE ) * SUB_PAGE, SUB_PAGE ) };
+		return _textItem( $client, $sub && $sub->{error} ? $sub->{error} : $page ? $page->{error} : LOAD_FAILED ) unless $sub && !$sub->{error};
+		( $page, $at ) = ( $sub, $n % SUB_PAGE );
+	}
+
+	my $episode = ( $page->{items} || [] )->[$at];
+	return _textItem( $client, 'PLUGIN_ABCLISTEN_EPISODE_UNAVAILABLE' ) unless ref $episode eq 'HASH';
+
+	my $item = eval { __PACKAGE__->episodeItem( $client, _withProgram( $context, $episode ) ) };
+	return $item if ref $item eq 'HASH';
+
+	$log->error( 'Building the ABC listen episode list failed: ' . ( $@ || "no row for episode $n" ) );
+	return _textItem( $client, LOAD_FAILED );
 }
 
 # The episode ref with the program's artwork as fallback, and the program's title and id when the

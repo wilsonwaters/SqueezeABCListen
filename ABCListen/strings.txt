@@ -160,12 +160,6 @@ PLUGIN_ABCLISTEN_PLAY_EPISODE
 PLUGIN_ABCLISTEN_NO_EPISODES
 	EN	No episodes available
 
-# Unused since U2 (#84: a program's episodes are one list, no "More episodes…" row). Kept only
-# because README's Programs section still names it and t/98-docs.t checks README against these
-# strings: remove it with that sentence in the next docs update.
-PLUGIN_ABCLISTEN_MORE_EPISODES
-	EN	More episodes…
-
 PLUGIN_ABCLISTEN_PRESENTED_BY
 	EN	Presented by %s
 
@@ -436,3 +430,10 @@ PLUGIN_ABCLISTEN_ABOUT_STATION
 # The liveQuality option for ABC's HLS streams (the L5 setting)
 PLUGIN_ABCLISTEN_LIVE_QUALITY_HLS
 	EN	High quality (HLS)
+
+# === U2 === One continuous list instead of More pages
+
+# A row in a program's episode list where ABC's page holds no episode at that place (a card that
+# isn't an episode, or a list that got shorter than ABC said); it keeps the rows after it in place
+PLUGIN_ABCLISTEN_EPISODE_UNAVAILABLE
+	EN	Episode unavailable
