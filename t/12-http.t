@@ -23,6 +23,7 @@ my $EPG     = 'https://www.abc.net.au/core-next/api/epgNowPlaying/RN/now?imageRa
 my $PLS     = 'https://streaming.abc-cdn.net.au/audio/ice/triplejnsw.pls';
 my $ALGOLIA = 'https://TESTAPP-dsn.algolia.net/1/indexes/test_index/query';
 my $SECRET  = 'k3y-VALUE-never-logged-0123456789';
+my $ALGOLIA_LOGGED = 'https://<algolia>-dsn.algolia.net/1/indexes/test_index/query';    # F10: as log lines and messages name it
 
 # Run one request; return (success collector, error collector, recorded request).
 sub run_request {
@@ -164,7 +165,8 @@ subtest 'quiet => 1: failures logged at DEBUG instead of WARN, same callbacks an
 		exactly_one( $ok, $err, 'err', "quiet $name" );
 		my ($message) = $err->args(0);
 		like( $message, $expected, "quiet $name: same readable message" );
-		like( $message, qr/\Q$target\E/, "quiet $name: message names the URL" );
+		my $shown = $target eq $ALGOLIA ? $ALGOLIA_LOGGED : $target;
+		like( $message, qr/\Q$shown\E/, "quiet $name: message names the URL" . ( $target eq $ALGOLIA ? ' (F10: without the Algolia app id)' : '' ) );
 		is( scalar plugin_messages( level => 'WARN' ), 0, "quiet $name: no WARN" );
 		ok( ( grep { $_->{message} eq $message } plugin_messages( level => 'DEBUG' ) ), "quiet $name: logged at DEBUG" );
 		ok( !exists $req->{params}->{quiet}, "quiet $name: not passed to SimpleAsyncHTTP" );
@@ -273,7 +275,7 @@ subtest 'postJSON: method, Content-Type, JSON body and extra headers' => sub {
 		( $ok, $err, $req ) = run_request( postJSON => [ $ALGOLIA, $value ], undef );
 		exactly_one( $ok, $err, 'err', "postJSON with a $label body" );
 		is( $req, undef, "postJSON with a $label body: no request sent" );
-		like( ( $err->args(0) )[0], qr/\Q$ALGOLIA\E/, "postJSON with a $label body: message names the URL" );
+		like( ( $err->args(0) )[0], qr/\Q$ALGOLIA_LOGGED\E/, "postJSON with a $label body: message names the URL (F10: without the Algolia app id)" );
 	}
 };
 
@@ -442,6 +444,46 @@ subtest "F6: the error callback gets LMS's response third (a 307 LMS can't follo
 	is( $args[0], "HTTP request failed: Timed out waiting for data ($NEXT)", 'a transport error after a followed redirect: the message as before' );
 	is( scalar @args, 3, '... and the response LMS passed, third' );
 	is( ref $args[2] && $args[2]->header('Location'), '/listen/programs/new-name', '... unchanged (the 307 LMS followed)' );
+};
+
+subtest 'F10: no Algolia app id or key in any log line or message, at any level' => sub {
+	# the request line (DEBUG), failures quiet (DEBUG) and not (WARN), a body that isn't JSON, a
+	# body that can't be sent, malformed headers; plugin.abclisten at DEBUG
+	local $Slim::Utils::Log::CATEGORIES{'plugin.abclisten'}->{defaultLevel} = 'DEBUG';
+	my @cases = (
+		[ 'success', { content => '{"hits":[]}' }, [ { q => 1 } ], { headers => [ 'X-Algolia-Application-Id' => 'TESTAPP', 'X-Algolia-API-Key' => $SECRET ] } ],
+		[ '403 quiet', { code => 403, content => '{"message":"Invalid API key"}' }, [ { q => 1 } ], { quiet => 1, headers => [ 'X-Algolia-Application-Id' => 'TESTAPP', 'X-Algolia-API-Key' => $SECRET ] } ],
+		[ '500', { code => 500, content => 'oops' }, [ { q => 1 } ], {} ],
+		[ 'not JSON', { content => 'oops, not JSON' }, [ { q => 1 } ], {} ],
+		[ 'no body', { content => '{}' }, [undef], {} ],
+		[ 'malformed headers', { content => '{}' }, [ { q => 1 } ], { headers => ['X-Algolia-API-Key'] } ],
+	);
+	for my $case (@cases) {
+		my ( $name, $response, $args, $opts ) = @$case;
+		resetStubs();
+		route( $ALGOLIA, %$response );
+		my ( $ok, $err ) = run_request( postJSON => [ $ALGOLIA, @$args ], $opts );
+		my @lines = map { $_->{message} } plugin_messages();
+		my @texts = ( @lines, map { defined $_ && !ref $_ ? $_ : () } $err->args(0) );
+		ok( scalar @lines, "$name: logged (" . scalar(@lines) . ' lines)' );
+		is( scalar( grep {/TESTAPP/} @texts ), 0, "$name: no app id in a log line or the error message" ) or diag explain \@texts;
+		is( scalar( grep {/\Q$SECRET\E/} @texts ), 0, "$name: no API key" );
+	}
+	resetStubs();
+	route( $ALGOLIA, content => '{}' );
+	run_request( postJSON => [ $ALGOLIA, { q => 1 } ], undef );
+	ok( ( grep { $_->{level} eq 'DEBUG' && $_->{message} eq "POST $ALGOLIA_LOGGED" } plugin_messages() ), 'the request line: "POST https://<algolia>-dsn.algolia.net/..."' );
+
+	my %urls = (
+		'https://TESTAPP-dsn.algolia.net/1/indexes/x/query'                                       => 'https://<algolia>-dsn.algolia.net/1/indexes/x/query',
+		'https://TESTAPP.algolia.net/1/x'                                                         => 'https://<algolia>.algolia.net/1/x',
+		'https://testapp-1.algolianet.com/1/x?x-algolia-api-key=K&x-algolia-application-id=A&q=1' => 'https://<algolia>-1.algolianet.com/1/x?x-algolia-api-key=<hidden>&x-algolia-application-id=<hidden>&q=1',
+		'https://TESTAPP-DSN.ALGOLIA.NET:443/1/x'                                                 => 'https://<algolia>-DSN.ALGOLIA.NET:443/1/x',
+		$EPG                                                                                      => $EPG,
+		'https://www.abc.net.au/listen/search?q=algolia.net'                                      => 'https://www.abc.net.au/listen/search?q=algolia.net',
+	);
+	is( Plugins::ABCListen::HTTP::_logUrl($_), $urls{$_}, "_logUrl($_)" ) for sort keys %urls;
+	is( Plugins::ABCListen::HTTP::_logUrl(undef), '', '_logUrl(undef): empty' );
 };
 
 done_testing();

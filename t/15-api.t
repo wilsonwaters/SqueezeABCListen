@@ -1500,7 +1500,7 @@ subtest 'algolia: 429 -> RATE_LIMITED; no config or no site config -> LOAD_FAILE
 	}
 };
 
-subtest 'algolia: the API key is never logged; API.pm never logs the app id' => sub {
+subtest 'algolia: the API key is never logged; the app id neither (F10: HTTP.pm lines too)' => sub {
 	my $captured = '';
 	{
 		local $ENV{ABCLISTEN_TEST_LOG} = 1;
@@ -1534,10 +1534,14 @@ subtest 'algolia: the API key is never logged; API.pm never logs the app id' => 
 	unlike( $captured, qr/testsearchkey|newsearchkey/, 'no API key in the captured log' );
 	ok( !( grep { $_->{message} =~ /searchkey/ } @messages ), 'no API key in any log message' );
 
-	# HTTP.pm logs the request URL (whose host name is the app id); API.pm's own lines never do
+	# API.pm's own lines never name the app id; F10: nor do HTTP.pm's (the request URL, whose host
+	# name is the app id, is logged as https://<algolia>-dsn.algolia.net/...)
 	my @own = grep { $_->{message} !~ /\A(?:POST|GET) https:/ && $_->{message} !~ /\AHTTP request failed: / } @messages;
 	ok( scalar @own, 'API.pm logged its own lines' );
 	ok( !( grep { $_->{message} =~ /TESTAPPID/ } @own ), "no app id in API.pm's log lines" ) or diag explain [ map { $_->{message} } grep { $_->{message} =~ /TESTAPPID/ } @own ];
+	ok( ( grep { $_->{level} eq 'DEBUG' && $_->{message} =~ m{\APOST https://<algolia>-dsn\.algolia\.net/1/indexes/listen_prod_all/query\z} } @messages ), "F10: HTTP.pm's request line names <algolia>-dsn.algolia.net" );
+	ok( !( grep { $_->{message} =~ /TESTAPPID/i } @messages ), 'F10: no app id in any log line, at any level' ) or diag explain [ map { $_->{message} } grep { $_->{message} =~ /TESTAPPID/i } @messages ];
+	unlike( $captured, qr/TESTAPPID/i, 'F10: no app id in the captured log' );
 };
 
 # ---------------------------------------------------------------------------
