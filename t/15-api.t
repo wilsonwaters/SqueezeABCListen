@@ -7,6 +7,8 @@
 # 307's x-nextjs-redirect (from the response HTTP.pm now passes on) followed once per call;
 # Algolia headers, cache, rolling budget, 401/403 re-discovery, 429, no-config and no-key logging;
 # coalescing with deferred responses; ttl / stale_ok / quiet; exactly one callback on every path.
+# F8 (#78): the stale-serve WARN state expires (a success clears its key, a long outage warns once a
+# day, keys not warned about for a day are dropped).
 #
 # Fixtures in t/data/foundation/ are raw response bodies as served. Copied from
 # ai-state/research/abc-samples/ (trimmed there; shapes unedited; the research {_fixture_note, data}
@@ -395,6 +397,55 @@ subtest 'stale_ok: last-good copy on error, WARN once then DEBUG; quiet; no copy
 	( undef, $info ) = one_ok( $ok, $err, 'quiet stale serve' );
 	is( $info->{stale}, 1, 'quiet: stale' );
 	is( scalar warns(), 0, 'quiet: no WARN' );
+};
+
+subtest 'F8: the stale-serve WARN state expires: a success clears its key, a long outage warns once a day, old keys are dropped' => sub {
+	fresh();
+	my $good = { file => 'foundation/bff-collection-empty.json', headers => $JSON_TYPE };
+	route_seq( "$BFF/collection/x", $good, { code => 503 }, { code => 503 }, $good, { code => 503 } );
+	my $stale = sub {
+		my ( $ok, $err ) = api( bff => [ 'collection/x', undef ], { stale_ok => 1 } );
+		my ( undef, $info ) = $ok->args;
+		return $ok->count == 1 && $err->count == 0 ? $info->{stale} : 'no single success';
+	};
+	my $warned = sub { scalar grep { $_->{message} =~ /collection\/x.*last good copy/ } warns() };
+
+	is( $stale->(), 0, 'T0: fetched' );
+	advanceTime(600);
+	is( $stale->(), 1, 'ABC down: the last good copy' );
+	is( $warned->(), 1, '... logged at WARN' );
+	advanceTime(600);
+	$stale->();
+	is( $warned->(), 1, 'still down: DEBUG' );
+	is_deeply( [ Plugins::ABCListen::API::_staleWarnedKeys() ], ["api:json:$BFF/collection/x"], 'the key is remembered' );
+
+	advanceTime(600);
+	is( $stale->(), 0, 'ABC back: fetched again' );
+	is_deeply( [ Plugins::ABCListen::API::_staleWarnedKeys() ], [], '... which clears the key' );
+
+	advanceTime(600);
+	is( $stale->(), 1, 'the next outage: the last good copy again' );
+	is( $warned->(), 2, '... logged at WARN again (before F8: DEBUG for the rest of the run)' );
+
+	advanceTime( 86400 - 1 );
+	$stale->();
+	is( $warned->(), 2, 'the same outage a day less a second later: DEBUG' );
+	advanceTime(1);
+	$stale->();
+	is( $warned->(), 3, 'a day later: one more WARN' );
+
+	# a key stale-served once and never again is dropped a day later (by the next stale serve of any key)
+	route_seq( "$BFF/collection/y", $good, { code => 503 } );
+	api( bff => [ 'collection/y', undef ], { stale_ok => 1 } );
+	advanceTime(60);
+	api( bff => [ 'collection/y', undef ], { stale_ok => 1 } );
+	is_deeply( [ Plugins::ABCListen::API::_staleWarnedKeys() ], [ "api:json:$BFF/collection/x", "api:json:$BFF/collection/y" ], 'two keys warned about' );
+	advanceTime( 86400 + 1 );
+	route_seq( "$BFF/collection/z", $good, { code => 503 } );
+	api( bff => [ 'collection/z', undef ], { stale_ok => 1 } );
+	advanceTime(60);
+	api( bff => [ 'collection/z', undef ], { stale_ok => 1 } );
+	is_deeply( [ Plugins::ABCListen::API::_staleWarnedKeys() ], ["api:json:$BFF/collection/z"], 'a day later only the newest is kept' );
 };
 
 # ---------------------------------------------------------------------------
