@@ -351,7 +351,7 @@ sub _loadSegment {
 		sub {
 			my $body = shift;
 
-			$v->{next}++;
+			$v->{next}  = $segment->{seq} + 1;
 			$v->{tries} = 0;
 
 			my $format = defined $segment->{map} ? 'fmp4' : _format($body) or return $self->_failed("unsupported segment format ($segment->{url})", 1);
@@ -377,7 +377,7 @@ sub _loadSegment {
 			$v->{stale} = 1;
 			if ( ++$v->{tries} >= SEGMENT_TRIES ) {
 				main::INFOLOG && $log->is_info && $log->info("HLS: skipping segment $segment->{seq} ($segment->{url})");
-				$v->{next}++;
+				$v->{next}  = $segment->{seq} + 1;
 				$v->{tries} = 0;
 				$v->{reset} = 1;
 			}

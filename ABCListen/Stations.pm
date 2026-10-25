@@ -27,7 +27,8 @@ package Plugins::ABCListen::Stations;
 #                                    event whose only sources are HLS streams counts as on air too.
 #   Stations->streamCandidates($id, $cb)
 #                                    calls $cb exactly once with \@urls (ordered, direct audio streams,
-#                                    never .pls/.m3u8/.f4m) or { error => TOKEN }:
+#                                    never .pls/.m3u8/.f4m, except L6's { url => <.m3u8>, hls => 1 }) or
+#                                    { error => TOKEN }:
 #                                      1. StreamGuys Icecast for the mount, from File1= of
 #                                         https://streaming.abc-cdn.net.au/audio/ice/<hlsSlug>.pls
 #                                         (cached 24 h); any .pls problem -> the static mount URL
