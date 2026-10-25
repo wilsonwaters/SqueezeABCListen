@@ -13,9 +13,12 @@ v1.0.0 accepted by the stakeholder on pi14 (2026-10-25; #17 closed). Now: v1.1.0
 
 ## Currently in flight
 - v1.1.0 (stakeholder feedback 2026-10-25): all feature PRs merged (main 7b64242).
-  - System verification SYS-1.1.0 — running (J1–J12: top level, stations std/HLS, HLS plays + CPU + fallback,
-    U1/U2/U3/O9 incl. Jive DB.lua sim, no leftover "More", podcasts, search, My ABC, sections, upgrade from 1.0.0,
-    hygiene, smoke).
+  - System verification SYS-1.1.0 DONE: PASS_WITH_NOTES, J1–J12 pass (85/85 standard, HLS 96/100 with
+    geo/Nimble 403s, 1107 lists walked: 0 More rows, 78 long lists count-stable; upgrade 1.0.0 → RC keeps prefs,
+    follows, favourites; smoke 15/15 both modes; HLS CPU 3.9–5.0% x86). Defects: D-1 program-menu page failures
+    WARN per open + D-2 Algolia app id at DEBUG → F10 (implementing); D-3 J Files duplicate → #98; D-4 7 s deadline
+    under slow ABC (by design, CHANGELOG limitation); D-5 CHANGELOG #96/#97 → release commit; D-6 → #99.
+    Report: scratchpad evidence/SYS-v1.1.0/report.md.
   - Then: CHANGELOG [1.1.0] + version bump → release → install check from repo.xml → pi14 re-check (CPU in top,
     Cricket / Grandstand, 30+ min HLS play, Squeezer header, long lists on Jive/piCorePlayer if available).
   - P3 after 1.1.0: #91 L7 HLS title offset, #81 O5.
