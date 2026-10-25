@@ -202,7 +202,7 @@ date and title ("Fri 23 Oct – Mental health and the manosphere"), as one list 
 episode ABC lists (its newest 250). Programs use ABC's current titles, such as "Radio National
 Breakfast" and "If You're Listening".
 
-![A program's page in the Default web interface: All In the Mind's presenter, network and Follow row, then its episodes, newest first, each named with its date and title](docs/images/default-program-episodes.png)
+![A program's page in the Default web interface: All In the Mind's About this program, presenter, network and Follow rows with the program's artwork, then its episodes, newest first, each named with its date and title](docs/images/default-program-episodes.png)
 
 The description at the top of a program's page is kept short: its first paragraph, up to about
 200 characters. When that isn't the whole text, **About this program**, right below it, opens all
