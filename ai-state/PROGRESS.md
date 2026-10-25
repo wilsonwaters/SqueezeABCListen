@@ -33,6 +33,8 @@ v1.0.0 accepted by the stakeholder on pi14 (2026-10-25; #17 closed). Now: v1.1.0
   stale D5-review lock broken, main re-linked; SYS, D5 review and M4 resumed from saved state.
 - 2026-10-24 ~03:00–04:30 UTC: usage limit (R2 final fix round) + worker restart; global git identity reset again
   (fixed), testbed restarted, R2 resumed.
+- 2026-10-25 ~03:45–05:56 UTC: usage limit (U2 round-2 fixes, R7) + worker restart; global git identity reset again
+  (fixed), testbed restarted, main re-linked, lock free; U2 and R7 resumed from saved state.
 
 ## Last completions
 - #89 F9 merged (PR #93, squash 62e98b3): Programs quiet opts; Latest 404 → 1 WARN/day; F7/F8 test gaps (13/13 caught);
