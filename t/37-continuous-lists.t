@@ -87,6 +87,7 @@ sub fresh {
 	Plugins::ABCListen::API::_reset();
 	Plugins::ABCListen::Collections->_reset;
 	Plugins::ABCListen::OnDemand::_resetProviders();
+	Plugins::ABCListen::OnDemand::_resetPageWarnings();    # F10
 	setTime(1_792_400_000);
 	route( "$SITE/listen/search", file => 'foundation/listen-search.trimmed.html', headers => { 'Content-Type' => 'text/html' } );
 }
@@ -175,7 +176,7 @@ sub route_episodes {
 		my $url = shift;
 		my ( $offset, $size ) = ( offset_of($url), $url =~ /size=([0-9]+)/ );
 		my $fail = $opt{fail} && ( $opt{fail}->{"$offset/$size"} || $opt{fail}->{$offset} );
-		return { code => $fail } if $fail;
+		return { code => $fail, ( $opt{defer} && ( $opt{defer}->{"$offset/$size"} || $opt{defer}->{$offset} ) ? ( defer => 1 ) : () ) } if $fail;
 		my @cards = map { $opt{video} && $opt{video}->{$_} ? { %{ episode_card($_) }, contentUri => "coremedia://video/$_", docType => 'video' } : episode_card($_) } grep { $_ < $have } $offset .. $offset + $size - 1;
 		return {
 			code    => 200,
@@ -573,6 +574,63 @@ subtest 'program menu: the pages asked for at totals of 50, 100, 150 and 200: no
 		my $lead = $n + 4 > 200 ? 3 : 4;    # textarea, About, presenters, network; no textarea past 200 rows
 		is_deeply( [ $feed->{total}, episode_no( $feed->{items}->[-1] ) ], [ $lead + $n, $n - 1 ], '... ' . ( $lead + $n ) . " rows, the last episode $n - 1" );
 	}
+};
+
+subtest 'program menu: failing episode pages are a WARN at most once a day per program, else DEBUG (F10)' => sub {
+	my $warns = sub { grep { $_->{message} =~ /episode pages failed/ } Slim::Utils::Log->messages( level => 'WARN' ) };
+	my $debug = sub { grep { $_->{message} =~ /episode pages failed/ } Slim::Utils::Log->messages( level => 'DEBUG' ) };
+	my $other = sub { grep { $_->{message} !~ /episode pages failed/ && $_->{message} =~ /episodesWithSegments|HTTP request failed/ } Slim::Utils::Log->messages( level => 'WARN' ) };
+	local $Slim::Utils::Log::CATEGORIES{'plugin.abclisten'}->{defaultLevel} = 'DEBUG';    # the DEBUG lines too
+
+	# RN Breakfast on 2026-10-25: 150/50 and 190/10 answer 500 every time; 3 opens, each past the 60 s failure cache
+	fresh();
+	route_science();
+	route_episodes( fail => { '150/50' => 500, '190/10' => 500 } );
+	for my $open ( 1 .. 3 ) {
+		answer( science( {} ) );
+		advanceTime(61);
+	}
+	is( scalar( grep { $_ eq '150/50' } episode_pages() ), 3, '(3 opens, each asking ABC for page 150 again)' );
+	my @warns = $warns->();
+	is( scalar @warns, 1, 'RN Breakfast-like failures, 3 opens more than 60 s apart: exactly 1 WARN' );
+	like( $warns[0]->{message}, qr{\AProgram \Q$SCIENCE\E: ABC's episode pages failed \(shown as "Couldn't load" rows\): 150/50: .*500.*; 190/10: .*500.*\(repeats are logged at DEBUG for a day\)\z}, '... naming the program, each failing page (offset/size) and API.pm\'s message' );
+	is( scalar $debug->(), 2, '... the two later opens at DEBUG' );
+	is( scalar $other->(), 0, '... and no WARN from API.pm or HTTP.pm for them (the fetches are quiet)' );
+	is_deeply( [ Plugins::ABCListen::OnDemand::_pageWarnedPaths() ], [$SCIENCE], 'remembered: the program\'s path' );
+
+	# another program: its own WARN
+	route_program( '/listen/programs/other', 4242 );
+	route_episodes( collection => 4242, fail => { '50/50' => 500, 50 => 500, 60 => 500 } );
+	answer( feed( $PROGRAM_MENU, {}, { title => 'Other', path => '/listen/programs/other' } ) );
+	@warns = $warns->();
+	is( scalar @warns, 2, 'a second program: its own WARN' );
+	like( $warns[1]->{message}, qr{\AProgram /listen/programs/other: .*50/50: .*; 50/10: .*; 60/10: }, '... with its failing pages (page 50 and its first two pages of 10)' );
+
+	# a day later: WARN again; a program not warned about for a day is forgotten
+	advanceTime(86401);
+	answer( science( {} ) );
+	is( scalar $warns->(), 3, 'a day later: WARN again' );
+	is_deeply( [ Plugins::ABCListen::OnDemand::_pageWarnedPaths() ], [$SCIENCE], '... and the other program, not warned about for a day, is forgotten (pruned)' );
+
+	# a page that fails after the answer (the deadline): logged on its own
+	fresh();
+	route_science();
+	route_episodes( fail => { '100/50' => 500 }, defer => { '100/50' => 1 } );
+	my $c = science( {} );
+	advanceTime(7);
+	is_deeply( [ $c->count, scalar $warns->() ], [ 1, 0 ], 'page 100 still out at the deadline: the answer, no WARN yet' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	@warns = $warns->();
+	is( scalar @warns, 1, 'it fails later: one WARN' );
+	like( $warns[0]->{message}, qr{: 100/50: }, '... naming page 100' );
+
+	# at most 200 paths remembered
+	fresh();
+	Plugins::ABCListen::OnDemand::_logPageFailures( { path => sprintf( '/listen/programs/p%03d', $_ ), failed => ['0/50: LOAD_FAILED'] } ) for 1 .. 201;
+	my @paths = Plugins::ABCListen::OnDemand::_pageWarnedPaths();
+	is( scalar @paths, 200, '201 programs failing on the same day: 200 paths remembered' );
+	is( $paths[0], '/listen/programs/p002', '... the oldest (here: the first by name) dropped' );
+	is( scalar $warns->(), 201, '... each warned about once' );
 };
 
 subtest 'program menu: the failure cache is per program (U2 round 2)' => sub {

@@ -17,6 +17,8 @@ package Plugins::ABCListen::HTTP;
 #     are never logged, at any level. A malformed list (odd length) is ignored with a warning.
 #   - A failed request is logged at WARN, or at DEBUG with opts quiet => 1 (for callers that log
 #     failures themselves); the error callback is called either way.
+#   - F10: URLs in log lines and error messages name an Algolia host without its app id
+#     (<algolia>-dsn.algolia.net) and without x-algolia-* query values (_logUrl).
 #   - JSON is decoded whatever the Content-Type (ABC serves some JSON as text/plain or
 #     text/html); a UTF-8 byte-order mark and surrounding whitespace are ignored. The decoded
 #     value must be an object or an array.
@@ -83,7 +85,7 @@ sub _request {
 
 	my $onError = sub {
 		my ( $http, $error, $response ) = @_;
-		_fail( $ecb, sprintf( 'HTTP request failed: %s (%s)', $error || 'unknown error', $url ), $http, $opts->{quiet}, $response );
+		_fail( $ecb, sprintf( 'HTTP request failed: %s (%s)', $error || 'unknown error', _logUrl($url) ), $http, $opts->{quiet}, $response );
 	};
 
 	my %params = ( timeout => $opts->{timeout} || DEFAULT_TIMEOUT );
@@ -96,7 +98,7 @@ sub _request {
 	my @args = ( 'User-Agent' => Slim::Utils::Misc::userAgentString(), @$headers, _extraHeaders( $opts, $url ) );
 	push @args, $body if defined $body;
 
-	main::DEBUGLOG && $log->is_debug && $log->debug("$method $url");
+	main::DEBUGLOG && $log->is_debug && $log->debug( "$method " . _logUrl($url) );
 
 	if ( $method eq 'POST' ) {
 		$http->post( $url, @args );
@@ -118,7 +120,7 @@ sub _jsonHandler {
 		my ( $data, $error ) = _decodeJSON( $http->content );
 
 		if ( defined $error ) {
-			return _fail( $ecb, "$error ($url)", $http, $quiet );
+			return _fail( $ecb, "$error (" . _logUrl($url) . ')', $http, $quiet );
 		}
 
 		$cb->( $data, $http );
@@ -191,7 +193,7 @@ sub postJSON {
 	my $json = ( ref $body eq 'HASH' || ref $body eq 'ARRAY' ) ? eval { encode_json($body) } : undef;
 
 	if ( !defined $json ) {
-		return _fail( $ecb, "Could not encode the request body as JSON ($url)", undef, $opts && $opts->{quiet} );
+		return _fail( $ecb, 'Could not encode the request body as JSON (' . _logUrl($url) . ')', undef, $opts && $opts->{quiet} );
 	}
 
 	_request(
@@ -212,11 +214,29 @@ sub _extraHeaders {
 	return () unless defined $headers;
 
 	if ( ref $headers ne 'ARRAY' || @$headers % 2 ) {
-		$log->warn("Ignoring malformed headers option (expected [ Name => value, ... ]) for $url");
+		$log->warn( 'Ignoring malformed headers option (expected [ Name => value, ... ]) for ' . _logUrl($url) );
 		return ();
 	}
 
 	return @$headers;
+}
+
+# ---------------------------------------------------------------------------
+# Appended by F10 (ABC listen): no Algolia app id or key in log lines (the five lines that log a URL
+# above call it; the change there is only that call).
+# ---------------------------------------------------------------------------
+
+# $url as it may be logged: an Algolia host's app id replaced (<appId>-dsn.algolia.net,
+# <appId>.algolia.net, <appId>-1.algolianet.com -> <algolia>-dsn.algolia.net, ...), and the values of
+# x-algolia-* query parameters (Algolia also takes the app id and key there) replaced by <hidden>.
+sub _logUrl {
+	my $url = shift;
+	return '' unless defined $url;
+
+	$url =~ s{(//(?:[^/\@?#]*\@)?)[^/.?#:\@]+?((?:-[a-z0-9]+)?\.(?:algolia\.net|algolianet\.com))(?=[:/?#]|\z)}{$1<algolia>$2}gi;
+	$url =~ s{([?&]x-algolia-[^=&#]*=)[^&#]*}{$1<hidden>}gi;
+
+	return $url;
 }
 
 1;

@@ -178,7 +178,9 @@ package Plugins::ABCListen::OnDemand;
 # (60 s). U3: the menu answers at the latest LOAD_DEADLINE (7 s) after page 0 has answered; a page
 # still out by then keeps its places as error rows for that answer, and fills the cache when it
 # comes. Row i is the same episode for as long as the pages are cached (stable item ids: LMS keeps
-# no browse session and re-walks menus by index).
+# no browse session and re-walks menus by index). F10: the episode-page fetches are quiet; the
+# pages that failed in an open are logged here, at WARN at most once a day per program path, else
+# at DEBUG (_logPageFailures).
 #
 # Episode menu (_episodeMenu; O4 extended it): synopsis (descriptionItems: the short textarea,
 # then "About this episode" when it was shortened) · "Play episode" (type audio,
@@ -253,6 +255,8 @@ use constant SUB_PAGE         => 10;     # U2 review: a failed page is loaded ag
 use constant SUB_PROBE        => 2;      # U2 round 2: a failed page's pages of 10 tried before the rest (_subPagesWanted)
 use constant MAX_ROUNDS       => 5;      # U2 review: rounds of page loads after page 0 (_programMenuItems; 4 are enough)
 use constant FAILURE_TTL      => 60;     # U2 review: seconds a failed episode page isn't asked for again
+use constant PAGE_WARN_EVERY  => 86400;  # F10: a program's failing episode pages: a WARN at most once a day
+use constant PAGE_WARN_MAX    => 200;    # F10: program paths remembered for that, at most
 use constant LOAD_DEADLINE    => 7;      # U3: seconds after page 0 answers that the program menu waits for its other pages
 use constant JIVE_CHUNK       => 200;    # U2 review: rows SqueezePlay/jivelite ask for at a time (DB.lua BLOCK_SIZE)
 use constant PROVIDER_TIMEOUT => 5;      # seconds
@@ -270,6 +274,7 @@ my @META_KEYS = qw(docType title programTitle programId path image description d
 my $log = logger('plugin.abclisten');
 
 my @PROVIDERS;
+my %pageWarned;    # F10: program path => when its failing episode pages were last logged at WARN
 
 sub init {
 	require Plugins::ABCListen::Episode;
@@ -912,6 +917,7 @@ sub _programMenuItems {
 		undef $timer;
 		undef $step;    # break the step closure's reference to itself
 		$context->{stopped} = 1;
+		_logPageFailures($context);
 		$cb->(@_);
 	};
 	my $answer = sub {
@@ -1087,13 +1093,18 @@ sub _fetchPages {
 			my $done = sub {
 				return if $settled++;
 				my $result = ref $_[0] eq 'HASH' ? $_[0] : { error => LOAD_FAILED };
-				$cache->set( $failKey, $result->{error}, FAILURE_TTL ) if $result->{error};
+				if ( $result->{error} ) {
+					$cache->set( $failKey, $result->{error}, FAILURE_TTL );
+					push @{ $context->{failed} }, "$key: " . ( _hasText( $result->{message} ) ? $result->{message} : $result->{error} );    # F10
+					_logPageFailures($context) if $context->{stopped};    # after the answer: on its own
+				}
 				$pages->{$key} = $result;
 				$active--;
 				$pump->() if $pump;
 			};
 
-			eval { Plugins::ABCListen::Programs::episodes( $context->{collectionId}, $offset, $size, $done ); 1 } or do {
+			# F10: quiet (API.pm logs a failure at DEBUG); _logPageFailures reports them
+			eval { Plugins::ABCListen::Programs::episodes( $context->{collectionId}, $offset, $size, $done, { quiet => 1 } ); 1 } or do {
 				$log->error( 'Loading ABC listen episodes failed: ' . ( $@ || 'unknown error' ) );
 				$done->( { error => LOAD_FAILED } );
 			};
@@ -1112,6 +1123,46 @@ sub _fetchPages {
 	$pump->();
 	return;
 }
+
+# F10: the episode pages that failed in one open (offset/size and API.pm's message), logged here:
+# the menu's fetches are quiet, as ABC fails some pages every time (RN Breakfast: 150/50 and 190/10
+# answer 500) and the menu already shows those places as "Couldn't load" rows. A WARN at most once
+# a day per program path, else DEBUG (MyABC's _logSkipped does the same for Latest episodes). The
+# remembered paths are pruned to the last day, and to PAGE_WARN_MAX at most. The program page
+# itself (Programs::program) still logs its own failure at WARN.
+sub _logPageFailures {
+	my $context = shift;
+	my $failed  = delete $context->{failed};
+	return unless ref $failed eq 'ARRAY' && @$failed;
+
+	my $path    = defined $context->{path} ? $context->{path} : '';
+	my $message = "Program $path: ABC's episode pages failed (shown as \"Couldn't load\" rows): " . join( '; ', @$failed );
+	my $now     = time();
+
+	my $last = $pageWarned{$path};
+	if ( defined $last && $now >= $last && $now - $last < PAGE_WARN_EVERY ) {
+		main::DEBUGLOG && $log->is_debug && $log->debug("$message (again; a WARN at most once a day)");
+		return;
+	}
+
+	for my $known ( keys %pageWarned ) {
+		my $at = $pageWarned{$known};
+		delete $pageWarned{$known} unless $now >= $at && $now - $at < PAGE_WARN_EVERY;
+	}
+	if ( keys %pageWarned >= PAGE_WARN_MAX ) {
+		my @oldest = sort { $pageWarned{$a} <=> $pageWarned{$b} || $a cmp $b } keys %pageWarned;
+		delete @pageWarned{ @oldest[ 0 .. @oldest - PAGE_WARN_MAX ] };
+	}
+
+	$pageWarned{$path} = $now;
+	$log->warn("$message (repeats are logged at DEBUG for a day)");
+
+	return;
+}
+
+# test helpers (F10): forget which programs were logged; the remembered paths
+sub _resetPageWarnings { %pageWarned = (); return }
+sub _pageWarnedPaths   { sort keys %pageWarned }
 
 # The program's episode rows, newest first, numbered by audio episode (U2 round 2): each page of
 # EPISODE_PAGE's episodes in ABC's order (a card that isn't an audio episode has no row); for a
