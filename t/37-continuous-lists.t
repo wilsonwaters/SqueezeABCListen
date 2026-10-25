@@ -381,6 +381,19 @@ subtest 'program menu: exactly one callback' => sub {
 	route_episodes();
 	{
 		no warnings 'redefine';
+		my $calls = 0;
+		my $header = \&Plugins::ABCListen::OnDemand::_programHeader;
+		local *Plugins::ABCListen::OnDemand::_programHeader = sub { die "header broke\n" if ++$calls > 1; goto &$header };
+		my $c = science( { index => 0, quantity => 10 } );
+		is( $c->count, 1, 'building the rows dies once the pages are in: one callback' );
+		is_deeply( answer($c)->{items}, [ { name => $LOAD_FAILED, type => 'text' } ], '... the LOAD_FAILED row' );
+	}
+
+	fresh();
+	route_science();
+	route_episodes();
+	{
+		no warnings 'redefine';
 		local *Plugins::ABCListen::Programs::episodes = sub { die "episodes broke\n" };
 		my $c = science( {} );
 		is( $c->count, 1, 'a page request that dies: one callback' );

@@ -851,16 +851,18 @@ sub _programMenuItems {
 	my $done = sub {
 		return if --$pending;
 
-		# the rows before the episodes, now that the number of rows after the header is known
-		my $count = defined $context->{collectionId} ? _episodeCount( $pages{0}, $detail ) : 0;
-		@lead = ( _programHeader( $client, $detail, @$extras + ( $count || 1 ) ), @$extras );
+		_try( $client, $cb, sub {
+			# the rows before the episodes, now that the number of rows after the header is known
+			my $count = defined $context->{collectionId} ? _episodeCount( $pages{0}, $detail ) : 0;
+			@lead = ( _programHeader( $client, $detail, @$extras + ( $count || 1 ) ), @$extras );
 
-		return $answer->() unless defined $context->{collectionId};
+			return $answer->() unless defined $context->{collectionId};
 
-		my @missing = grep { !$pages{$_} } _windowPages( scalar @lead, $window, $count );
-		return $answer->() unless @missing;
+			my @missing = grep { !$pages{$_} } _windowPages( scalar @lead, $window, $count );
+			return $answer->() unless @missing;
 
-		_try( $client, $cb, sub { _fetchPages( $context, \@missing, \%pages, $answer ) } );
+			_fetchPages( $context, \@missing, \%pages, $answer );
+		} );
 	};
 
 	_runProviders( $client, \%merged, sub {
