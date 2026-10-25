@@ -364,7 +364,8 @@ limits how often your internet address may search. Wait a few minutes and search
 "Sorry, part of the ABC listen menu could not be loaded. Please try again later."** ABC's website
 is slow or unavailable, or your server can't reach it. Try again later; menus you opened before
 usually still work from the plugin's cache. If it keeps happening, ABC may have changed its
-website: run the [self-test](#self-test) and report it (see item h).
+website: run the [self-test](#self-test) and report it (see item h). Changes on ABC's side that
+the project already knows about are in the open issues labelled `abc-drift`.
 
 **h. Anything else: turn on debug logging and report it.**
 
@@ -492,8 +493,10 @@ so a new version can take a little while to show up. The changes in each version
 - `scripts/lms-repo-install.sh` installs the plugin on an LMS from a repository URL without a
   browser (used for testing).
 - `scripts/smoke.sh` is the acceptance test described in [Self-test](#self-test).
-- `scripts/abc-endpoints-check.sh` checks that the ABC pages and services the plugin reads still
-  answer in the shape it expects.
+- `scripts/abc-endpoints-check.sh` checks that every ABC page and service the plugin reads still
+  answers in the shape it expects, one `PASS`/`FAIL` line per endpoint family. The
+  **ABC endpoint drift** workflow runs it every week and opens an issue labelled `abc-drift` when
+  it fails; see [RELEASING.md](RELEASING.md#prerequisites-and-troubleshooting).
 - Releases are automated: see [RELEASING.md](RELEASING.md). Update [CHANGELOG.md](CHANGELOG.md)
   first. Each version's zip is attached to its GitHub Release and also committed to the
   `release-assets` branch, which is where `repo.xml` points LMS: LMS 9.1.1 can't download

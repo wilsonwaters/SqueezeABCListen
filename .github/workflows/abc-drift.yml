@@ -1,0 +1,90 @@
+name: ABC endpoint drift
+
+# Runs scripts/abc-endpoints-check.sh against ABC's live endpoints once a week (and on demand), so
+# a change on ABC's side shows up here before users report broken menus. A failing probe is run
+# once more 5 minutes later, so a short ABC outage doesn't count. If that run fails too, the job
+# fails and the probe's PASS/FAIL lines are posted to the open issue labelled abc-drift, as a
+# comment, or, when none is open, to a new "ABC endpoint drift" issue with that label. A passing
+# run changes nothing: close the issue once the plugin is fixed or ABC is back, and the next
+# failure opens a new one. Only GITHUB_TOKEN is used, with issues: write for this job alone.
+# The Algolia key the probe reads from ABC's search page is never in the issue or the log: the
+# script redacts it and registers it with ::add-mask::, and only its result lines
+# ("PASS ...", "FAIL ...", "abc-endpoints-check: ...") are copied to the issue. See RELEASING.md.
+
+on:
+  schedule:
+    - cron: '17 19 * * 0'    # Sundays 19:17 UTC: Monday morning in Sydney, a quiet time for ABC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: abc-drift
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: write
+    defaults:
+      run:
+        shell: bash    # -eo pipefail: a failing probe fails its step through tee
+    steps:
+      - uses: actions/checkout@v4
+
+      # curl, jq and gh are on GitHub's Ubuntu runners
+      - name: Check tools
+        run: |
+          curl --version | head -n 1
+          jq --version
+          gh --version | head -n 1
+
+      - name: Probe ABC's endpoints
+        id: probe
+        env:
+          RETRY_AFTER: 300    # seconds before the second try
+        run: |
+          if scripts/abc-endpoints-check.sh | tee probe.txt; then
+            exit 0
+          fi
+          echo "::warning::The ABC endpoint probe failed; trying again in $RETRY_AFTER s"
+          sleep "$RETRY_AFTER"
+          scripts/abc-endpoints-check.sh | tee probe.txt
+
+      - name: Open or update the drift issue
+        if: failure() && steps.probe.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          LABEL: abc-drift
+          TITLE: ABC endpoint drift
+        run: |
+          {
+            echo "The weekly ABC endpoint probe failed on $(date -u '+%Y-%m-%d %H:%M UTC'): $RUN_URL"
+            echo
+            echo '````'
+            grep -E '^(PASS|FAIL) |^abc-endpoints-check: ' probe.txt || echo '(no result lines: see the run log)'
+            echo '````'
+          } >report.md
+          gh label create "$LABEL" --color D93F0B --description 'The weekly ABC endpoint probe failed' --force
+          number=$(gh issue list --label "$LABEL" --state open --limit 1 --json number --jq '.[0].number // empty')
+          if [[ -n "$number" ]]; then
+            gh issue comment "$number" --body-file report.md
+          else
+            {
+              cat report.md
+              cat <<'EOF'
+
+          ABC has changed something the plugin reads, or an endpoint was down twice in 5 minutes.
+          Each later failing run adds a comment here; a passing run changes nothing. Run
+          `scripts/abc-endpoints-check.sh` locally to reproduce (see RELEASING.md), fix the plugin
+          or the probe, and close this issue: the next failure opens a new one.
+          EOF
+            } >issue.md
+            gh issue create --title "$TITLE" --label "$LABEL" --body-file issue.md
+          fi
