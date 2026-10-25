@@ -12,6 +12,8 @@ v1.0.0 accepted by the stakeholder on pi14 (2026-10-25; #17 closed). Now: v1.1.0
 - release: R1 #9 · R2 #15 · R3 #17 · R4 #62 (raw-hosted zips: LMS can't read GitHub's download redirect) · R5 #75 (push-refusal match)
 
 ## Currently in flight
+- PRs: #88 L6 HLS (192 kbps via own HLS reader; F2 change) — in review + runtime; #85 F7 + #87 F8 (stacked) — in review.
+  New: #89 F9 (404 WARN for removed followed program).
 - v1.1.0 (stakeholder feedback 2026-10-25): #83 U1 short description headers (Squeezer), #84 U2 continuous lists (no
   "More…") — one agent, two PRs · #80 L6 HLS higher-quality live (Phase A spike first) · #76 F7 seenAt + #78 F8 log/cache
   hygiene — one agent, two PRs. Queued: #77 R6 drift probe, #79 R7 docs, #72 O9 icons, then system check → 1.1.0.
