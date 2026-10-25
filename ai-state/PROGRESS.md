@@ -12,16 +12,12 @@ v1.0.0 accepted by the stakeholder on pi14 (2026-10-25; #17 closed). Now: v1.1.0
 - release: R1 #9 · R2 #15 · R3 #17 · R4 #62 (raw-hosted zips: LMS can't read GitHub's download redirect) · R5 #75 (push-refusal match)
 
 ## Currently in flight
-- v1.1.0 (stakeholder feedback 2026-10-25): all feature PRs merged (main 7b64242).
-  - System verification SYS-1.1.0 DONE: PASS_WITH_NOTES, J1–J12 pass (85/85 standard, HLS 96/100 with
-    geo/Nimble 403s, 1107 lists walked: 0 More rows, 78 long lists count-stable; upgrade 1.0.0 → RC keeps prefs,
-    follows, favourites; smoke 15/15 both modes; HLS CPU 3.9–5.0% x86). Defects: D-1 program-menu page failures
-    WARN per open + D-2 Algolia app id at DEBUG → F10 (implementing); D-3 J Files duplicate → #98; D-4 7 s deadline
-    under slow ABC (by design, CHANGELOG limitation); D-5 CHANGELOG #96/#97 → release commit; D-6 → #99.
-    Report: scratchpad evidence/SYS-v1.1.0/report.md.
-  - Then: CHANGELOG [1.1.0] + version bump → release → install check from repo.xml → pi14 re-check (CPU in top,
-    Cricket / Grandstand, 30+ min HLS play, Squeezer header, long lists on Jive/piCorePlayer if available).
-  - P3 after 1.1.0: #91 L7 HLS title offset, #81 O5.
+- **v1.1.0 RELEASED** (release commit 0533f1b; workflow run 40184845297 success; repo.xml a81760f → release-assets
+  ABCListen-1.1.0.zip sha1 e0d608a8…). Orchestrator install check from the public repo.xml on the testbed: SHA1-verified,
+  v1.1.0 installed, 10 top-level items, triple j 56 kbps with metadata, Double J HLS 192 kbps; uninstalled, dev link
+  restored. HANDOFF.md updated with the 1.1.0 summary and the pi14 checklist.
+- Waiting on the stakeholder's pi14 re-check. Open backlog (P3): #91 L7 HLS title offset, #98 D10 J Files duplicate,
+  #99 R8 install-script update path, #81 O5.
 
 ## Interruptions
 - 2026-10-19 ~12:30–17:23 UTC: account usage limit stopped all agents, then the session worker restarted (LMS +
@@ -39,6 +35,8 @@ v1.0.0 accepted by the stakeholder on pi14 (2026-10-25; #17 closed). Now: v1.1.0
   (fixed), testbed restarted, main re-linked, lock free; U2 and R7 resumed from saved state.
 
 ## Last completions
+- F10 merged (PR #100, squash b5c861d): program-menu page failures quiet + one WARN/day per program; HTTP.pm masks the
+  Algolia app id in logged URLs. Orchestrator review: diff read, merged-tree check.sh 943 tests.
 - #95 U3 merged (PR #96, squash f48f7ab): 7 s load deadline after page 0, 429 stops a page's split, P5/P9 tests.
   #72 O9 merged (PR #97, squash 7b64242): images on text rows for the web UI only (isWeb; Material turns image-only
   menus into grids), program/episode menus + Program info, README screenshot refreshed. Both orchestrator-reviewed:

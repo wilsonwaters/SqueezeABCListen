@@ -1,6 +1,32 @@
-# Handoff — ABC listen for Lyrion Music Server, v1.0.0
+# Handoff — ABC listen for Lyrion Music Server, v1.1.0
 
-_Written 2026-10-24 at the end of the orchestrated build. For the stakeholder (Wilson Waters)._
+_v1.0.0 written 2026-10-24 at the end of the orchestrated build; updated 2026-10-25 for v1.1.0. For the stakeholder
+(Wilson Waters)._
+
+## What's new in 1.1.0 (your feedback after accepting 1.0.0 on pi14)
+
+| Change | PR |
+|---|---|
+| **High quality (HLS)** live option: 192 kbps AAC on music stations (64 kbps talk), plugin's own HLS reader, falls back to the standard stream; HLS-only services (Sport Rapid, RLWC Rapid, ABC Cricket, Kids listen time-zone versions) listed in this mode | #88 |
+| **Short description headers** (Squeezer) with the full text under **About this program / episode** | #86 |
+| **One continuous list** instead of "More…" / "More episodes…" (all clients page it themselves; long lists don't reload on Squeezebox/piCorePlayer); Play all / Add all up to 250; 7 s load deadline | #90, #96 |
+| Default-skin artwork instead of grey placeholder icons | #97 |
+| Fresher episode audio data, fewer repeated warnings and cache writes, no Algolia app id in logs | #85, #87, #93, #100 |
+| Weekly ABC drift check (GitHub Actions, opens an `abc-drift` issue) | #92 |
+
+Verified: every PR independently reviewed (U2 three rounds, L6 two) or orchestrator-reviewed; system verification
+PASS_WITH_NOTES (J1–J12; 85/85 standard, HLS 96/100 with geo 403s, 1107 lists walked with no "More" rows, upgrade
+from 1.0.0 keeps prefs/follows/favourites); release installed from the public `repo.xml` on the testbed (SHA1 OK,
+v1.1.0, 10 top-level items, triple j 56 kbps, Double J HLS 192 kbps).
+
+### Please check on pi14 (only your server can)
+1. Update via Settings → Manage Plugins (1.0.0 → 1.1.0); settings, follows and favourites kept.
+2. Settings → Advanced → ABC listen → Live stream quality → **High quality (HLS)**; play a music station for 30+
+   minutes; LMS CPU in `top` while it plays (test machine: 4–5% of an x86 core).
+3. ABC Cricket / Grandstand / Sport Rapid during a live event (blocked from the test machine).
+4. Squeezer: a program's header is short; **About this program** shows the full text; RN Breakfast scrolls to the end
+   without "More".
+5. If you have one: a Squeezebox/piCorePlayer scrolling RN Breakfast past row 200 (simulated here only).
 
 ## What was built
 
@@ -28,11 +54,11 @@ stream quality** (Standard 56 kbps, or ABC mediahub with automatic fallback).
 |---|---|
 | Install URL (LMS → Settings → Manage Plugins → Additional repositories) | `https://raw.githubusercontent.com/wilsonwaters/SqueezeABCListen/main/repo.xml` |
 | User docs | `README.md` (install, usage tour with 9 screenshots, limitations, troubleshooting, privacy, self-test) |
-| Release notes | `CHANGELOG.md`; GitHub Releases v0.1.0, v0.2.0, v0.3.0, **v1.0.0** |
+| Release notes | `CHANGELOG.md`; GitHub Releases v0.1.0, v0.2.0, v0.3.0, v1.0.0, **v1.1.0** |
 | Releasing | `RELEASING.md` — bump `<version>` in `ABCListen/install.xml` on `main` (+ CHANGELOG) and the Release workflow does the rest. Zips are also committed to the orphan branch **`release-assets`** and `repo.xml` points there, because LMS 9.1.1 can't read GitHub's release-download redirect (a 9 KB header; #62). Never merge `release-assets`. |
 | Self-test | `scripts/smoke.sh <LMS URL> <player MAC>` — 15 checks over JSON-RPC, ~1 min; plays audio on that player and restores its queue and your follows afterwards |
-| Developer checks | `scripts/check.sh` (≈810 tests, XML, strings lint, package checks, shellcheck); CI runs it on every push/PR |
-| ABC endpoint drift probe | `scripts/abc-endpoints-check.sh` (extend per #77) |
+| Developer checks | `scripts/check.sh` (≈940 tests, XML, strings lint, package checks, shellcheck); CI runs it on every push/PR |
+| ABC endpoint drift probe | `scripts/abc-endpoints-check.sh` (19 families); weekly in `.github/workflows/abc-drift.yml` → `abc-drift` issue |
 | Getting into the official LMS repository | `docs/official-repository.md` (not submitted — your call) |
 | Planning and history | `ai-state/` — brief, streams + master plans, PROGRESS, OPEN-QUESTIONS, RUNBOOK (container testbed), research |
 
@@ -66,9 +92,9 @@ stream quality** (Standard 56 kbps, or ABC mediahub with automatic fallback).
 
 ## Known limitations (also in README)
 
-- Live streams are 56 kbps by default; ABC mediahub may only work from Australia (falls back automatically). No
-  HLS: the PlayHLS plugin can't play `abclisten://` stations, so HLS-only services (Sport Rapid, RLWC Rapid, ABC
-  Cricket, Kids listen time-zone versions) aren't listed — #80.
+- Live streams are 56 kbps by default; High quality (HLS) gives 192 kbps but uses more LMS CPU and runs 30–40 s
+  behind live, so song titles change early (#91). ABC mediahub may only work from Australia (falls back
+  automatically). HLS-only services are listed only in HLS mode; Cricket may be Australia-only.
 - ABC lists only a program's newest 250 episodes; some expired catch-up episodes stay listed until played — #81.
 - Australia-only audio (most audiobooks, some podcasts) plays only from an Australian connection.
 - Program info, Recently played and Sport event times use the LMS server's time zone.
@@ -80,9 +106,8 @@ stream quality** (Standard 56 kbps, or ABC mediahub with automatic fallback).
 
 | Priority | Issue |
 |---|---|
-| P1 (1.0.1) | #76 `seenAt` from fetch time · #77 drift probe coverage + weekly run · #79 docs touch-ups · any pi14 ✗ |
-| P2 | #80 HLS / higher-quality live (before the cricket season) · #78 log noise and cache writes |
-| P3 | #81 episodes beyond 250 / hide expired · #72 Default-skin placeholder icons |
+| Done in 1.1.0 | #76 #77 #78 #79 #80 #72 #83 #84 #89 #95 |
+| P3 | #91 HLS song titles change 30–40 s early · #98 The J Files listed twice · #99 install script can't apply updates · #81 episodes beyond 250 / hide expired |
 | Won't (proposed) | ABC-account (Gigya) sync of follows — fragile, needs credentials, little gain |
 
 ## Process notes
