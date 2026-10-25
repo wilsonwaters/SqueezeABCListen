@@ -11,6 +11,7 @@
 # 5xx/429/timeouts/bad JSON -> 30 s, WARN once; last-good (current); pollIn; recently played (parse,
 # limit, 60 s cache, main stations only); Tracks' own coalescing (one settle, one miss, for every
 # caller); a dying callback doesn't stop the other callers; exactly one callback on every path.
+# F8 (#78): an unreadable response is an ERROR at most once an hour per station and request.
 #
 # Fixtures in t/data/live/ are raw response bodies (the research {_fixture_note, data} wrapper
 # stripped; lists trimmed, shapes unedited):
@@ -544,6 +545,43 @@ subtest 'exactly one callback, also when the callback dies' => sub {
 		is( $c->count, 1, 'API dies: one callback' );
 		ok( defined( ( $c->args(0) )[1] ), '... with an error' );
 	}
+};
+
+subtest 'F8: an unreadable response is an ERROR at most once an hour per station and request; DEBUG meanwhile' => sub {
+	reset_all();
+	route( $TJ_NOW_URL,                  file => 'live/music-abcradio-plays-triplej-now.json' );
+	route( "${MUSIC}plays/doublej/now.json", file => 'live/music-abcradio-plays-triplej-now.json' );
+	route( "${MUSIC}plays/search.json?limit=10&order=desc&station=triplej", file => 'live/music-abcradio-plays-search-triplej.json' );
+	my $errors = sub { my $re = shift; scalar grep { $_->{message} =~ $re } logged('ERROR') };
+
+	no warnings 'redefine';
+	local *Plugins::ABCListen::Tracks::parseNow    = sub { die "unexpected shape\n" };
+	local *Plugins::ABCListen::Tracks::parseRecent = sub { die "unexpected list\n" };
+
+	# a music station playing for an hour: the poll asks every 30 s (ERROR_TTL after a failure)
+	my $polls = 0;
+	for ( 1 .. 120 ) {
+		my $c = now_cb('TRIPLEJ');
+		$polls++ if defined( ( $c->args(0) )[1] );
+		advanceTime(30);
+	}
+	is( $polls, 120, '120 polls in an hour, each answered with an error' );
+	is( music_requests(qr{/plays/triplej/now\.json}), 120, '... each a new request' );
+	is( $errors->(qr/^Song for TRIPLEJ: could not read the response: unexpected shape/), 1, 'one ERROR for TRIPLEJ in that hour (before F8: 120)' );
+	is( scalar( grep { $_->{message} =~ /^Song for TRIPLEJ: could not read the response/ } logged('DEBUG') ), 119, '... the other 119 at DEBUG' );
+	is( scalar( grep { $_->{message} =~ /Song for TRIPLEJ unavailable/ } logged('WARN') ), 1, 'the WARN for the run of failures is unchanged: once' );
+
+	now_cb('TRIPLEJ');    # 3600 s after the first
+	is( $errors->(qr/^Song for TRIPLEJ: could not read/), 2, 'an hour after the first: an ERROR again' );
+
+	now_cb('DOUBLEJ');
+	is( $errors->(qr/^Song for DOUBLEJ: could not read/), 1, 'another station: its own ERROR' );
+
+	$T->recent( 'TRIPLEJ', 10, sub { } );
+	is( $errors->(qr/^Recently played for TRIPLEJ: could not read the response: unexpected list/), 1, 'recently played: its own ERROR' );
+	advanceTime(31);
+	$T->recent( 'TRIPLEJ', 10, sub { } );
+	is( $errors->(qr/^Recently played for TRIPLEJ: could not read/), 1, '... and DEBUG within the hour' );
 };
 
 done_testing();

@@ -3,6 +3,7 @@
 # input), the local-time display helpers under fixed time zones, decodeEntities (with and without
 # HTML::Entities), the URL contract (streams.md contract 2) and the episode metadata cache
 # contract (streams.md contract 3).
+# F8 (#78): setEpisodeMeta writes only what changes the entry, and renews an unchanged one once a day.
 # F7 (#76): episodeSeenAt (the fetch time of a fresh answer younger than 6 h, else undef) and
 # episodeMetaIsNewer (a later seenAt, or windows closed later; ties are not newer).
 
@@ -13,6 +14,7 @@ use utf8;
 use ABCListenTest qw(:all);
 use Test::More;
 
+use JSON::PP ();
 use POSIX ();
 use Time::Local qw(timegm);
 
@@ -414,6 +416,87 @@ subtest 'episode metadata cache: 30-day TTL, refreshed by every write' => sub {
 	is_deeply( getEpisodeMeta('8'), { id => '8', title => 'Eight', description => 'refreshed' }, 'a later write refreshes the TTL (45 days after the first write)' );
 	advanceTime( 5 * 86400 + 1 );
 	is( getEpisodeMeta('8'), undef, 'expired 30 days after the last write' );
+
+	clearTime();
+};
+
+# ---- F8 (#78): unchanged entries are not written again ----
+
+subtest 'F8: setEpisodeMeta writes only what changes the entry (and renews an unchanged one once a day)' => sub {
+	resetStubs();
+	my $t0 = at('2026-10-19T12:00:00+11:00');
+	setTime($t0);
+
+	my @writes;
+	no warnings 'redefine';
+	my $set = \&Slim::Utils::Cache::set;
+	local *Slim::Utils::Cache::set = sub { push @writes, $_[1]; $set->(@_) };
+	my $writes = sub { my $n = scalar @writes; @writes = (); return $n };
+
+	my %meta = (
+		docType => 'audioepisode', title => 'Episode', programTitle => 'Program', programId => '2885500',
+		path => '/listen/programs/p/e/107266790', image => 'https://example.test/i.jpg', date => 1_792_000_000, duration => 3000,
+		renditions => [ { url => 'https://example.test/a.mp3', mime => 'audio/mpeg', bitrate => 128, fileSize => 1000 } ],
+		availableTo => 1_794_000_000, downloadAvailableTo => 4_102_444_800, seenAt => $t0,
+	);
+
+	ok( setEpisodeMeta( '107266790', {%meta} ), 'a new entry: stored' );
+	is( $writes->(), 1, '... one write' );
+
+	ok( setEpisodeMeta( '107266790', {%meta} ), 'the same meta again: 1 (it is stored)' );
+	is( $writes->(), 0, '... no write' );
+	ok( setEpisodeMeta( '107266790', { title => 'Episode', duration => '3000', renditions => [ { url => 'https://example.test/a.mp3', mime => 'audio/mpeg', bitrate => '128', fileSize => 1000 } ] } ), 'a subset, numbers as strings' );
+	is( $writes->(), 0, '... no write (128 and "128" are one value; lists compared element by element)' );
+	ok( setEpisodeMeta( '107266790', { title => 'Episode', description => '', image => undef, renditions => [] } ), 'only the same values and empty ones' );
+	is( $writes->(), 0, '... no write (empty values never change the entry)' );
+
+	for my $change (
+		[ 'a new title',                     { title => 'Episode (repeat)' } ],
+		[ 'a new key',                       { description => 'Notes' } ],
+		[ 'a newer seenAt',                  { seenAt => $t0 + 60 } ],
+		[ 'another bitrate in a rendition', { renditions => [ { url => 'https://example.test/a.mp3', mime => 'audio/mpeg', bitrate => 192, fileSize => 1000 } ] } ],
+		[ 'one more rendition',              { renditions => [ @{ $meta{renditions} }, { url => 'https://example.test/a.aac', mime => 'audio/aac' } ] } ],
+		[ 'a key inside a rendition',        { renditions => [ { url => 'https://example.test/a.mp3', mime => 'audio/mpeg', bitrate => 128 } ] } ],
+	) {
+		my ( $name, $new ) = @$change;
+		setEpisodeMeta( '107266790', $new );
+		is( $writes->(), 1, "$name: written" );
+		is_deeply( getEpisodeMeta('107266790')->{ ( keys %$new )[0] }, ( values %$new )[0], "$name: stored" );
+	}
+
+	my $entry = getEpisodeMeta('107266790');
+	ok( !exists $entry->{_storedAt}, 'getEpisodeMeta never returns the write time' );
+	setEpisodeMeta( '107266790', { _storedAt => 1, title => $entry->{title} } );
+	is( $writes->(), 0, 'a _storedAt in the meta is ignored (no write, nothing stored)' );
+
+	# JSON booleans (blessed scalars) compare by value
+	setEpisodeMeta( '42', { title => 'Bool', flag => JSON::PP::true } );
+	$writes->();
+	setEpisodeMeta( '42', { flag => JSON::PP::true } );
+	is( $writes->(), 0, 'the same JSON boolean: no write' );
+	setEpisodeMeta( '42', { flag => JSON::PP::false } );
+	is( $writes->(), 1, 'another JSON boolean: written' );
+
+	# an unchanged entry is renewed once a day, so an episode still listed keeps its 30 days
+	setTime( $t0 + 86400 - 1 );
+	setEpisodeMeta( '107266790', { title => $entry->{title} } );
+	is( $writes->(), 0, 'unchanged a day less a second after the last write: no write' );
+	setTime( $t0 + 86400 );
+	setEpisodeMeta( '107266790', { title => $entry->{title} } );
+	is( $writes->(), 1, 'unchanged a day after the last write: written (TTL renewed)' );
+	advanceTime( 30 * 86400 - 1 );
+	ok( getEpisodeMeta('107266790'), '... so it is still cached 31 days after the first write' );
+	is_deeply( getEpisodeMeta('107266790'), $entry, '... unchanged' );
+
+	# entries stored before F8 have no write time: the first unchanged write adds it
+	resetStubs();
+	setTime($t0);
+	Slim::Utils::Cache->new('abclisten')->set( 'episode-meta:7', { id => '7', title => 'Old entry' }, 30 * 86400 );
+	$writes->();
+	setEpisodeMeta( '7', { title => 'Old entry' } );
+	is( $writes->(), 1, 'an entry from before F8: written once' );
+	setEpisodeMeta( '7', { title => 'Old entry' } );
+	is( $writes->(), 0, '... then no more' );
 
 	clearTime();
 };

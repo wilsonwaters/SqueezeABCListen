@@ -8,7 +8,8 @@
 # a station switch moves the poll; master-only polling; stale-poll recovery (forgotten timers, a
 # reconnected player, LMS restart); one upstream request for many players; $song->duration and
 # startOffset never called; the "Program info" song-info entry (with and without Next, the 3 s
-# deadline, exactly one answer).
+# deadline, exactly one answer). F8 (#78): an unexpected error is an ERROR again after an hour; at
+# most 100 messages are remembered.
 
 use strict;
 use warnings;
@@ -575,6 +576,38 @@ subtest 'song info: answers within 3 s even when ABC is slow, exactly once' => s
 	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
 	is( $c->count, 1, 'the late answer does not call back again' );
 	is( scalar( Slim::Utils::Timers::pending() ), 0, 'no timer left' );
+};
+
+subtest 'F8: an unexpected error is an ERROR again after an hour (DEBUG meanwhile); at most 100 messages are remembered' => sub {
+	reset_all();
+	my $t = $RN_END;
+	setTime($t);
+	my $count = sub { my ( $level, $text ) = @_; scalar grep { $_->{message} eq $text } logged($level) };
+
+	Plugins::ABCListen::LiveMetadata::_unexpected( 'Live metadata failed', "boom\n" );
+	is( $count->( ERROR => 'Live metadata failed: boom' ), 1, 'the first time: ERROR' );
+	setTime( $t + 3599 );
+	Plugins::ABCListen::LiveMetadata::_unexpected( 'Live metadata failed', "boom\n" );
+	is( $count->( ERROR => 'Live metadata failed: boom' ), 1, 'within the hour: no new ERROR' );
+	is( $count->( DEBUG => 'Live metadata failed: boom' ), 1, '... DEBUG' );
+	setTime( $t + 3600 );
+	Plugins::ABCListen::LiveMetadata::_unexpected( 'Live metadata failed', "boom\n" );
+	is( $count->( ERROR => 'Live metadata failed: boom' ), 2, 'an hour later: ERROR again (before F8: DEBUG for the rest of the run)' );
+
+	# 101 different messages, a second apart: the oldest is forgotten, so it is an ERROR again at once
+	reset_all();
+	setTime($t);
+	for my $i ( 0 .. 100 ) {
+		setTime( $t + $i );
+		Plugins::ABCListen::LiveMetadata::_unexpected( 'Live metadata poll failed', "problem $i" );
+	}
+	is( scalar( grep { $_->{message} =~ /^Live metadata poll failed: problem / } logged('ERROR') ), 101, '101 different messages: 101 ERRORs' );
+	setTime( $t + 101 );
+	Plugins::ABCListen::LiveMetadata::_unexpected( 'Live metadata poll failed', 'problem 0' );
+	is( $count->( ERROR => 'Live metadata poll failed: problem 0' ), 2, 'the oldest was forgotten (100 kept): ERROR again' );
+	Plugins::ABCListen::LiveMetadata::_unexpected( 'Live metadata poll failed', 'problem 50' );
+	is( $count->( ERROR => 'Live metadata poll failed: problem 50' ), 1, 'a newer one is still remembered: no new ERROR' );
+	is( $count->( DEBUG => 'Live metadata poll failed: problem 50' ), 1, '... DEBUG' );
 };
 
 subtest '$song->duration and startOffset are never called' => sub {

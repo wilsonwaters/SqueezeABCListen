@@ -77,7 +77,8 @@ package Plugins::ABCListen::LiveMetadata;
 # $song->duration / startOffset are never touched, and setCurrentTitle never gets a client.
 #
 # Logging: DEBUG for each poll, push and stop decision. Fetch failures are logged by NowPlaying. An
-# unexpected exception is logged at ERROR the first time, then at DEBUG.
+# unexpected exception is logged at ERROR the first time, then at DEBUG (F8: for an hour; at most
+# 100 messages are remembered).
 #
 # Owned by the live stream: L2 creates, L3 extends (track mode) (ai-state/streams.md, rule 5).
 
@@ -117,7 +118,10 @@ my $TRACKS      = 'Plugins::ABCListen::Tracks';
 
 my $stationMeta;    # code ref: the live kind's station metadata (L1)
 my %polls;          # master id => { master, id, url, timer (weak; undef once fired or killed), fetching }
-my %errorsSeen;     # unexpected errors already logged at ERROR
+my %errorsSeen;     # unexpected error message => when it was logged at ERROR (F8: the last hour only)
+
+use constant ERROR_LOG_INTERVAL => 3600;    # F8: seconds an ERROR line covers its message
+use constant MAX_ERRORS_SEEN    => 100;     # F8: messages remembered at most
 
 sub init {
 	my ( $class, %args ) = @_;
@@ -657,7 +661,7 @@ sub _who {
 }
 
 # Log an unexpected exception at ERROR the first time, at DEBUG after that (metadata runs on every
-# status request).
+# status request). F8: "after that" is for an hour; then the next one is an ERROR again.
 sub _unexpected {
 	my ( $what, $problem ) = @_;
 
@@ -665,12 +669,21 @@ sub _unexpected {
 	$problem =~ s/\s+\z//;
 	my $message = "$what: $problem";
 
-	if ( $errorsSeen{$message}++ ) {
+	my $now  = time();
+	my $last = $errorsSeen{$message};
+
+	if ( defined $last && $now >= $last && $now - $last < ERROR_LOG_INTERVAL ) {
 		main::DEBUGLOG && $log->is_debug && $log->debug($message);
+		return;
 	}
-	else {
-		$log->error($message);
-	}
+
+	# F8: forget messages older than the interval, and the oldest beyond MAX_ERRORS_SEEN
+	delete @errorsSeen{ grep { !( $now >= $errorsSeen{$_} && $now - $errorsSeen{$_} < ERROR_LOG_INTERVAL ) } keys %errorsSeen };
+	my @byAge = sort { $errorsSeen{$a} <=> $errorsSeen{$b} } keys %errorsSeen;
+	delete @errorsSeen{ splice( @byAge, 0, @byAge - MAX_ERRORS_SEEN + 1 ) } if @byAge >= MAX_ERRORS_SEEN;
+
+	$errorsSeen{$message} = $now;
+	$log->error($message);
 
 	return;
 }

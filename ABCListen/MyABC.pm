@@ -26,7 +26,8 @@ package Plugins::ABCListen::MyABC;
 #     Programs->program(path) -> its episodeCollectionId -> Programs->episodes(id, 0, 5): a program
 #     unfollowed in the last 30 min keeps its episodes, in their places, until its tombstone
 #     expires (M4; see "Follow / Unfollow"); no follows and no tombstones -> the help text. At
-#     most 4 programs in flight; a program that fails is skipped (WARN). After 25 s (XMLBrowser
+#     most 4 programs in flight; a program that fails is skipped (WARN; F8: once a day per program,
+#     else DEBUG, since a program ABC removed fails on every rebuild). After 25 s (XMLBrowser
 #     gives a feed 35 s) the feed answers with what has arrived (WARN with the number of programs
 #     left out) and ignores later results.
 #     Merge: one row per episode id (the program the episode belongs to wins, else the first A-Z),
@@ -111,10 +112,13 @@ use constant LATEST_MAX         => 50;
 use constant LATEST_IN_FLIGHT   => 4;      # programs fetched at once
 use constant LATEST_DEADLINE    => 25;     # seconds (XMLBrowser gives a feed 35 s)
 use constant LATEST_TTL         => 900;    # seconds
+use constant SKIP_WARN_INTERVAL => 86400;  # F8: a program's "skipped" line is a WARN at most once a day
 use constant LOAD_FAILED        => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
 
 my $log   = logger('plugin.abclisten');
 my $prefs = preferences('plugin.abclisten');
+
+my %skipWarned;    # F8: program path => when its "skipped" WARN was logged (last day only)
 
 my %HOME_STATES = map { $_ => 1 } qw(ACT NSW NT QLD SA TAS VIC WA);
 
@@ -309,7 +313,7 @@ sub _collectLatest {
 
 		if ( $result->{error} ) {
 			$stats{failed}++;
-			$log->warn( "Latest episodes: skipped the program $entry->{title} ($entry->{path}): " . ( $result->{message} || $result->{error} ) );
+			_logSkipped( $entry, $result );
 		}
 		else {
 			$stats{ok}++;
@@ -345,6 +349,36 @@ sub _collectLatest {
 	$pump->();
 	return;
 }
+
+# F8: a program that failed is logged at WARN once a day, then at DEBUG: a followed program ABC
+# removed fails on every rebuild (every 15 min while Latest episodes is in use), for ever.
+sub _logSkipped {
+	my ( $entry, $result ) = @_;
+
+	my $path    = defined $entry->{path} ? $entry->{path} : '';
+	my $message = "Latest episodes: skipped the program $entry->{title} ($path): " . ( $result->{message} || $result->{error} );
+	my $now     = time();
+
+	my $last = $skipWarned{$path};
+	if ( defined $last && $now >= $last && $now - $last < SKIP_WARN_INTERVAL ) {
+		main::DEBUGLOG && $log->is_debug && $log->debug("$message (again; a WARN at most once a day)");
+		return;
+	}
+
+	# forget programs not warned about for a day (unfollowed since, or back), so this stays small
+	for my $known ( keys %skipWarned ) {
+		my $at = $skipWarned{$known};
+		delete $skipWarned{$known} unless $now >= $at && $now - $at < SKIP_WARN_INTERVAL;
+	}
+
+	$skipWarned{$path} = $now;
+	$log->warn("$message (repeats are logged at DEBUG for a day)");
+
+	return;
+}
+
+# test helper: forget which programs were logged (a restarted LMS starts like this)
+sub _reset { %skipWarned = (); return }
 
 # One program's newest episodes (a followed program or a tombstone): $cb->({ entry, detail, episodes })
 # or $cb->({ error }), once.

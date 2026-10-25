@@ -19,6 +19,7 @@ package Plugins::ABCListen::Util;
 use strict;
 use warnings;
 
+use Scalar::Util ();
 use Time::Local qw(timegm);
 
 use Slim::Utils::Cache;
@@ -40,6 +41,11 @@ use constant SITE_BASE    => 'https://www.abc.net.au';
 
 use constant CACHE_NAMESPACE  => 'abclisten';    # Slim::Utils::Cache namespace (create it without a version)
 use constant EPISODE_META_TTL => 30 * 86400;     # seconds
+
+# F8: an unchanged episode meta entry is written again (its TTL renewed) at most once a day; the
+# time of its last write is kept in the entry under this key (see setEpisodeMeta)
+use constant EPISODE_META_REFRESH => 86400;          # seconds
+use constant STORED_AT            => '_storedAt';
 
 my @DAY_NAMES   = qw(Sun Mon Tue Wed Thu Fri Sat);
 my @MONTH_NAMES = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
@@ -273,19 +279,33 @@ sub _isEpisodeId { defined $_[0] && $_[0] =~ /\A[0-9]+\z/ }
 # Merge rule: new non-empty values replace the cached ones; undef, '', [] and {} never clobber an
 # existing field; fields not in \%meta are kept. Code refs are dropped (the cache can't store
 # them). id is always $id.
-# Returns 1 when stored; 0 (and nothing changes) if $id isn't an episode id (digits) or \%meta
-# has no non-empty value.
+# F8: when the merged entry is the cached one unchanged (plain values compared as text, lists and
+# hashes element by element), nothing is written, unless the entry was last written a day ago or
+# more (EPISODE_META_REFRESH): then it is written again, so an entry still listed keeps its 30 days.
+# Every episode row writes here on every render, and LMS re-walks menus for each item_id, so a
+# 50-row list used to cost 50 cache writes per walk. The write time is kept in the entry under
+# _storedAt (never returned by getEpisodeMeta, never taken from \%meta).
+# Returns 1 when stored (or already stored unchanged); 0 (and nothing changes) if $id isn't an
+# episode id (digits) or \%meta has no non-empty value.
 sub setEpisodeMeta {
 	my ( $id, $meta ) = @_;
 	return 0 unless _isEpisodeId($id) && ref $meta eq 'HASH';
 
-	my %new = map { $_ => $meta->{$_} } grep { $_ ne 'id' && _hasValue( $meta->{$_} ) } keys %$meta;
+	my %new = map { $_ => $meta->{$_} } grep { $_ ne 'id' && $_ ne STORED_AT && _hasValue( $meta->{$_} ) } keys %$meta;
 	return 0 unless %new;
 
 	my $cache = _cache();
 	my $old   = $cache->get( _metaKey($id) );
+	$old = undef unless ref $old eq 'HASH';
 
-	my %entry = ( ( ref $old eq 'HASH' ? %$old : () ), %new, id => "$id" );
+	my %entry = ( ( $old ? %$old : () ), %new, id => "$id" );
+
+	# F8: unchanged and written less than a day ago: nothing to write
+	my $now = time();
+	my $storedAt = $old ? $old->{ +STORED_AT } : undef;
+	return 1 if _isEpoch($storedAt) && $now >= $storedAt && $now - $storedAt < EPISODE_META_REFRESH && _same( \%entry, $old );
+
+	$entry{ +STORED_AT } = $now;
 	$cache->set( _metaKey($id), \%entry, EPISODE_META_TTL );
 
 	return 1;
@@ -297,7 +317,42 @@ sub getEpisodeMeta {
 	return undef unless _isEpisodeId($id);
 
 	my $meta = _cache()->get( _metaKey($id) );
-	return ref $meta eq 'HASH' ? $meta : undef;
+	return undef unless ref $meta eq 'HASH';
+
+	delete $meta->{ +STORED_AT };
+	return $meta;
+}
+
+# F8: are two cache values the same data? Plain values compare as text (192 and '192' are one
+# value), lists and hashes element by element, blessed scalars (JSON booleans) by class and value.
+# Anything else (code refs, other objects) never counts as the same, so it is written as before.
+sub _same {
+	my ( $x, $y ) = @_;
+
+	return !defined $y unless defined $x;
+	return 0 unless defined $y;
+
+	my ( $rx, $ry ) = ( ref $x, ref $y );
+	return 0 unless $rx eq $ry;
+	return "$x" eq "$y" ? 1 : 0 unless $rx;
+
+	my $type = Scalar::Util::reftype($x);
+
+	if ( $type eq 'ARRAY' ) {
+		return 0 unless @$x == @$y;
+		for my $i ( 0 .. $#$x ) { return 0 unless _same( $x->[$i], $y->[$i] ) }
+		return 1;
+	}
+
+	if ( $type eq 'HASH' ) {
+		return 0 unless keys %$x == keys %$y;
+		for my $key ( keys %$x ) { return 0 unless exists $y->{$key} && _same( $x->{$key}, $y->{$key} ) }
+		return 1;
+	}
+
+	return _same( $$x, $$y ) if $type eq 'SCALAR' && defined Scalar::Util::blessed($x);
+
+	return 0;
 }
 
 sub _hasValue {

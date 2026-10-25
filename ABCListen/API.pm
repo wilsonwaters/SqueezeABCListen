@@ -26,8 +26,9 @@ package Plugins::ABCListen::API;
 #   ttl      => seconds  serve a cached successful result younger than this, without a request.
 #                        Absent or 0: no cache, except algolia (default 3600) and siteConfig (always 6 h).
 #   stale_ok => 1        on error, serve the last-good copy with $info->{stale} = 1. The copy is kept
-#                        7 days, for calls made with stale_ok. The first stale serve per cache key per
-#                        run logs at WARN, later ones at DEBUG.
+#                        7 days, for calls made with stale_ok. The first stale serve per cache key
+#                        logs at WARN, later ones at DEBUG until the key is fetched again (F8: the next
+#                        outage warns again) or a day has passed (a long outage warns once a day).
 #   quiet    => 1        log failures (and stale serves) at DEBUG instead of WARN.
 #   timeout  => seconds  passed to HTTP.pm (default 15).
 #
@@ -179,7 +180,10 @@ my %inFlight;          # coalescing key => { id, waiters => [ { cb, ecb, opts } 
 my $flightId = 0;
 my @algoliaSent;       # times of the Algolia queries sent in the current window
 my $lastRefresh;       # time of the last forced siteConfig refresh (nextData / algolia rediscovery)
-my %staleWarned;       # cache key => 1 once a stale serve has been logged at WARN
+my %staleWarned;       # cache key => when a stale serve was logged at WARN (F8: cleared by the key's
+                       # next success; entries older than STALE_WARN_TTL are dropped)
+
+use constant STALE_WARN_TTL => 86400;    # F8: seconds a stale serve's WARN covers
 
 # ---------------------------------------------------------------------------
 # Network functions
@@ -751,6 +755,8 @@ sub _settle {
 	my $data = $result->{data};
 	my $at   = defined $result->{at} ? $result->{at} : time();
 
+	delete $staleWarned{ $op->{cacheKey} };    # F8: fetched again: the next outage warns again
+
 	# keep it as long as the longest-lived waiter wants it
 	my $keep = 0;
 	for my $w (@$waiters) {
@@ -794,7 +800,8 @@ sub _logStale {
 	my ( $op, $error, @waiters ) = @_;
 	my $message = "$op->{what}: serving the last good copy ($error->{message})";
 
-	if ( ( grep { !$_->{opts}->{quiet} } @waiters ) && !$staleWarned{ $op->{cacheKey} }++ ) {
+	if ( ( grep { !$_->{opts}->{quiet} } @waiters ) && !_staleWarnedRecently( $op->{cacheKey} ) ) {
+		$staleWarned{ $op->{cacheKey} } = time();
 		$log->warn($message);
 	}
 	else {
@@ -802,6 +809,20 @@ sub _logStale {
 	}
 
 	return;
+}
+
+# F8: was a stale serve of $key logged at WARN within STALE_WARN_TTL? Older entries are dropped
+# (of every key), so the hash holds only keys stale-served at WARN in the last day.
+sub _staleWarnedRecently {
+	my $key = shift;
+	my $now = time();
+
+	for my $known ( keys %staleWarned ) {
+		my $when = $staleWarned{$known};
+		delete $staleWarned{$known} unless $now >= $when && $now - $when < STALE_WARN_TTL;
+	}
+
+	return exists $staleWarned{$key} ? 1 : 0;
 }
 
 sub _cache { Slim::Utils::Cache->new(CACHE_NAMESPACE) }
@@ -959,6 +980,9 @@ sub _reset {
 	undef $lastRefresh;
 	return;
 }
+
+# The cache keys whose stale serve is remembered as warned (for tests; F8).
+sub _staleWarnedKeys { sort keys %staleWarned }
 
 # ---------------------------------------------------------------------------
 # Pure helpers

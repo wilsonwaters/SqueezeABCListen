@@ -73,6 +73,9 @@ package Plugins::ABCListen::Tracks;
 # body, or HTTP 4xx (not 429) or 500, which BFF answers for every variant id as of 2026-10-19) ->
 # undef, NO_DATA_TTL (6 h), logged at INFO, never at WARN. Any other failure (5xx, 429, timeout,
 # bad JSON) -> ERROR_TTL (30 s), logged at WARN once per run of consecutive failures, then at DEBUG.
+# A response that can't be read (the parser dies) is also logged at ERROR, F8: at most once an hour
+# per station and request (now / recently played; PARSE_ERROR_INTERVAL), else at DEBUG, since the
+# poll asks again every 20-120 s while the station plays.
 # Identical requests are coalesced: one upstream request per service for every caller. API.pm is
 # called with quiet => 1 (its own logging at DEBUG only) and without a ttl (no second cache).
 #
@@ -101,6 +104,7 @@ use constant MAX_MISSES   => 1;           # empty/failed answers bridged by the 
 use constant TIMEOUT      => 8;           # seconds per request
 use constant COVER_PX     => 580;
 use constant MIN_COVER_PX => 340;         # a smaller best size gives way to the artwork's original url
+use constant PARSE_ERROR_INTERVAL => 3600;    # F8: seconds between ERROR lines for one station's unreadable responses
 
 my $log = logger('plugin.abclisten');
 
@@ -109,6 +113,7 @@ my %LAST_GOOD;    # $id => { song, bound (current-until when songEnd is unknown)
 my %RECENT;       # $id => { plays | undef, error | undef, expires }
 my %WAITERS;      # "now:$id" | "recent:$id" => [ callbacks ] while a request is in flight
 my %FAILURES;     # "now:$id" | "recent:$id" => consecutive failed requests
+my %PARSE_ERRORS; # F8: "now:$id" | "recent:$id" => when an unreadable response was last logged at ERROR
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -405,7 +410,7 @@ sub _settleNow {
 			};
 			if ( !$parsed ) {
 				$error = 'could not read the response: ' . ( $@ || 'unknown problem' );
-				$log->error("Song for $id: $error");
+				_parseError( $key, "Song for $id", $error );
 				undef $song;
 			}
 		}
@@ -467,7 +472,7 @@ sub _settleRecent {
 		$plays = eval { parseRecent( $result->{data}, RECENT_LIMIT ) };
 		if ( ref $plays ne 'ARRAY' ) {
 			$error = 'could not read the response: ' . ( $@ || 'unknown problem' );
-			$log->error("Recently played for $id: $error");
+			_parseError( $key, "Recently played for $id", $error );
 			undef $plays;
 		}
 	}
@@ -492,6 +497,24 @@ sub _settleRecent {
 		my ( $cb, $n ) = @$waiter;
 		defined $error ? $cb->( undef, $error ) : $cb->( _firstPlays( $plays, $n ) );
 	}
+
+	return;
+}
+
+# F8: an unreadable response is logged at ERROR at most once per PARSE_ERROR_INTERVAL per $key
+# (station and request), else at DEBUG.
+sub _parseError {
+	my ( $key, $what, $error ) = @_;
+	my $now = _now();
+
+	my $last = $PARSE_ERRORS{$key};
+	if ( defined $last && $now >= $last && $now - $last < PARSE_ERROR_INTERVAL ) {
+		main::DEBUGLOG && $log->is_debug && $log->debug("$what: $error");
+		return;
+	}
+
+	$PARSE_ERRORS{$key} = $now;
+	$log->error("$what: $error (repeats are logged at DEBUG for an hour)");
 
 	return;
 }
@@ -681,6 +704,7 @@ sub _reset {
 	%RECENT    = ();
 	%WAITERS   = ();
 	%FAILURES  = ();
+	%PARSE_ERRORS = ();
 	return;
 }
 

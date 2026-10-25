@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 # M2: Plugins::ABCListen::MyABC menus, offline (SimpleAsyncHTTP stub, fake clock, server time zone
-# Australia/Sydney):
+# Australia/Sydney). F8 (#78): a 50-row Latest walk writes the episode meta cache only for what
+# changed (50 new entries, then none; renewed once a day); a followed program ABC removed is a WARN
+# once a day, DEBUG on the other rebuilds.
 #   * the top-level "My ABC listen" item (exact keys, weight, menuWeights, last among the hooks' items);
 #   * My ABC listen: the empty state (one instructional text item), "Latest episodes" and
 #     "Followed programs (N)" (N counts follows, not tombstones; both rows stay while only
@@ -132,6 +134,7 @@ sub fresh {
 	Slim::Web::Settings->reset;
 	Plugins::ABCListen::API::_reset();
 	Plugins::ABCListen::OnDemand::_resetProviders();
+	Plugins::ABCListen::MyABC::_reset();    # F8: which failing programs were logged at WARN
 	reset_latest_fetches();
 	%{ prefs() } = %{ Slim::Utils::Prefs::Namespace->new('plugin.abclisten') };
 	$MY->init();
@@ -1497,6 +1500,68 @@ subtest 'O8: /programs/ episodes are unchanged; a network page or an archived pa
 	is( $TRACKINFO->( undef, 'abclisten://episode/107400001' )->[0]->{passthrough}->[0]->{program}->{path}, $HACK,    '/triplej/programs/: the program path, as before' );
 	is( $TRACKINFO->( undef, 'abclisten://episode/7099490' ), undef, 'an archived program\'s page under /listen/radionational: no follow rows' );
 	is( $TRACKINFO->( undef, 'abclisten://episode/2913842' ), undef, 'a presenter page under /listen/radionational: no follow rows' );
+};
+
+# ---------------------------------------------------------------------------
+# F8 (#78): cache writes per walk, the WARN for a removed program
+# ---------------------------------------------------------------------------
+
+subtest 'F8: walking the 50-row Latest episodes list writes the meta cache only for what changed' => sub {
+	fresh();
+	$F->follow($_) for map { route_generated($_) } 1 .. 12;
+
+	my %writes;
+	no warnings 'redefine';
+	my $set = \&Slim::Utils::Cache::set;
+	local *Slim::Utils::Cache::set = sub { $writes{ $_[1] =~ /^episode-meta:/ ? 'meta' : 'other' }++; $set->(@_) };
+	my $walk = sub {
+		%writes = ();
+		my $rows = items_of( feed( $LATEST, undef ) );
+		return [ scalar @$rows, $writes{meta} || 0, $writes{other} || 0 ];
+	};
+
+	is_deeply( $walk->(), [ 50, 50, 26 ], 'first walk: 50 rows, 50 new meta entries written (and 26 other writes: 12 pages, 12 episode lists, the site config, the merged list)' );
+	advanceTime(60);
+	is_deeply( $walk->(), [ 50, 0, 0 ], 'the same walk a minute later (LMS re-walks for every item_id): 50 rows, no write at all (before F8: 50 meta writes)' );
+	advanceTime(60);
+	is_deeply( $walk->(), [ 50, 0, 0 ], '... and again' );
+
+	advanceTime(900);
+	is_deeply( $walk->(), [ 50, 0, 13 ], 'rebuilt after 15 min (the same answers from ABC): no meta write; 13 other writes (12 episode lists fetched again, 15 min TTL, and the merged list)' );
+
+	setTime( $T0 + 86400 );
+	my $r = $walk->();
+	is_deeply( [ @$r[ 0, 1 ] ], [ 50, 50 ], 'a day later: the 50 unchanged entries are written once more (their 30 days renewed)' );
+	advanceTime(60);
+	is( $walk->()->[1], 0, '... and not again' );
+};
+
+subtest 'F8: a followed program ABC removed: one WARN a day, DEBUG on every other Latest rebuild' => sub {
+	fresh();
+	local $Slim::Utils::Log::CATEGORIES{'plugin.abclisten'}->{defaultLevel} = 'DEBUG';    # record DEBUG lines too
+	$F->follow( route_generated(1) );
+	route( "$NEXT/listen/programs/removed.json", code => 404, content => '{}' );
+	$F->follow( { title => 'Removed Program', path => '/listen/programs/removed' } );
+
+	my $logged = sub { my $level = shift; scalar grep { $_->{level} eq $level && $_->{message} =~ m{skipped the program Removed Program \(/listen/programs/removed\)} } Slim::Utils::Log->messages( category => 'plugin.abclisten' ) };
+
+	# in use for an hour: Latest rebuilt every 15 min
+	for my $rebuild ( 1 .. 4 ) {
+		is( scalar @{ items_of( feed( $LATEST, undef ) ) }, 5, "rebuild $rebuild: Generated 1's five episodes" );
+		advanceTime(901);
+	}
+	is( $logged->('WARN'),  1, 'four rebuilds: one WARN (before F8: four, and one every 15 min for ever)' );
+	is( $logged->('DEBUG'), 3, '... the other three at DEBUG' );
+
+	setTime( $T0 + 86400 );
+	feed( $LATEST, undef );
+	is( $logged->('WARN'), 2, 'a day after the first WARN: one more' );
+
+	route( "$NEXT/listen/programs/removed-too.json", code => 404, content => '{}' );
+	$F->follow( { title => 'Also Removed', path => '/listen/programs/removed-too' } );
+	feed( $LATEST, undef );
+	is( scalar( grep { m{skipped the program Also Removed} } warnings_logged() ), 1, 'another removed program: its own WARN' );
+	is( $logged->('WARN'), 2, '... and none more for the first' );
 };
 
 done_testing();
