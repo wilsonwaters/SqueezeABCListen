@@ -560,6 +560,35 @@ subtest 'song info: synopsis, On air, presenters, Next' => sub {
 	$S->_setRecords();
 };
 
+subtest 'song info (U1): a long synopsis is a short header, then "About this station" with the whole text' => sub {
+	reset_all();
+	$PH->getMetadataFor( undef, $RN_URL );
+	my $first = 'Ideas and conversation on contemporary culture, issues and current affairs, ' x 3;
+	$first =~ s/, \z/./;
+	my $long = "$first\n\nA second paragraph about the station.";
+	$S->_setRecords( { %{ $S->get('RN') }, synopsis => $long } );
+
+	my $c     = open_info( undef, program_info( undef, $RN_URL ) );
+	my $items = ( $c->args(0) )[0]->{items};
+	is( $c->count, 1, 'answers once' );
+	is( $items->[0]->{type}, 'textarea', 'the synopsis still comes first, as a textarea' );
+	is( $items->[0]->{wrap}, 1,          '... with wrap' );
+	ok( length( $items->[0]->{name} ) <= 200, 'the header is at most 200 characters (' . length( $items->[0]->{name} ) . ')' );
+	like( $items->[0]->{name}, qr/\AIdeas and conversation on contemporary culture, .+\x{2026}\z/, 'cut, with an ellipsis' );
+	is_deeply(
+		$items->[1],
+		{ name => 'About this station', type => 'link', items => [ { name => $long, type => 'textarea' } ] },
+		'then "About this station" with the whole synopsis'
+	);
+	is( $items->[1]->{name}, string('PLUGIN_ABCLISTEN_ABOUT_STATION'), '(PLUGIN_ABCLISTEN_ABOUT_STATION)' );
+	like( $items->[2]->{name}, qr/\AOn air: The Radio National Hour/, 'then "On air" as before' );
+	$S->_setRecords();
+
+	reset_all();
+	$c = open_info( undef, program_info( undef, $RN_URL ) );
+	ok( !( grep { $_->{type} eq 'link' } @{ ( $c->args(0) )[0]->{items} } ), 'a short synopsis (every station today): no About row' );
+};
+
 subtest 'song info: answers within 3 s even when ABC is slow, exactly once' => sub {
 	reset_all();
 	$PH->getMetadataFor( undef, $RN_URL );

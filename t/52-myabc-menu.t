@@ -820,27 +820,27 @@ subtest 'through OnDemand\'s program menu: the follow rows after the header, bef
 	my $row   = Plugins::ABCListen::OnDemand->programItem( undef, {%SCIENCE_SHOW} );
 	my $items = items_of( open_item($row) );
 	is_deeply(
-		[ @{ names( [ @$items[ 3, 4 ] ] ) } ],
+		[ @{ names( [ @$items[ 4, 5 ] ] ) } ],
 		[ 'Follow "The Science Show"', 'Follow to see its new episodes in My ABC listen' ],
-		'description, Presented by, network, then Follow "<program>" and the hint'
+		'description, About this program, Presented by, network, then Follow "<program>" and the hint'
 	);
-	is( $items->[2]->{name}, 'ABC Radio National', 'item 3: the network row' );
-	like( $items->[5]->{name}, qr/\ASat 17 Oct $ENDASH /, 'then the first episode' );
-	is( scalar @$items, 11, 'two extra rows: description, presenters, network, Follow, hint, 5 episodes, More episodes' );
+	is( $items->[3]->{name}, 'ABC Radio National', 'item 4: the network row (after the description and About this program)' );
+	like( $items->[6]->{name}, qr/\ASat 17 Oct $ENDASH /, 'then the first episode' );
+	is( scalar @$items, 12, 'two extra rows: description, About this program, presenters, network, Follow, hint, 5 episodes, More episodes' );
 
-	my $confirm = items_of( open_item( $items->[3] ) );
+	my $confirm = items_of( open_item( $items->[4] ) );
 	is_deeply( names($confirm), ['Following The Science Show'], 'opening it: the FOLLOWED_OK text' );
 	is_deeply( [ map { $_->{path} } $F->list ], [$SCIENCE], 'the program is followed' );
 
 	$items = items_of( open_item($row) );
 	is_deeply(
-		names( [ @$items[ 3, 4 ] ] ),
+		names( [ @$items[ 4, 5 ] ] ),
 		[ '✓ Following "The Science Show"', 'Unfollow "The Science Show"' ],
 		're-opening the program: the "✓ Following" text, then Unfollow "<program>"'
 	);
-	is( $items->[3]->{type}, 'text', '... the "✓ Following" row is plain text' );
-	like( $items->[5]->{name}, qr/\ASat 17 Oct $ENDASH /, '... the first episode has not moved' );
-	is( scalar @$items, 11, '... still 11 rows' );
+	is( $items->[4]->{type}, 'text', '... the "✓ Following" row is plain text' );
+	like( $items->[6]->{name}, qr/\ASat 17 Oct $ENDASH /, '... the first episode has not moved' );
+	is( scalar @$items, 12, '... still 12 rows' );
 
 	is_deeply( [ sort keys %{ prefs()->get('followed')->[0] } ], [qw(followedAt id image network path title)], 'stored keys' );
 };
@@ -861,7 +861,7 @@ subtest 'stale ids, program menu: follow, then every id from before -> still fol
 
 	my $before = $program->();
 	my $k      = op_index( $before, 'follow' );
-	is( $k, 3, 'Follow at k = 3, right after the header rows' );
+	is( $k, 4, 'Follow at k = 4, right after the header rows (description, About this program, presenters, network)' );
 	is( op_index( $before, 'unfollow' ), undef, 'no Unfollow row anywhere' );
 	my @openable = openable($before);
 
@@ -895,8 +895,8 @@ subtest 'stale ids, program menu: unfollow, then every id from before -> still n
 	my $before = $program->();
 	is( op_index( $before, 'follow' ), undef, 'following: no Follow row' );
 	my $k = op_index( $before, 'unfollow' );
-	is( $k, 4, 'Unfollow at k + 1 = 4' );
-	is_deeply( $before->[3], $FOLLOWING_ROW, 'row k = 3: the "✓ Following" text row' );
+	is( $k, 5, 'Unfollow at k + 1 = 5' );
+	is_deeply( $before->[4], $FOLLOWING_ROW, 'row k = 4: the "✓ Following" text row' );
 	my @openable = openable($before);
 
 	open_id( $program, $k );

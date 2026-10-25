@@ -1,0 +1,287 @@
+{
+  "pageProps": {
+    "heroImageWithCTAPrepared": {
+      "heading": "Wait... They Did What!?",
+      "uri": "coremedia://program/106387624",
+      "canonicalURI": "/listen/programs/wait-they-did-what",
+      "attributionLinksPrepared": [
+        {
+          "url": "https://www.abc.net.au/kidslisten/",
+          "title": "ABC Kids listen",
+          "screenReaderText": "Source:"
+        }
+      ],
+      "heroImagePrepared": {
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/081b693d341a00bd885956c492c23470?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+      }
+    },
+    "heroDescriptionPrepared": {
+      "descriptionPrepared": {
+        "descriptor": {
+          "type": "tagname",
+          "key": "div",
+          "props": {},
+          "children": [
+            {
+              "type": "tagname",
+              "key": "@@standfirst",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "Wait... They Did What!? is the question you’ll be asking after travelling back through modern history with comedian Tilly Oddy-Black."
+                }
+              ]
+            },
+            {
+              "type": "tagname",
+              "key": "p",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "Perfect for kids aged 8 and over, Wait…They Did What!? unearths the weird, wild and outright scandalous common practices of people in the olden days... like letting kids buy fireworks, banning bikinis on the beach, putting blood-sucking leeches on sick people, and riding in cars without seatbelts."
+                }
+              ]
+            },
+            {
+              "type": "tagname",
+              "key": "p",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "It’s the podcast that will make you feel just a little bit smarter than your parents and grandparents."
+                }
+              ]
+            },
+            {
+              "type": "tagname",
+              "key": "p",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "For more great kids' podcasts, download the free ABC listen app (Australia). There you’ll find more kids news podcasts, educational children’s stories and storytelling, podcasts from your favourite characters like Bluey and Hey Duggee and plenty more of the best kids podcasts like Imagine This, Dino Dome and News Time. For all ages from 0–4-year-olds, 5–8-year-olds, 8–10-year-olds, tweens and teens. And you can watch our kids shows on ABC iview and on the ABC Kids and ABC Big Kids channels of YouTube kids."
+                },
+                {
+                  "type": "tagname",
+                  "key": "br",
+                  "props": {},
+                  "children": []
+                },
+                {
+                  "type": "tagname",
+                  "key": "br",
+                  "props": {},
+                  "children": []
+                },
+                {
+                  "type": "text",
+                  "content": "Credits:"
+                }
+              ]
+            },
+            {
+              "type": "tagname",
+              "key": "ul",
+              "props": {
+                "type": "unordered"
+              },
+              "children": [
+                {
+                  "type": "tagname",
+                  "key": "li",
+                  "props": {},
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Host: Tilly Oddy-Black"
+                    }
+                  ]
+                },
+                {
+                  "type": "tagname",
+                  "key": "li",
+                  "props": {},
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Producers: Samantha Turnbull and Soumia Bella"
+                    }
+                  ]
+                },
+                {
+                  "type": "tagname",
+                  "key": "li",
+                  "props": {},
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Sound engineers: Que Nguyen and Isabella Tropiano"
+                    }
+                  ]
+                },
+                {
+                  "type": "tagname",
+                  "key": "li",
+                  "props": {},
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Archive researchers: Michael Osmond and Carolyn Cage"
+                    }
+                  ]
+                },
+                {
+                  "type": "tagname",
+                  "key": "li",
+                  "props": {},
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Composer: David McDonald"
+                    }
+                  ]
+                },
+                {
+                  "type": "tagname",
+                  "key": "li",
+                  "props": {},
+                  "children": [
+                    {
+                      "type": "text",
+                      "content": "Executive producers: Veronica Milsom and Alex Lollback"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "uri": "coremedia://program/106387624"
+    },
+    "presentersPrepared": [
+      {
+        "id": "106387638",
+        "label": {
+          "full": "Tilly Oddy-Black"
+        }
+      }
+    ],
+    "programCollectionPrepared": {
+      "id": "106387620",
+      "pagination": {
+        "collectionLoaderLimit": 10,
+        "offset": 0,
+        "size": 10,
+        "total": 32
+      },
+      "items": [
+        {
+          "articleLink": "/listen/programs/wait-they-did-what/giant-computers/107281766",
+          "cardAttributionPrepared": {
+            "publishedDate": "2026-10-18T21:15:00+00:00",
+            "publishedDateFormat": false
+          },
+          "cardImagePrepared": {
+            "alt": "Wait... They Did What?! Black and what photo of Tilly Oddy-Black looking shocked",
+            "imgSrc": "https://live-production.wcms.abc-cdn.net.au/ca929665155570820b978dcab934c463?impolicy=wcms_crop_resize&cropH=2812&cropW=2812&xPos=996&yPos=0&width=862&height=862",
+            "ratio": "1x1",
+            "srcSet": [
+              "https://live-production.wcms.abc-cdn.net.au/ca929665155570820b978dcab934c463?impolicy=wcms_crop_resize&cropH=2812&cropW=2812&xPos=996&yPos=0&width=160&height=160 160w",
+              "https://live-production.wcms.abc-cdn.net.au/ca929665155570820b978dcab934c463?impolicy=wcms_crop_resize&cropH=2812&cropW=2812&xPos=996&yPos=0&width=862&height=862 862w"
+            ],
+            "width": "862",
+            "height": "862"
+          },
+          "cardMediaIndicatorPrepared": {
+            "icon": "audio",
+            "duration": 433
+          },
+          "contentLabelPrepared": null,
+          "contentUri": "coremedia://audioepisode/107281766",
+          "description": "Before we could carry computers they cost around a million dollars... and were as heavy as about six African elephants. \n\nThis episode will answer questions like: \nWho invented the first computer? \nHow big were the first computers? ",
+          "cardId": "107281766",
+          "cardTitle": "Wait... computers were the size of entire rooms?",
+          "noBorders": true,
+          "presentersPrepared": [
+            {
+              "canonicalURI": "/kidslisten/tilly-oddy-black/106387638",
+              "canonicalURL": "https://www.abc.net.au/kidslisten/tilly-oddy-black/106387638",
+              "id": "106387638",
+              "names": {
+                "full": "Tilly Oddy-Black"
+              },
+              "role": "Author"
+            }
+          ],
+          "imagePositionPrepared": {
+            "mobile": "left",
+            "tablet": "left",
+            "desktop": "left"
+          },
+          "cardContentPositionPrepared": {},
+          "hasMobileFeatured": true,
+          "docType": "audioepisode",
+          "segments": null,
+          "programTemplate": "audio",
+          "expanded": true
+        },
+        {
+          "articleLink": "/listen/programs/wait-they-did-what/playgrounds/107004118",
+          "cardAttributionPrepared": {
+            "publishedDate": "2026-10-11T19:00:00+00:00",
+            "publishedDateFormat": false
+          },
+          "cardImagePrepared": {
+            "alt": "Wait... They Did What?! Black and what photo of Tilly Oddy-Black looking shocked",
+            "imgSrc": "https://live-production.wcms.abc-cdn.net.au/ca929665155570820b978dcab934c463?impolicy=wcms_crop_resize&cropH=2812&cropW=2812&xPos=996&yPos=0&width=862&height=862",
+            "ratio": "1x1",
+            "srcSet": [
+              "https://live-production.wcms.abc-cdn.net.au/ca929665155570820b978dcab934c463?impolicy=wcms_crop_resize&cropH=2812&cropW=2812&xPos=996&yPos=0&width=160&height=160 160w",
+              "https://live-production.wcms.abc-cdn.net.au/ca929665155570820b978dcab934c463?impolicy=wcms_crop_resize&cropH=2812&cropW=2812&xPos=996&yPos=0&width=862&height=862 862w"
+            ],
+            "width": "862",
+            "height": "862"
+          },
+          "cardMediaIndicatorPrepared": {
+            "icon": "audio",
+            "duration": 442
+          },
+          "contentLabelPrepared": null,
+          "contentUri": "coremedia://audioepisode/107004118",
+          "description": "Playgrounds used to be made from splintery wood and hot, rusty metal... and the ground surfaces were asphalt or concrete – ouch! \n\nThis episode will answer questions like: \nWhat did playgrounds look like in the 1970s?",
+          "cardId": "107004118",
+          "cardTitle": "Wait... playgrounds were danger zones?",
+          "noBorders": true,
+          "presentersPrepared": [
+            {
+              "canonicalURI": "/kidslisten/tilly-oddy-black/106387638",
+              "canonicalURL": "https://www.abc.net.au/kidslisten/tilly-oddy-black/106387638",
+              "id": "106387638",
+              "names": {
+                "full": "Tilly Oddy-Black"
+              },
+              "role": "Presenter"
+            }
+          ],
+          "imagePositionPrepared": {
+            "mobile": "left",
+            "tablet": "left",
+            "desktop": "left"
+          },
+          "cardContentPositionPrepared": {},
+          "hasMobileFeatured": true,
+          "docType": "audioepisode",
+          "segments": null,
+          "programTemplate": "audio",
+          "expanded": false
+        }
+      ]
+    },
+    "programTemplate": "audio",
+    "webDistributionRestricted": false
+  }
+}
