@@ -61,7 +61,7 @@ my $RECS_MENU   = \&Plugins::ABCListen::Discover::_recommendationsMenu;
 my $COLL_MENU   = \&Plugins::ABCListen::Collections::_collectionMenu;
 my $LOAD_FAILED = string('PLUGIN_ABCLISTEN_LOAD_FAILED');
 my $EMPTY       = string('PLUGIN_ABCLISTEN_EMPTY_COLLECTION');
-my $MORE        = string('PLUGIN_ABCLISTEN_MORE');
+my $MORE        = "More\x{2026}";    # U2: no collection menu lists a More… row any more
 my $FEATURED    = string('PLUGIN_ABCLISTEN_FEATURED');
 my $POPULAR     = string('PLUGIN_ABCLISTEN_POPULAR_NOW');
 my $SPORT       = string('PLUGIN_ABCLISTEN_POPULAR_SPORT');
@@ -370,7 +370,7 @@ subtest 'Home root: page errors; last-good copy' => sub {
 	}
 };
 
-subtest 'collection menu: 20 per page + More…; last page without More…' => sub {
+subtest 'collection menu (U2): the whole collection as one list (pages of 20, 20 and 15), no More…' => sub {
 	fresh();
 	route_home();
 	route_collection( 103194120, 0,  'bff-collection-103194120-most-popular-podcasts-o0.json' );
@@ -378,41 +378,39 @@ subtest 'collection menu: 20 per page + More…; last page without More…' => s
 	route_collection( 103194120, 40, 'bff-collection-103194120-most-popular-podcasts-o40.json' );
 
 	my ($popular) = grep { $_->{name} eq 'Most Popular Podcasts' } @{ home_root() };
+	is_deeply( $popular->{passthrough}, [ { id => '103194120', title => 'Most Popular Podcasts', image => $popular->{image} }, 0, 1 ], 'the link: the collection, offset 0, level 1 (unchanged)' );
 
 	my $c = open_item($popular);
 	advanceTime(3);    # program name lookups (not routed here) end by the deadline at the latest
-	is( $c->count, 1, 'page 1: one callback' );
-	my $page1 = items_of($c);
-	is( scalar @$page1, 21, '20 items + More…' );
-	is( scalar( grep { $_->{url} && $_->{url} == \&Plugins::ABCListen::OnDemand::_programMenu } @$page1 ), 20, '20 program links' );
-	ok( !( grep { !$_->{image} } @$page1[ 0 .. 19 ] ), 'every program link has an image' );
-	is_deeply( $page1->[20], { name => $MORE, type => 'link', url => $COLL_MENU, passthrough => [ { id => '103194120', title => 'Most Popular Podcasts', image => $popular->{image} }, 20, 1 ] }, 'More…: next offset 20, same level' );
-	is( $page1->[20]->{name}, 'More…', 'named "More…"' );
-
-	$c = open_item( $page1->[20] );
-	advanceTime(3);
-	my $page2 = items_of($c);
-	is( scalar @$page2, 21, 'page 2: 20 + More…' );
-	is( $page2->[20]->{passthrough}->[1], 40, 'More… offset 40' );
-
-	$c = open_item( $page2->[20] );
-	advanceTime(3);
-	my $page3 = items_of($c);
-	is( scalar @$page3, 15, 'page 3: the last 15 programs, no More… (40 + 15 = total 55)' );
-	ok( !( grep { $_->{name} eq $MORE } @$page3 ), 'no More…' );
+	is( $c->count, 1, 'one callback' );
+	my $items = items_of($c);
+	is( scalar @$items, 52, '52 items: the 55 cards of the collection (ABC\'s total 55) less 3 that a later page repeats' );
+	is( scalar( grep { $_->{url} && $_->{url} == \&Plugins::ABCListen::OnDemand::_programMenu } @$items ), 51, '51 program links' );
+	is_deeply( [ map { $_->{name} } grep { $_->{url} && $_->{url} == $COLL_MENU } @$items ], ['The Book Show'], 'and one nested collection, The Book Show' );
+	ok( !( grep { !$_->{image} } @$items ), 'every link has an image' );
+	ok( !( grep { $_->{name} eq $MORE } @$items ), 'no More… row' );
+	my @paths = map { $_->{passthrough}->[0]->{path} } grep { $_->{url} && $_->{url} == \&Plugins::ABCListen::OnDemand::_programMenu } @$items;
+	is( scalar( keys %{ { map { $_ => 1 } @paths } } ), 51, 'no program twice (ABC Rewind, Someone Knows Something and Uncover are on two pages: listed once, where they first appear)' );
 
 	is_deeply(
 		[ collection_requests() ],
 		[ map {"$BFF_COLL?collectionId=103194120&offset=$_&size=20"} 0, 20, 40 ],
-		'requests: offsets 0, 20, 40, size 20'
+		'requests: offsets 0, 20, 40, size 20 (the first page, then the other two at once)'
 	);
-	check_names( [ @$page1, @$page2, @$page3 ], 'Most Popular Podcasts' );
-	is( $c->count, 1, 'one callback per page' );
+	check_names( $items, 'Most Popular Podcasts' );
+
+	# a second open (LMS rebuilds the menu for every item_id): the same rows, from the cache
+	my @before = @{ names($items) };
+	$c = open_item($popular);
+	advanceTime(3);
+	is_deeply( names( items_of($c) ), \@before, 'opened again: the same rows in the same order (stable item ids)' );
+	is( scalar collection_requests(), 3, '... no new request' );
 };
 
 subtest 'collection menu: names of programs (second open uses the cache)' => sub {
 	fresh();
 	route_collection( 103194120, 0, 'bff-collection-103194120-most-popular-podcasts-o0.json' );
+	route( qr{\Q$BFF_COLL\E\?collectionId=103194120&offset=(?:20|40)&}, code => 404 );
 	route( "$NEXT/listen/programs/if-youre-listening.json", file => 'discovery/nextdata-program-if-youre-listening.trimmed.json', headers => $JSON_TYPE );
 
 	my $collection = { id => '103194120', title => 'Most Popular Podcasts' };
@@ -420,9 +418,11 @@ subtest 'collection menu: names of programs (second open uses the cache)' => sub
 	advanceTime(3);
 	is( items_of($c)->[0]->{name}, "If You're Listening", 'coremedia://program/104252122 is named "If You\'re Listening" (its ABC page), not the tagline' );
 	is( items_of($c)->[0]->{passthrough}->[0]->{description}, "What's really going on behind the biggest news stories", 'the tagline travels as the program\'s description' );
+	is( scalar @{ items_of($c) }, 20, 'the later pages failed: the first page\'s 20, no gap, no More…' );
 
 	$c = feed( $COLL_MENU, $CLIENT, $collection, 0, 1 );
-	is( $c->count, 1, 'second open: answered at once (collection and program page cached)' );
+	advanceTime(3);
+	is( $c->count, 1, 'second open: one callback' );
 	is( items_of($c)->[0]->{name}, "If You're Listening", 'second open: same name' );
 };
 
@@ -438,26 +438,31 @@ subtest 'collection menu: empty, null, past the end, missing total, short pages'
 
 	fresh();
 	route( qr{\Q$BFF_COLL\E\?collectionId=2&offset=60&}, code => 200, headers => $JSON_TYPE, content => to_json( { collection => { items => [], pagination => { offset => 60, size => 0, total => 55 } } } ) );
-	is_deeply( items_of( feed( $COLL_MENU, $CLIENT, { id => 2 }, 60, 1 ) ), [ { name => $EMPTY, type => 'text' } ], 'offset >= total: empty text item, no More…' );
+	is_deeply( items_of( feed( $COLL_MENU, $CLIENT, { id => 2 }, 60, 1 ) ), [ { name => $EMPTY, type => 'text' } ], 'a stale passthrough offset >= total: empty text item' );
 
 	fresh();
 	my @audio = map { card( "coremedia://audio/$_", articleLink => "/listen/programs/x/y/$_" ) } 1 .. 3;
 	route( qr{\Q$BFF_COLL\E\?collectionId=3&}, code => 200, headers => $JSON_TYPE, content => to_json( { collection => { items => \@audio, pagination => {} } } ) );
 	my $items = items_of( feed( $COLL_MENU, $CLIENT, { id => 3 }, 0, 1 ) );
-	is( scalar @$items, 3, 'no total: the cards, no More…' );
+	is( scalar @$items, 3, 'no total: the first page\'s cards only' );
+	is( scalar collection_requests(), 1, '... one request' );
 
 	fresh();
-	route( qr{\Q$BFF_COLL\E\?collectionId=4&offset=0&}, code => 200, headers => $JSON_TYPE, content => to_json( { collection => { items => \@audio, pagination => { total => 50 } } } ) );
-	route( qr{\Q$BFF_COLL\E\?collectionId=4&offset=3&}, code => 200, headers => $JSON_TYPE, content => to_json( { collection => { items => [], pagination => { total => 50 } } } ) );
+	my @more = map { card( "coremedia://audio/$_", articleLink => "/listen/programs/x/y/$_" ) } 4 .. 6;
+	route( qr{\Q$BFF_COLL\E\?collectionId=4&offset=0&},  code => 200, headers => $JSON_TYPE, content => to_json( { collection => { items => \@audio, pagination => { total => 50 } } } ) );
+	route( qr{\Q$BFF_COLL\E\?collectionId=4&offset=3&},  code => 200, headers => $JSON_TYPE, content => to_json( { collection => { items => \@more,  pagination => { total => 50 } } } ) );
+	route( qr{\Q$BFF_COLL\E\?collectionId=4&offset=23&}, code => 200, headers => $JSON_TYPE, content => to_json( { collection => { items => [],     pagination => { total => 50 } } } ) );
+	route( qr{\Q$BFF_COLL\E\?collectionId=4&offset=43&}, code => 200, headers => $JSON_TYPE, content => to_json( { collection => { items => [ card( 'coremedia://audio/99', articleLink => '/listen/programs/x/y/99' ) ], pagination => { total => 50 } } } ) );
 	$items = items_of( feed( $COLL_MENU, $CLIENT, { id => 4 }, 0, 1 ) );
-	is_deeply( [ names($items)->[-1], $items->[-1]->{passthrough}->[1] ], [ $MORE, 3 ], 'fewer cards than total: More… at offset + cards sent (3)' );
-	is_deeply( items_of( open_item( $items->[-1] ) ), [ { name => $EMPTY, type => 'text' } ], 'a page with 0 cards ends it: empty text, no More…' );
+	is_deeply( [ map { $_->{play} } @$items ], [ map {"abclisten://episode/$_"} 1 .. 6 ], 'fewer cards than the page size: the next page starts at offset + cards sent (3); a page with 0 cards ends the list (nothing after it, no gap)' );
+	is_deeply( [ map { /offset=([0-9]+)/ } collection_requests() ], [ 0, 3, 23, 43 ], 'pages at 0, then 3, 23, 43 (page size 20) up to the total 50' );
 
 	fresh();
 	my @videos = map { card("coremedia://video/$_") } 1 .. 3;
 	route( qr{\Q$BFF_COLL\E\?collectionId=5&offset=0&}, code => 200, headers => $JSON_TYPE, content => to_json( { collection => { items => \@videos, pagination => { total => 6 } } } ) );
+	route( qr{\Q$BFF_COLL\E\?collectionId=5&offset=3&}, code => 200, headers => $JSON_TYPE, content => to_json( { collection => { items => \@audio, pagination => { total => 6 } } } ) );
 	$items = items_of( feed( $COLL_MENU, $CLIENT, { id => 5 }, 0, 1 ) );
-	is_deeply( [ map { [ $_->{name}, $_->{passthrough} ? $_->{passthrough}->[1] : undef ] } @$items ], [ [ $MORE, 3 ] ], 'a page of unsupported cards with more to come: just More…' );
+	is_deeply( [ map { $_->{play} } @$items ], [ map {"abclisten://episode/$_"} 1 .. 3 ], 'a page of unsupported cards, then one with episodes: the episodes (the videos are left out)' );
 };
 
 subtest 'collection menu: API errors are one text item' => sub {
@@ -524,7 +529,7 @@ subtest 'home Categories collection -> True Crime: program links (dynamiccollect
 
 	# no longer listed under Home (D2: Podcasts -> Browse by category, t/42), but the engine still pages it
 	my $list = items_of( feed( $COLL_MENU, $CLIENT, { id => '14123152', title => 'Categories' }, 0, 1 ) );
-	is_deeply( names($list), [ 'News & Analysis', 'True Crime', 'Sport', 'For Kids & Families', 'History', 'Society & Culture', $MORE ], 'the category links (trimmed fixture: 6 of 18, then More…)' );
+	is_deeply( names($list), [ 'News & Analysis', 'True Crime', 'Sport', 'For Kids & Families', 'History', 'Society & Culture' ], 'the category links (trimmed fixture: 6 of 18; the next page, not routed here, fails: the list ends, no More…)' );
 
 	my ($trueCrime) = grep { $_->{name} eq 'True Crime' } @$list;
 	is( $trueCrime->{passthrough}->[0]->{id}, '104142226', 'True Crime pages collection 104142226 (articleLink leaf)' );
@@ -534,8 +539,8 @@ subtest 'home Categories collection -> True Crime: program links (dynamiccollect
 	advanceTime(3);
 	my $programs = items_of($c);
 	cmp_ok( scalar( grep { $_->{url} && $_->{url} == \&Plugins::ABCListen::OnDemand::_programMenu } @$programs ), '>=', 1, '>= 1 program link' );
-	is( $programs->[-1]->{name}, $MORE, 'More… (ABC reports 22)' );
-	is( ( collection_requests() )[-1], "$BFF_COLL?collectionId=104142226&offset=0&size=20", 'requested collectionId=104142226' );
+	isnt( $programs->[-1]->{name}, $MORE, 'no More… (ABC reports 22; the trimmed fixture holds 4, the next page is not routed)' );
+	is_deeply( [ grep {/104142226/} collection_requests() ], [ map {"$BFF_COLL?collectionId=104142226&offset=$_&size=20"} 0, 4 ], 'requested collectionId=104142226 from 0, then from 4 (the cards sent)' );
 };
 
 subtest 'depth limit: nested collections stop at level 3 with a visible text item' => sub {

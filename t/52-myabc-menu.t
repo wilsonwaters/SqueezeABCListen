@@ -149,9 +149,17 @@ sub fresh {
 
 sub to_json { JSON::PP->new->utf8->canonical->encode( $_[0] ) }
 
+# The program menu's page 0: the Latest fixture's 5 episodes as a program of 5 (U2 review: a page
+# that holds fewer episodes than its total no longer ends the list, so the total says 5 here).
+sub science_five {
+	my $page = JSON::PP->new->utf8->decode( fixture('myabc/bff-episodesWithSegments-scienceshow-latest.synthetic.json') );
+	$page->{collection}->{pagination}->{total} = scalar @{ $page->{collection}->{items} };
+	return to_json($page);
+}
+
 sub route_science_menu {
 	route( "$NEXT$SCIENCE.json", file => 'ondemand/nextdata-program-scienceshow.trimmed.json', headers => $JSON_TYPE );
-	route( qr{\Q$EPS\E\?collectionId=2885458&offset=0&size=50\z}, file => 'myabc/bff-episodesWithSegments-scienceshow-latest.synthetic.json', headers => $JSON_TYPE );
+	route( qr{\Q$EPS\E\?collectionId=2885458&offset=0&size=50\z}, content => science_five(), headers => $JSON_TYPE );
 }
 
 sub feed {
@@ -826,7 +834,7 @@ subtest 'through OnDemand\'s program menu: the follow rows after the header, bef
 	);
 	is( $items->[3]->{name}, 'ABC Radio National', 'item 4: the network row (after the description and About this program)' );
 	like( $items->[6]->{name}, qr/\ASat 17 Oct $ENDASH /, 'then the first episode' );
-	is( scalar @$items, 12, 'two extra rows: description, About this program, presenters, network, Follow, hint, 5 episodes, More episodes' );
+	is( scalar @$items, 11, 'two extra rows: description, About this program, presenters, network, Follow, hint, 5 episodes (a program of 5; U2: no More row)' );
 
 	my $confirm = items_of( open_item( $items->[4] ) );
 	is_deeply( names($confirm), ['Following The Science Show'], 'opening it: the FOLLOWED_OK text' );
@@ -840,7 +848,7 @@ subtest 'through OnDemand\'s program menu: the follow rows after the header, bef
 	);
 	is( $items->[4]->{type}, 'text', '... the "✓ Following" row is plain text' );
 	like( $items->[6]->{name}, qr/\ASat 17 Oct $ENDASH /, '... the first episode has not moved' );
-	is( scalar @$items, 12, '... still 12 rows' );
+	is( scalar @$items, 11, '... still 11 rows' );
 
 	is_deeply( [ sort keys %{ prefs()->get('followed')->[0] } ], [qw(followedAt id image network path title)], 'stored keys' );
 };
@@ -1184,7 +1192,7 @@ sub program_of { my $name = shift; return defined $name && $name =~ /\A([^:]+): 
 sub route_latest_and_menus {
 	route_three();
 	route_program_menus();
-	route( qr{\Q$EPS\E\?collectionId=2885458&offset=0&size=50\z}, file => 'myabc/bff-episodesWithSegments-scienceshow-latest.synthetic.json', headers => $JSON_TYPE );
+	route( qr{\Q$EPS\E\?collectionId=2885458&offset=0&size=50\z}, content => science_five(), headers => $JSON_TYPE );
 }
 
 subtest 'stale ids, Latest -> episode -> More from: unfollow B there; every id from before -> the same programs; the repeated Unfollow id is a no-op on B' => sub {

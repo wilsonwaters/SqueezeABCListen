@@ -372,7 +372,8 @@ sub episodes {
 
 	# ABC never returns more than the newest 250. No request is made here, so the real total is
 	# unknown: at offset >= 250 the reported total is 250 even when the program has fewer episodes
-	# (OnDemand's "More episodes" link never asks past the total, so its menus never show this).
+	# (OnDemand's program menu never asks past offset 200, ABC's last page of 50, so its menus never
+	# show this).
 	return $once->( { items => [], total => MAX_EPISODES, offset => $offset } ) if $offset >= MAX_EPISODES;
 	$size = MAX_EPISODES - $offset if $offset + $size > MAX_EPISODES;
 
