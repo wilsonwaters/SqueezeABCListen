@@ -30,8 +30,9 @@ package Plugins::ABCListen::Sections;
 #        Carousel entries without a heading are station rows (1.) with the same text.
 #        The event-only services among 1. and 2. are checked first (Collections->checkOnAir, ≤ 3 s).
 #     3. One link per page collection, in page order (Collections->collectionItem at level 0: ABC's
-#        title, an untitled one is "Featured"; the first card's image, else the plugin icon; menus of
-#        20 + More…). Collections whose embedded cards are all unsupported were dropped by page().
+#        title, an untitled one is "Featured"; the first card's image, else the plugin icon; each
+#        menu the whole collection as one list, U2). Collections whose embedded cards are all
+#        unsupported were dropped by page().
 #     4. The static extras:
 #          Kids listen  All Kids listen programs (program aggregation 9317914, A–Z as ABC orders it),
 #                       Kids & Families podcasts (collection 104141842), Books for Kids (collection

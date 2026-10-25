@@ -48,7 +48,7 @@ my $ICON      = Plugins::ABCListen::Util::ICON;
 my $JSON_TYPE = { 'Content-Type' => 'application/json' };
 my $CLIENT    = ABCListenTest::FakeClient->new('00:00:00:00:00:01');
 my $COLL_MENU = \&Plugins::ABCListen::Collections::_collectionMenu;
-my $MORE      = string('PLUGIN_ABCLISTEN_MORE');
+my $MORE      = "More\x{2026}";    # U2: no collection menu lists a More… row any more
 
 Slim::Utils::Log->addLogCategory( { category => 'plugin.abclisten', defaultLevel => 'WARN', description => 'PLUGIN_ABCLISTEN' } );
 
@@ -342,9 +342,9 @@ subtest '%FETCHERS / menuPage: kind => aggregation pages 50 at a time with progr
 	route_json( "${BFF}programAggregationCollection/x?collectionId=8&offset=50&size=50", { collection => { heading => 'Big', pagination => { total => 51 }, items => [ card( 'coremedia://program/51', articleLink => '/kidslisten/programs/p51/' ) ] } } );
 	$link  = $COL->collectionItem( $CLIENT, { id => '8', title => 'Big', kind => 'aggregation' }, 0 );
 	$items = items_of( feed( $link->{url}, @{ $link->{passthrough} } ) );
-	is_deeply( [ scalar @$items, $items->[-1]->{name} ], [ 51, $MORE ], 'more than 50: 50 + More…' );
-	my $more = items_of( feed( $items->[-1]->{url}, @{ $items->[-1]->{passthrough} } ) );
-	is( scalar @$more, 1, 'the next page (offset 50) through the same fetcher; last page: no More…' );
+	is_deeply( [ scalar @$items, $items->[-1]->{passthrough}->[0]->{path} ], [ 51, '/kidslisten/programs/p51' ], 'more than 50: all 51 in one list (U2), the next page (offset 50) through the same fetcher' );
+	is_deeply( [ map { $_->{url} =~ /offset=([0-9]+)&size=([0-9]+)/ ? "$1/$2" : () } grep { $_->{url} =~ /collectionId=8&/ } requests() ], [ '0/50', '50/50' ], '... pages of 50 at 0 and 50' );
+	ok( !( grep { $_->{name} eq $MORE } @$items ), '... no More…' );
 
 	my $c = collector();
 	$COL->menuPage( { id => '8', kind => 'aggregation' }, 0, $c->cb );

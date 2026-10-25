@@ -58,7 +58,7 @@ my $CLIENT      = ABCListenTest::FakeClient->new('00:00:00:00:00:01');
 my $COLL_MENU   = \&Plugins::ABCListen::Collections::_collectionMenu;
 my $LOAD_FAILED = string('PLUGIN_ABCLISTEN_LOAD_FAILED');
 my $EMPTY       = string('PLUGIN_ABCLISTEN_EMPTY_COLLECTION');
-my $MORE        = string('PLUGIN_ABCLISTEN_MORE');
+my $MORE        = "More\x{2026}";    # U2: no collection menu lists a More… row any more
 my $AU_ONLY     = string('PLUGIN_ABCLISTEN_AUDIOBOOKS_AU_ONLY');
 my $AZ          = string('PLUGIN_ABCLISTEN_AUDIOBOOKS_AZ');
 
@@ -375,10 +375,14 @@ subtest 'Kids listen (full section): live station, Featured, Latest Programs, Al
 	is( scalar( grep { $_->{name} eq $MORE } @$programs ), 0, 'no More…' );
 	is( $programs->[1]->{passthrough}->[0]->{path}, '/kidslisten/programs/bedtime-stories', 'e.g. Bedtime Stories -> its program menu (episodes)' );
 	my $podcasts = items_of( open_item( $by{'Kids & Families podcasts'}, $CLIENT ) );
-	is( $podcasts->[-1]->{name}, $MORE, 'Kids & Families podcasts: a first page + More… (52 in all)' );
+	ok( @$podcasts && !( grep { $_->{name} eq $MORE } @$podcasts ), 'Kids & Families podcasts: the first page\'s podcasts (52 in all; the later pages are not routed here, so the list ends there), no More…' );
 	my $books = items_of( open_item( $by{'Books for Kids'}, $CLIENT ) );
 	is( scalar @$books, 7, 'Books for Kids: 7 books' );
-	is( scalar( grep { $_->{url} =~ m{/(?:collection|programAggregationCollection)/x} } ( requests() )[ $before .. scalar( requests() ) - 1 ] ), 0, 'no new collection request: served from the root\'s prefetch' );
+	is_deeply(
+		[ map { $_->{url} =~ /collectionId=([0-9]+)&offset=([0-9]+)/ ? "$1\@$2" : $_->{url} } grep { $_->{url} =~ m{/(?:collection|programAggregationCollection)/x} } ( requests() )[ $before .. scalar( requests() ) - 1 ] ],
+		[ '104141842@3', '104141842@23', '104141842@43' ],
+		'first pages served from the root\'s prefetch; the only new collection requests are Kids & Families podcasts\' later pages, from the 3 cards the trimmed fixture holds (U2: one list)'
+	);
 };
 
 subtest 'Kids listen: state versions listed when stationItem defines them; extras fall back to tokens and the icon' => sub {

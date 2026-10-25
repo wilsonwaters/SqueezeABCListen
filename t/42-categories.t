@@ -74,7 +74,7 @@ my $COLL_MENU   = \&Plugins::ABCListen::Collections::_collectionMenu;
 my $PROGRAM     = \&Plugins::ABCListen::OnDemand::_programMenu;
 my $LOAD_FAILED = string('PLUGIN_ABCLISTEN_LOAD_FAILED');
 my $EMPTY       = string('PLUGIN_ABCLISTEN_EMPTY_COLLECTION');
-my $MORE        = string('PLUGIN_ABCLISTEN_MORE');
+my $MORE        = "More\x{2026}";    # U2: no collection menu lists a More… row any more
 my $BROWSE      = string('PLUGIN_ABCLISTEN_CATEGORIES');
 my $AZ          = string('PLUGIN_ABCLISTEN_PODCASTS_AZ');
 my $META_QUERY  = { rootMetaCollectionId => '106118844', metaInMeta => 'false' };
@@ -1260,20 +1260,23 @@ subtest 'Podcasts sub-collections: requests carry rootMetaCollectionId=106118844
 		'the recorded URLs carry rootMetaCollectionId=106118844 and metaInMeta=false (the categories collection, D7: none)'
 	);
 
+	# ABC reports 7, the fixture's first page holds 3: U2 lists the rest from offset 3 in the same menu
+	route_json( sub_url( 105492374, 3 ), { collection => { pagination => { total => 7 }, items => [ map { program_card($_) } 9 .. 12 ] } } );
+
 	my $c = open_item( $items->[0] );
 	advanceTime(3);
 	my $nn = items_of($c);
 	is( $c->count, 1, 'New & Noteworthy: one callback' );
-	cmp_ok( scalar( grep { $_->{url} && $_->{url} == $PROGRAM } @$nn ), '>=', 1, 'New & Noteworthy: >= 1 program item (O2\'s program menu)' );
+	is( scalar( grep { $_->{url} && $_->{url} == $PROGRAM } @$nn ), 7, 'New & Noteworthy: 7 program items (O2\'s program menu): ABC\'s total, as one list' );
 	is_deeply( [ map { $_->{passthrough}->[0]->{path} } @$nn[ 0 .. 2 ] ], [ '/listen/programs/planet-america-page', '/listen/programs/abc-rewind', '/listen/programs/the-walkers-the-real-salt-path' ], 'each opens its program page' );
-	is( scalar( collection_requests() ), 4, 'opening it made no new collection request (the artwork lookup cached its first page)' );
-	is( $nn->[-1]->{name}, $MORE, 'More… (ABC reports 7, the fixture holds 3)' );
-	is_deeply( $nn->[-1]->{passthrough}, [ { id => '105492374', title => 'New & Noteworthy', query => $META_QUERY, image => $items->[0]->{image} }, 3, 1 ], 'More… keeps the query, next offset 3' );
-
-	route_json( sub_url( 105492374, 3 ), { collection => { pagination => { total => 7 }, items => [ program_card(9) ] } } );
-	open_item( $nn->[-1] );
-	advanceTime(3);
-	is( ( collection_requests() )[-1], "$BFF_COLL?collectionId=105492374&metaInMeta=false&offset=3&rootMetaCollectionId=106118844&size=20", 'More…: offset 3 with the same query' );
+	is_deeply( names( [ @$nn[ 3 .. 6 ] ] ), [ map {"Program $_"} 9 .. 12 ], 'then the next page\'s programs, in order' );
+	ok( !( grep { $_->{name} eq $MORE } @$nn ), 'no More… row' );
+	is_deeply(
+		[ ( collection_requests() )[ 4 .. 4 ] ],
+		["$BFF_COLL?collectionId=105492374&metaInMeta=false&offset=3&rootMetaCollectionId=106118844&size=20"],
+		'opening it: one new collection request, the next page (offset 3, the same query); the first page came from the artwork lookup\'s cache'
+	);
+	is( scalar( collection_requests() ), 5, '... and no other' );
 	check_names( $nn, 'New & Noteworthy' );
 };
 
@@ -1380,12 +1383,13 @@ subtest 'withImages (D6): at most 4 first pages at a time; the rest start as ans
 # Browse by category -> a category
 # ---------------------------------------------------------------------------
 
-subtest 'Browse by category -> True Crime: collectionId=104142226 pages 20 at a time + More… -> O2\'s program menu' => sub {
+subtest 'Browse by category -> True Crime: collectionId=104142226, every page as one list (U2) -> O2\'s program menu' => sub {
 	fresh();
 	route_podcasts();
 	route_sub_collections();
 	route_categories();
 	route( "$BFF_COLL?collectionId=104142226&offset=0&size=20", file => 'discovery/bff-collection-category-true-crime.json', headers => $JSON_TYPE );
+	route_json( "$BFF_COLL?collectionId=104142226&offset=4&size=20", { collection => { pagination => { total => 22 }, items => [ program_card(7), program_card(8) ] } } );
 
 	my $browse = without_az( sub { podcasts_root() } )->[3];
 	my ($trueCrime) = grep { $_->{name} eq 'True Crime' } @{ $browse->{items} };
@@ -1394,19 +1398,15 @@ subtest 'Browse by category -> True Crime: collectionId=104142226 pages 20 at a 
 	advanceTime(3);
 	is( $c->count, 1, 'one callback' );
 	my $programs = items_of($c);
-	is( ( collection_requests() )[-1], "$BFF_COLL?collectionId=104142226&offset=0&size=20", 'GET collection/x?collectionId=104142226&offset=0&size=20 (the category page id; no MetaCollection query)' );
-	is_deeply( names($programs), [ 'The Case Of', 'Unravel', 'Uncover', 'Someone Knows Something', $MORE ], 'the program links (4 recorded of 22), then More…' );
-	is_deeply( [ map { $_->{url} } @$programs[ 0 .. 3 ] ], [ ($PROGRAM) x 4 ], 'each opens O2\'s program -> episodes menu' );
+	is_deeply(
+		[ grep {/104142226/} collection_requests() ],
+		[ "$BFF_COLL?collectionId=104142226&offset=0&size=20", "$BFF_COLL?collectionId=104142226&offset=4&size=20" ],
+		'GET collection/x?collectionId=104142226 (the category page id; no MetaCollection query) from 0, then from 4 (the cards sent); 24 is past ABC\'s total 22'
+	);
+	is_deeply( names($programs), [ 'The Case Of', 'Unravel', 'Uncover', 'Someone Knows Something', 'Program 7', 'Program 8' ], 'the program links (4 recorded, then the next page\'s 2), one list, no More…' );
+	is_deeply( [ map { $_->{url} } @$programs ], [ ($PROGRAM) x 6 ], 'each opens O2\'s program -> episodes menu' );
 	is( $programs->[0]->{passthrough}->[0]->{path}, '/listen/programs/the-case-of', 'with its program page path' );
 	ok( !( grep { !$_->{image} || $_->{image} eq $ICON } @$programs[ 0 .. 3 ] ), 'every program shows its artwork' );
-	is_deeply( $programs->[4]->{passthrough}, [ $trueCrime->{passthrough}->[0], 4, 2 ], 'More…: the same category, next offset 4, level 2' );
-
-	route_json( "$BFF_COLL?collectionId=104142226&offset=4&size=20", { collection => { pagination => { total => 22 }, items => [ program_card(7), program_card(8) ] } } );
-	$c = open_item( $programs->[4] );
-	advanceTime(3);
-	is( ( collection_requests() )[-1], "$BFF_COLL?collectionId=104142226&offset=4&size=20", 'More…: offset 4' );
-	is_deeply( names( items_of($c) ), [ 'Program 7', 'Program 8', $MORE ], 'the next page, More… again (6 of 22)' );
-	is( items_of($c)->[-1]->{passthrough}->[1], 6, 'next offset 6' );
 	ok( !( grep {m{/_next/data/.*listenapp}} urls() ), 'no category page fetched (the id pages directly)' );
 	check_names( $programs, 'True Crime' );
 };
@@ -1509,17 +1509,17 @@ subtest 'category fallback: the category id gives nothing -> its page\'s first c
 	route( "$BFF_COLL?collectionId=104142226&offset=0&size=20", file => 'discovery/bff-collection-category-true-crime.json', headers => $JSON_TYPE );
 
 	my $category = { id => '999', title => 'True Crime', fallbackPath => '/listen/listenapp/true-crime/104142226' };
+	route_json( "$BFF_COLL?collectionId=104142226&offset=4&size=20", { collection => { pagination => { total => 22 }, items => [ program_card(7) ] } } );
 	my $c = feed( $COLL_MENU, $CLIENT, $category, 0, 2 );
 	advanceTime(3);
 	is( $c->count, 1, 'one callback' );
 	is_deeply(
 		[ grep { !m{/listen/programs/} } urls() ],
-		[ "$BFF_COLL?collectionId=999&offset=0&size=20", "$SITE/listen/search", "$NEXT/listen/listenapp/true-crime/104142226.json", "$BFF_COLL?collectionId=104142226&offset=0&size=20" ],
-		'0 cards for 999 -> nextData(the category page) -> its first StandardCollection (componentProps.id 104142226) -> collection/x for 104142226'
+		[ "$BFF_COLL?collectionId=999&offset=0&size=20", "$SITE/listen/search", "$NEXT/listen/listenapp/true-crime/104142226.json", "$BFF_COLL?collectionId=104142226&offset=0&size=20", "$BFF_COLL?collectionId=104142226&offset=4&size=20" ],
+		'0 cards for 999 -> nextData(the category page) -> its first StandardCollection (componentProps.id 104142226) -> collection/x for 104142226, then its next page (U2: 104142226, no second fallback)'
 	);
 	my $items = items_of($c);
-	is_deeply( names($items), [ 'The Case Of', 'Unravel', 'Uncover', 'Someone Knows Something', $MORE ], 'its programs and More…' );
-	is_deeply( $items->[-1]->{passthrough}, [ { id => '104142226', title => 'True Crime' }, 4, 2 ], 'More… pages 104142226 (no fallbackPath: no second fallback)' );
+	is_deeply( names($items), [ 'The Case Of', 'Unravel', 'Uncover', 'Someone Knows Something', 'Program 7' ], 'its programs, both pages, one list (no More…)' );
 
 	fresh();
 	route( "$BFF_COLL?collectionId=999&offset=0&size=20", code => 404, content => 'gone' );
