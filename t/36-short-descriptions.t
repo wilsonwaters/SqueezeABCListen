@@ -188,7 +188,7 @@ subtest 'shortText: initials and abbreviations are not sentence ends' => sub {
 	unlike( $s, qr/R\.A\. \Q$ELLIPSIS\E\z/, 'not cut after "R.A."' );
 	like( $s, qr/[a-z]\Q$ELLIPSIS\E\z/, '... a word cut instead (no sentence end in reach)' );
 
-	for my $abbr ( 'Dr.', 'Mr.', 'Mrs.', 'Ms.', 'St.', 'Prof.', 'e.g.', 'i.e.', 'vs.', 'J.' ) {
+	for my $abbr ( 'Dr.', 'Mr.', 'Mrs.', 'Ms.', 'St.', 'Prof.', 'Jr.', 'Inc.', 'No.', 'e.g.', 'i.e.', 'vs.', 'J.' ) {
 		my $t = ( 'x' x 120 ) . " met $abbr Somebody " . ( 'and more ' x 20 );
 		my ($cut) = $OD->shortText($t);
 		unlike( $cut, qr/\Q$abbr\E \Q$ELLIPSIS\E\z/, "not a sentence end: '$abbr'" );
@@ -227,6 +227,31 @@ subtest 'shortText: else the last word boundary, then "…" (trailing punctuatio
 
 	is_deeply( short( 'abc def ghi jkl mno pqr stu', 10 ), [ "abc def$ELLIPSIS", 1 ], 'a smaller $max' );
 	is_deeply( short( 'abcdefghi jkl', 10 ), [ "abcdefghi$ELLIPSIS", 1 ], 'cut exactly before the space at $max - 1' );
+};
+
+subtest 'shortText: a stop inside a word (abc.net.au, 3.5) is not a sentence end' => sub {
+	my $text = 'Find every program, podcast and live station of the ABC in one place and hear them whenever you like, '
+		. 'on the website at abc.net.au/listen and in the app, which more than 3.5 million Australians use every single week of the year.';
+	ok( length($text) > 200, '(longer than the cap; no sentence end before it)' );
+	my ($s) = $OD->shortText($text);
+	unlike( $s, qr/ \Q$ELLIPSIS\E\z/, 'not a sentence cut' );
+	unlike( $s, qr/(?:abc|3)\.\s*\Q$ELLIPSIS\E\z/, 'never after "abc." or "3."' );
+	like( $s, qr/[a-z]\Q$ELLIPSIS\E\z/, 'a word cut' );
+	cut_ok( $text, 200, 'the invariants' );
+};
+
+subtest 'shortText: after a sentence end past the cap, the fallback cuts from the start (no stale match position)' => sub {
+	my ( $s, $x ) = $OD->shortText( ( 'a' x 250 ) . '. More text here and more.' );
+	is( $s, ( 'a' x 199 ) . $ELLIPSIS, '250 letters, ". More text…": the first 199 letters and "…"' );
+	is( $x, 1, '... shortened' );
+
+	my $url = 'https://www.abc.net.au/listen/' . ( 'x' x 230 );
+	is( length $url, 260, '(a 260-character URL)' );
+	($s) = $OD->shortText( "$url. Then a sentence about it, and some more words." );
+	is( $s, substr( $url, 0, 199 ) . $ELLIPSIS, 'a URL followed by a sentence: the start of the URL' );
+
+	($s) = $OD->shortText( ( 'b' x 150 ) . '! ' . ( 'c' x 300 ) );
+	is( $s, ( 'b' x 150 ) . '! ' . $ELLIPSIS, 'a sentence end before the cap still wins' );
 };
 
 subtest 'shortText: a single word longer than the cap is the one case cut inside a word' => sub {

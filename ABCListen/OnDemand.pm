@@ -79,7 +79,8 @@ package Plugins::ABCListen::OnDemand;
 #     - a first paragraph that fits is kept whole, without an ellipsis;
 #     - a longer one is cut at the last sentence end that leaves at least half of $max ("."
 #       "!" "?" "…" and closing quotes or brackets, then a space; "。" "！" "？" need no space;
-#       "R.A." style initials and Dr. Mr. Mrs. Ms. St. e.g. i.e. vs. etc. are not sentence ends)
+#       "R.A." style initials and Dr. Mr. Mrs. Ms. Mx. St. Prof. Rev. Mt. Jr. Inc. No. vs. e.g.
+#       i.e. are not sentence ends)
 #       followed by " …"; else at the last word boundary (a space, or beside a Chinese or
 #       Japanese character), trailing commas, colons, dashes and opening brackets or quotes
 #       dropped, followed by "…". A word is never cut, except a single word longer than $max,
@@ -676,7 +677,7 @@ sub _resetProviders { @PROVIDERS = (); return }
 my $CJK = qr/[\p{Han}\p{Hiragana}\p{Katakana}]/;
 
 # Abbreviations whose full stop doesn't end a sentence (lower case, without the last stop)
-my %ABBREVIATION = map { $_ => 1 } qw(dr mr mrs ms mx st prof rev mt vs e.g i.e);
+my %ABBREVIATION = map { $_ => 1 } qw(dr mr mrs ms mx st prof rev mt jr inc no vs e.g i.e);
 
 sub shortText {
 	my ( $class, $text, $max ) = @_;
@@ -732,6 +733,7 @@ sub _cutText {
 		last if $end > $max - 2;
 		$sentence = $end unless _notSentenceEnd( substr( $text, 0, $end ) );
 	}
+	pos($text) = undef;    # the loop may stop part-way: later //g matches must start at 0
 
 	if ( defined $sentence && $sentence >= $max / 2 ) {
 		my $head = substr( $text, 0, $sentence );
@@ -748,6 +750,7 @@ sub _cutText {
 
 	# a single word longer than that: cut at a character (grapheme) boundary
 	my $head = '';
+	pos($text) = undef;
 	while ( $text =~ /(\X)/g ) {
 		last if length($head) + length($1) > $limit;
 		$head .= $1;
