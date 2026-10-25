@@ -39,7 +39,9 @@ package Plugins::ABCListen::LiveMetadata;
 #                                  known live station, a "Program info" link; undef for other URLs.
 #                                  The link's feed answers exactly once, within INFO_DEADLINE (3 s):
 #                                  the station synopsis (textarea, first: in menu mode LMS blanks
-#                                  rows listed before a textarea), "On air: <program> · <time slot>",
+#                                  rows listed before a textarea; U1: OnDemand->descriptionItems,
+#                                  so at most ~200 characters, then "About this station" with the
+#                                  whole text when it was shortened), "On air: <program> · <time slot>",
 #                                  "Presented by <presenters>", "Next: <program> · <time slot>"
 #                                  (NowPlaying->programNext, fetched only here); rows without data
 #                                  are left out (the station name when nothing is known).
@@ -96,6 +98,7 @@ use Slim::Utils::Strings qw(cstring);
 use Slim::Utils::Timers;
 
 use Plugins::ABCListen::NowPlaying;
+use Plugins::ABCListen::OnDemand;
 use Plugins::ABCListen::Stations;
 use Plugins::ABCListen::Tracks;
 use Plugins::ABCListen::Util;
@@ -539,8 +542,9 @@ sub _programInfoItems {
 	my $rec = Plugins::ABCListen::Stations->get($id) || {};
 	my $now = $NOW_PLAYING->cached($id) || $NOW_PLAYING->lastGood($id);
 
-	my @items;
-	push @items, { type => 'textarea', wrap => 1, name => $rec->{synopsis} } if _isText( $rec->{synopsis} );
+	# U1: the synopsis as a short header, then "About this station" when it was shortened
+	my @items = Plugins::ABCListen::OnDemand->descriptionItems( $client, $rec->{synopsis}, 'PLUGIN_ABCLISTEN_ABOUT_STATION' );
+	$items[0]->{wrap} = 1 if @items;
 
 	if ($now) {
 		push @items, { type => 'text', name => cstring( $client, 'PLUGIN_ABCLISTEN_ON_AIR', _label($now) ) };

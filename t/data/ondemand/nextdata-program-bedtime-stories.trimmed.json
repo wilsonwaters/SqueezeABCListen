@@ -1,0 +1,196 @@
+{
+  "pageProps": {
+    "heroImageWithCTAPrepared": {
+      "heading": "Bedtime Stories with R.A. Spratt",
+      "uri": "coremedia://program/106961186",
+      "canonicalURI": "/listen/programs/bedtime-stories-with-ra-spratt",
+      "attributionLinksPrepared": [
+        {
+          "url": "https://www.abc.net.au/kidslisten/",
+          "title": "ABC Kids listen",
+          "screenReaderText": "Source:"
+        }
+      ],
+      "heroImagePrepared": {
+        "imgSrc": "https://live-production.wcms.abc-cdn.net.au/bee444386b047d9ca0c5b6236ddbfbdb?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862"
+      }
+    },
+    "heroDescriptionPrepared": {
+      "descriptionPrepared": {
+        "descriptor": {
+          "type": "tagname",
+          "key": "div",
+          "props": {},
+          "children": [
+            {
+              "type": "tagname",
+              "key": "@@standfirst",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "The world's most glamorous flying pig, Nanny Piggins tells side-splitting stories and fractured fairytales for curious kids."
+                }
+              ]
+            },
+            {
+              "type": "tagname",
+              "key": "p",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "The stories are perfect for bedtime, long car rides or even if you're just stuck waiting a really, really long time at the doctor's office. Written with kids aged 7–11 in mind, these are tales the whole family can enjoy, because silliness is ageless. If you're into cake, danger and dodging responsibility, you'll love Bedtime Stories with R.A. Spratt. Remember, these myths and fairytales were written in the ancient story times so may reference silly ancient violence and occasional pigism."
+                }
+              ]
+            },
+            {
+              "type": "tagname",
+              "key": "p",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "R.A. Spratt (Rachel Spratt) is a beloved Australian children's author, television writer, and podcast host, best known for creating the Nanny Piggins series, along with Friday Barnes, Girl Detective,The Peski Kids and Hamlet Is Not OK. She's also responsible for story collections like Shockingly Good Stories and Epically Good Greek Myths and most recently, The Epically Awesome Odyssey as told by Nanny Piggins."
+                }
+              ]
+            },
+            {
+              "type": "tagname",
+              "key": "p",
+              "props": {},
+              "children": [
+                {
+                  "type": "text",
+                  "content": "Stories written and performed by R.A. Spratt."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "uri": "coremedia://program/106961186"
+    },
+    "presentersPrepared": [
+      {
+        "id": "106961272",
+        "label": {
+          "full": "R.A. Spratt"
+        }
+      }
+    ],
+    "programCollectionPrepared": {
+      "id": "106961196",
+      "pagination": {
+        "collectionLoaderLimit": 10,
+        "offset": 0,
+        "size": 10,
+        "total": 21
+      },
+      "items": [
+        {
+          "articleLink": "/listen/programs/bedtime-stories-with-ra-spratt/ep-00-introducing/106961254",
+          "cardAttributionPrepared": {
+            "publishedDate": "2026-08-03T14:00:00+00:00",
+            "publishedDateFormat": false
+          },
+          "cardImagePrepared": {
+            "alt": "Drawing of a pig in a green frock and aviator's goggles, holding a sword. Text says Bedtime Stories with RA Spratt",
+            "imgSrc": "https://live-production.wcms.abc-cdn.net.au/bee444386b047d9ca0c5b6236ddbfbdb?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+            "ratio": "1x1",
+            "srcSet": [
+              "https://live-production.wcms.abc-cdn.net.au/bee444386b047d9ca0c5b6236ddbfbdb?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w",
+              "https://live-production.wcms.abc-cdn.net.au/bee444386b047d9ca0c5b6236ddbfbdb?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862 862w"
+            ],
+            "width": "862",
+            "height": "862"
+          },
+          "cardMediaIndicatorPrepared": {
+            "icon": "audio",
+            "duration": false
+          },
+          "contentLabelPrepared": null,
+          "contentUri": "coremedia://audioepisode/106961254",
+          "description": "Meet Nanny Piggins. The world's most glamorous flying pig.",
+          "cardId": "106961254",
+          "cardTitle": "Introducing Nanny Piggins",
+          "noBorders": true,
+          "presentersPrepared": [
+            {
+              "canonicalURI": "/listen/ra-spratt/106961272",
+              "canonicalURL": "https://www.abc.net.au/listen/ra-spratt/106961272",
+              "id": "106961272",
+              "names": {
+                "full": "R.A. Spratt"
+              },
+              "role": "Presenter"
+            }
+          ],
+          "imagePositionPrepared": {
+            "mobile": "left",
+            "tablet": "left",
+            "desktop": "left"
+          },
+          "cardContentPositionPrepared": {},
+          "hasMobileFeatured": true,
+          "docType": "audioepisode",
+          "segments": null,
+          "programTemplate": "audio",
+          "expanded": true
+        },
+        {
+          "articleLink": "/listen/programs/bedtime-stories-with-ra-spratt/the-legend-of-the-giants-causeway-as-told-by-nanny-piggins/106983132",
+          "cardAttributionPrepared": {
+            "publishedDate": "2026-08-24T14:00:00+00:00",
+            "publishedDateFormat": false
+          },
+          "cardImagePrepared": {
+            "alt": "Drawing of a pig in a green frock and aviator's goggles, holding a sword. Text says Bedtime Stories with RA Spratt",
+            "imgSrc": "https://live-production.wcms.abc-cdn.net.au/bee444386b047d9ca0c5b6236ddbfbdb?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862",
+            "ratio": "1x1",
+            "srcSet": [
+              "https://live-production.wcms.abc-cdn.net.au/bee444386b047d9ca0c5b6236ddbfbdb?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=160&height=160 160w",
+              "https://live-production.wcms.abc-cdn.net.au/bee444386b047d9ca0c5b6236ddbfbdb?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862 862w"
+            ],
+            "width": "862",
+            "height": "862"
+          },
+          "cardMediaIndicatorPrepared": {
+            "icon": "audio",
+            "duration": false
+          },
+          "contentLabelPrepared": null,
+          "contentUri": "coremedia://audioepisode/106983132",
+          "description": "When Samantha is taught at school that the Giant's Causeway in Northern Ireland was caused by volcanic rock, Nanny Piggins tells her the real story that involved two giants, one of them her distant piggy relative.",
+          "cardId": "106983132",
+          "cardTitle": "The Legend of the Giant's Causeway as told by Nanny Piggins",
+          "noBorders": true,
+          "presentersPrepared": [
+            {
+              "canonicalURI": "/listen/ra-spratt/106961272",
+              "canonicalURL": "https://www.abc.net.au/listen/ra-spratt/106961272",
+              "id": "106961272",
+              "names": {
+                "full": "R.A. Spratt"
+              },
+              "role": "Presenter"
+            }
+          ],
+          "imagePositionPrepared": {
+            "mobile": "left",
+            "tablet": "left",
+            "desktop": "left"
+          },
+          "cardContentPositionPrepared": {},
+          "hasMobileFeatured": true,
+          "docType": "audioepisode",
+          "segments": null,
+          "programTemplate": "audio",
+          "expanded": false
+        }
+      ]
+    },
+    "programTemplate": "audio",
+    "webDistributionRestricted": false
+  }
+}

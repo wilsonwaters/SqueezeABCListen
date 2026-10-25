@@ -64,6 +64,9 @@ my $PROGRAM_MENU = \&Plugins::ABCListen::OnDemand::_programMenu;
 my $EPISODE_MENU = \&Plugins::ABCListen::OnDemand::_episodeMenu;
 my $MORE_FEED    = \&Plugins::ABCListen::OnDemand::_moreEpisodes;
 
+my $SCIENCE_FIRST = 'The Science Show gives Australians unique insights into the latest scientific research and debate, from the physics of cricket to prime ministerial biorhythms.';
+my $SCIENCE_AIRS  = 'Airs Saturday 12pm, Monday 4am and 1.30pm and Tuesday 9.30pm.';
+
 my $SCIENCE_IMG     = "$WCMS/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=862&height=862";
 my $SCIENCE_IMG_300 = "$WCMS/a9bfe6ad8b283391297dd347dd60de8f?impolicy=wcms_crop_resize&cropH=3000&cropW=3000&xPos=0&yPos=0&width=300&height=300";
 
@@ -464,14 +467,17 @@ subtest 'program menu (The Science Show): header, 50 episodes newest first, More
 	is( $c->count, 1, 'one callback' );
 	my $items = items_of($c);
 
-	is( scalar @$items, 54, 'count 54: description, presenters, network, 50 episodes, More (no providers)' );
-	is( $items->[0]->{type}, 'textarea', 'item 1: the description as a textarea' );
-	like( $items->[0]->{name}, qr/\AThe Science Show gives Australians unique insights/, 'item 1: description text' );
-	is_deeply( [ sort keys %{ $items->[0] } ], [qw(name type)], 'textarea: exact keys' );
-	is_deeply( $items->[1], text_item('Presented by Robyn Williams, Belinda Smith'), 'item 2: Presented by …' );
-	is_deeply( $items->[2], text_item('ABC Radio National'), 'item 3: the network (program page attribution)' );
+	is( scalar @$items, 55, 'count 55: description, About this program, presenters, network, 50 episodes, More (no providers)' );
+	is_deeply( $items->[0], { name => $SCIENCE_FIRST, type => 'textarea' }, 'item 1: the description\'s first paragraph as a textarea (exact keys; U1)' );
+	is_deeply(
+		$items->[1],
+		{ name => 'About this program', type => 'link', items => [ { name => "$SCIENCE_FIRST\n\n$SCIENCE_AIRS", type => 'textarea' } ] },
+		'item 2: "About this program" with the whole description (U1: the header was shortened)'
+	);
+	is_deeply( $items->[2], text_item('Presented by Robyn Williams, Belinda Smith'), 'item 3: Presented by …' );
+	is_deeply( $items->[3], text_item('ABC Radio National'), 'item 4: the network (program page attribution)' );
 
-	my @episodes = @$items[ 3 .. 52 ];
+	my @episodes = @$items[ 4 .. 53 ];
 	is( scalar( grep { $_->{type} eq 'link' && $_->{url} == $EPISODE_MENU && $_->{play} =~ m{\Aabclisten://episode/[0-9]+\z} } @episodes ), 50, '50 episode rows: links with a play URL' );
 	is( scalar( grep { $_->{name} =~ $EPISODE_NAME } @episodes ), 50, 'episode names: "<Day> <d> <Mon>[ <year>] – <title>"' );
 	is( $episodes[0]->{name}, "Sat 17 Oct \x{2013} Episode 0", 'newest first' );
@@ -481,11 +487,11 @@ subtest 'program menu (The Science Show): header, 50 episodes newest first, More
 	is( $episodes[0]->{line2}, "Sat 17 Oct \x{B7} 55 min", 'line2 = date · duration' );
 
 	is_deeply(
-		$items->[53],
-		{ name => $MORE, type => 'link', url => $MORE_FEED, passthrough => $items->[53]->{passthrough} },
-		'item 54: "More episodes…" link'
+		$items->[54],
+		{ name => $MORE, type => 'link', url => $MORE_FEED, passthrough => $items->[54]->{passthrough} },
+		'item 55: "More episodes…" link'
 	);
-	is( $items->[53]->{name}, "More episodes\x{2026}", 'More text' );
+	is( $items->[54]->{name}, "More episodes\x{2026}", 'More text' );
 
 	is_deeply( [ map { $_->{fn} } @API_CALLS ], [qw(nextData bff)], 'one program page, one episode page' );
 	is_deeply( [ episode_requests() ], ["$EPS?collectionId=2885458&offset=0&size=50"], 'episodes 0..49 of collection 2885458' );
@@ -497,7 +503,7 @@ subtest 'program menu (The Science Show): header, 50 episodes newest first, More
 	check_names( $items, 'program menu' );
 
 	# More: 4 more pages of 50, the last without a More link (ABC's 250)
-	my $more  = $items->[53];
+	my $more  = $items->[54];
 	my $pages = 0;
 	my @all   = @episodes;
 	while ($more) {
@@ -568,8 +574,8 @@ subtest 'program menu: empty and error states (one readable text item, never emp
 	$c = feed( $PROGRAM_MENU, undef, { title => 'The Science Show', path => $SCIENCE } );
 	my $items = items_of($c);
 	is( $c->count, 1, 'episodes fail: one callback' );
-	is( scalar @$items, 4, 'episodes fail: the header, then one item' );
-	is_deeply( $items->[3], text_item($LOAD_FAILED), 'episodes fail: LOAD_FAILED where the episodes would be' );
+	is( scalar @$items, 5, 'episodes fail: the header (with About this program), then one item' );
+	is_deeply( $items->[4], text_item($LOAD_FAILED), 'episodes fail: LOAD_FAILED where the episodes would be' );
 
 	fresh();
 	route( "$NEXT/listen/programs/quiet.json", file => 'ondemand/nextdata-program-emptydesc.synthetic.json', headers => $JSON_TYPE );
@@ -588,9 +594,11 @@ subtest 'program menu: empty and error states (one readable text item, never emp
 	$c = feed( $PROGRAM_MENU, undef, { title => 'The Dictionary of Lost Words', path => '/listen/audiobooks/the-dictionary-of-lost-words-page' } );
 	$items = items_of($c);
 	is( $c->count, 1, 'audiobook: one callback' );
-	is_deeply( [ map { $_->{type} } @$items ], [qw(textarea text)], 'audiobook (restricted, no collection): description and presenters only' );
+	is_deeply( [ map { $_->{type} } @$items ], [qw(textarea link text)], 'audiobook (restricted, no collection): description, About this program and presenters only' );
 	ok( !( grep { $_->{name} eq $NO_EPISODES } @$items ), 'audiobook: no "No episodes available" row' );
-	is( $items->[1]->{name}, 'Presented by Pip Williams', 'audiobook: presenters' );
+	is( $items->[0]->{name}, "In 1901, the word 'bondmaid' was discovered missing from the Oxford English Dictionary. This is the story of the girl who stole it.", 'audiobook: the first paragraph (standfirst) heads the menu' );
+	like( $items->[1]->{items}->[0]->{name}, qr/\AIn 1901, .+ stole it\.\n\nMotherless .+\n\nOver time, .+Lost Words\.\z/s, 'audiobook: About this program holds every paragraph' );
+	is( $items->[2]->{name}, 'Presented by Pip Williams', 'audiobook: presenters' );
 
 	fresh();
 	$c = feed( $PROGRAM_MENU, undef, undef );
@@ -613,7 +621,8 @@ subtest 'program menu: empty and error states (one readable text item, never emp
 	route_science();
 	route_episodes();
 	$c = feed( $PROGRAM_MENU, $client, { title => 'The Science Show', path => $SCIENCE } );
-	is( scalar @{ items_of($c) }, 54, 'with a client: the same menu' );
+	is( scalar @{ items_of($c) }, 55, 'with a client: the same menu' );
+	is( items_of($c)->[1]->{name}, 'About this program', 'with a client: the About row in the client\'s language' );
 };
 
 subtest 'program menu: a restricted program with nothing else to list says "No episodes available" (never an empty list)' => sub {
@@ -712,10 +721,10 @@ subtest 'registry: order, merged program detail, isolation' => sub {
 	is( $c->count, 1, 'then one callback' );
 
 	my $items = items_of($c);
-	is_deeply( [ map { $_->{name} } @$items[ 3 .. 5 ] ], [ 'Extra A', 'Extra B', 'Extra C' ], 'extras after the header, in registration order (non-hash entries dropped)' );
-	like( $items->[6]->{name}, $EPISODE_NAME, 'then the episodes' );
+	is_deeply( [ map { $_->{name} } @$items[ 4 .. 6 ] ], [ 'Extra A', 'Extra B', 'Extra C' ], 'extras after the header, in registration order (non-hash entries dropped)' );
+	like( $items->[7]->{name}, $EPISODE_NAME, 'then the episodes' );
 	is( $items->[-1]->{name}, $MORE, 'then More' );
-	is( scalar @$items, 57, 'count 54 + 3 extras' );
+	is( scalar @$items, 58, 'count 55 + 3 extras' );
 
 	is_deeply(
 		$received[0],
@@ -751,8 +760,8 @@ subtest 'registry: order, merged program detail, isolation' => sub {
 	is( $c->count, 0, 'still waiting at 4.9 s' );
 	advanceTime(0.1);
 	is( $c->count, 1, 'answered after 5 s without the silent provider' );
-	is_deeply( [ map { $_->{name} } @{ items_of($c) }[ 3, 4 ] ], [ 'Twice 1', 'Good' ], 'dying, non-array and silent providers skipped; a second call back ignored' );
-	is( scalar @{ items_of($c) }, 56, 'count 54 + 2 extras' );
+	is_deeply( [ map { $_->{name} } @{ items_of($c) }[ 4, 5 ] ], [ 'Twice 1', 'Good' ], 'dying, non-array and silent providers skipped; a second call back ignored' );
+	is( scalar @{ items_of($c) }, 57, 'count 55 + 2 extras' );
 
 	$late->( [ { name => 'Too late', type => 'text' } ] );
 	is( $c->count, 1, 'a late call back is ignored (no second answer)' );

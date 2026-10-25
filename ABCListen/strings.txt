@@ -416,6 +416,21 @@ PLUGIN_ABCLISTEN_CHAPTERS_N
 PLUGIN_ABCLISTEN_EPISODES_N
 	EN	Episodes (%s)
 
+# === U1 === Short description headers; the full text behind "About"
+
+# The row after a shortened program description (the menu header keeps only its first paragraph,
+# at most about 200 characters); it opens the whole description
+PLUGIN_ABCLISTEN_ABOUT_PROGRAM
+	EN	About this program
+
+# The same for an episode's synopsis
+PLUGIN_ABCLISTEN_ABOUT_EPISODE
+	EN	About this episode
+
+# The same for a live station's description (Now Playing → Program info)
+PLUGIN_ABCLISTEN_ABOUT_STATION
+	EN	About this station
+
 # === L6 === High-quality live audio via HLS
 
 # The liveQuality option for ABC's HLS streams (the L5 setting)

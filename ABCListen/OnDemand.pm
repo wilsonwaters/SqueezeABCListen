@@ -72,6 +72,33 @@ package Plugins::ABCListen::OnDemand;
 #   not called back within 5 s is skipped (and logged); a second or late call back is ignored.
 #   Non-hash entries in @items are dropped. Returns 1, or 0 (logged) for a non-coderef.
 #
+# Plugins::ABCListen::OnDemand->shortText($text[, $max]) -> ($short, $shortened) | ()      (U1)
+#   Pure. The header text for a description: its first paragraph (the text up to the first line
+#   break; richText separates paragraphs with "\n\n"), whitespace collapsed to single spaces,
+#   at most $max (default SHORT_TEXT_MAX, 200) characters:
+#     - a first paragraph that fits is kept whole, without an ellipsis;
+#     - a longer one is cut at the last sentence end that leaves at least half of $max ("."
+#       "!" "?" "…" and closing quotes or brackets, then a space; "。" "！" "？" need no space;
+#       "R.A." style initials and Dr. Mr. Mrs. Ms. St. e.g. i.e. vs. etc. are not sentence ends)
+#       followed by " …"; else at the last word boundary (a space, or beside a Chinese or
+#       Japanese character), trailing commas, colons, dashes and opening brackets or quotes
+#       dropped, followed by "…". A word is never cut, except a single word longer than $max,
+#       which is cut at a character (grapheme) boundary, then "…".
+#   $shortened is 1 when $short is not the whole text (a later paragraph, or the cut), else 0.
+#   () for undef, a reference or text without a visible character.
+#
+# Plugins::ABCListen::OnDemand->descriptionItems($client, $text, $aboutToken) -> @items     (U1)
+#   The rows that head a menu with a description (LMS menu rule 2: the textarea comes first):
+#     { name => $short, type => 'textarea' }                                  (shortText)
+#   and, only when the text was shortened, right after it:
+#     { name => cstring($aboutToken), type => 'link',
+#       items => [ { name => <the whole text, trimmed>, type => 'textarea' } ] }
+#   ("About this program" / "About this episode" / "About this station"; inline items, no feed,
+#   no description key: LMS menu rule 1). In menu mode LMS moves a leading textarea into the
+#   window header, which apps such as Squeezer show as a fixed block above the list, so a long
+#   description there left no room for the list (#83). Whether the About row is there depends only
+#   on the text, so the rows after it keep their index. () without a description.
+#
 # Plugins::ABCListen::OnDemand->programsByType($client, $cb, $typeKey)            (O3; used by D2, D4)
 #   The A–Z list of one type of program. Class method; $client may be undef. $typeKey is one of
 #   the six type keys (Plugins::ABCListen::ProgramIndex::typeKey of the program's programType),
@@ -109,7 +136,8 @@ package Plugins::ABCListen::OnDemand;
 #       programsByType's one text item (INDEX_FALLBACK, NO_PROGRAMS, LOAD_FAILED).
 #   Never dies ($cb dying is logged; it is not called again).
 #
-# Program menu (_programMenu) order: description (textarea) · "Presented by A, B" · network
+# Program menu (_programMenu) order: description (descriptionItems: the short textarea, then
+# "About this program" when it was shortened) · "Presented by A, B" · network
 # (Programs->program attribution title) · provider extras · the newest 50 episodes · "More
 # episodes…" (the next 50, to ABC's 250). No episodes: "No episodes available", except for a
 # restricted program without an episode collection (an ABC audiobook: D5's provider lists its
@@ -118,7 +146,8 @@ package Plugins::ABCListen::OnDemand;
 # programTitle/programId only when the episode path is under the program path
 # ('<program path>/...'); otherwise O1 fills them at play time.
 #
-# Episode menu (_episodeMenu; O4 extended it): synopsis (textarea) · "Play episode" (type audio,
+# Episode menu (_episodeMenu; O4 extended it): synopsis (descriptionItems: the short textarea,
+# then "About this episode" when it was shortened) · "Play episode" (type audio,
 # favourites keep the abclisten:// URL) · "Broadcast <date> · <duration>". The textarea must stay
 # first (Slim::Control::XMLBrowser's menu mode replaces item 0 with an empty item when it moves a
 # textarea into the window), so items O4 adds go after it. O4's rows, each only when its data
@@ -158,7 +187,9 @@ package Plugins::ABCListen::OnDemand;
 # All programs A–Z, whose menus are unchanged). D7 changed _bucket (Latin letters NFD leaves alone,
 # the Other row) and _letterRows (the Other row), for both A–Z lists; D8 changed _bucket
 # (modifier letters, compatibility forms, ħ ŋ ə). D9 moved _programRows' repeated-title naming
-# into _nameRepeats, unchanged, so Search names its program rows the same way.
+# into _nameRepeats, unchanged, so Search names its program rows the same way. U1 added shortText
+# and descriptionItems (shared with LiveMetadata's Program info) and heads the program and episode
+# menus with them.
 
 use strict;
 use warnings;
@@ -183,6 +214,9 @@ use constant EPISODE_PAGE     => 50;
 use constant PROVIDER_TIMEOUT => 5;      # seconds
 use constant IMAGE_PX         => 300;
 use constant LOAD_FAILED      => 'PLUGIN_ABCLISTEN_LOAD_FAILED';
+
+use constant SHORT_TEXT_MAX => 200;         # U1: characters in a menu's description header
+use constant ELLIPSIS       => "\x{2026}";
 
 # The contract-3 keys episodeItem writes to the episode meta cache
 my @META_KEYS = qw(docType title programTitle programId path image description date duration
@@ -635,6 +669,105 @@ sub registerProgramMenuProvider {
 sub _resetProviders { @PROVIDERS = (); return }
 
 # ---------------------------------------------------------------------------
+# === U1 === Short description headers (shortText, descriptionItems: see the header)
+# ---------------------------------------------------------------------------
+
+# Chinese and Japanese characters: a line may break beside them without a space
+my $CJK = qr/[\p{Han}\p{Hiragana}\p{Katakana}]/;
+
+# Abbreviations whose full stop doesn't end a sentence (lower case, without the last stop)
+my %ABBREVIATION = map { $_ => 1 } qw(dr mr mrs ms mx st prof rev mt vs e.g i.e);
+
+sub shortText {
+	my ( $class, $text, $max ) = @_;
+	return () unless _hasText($text);
+
+	$max = SHORT_TEXT_MAX unless defined $max && !ref $max && $max =~ /\A[0-9]+\z/ && $max >= 10;
+
+	my @paragraphs = grep { length } map { _collapse($_) } split /\R/, $text;
+	return () unless @paragraphs;
+
+	my $first = $paragraphs[0];
+	return ( $first, @paragraphs > 1 ? 1 : 0 ) if length $first <= $max;
+
+	return ( _cutText( $first, $max ), 1 );
+}
+
+sub descriptionItems {
+	my ( $class, $client, $text, $token ) = @_;
+
+	my ( $short, $shortened ) = $class->shortText($text);
+	return () unless defined $short;
+
+	my @items = ( { name => $short, type => 'textarea' } );
+
+	if ($shortened) {
+		( my $full = $text ) =~ s/\A\s+|\s+\z//gu;
+		push @items, {
+			name  => cstring( $client, $token ),
+			type  => 'link',
+			items => [ { name => $full, type => 'textarea' } ],
+		};
+	}
+
+	return @items;
+}
+
+# Whitespace runs -> one space, trimmed.
+sub _collapse {
+	my $text = shift;
+	$text =~ s/\s+/ /gu;
+	$text =~ s/\A | \z//g;
+	return $text;
+}
+
+# $text (one paragraph, longer than $max) cut to at most $max characters, ending in an ellipsis.
+sub _cutText {
+	my ( $text, $max ) = @_;
+
+	# the last sentence end within $max - 2 (room for " …"), if it keeps at least half of $max
+	my $sentence;
+	while ( $text =~ /(?:[.!?\x{2026}]+[\x{2019}\x{201D}"')\]]*(?=\s)|[\x{3002}\x{FF01}\x{FF1F}][\x{300D}\x{300F}\x{FF09}]*)/g ) {
+		my $end = pos($text);
+		last if $end > $max - 2;
+		$sentence = $end unless _notSentenceEnd( substr( $text, 0, $end ) );
+	}
+
+	if ( defined $sentence && $sentence >= $max / 2 ) {
+		my $head = substr( $text, 0, $sentence );
+		return $head . ( $head =~ /[\x{3000}-\x{303F}\x{FF00}-\x{FFEF}]\z/ ? '' : ' ' ) . ELLIPSIS;
+	}
+
+	# else the last word boundary within $max - 1 (room for "…"): before a space, or beside a
+	# Chinese or Japanese character (never before a combining mark)
+	my $limit = $max - 1;
+	if ( $text =~ /\A(.{1,$limit})(?:(?=\s)|(?=$CJK)|(?<=$CJK))(?!\p{Grapheme_Extend})/su ) {
+		( my $head = $1 ) =~ s/[\s,;:\p{Pd}\p{Ps}\p{Pi}]+\z//u;
+		return $head . ELLIPSIS if length $head;
+	}
+
+	# a single word longer than that: cut at a character (grapheme) boundary
+	my $head = '';
+	while ( $text =~ /(\X)/g ) {
+		last if length($head) + length($1) > $limit;
+		$head .= $1;
+	}
+
+	return $head . ELLIPSIS;
+}
+
+# Whether the full stop that ends $prefix belongs to initials ("R.A.", "J.") or an abbreviation.
+sub _notSentenceEnd {
+	my $prefix = shift;
+	return 0 unless $prefix =~ /\.\z/;
+	return 1 if $prefix =~ /(?:\A|[\s.])\p{L}\.\z/;
+	return 1 if $prefix =~ /(?:\A|\s)([\p{L}.]+)\.\z/ && $ABBREVIATION{ lc $1 };
+	return 0;
+}
+
+# === end U1 ===
+
+# ---------------------------------------------------------------------------
 # Program menu
 # ---------------------------------------------------------------------------
 
@@ -709,12 +842,12 @@ sub _programMenuItems {
 	}
 }
 
-# Description (textarea), "Presented by ...", network; each only when known.
+# Description (U1: the short textarea, then "About this program" when shortened), "Presented by
+# ...", network; each only when known.
 sub _programHeader {
 	my ( $client, $detail ) = @_;
-	my @items;
 
-	push @items, { name => $detail->{description}, type => 'textarea' } if _hasText( $detail->{description} );
+	my @items = __PACKAGE__->descriptionItems( $client, $detail->{description}, 'PLUGIN_ABCLISTEN_ABOUT_PROGRAM' );
 
 	my @presenters = grep { _hasText($_) } @{ ref $detail->{presenters} eq 'ARRAY' ? $detail->{presenters} : [] };
 	push @items, { name => cstring( $client, 'PLUGIN_ABCLISTEN_PRESENTED_BY', join( ', ', @presenters ) ), type => 'text' } if @presenters;
@@ -907,8 +1040,9 @@ sub _episodeMenuItems {
 
 	# The synopsis comes first: in menu mode (Jive, Material, CLI menu:1) Slim::Control::XMLBrowser
 	# moves a textarea into the window and writes an empty item at index 0, which would wipe out
-	# a "Play episode" item listed before it.
-	push @items, { name => $episode->{description}, type => 'textarea' } if _hasText( $episode->{description} );
+	# a "Play episode" item listed before it. U1: a short synopsis, then "About this episode" when
+	# it was shortened.
+	push @items, __PACKAGE__->descriptionItems( $client, $episode->{description}, 'PLUGIN_ABCLISTEN_ABOUT_EPISODE' );
 
 	push @items, {
 		name            => cstring( $client, 'PLUGIN_ABCLISTEN_PLAY_EPISODE' ),
