@@ -13,11 +13,11 @@ v1.0.0 accepted by the stakeholder on pi14 (2026-10-25; #17 closed). Now: v1.1.0
 
 ## Currently in flight
 - v1.1.0 (stakeholder feedback 2026-10-25):
-  - #88 L6 HLS (192 kbps via own HLS reader; gated F2 change signed off by the orchestrator) — review REQUEST_CHANGES
-    (segment-failure counter, mid-play bad 200, truncated segments, fMP4 trun bound, scan deadline, H18 test); fixes in
-    progress. After merge: streams.md contract 4 (L6 flags `hls`) and contract 8 (`hls` value).
-  - #86 U1 short description headers (Squeezer) + #90 U2 continuous lists (no "More…") — in review. Merge #86 then #90;
-    strings.txt conflict with L6 = keep both sections.
+  - #86 U1 + #90 U2 — review REQUEST_CHANGES: U1 `_cutText` pos() bug (long word); U2 HIGH: Jive/SqueezePlay/jivelite
+    endless reload on >200-row lists (textarea makes `count` differ per chunk; DB.lua drops the store) → no leading
+    textarea above 200 rows; plus failed ABC page (RN Breakfast offset 150) → sub-page retry, stable total, 60 s
+    failure cache; short page ≠ end; clamp test. Implementer fixing.
+    Merge #86 then #90; strings.txt conflict with L6 = keep the U1 section, then L6's.
   - #77 R6 drift probe + weekly run — implementing.
   - Queued: #79 R7 docs (README/CHANGELOG for U1/U2/L6/F7/F8, drop More-episodes text + unused token), #89 F9
     (404 WARN + F7/F8 review test gaps + Tracks log nit), #72 O9 icons; then system check → 1.1.0 → pi14 re-check.
@@ -37,6 +37,11 @@ v1.0.0 accepted by the stakeholder on pi14 (2026-10-25; #17 closed). Now: v1.1.0
   (fixed), testbed restarted, R2 resumed.
 
 ## Last completions
+- #80 L6 merged (PR #88, squash b95ad87): liveQuality `hls` — own HLS reader (HLS.pm), 192 kbps AAC on music
+  stations, fallback to Icecast, HLS-only services listed in hls mode; gated F2 hook (orchestrator sign-off). Review
+  REQUEST_CHANGES ×2 (failure counters, mid-play bad 200, truncation, trun bound, deadline; then master-fetch reset
+  loop) → fixes; round 2 verified by orchestrator: diff read, check.sh 874 tests, reviewer probes (hls/r2/framer)
+  pass. streams.md contracts 4 and 8 updated. Pending pi14: CPU in top, Cricket/Grandstand, 30+ min play.
 - #76 F7 merged (PR #85, squash c884ebf): seenAt = fetch time in Search + episode resolver; newer-meta guard; D5's
   rule shared in Util. #78 F8 merged (PR #87, squash 5c613b6; orchestrator merged main into the stacked branch, t/11
   conflict = F8 side): warnings rate-limited, unchanged meta not rewritten (re-walk 50 → 0 writes). One reviewer, both

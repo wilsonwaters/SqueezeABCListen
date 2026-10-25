@@ -167,7 +167,10 @@ books without chapters; they play only in Australia anyway), then L4, then M2 (M
    `resolve($client, $id, $cb)` → `$cb->({url, alternates => [...], meta => {...}, failToken => 'PLUGIN_…'})` or
    `$cb->({error => 'PLUGIN_…'})`; the PH tries `url` then each alternate, and reports `failToken` (default
    `PLUGIN_ABCLISTEN_STREAM_FAILED`) if all fail. Candidates are URL strings or `{url, hls => 1}`; the PH never hands
-   LMS an `.m3u8` unless flagged `hls` (only L5 does, when PlayHLS is enabled). `metadata($client, $url, $id)` is synchronous, no network, never
+   LMS an `.m3u8` unless flagged `hls`. Only L6 flags `hls` (`Stations::_hlsCandidates`, liveQuality `hls`); since L6
+   (#88, orchestrator sign-off) an hls-flagged candidate is scanned by `Plugins::ABCListen::HLS->scanUrl` and read
+   through `HLS->new` (own HLS reader → ADTS AAC); every other candidate takes the unchanged core path. L5 never shipped
+   PlayHLS. `metadata($client, $url, $id)` is synchronous, no network, never
    dies → `{title, artist, album, cover, duration}`. Kinds: `live` (registered by `Live->init`), `episode`
    (`Episode->init`, which F1's `OnDemand->init` already calls).
 5. **ABC data client (F3 `API.pm`).** `bff`, `nextData` (buildId discovery, one refresh-and-retry on 404, follows
@@ -198,7 +201,8 @@ books without chapters; they play only in Australia anyway), then L4, then M2 (M
    3 s deadline) when listing them (L1 review, PR #32). `/news` (ABC News website) is NOT NewsRadio; only `/listen/news`
    and the live slug `news` map to `NEWS`.
 8. **Prefs (`plugin.abclisten`).** `homeState` ('' | ACT | NSW | NT | QLD | SA | TAS | VIC | WA; '' behaves as NSW;
-   owner M1, read by L1/L4), `liveQuality` (`standard` | `mediahub`; owner L5, default `standard`; unknown stored values play as `standard`), `followed`
+   owner M1, read by L1/L4), `liveQuality` (`standard` | `mediahub` | `hls` (L6); owner L5, default `standard`; unknown stored values play as
+   `standard`; with `hls` the HLS-only services are listed and playable), `followed`
    (array; owner M2). Each owner calls `$prefs->init` for its own keys in its hook `init`; readers treat undef as the
    default. No credentials or tokens are ever stored.
 
