@@ -21,6 +21,10 @@
 # isn't audio, a second lookup), the renditions cached earlier are tried before NOT_FOUND; a cached
 # path that serves no document for the episode (a 307 x-nextjs-redirect to the program page, now
 # followed by API.pm; another id's document) falls back like a failed one.
+# F7 (#76): seenAt is the answer's fetch time (an hour-old cached document or lookup keeps its own,
+# so the 6 h shortcut ends 6 h after the fetch); an hour-old answer never overwrites newer meta
+# (windows closed since, a seed stored while the resolve waited); a restricted cached document
+# closes the windows at its fetch time; one freshness window (Util's = SEEN_MAX_AGE).
 #
 # Fixtures in t/data/ondemand/ are raw response bodies as served:
 #   nextdata-episode-scienceshow-mp3.trimmed.json   GET /_next/data/<buildId>/listen/programs/scienceshow/trees-potatoes-brendan-may-step/107266790.json
@@ -1187,6 +1191,115 @@ subtest 'request options on every path: documents ttl 3600 + timeout 6 (the gene
 		[ [ nextData => $STALE_PATH, {%document} ], [ nextData => "/listen/programs/x/x/$SCIENCE", { %document, quiet => 1 } ] ],
 		'F4 fallback: the cached path not quiet (a WARN), then the generic path quiet, both ttl 3600, timeout 6'
 	);
+};
+
+# ---- F7 (#76): seenAt is the answer's fetch time; an older answer never overwrites newer meta ----
+
+my $HOUR = 3600;
+
+sub forget_meta { Slim::Utils::Cache->new(CACHE_NAMESPACE)->remove("episode-meta:$_[0]") }
+
+subtest 'F7: the 6 h shortcut and Util\'s seenAt rule use one freshness window' => sub {
+	is( Plugins::ABCListen::Util::EPISODE_SEEN_MAX_AGE(), $E->SEEN_MAX_AGE, 'Util::EPISODE_SEEN_MAX_AGE = Episode::SEEN_MAX_AGE (6 h)' );
+};
+
+subtest 'F7: an hour-old cached document: seenAt is its fetch time; the shortcut ends 6 h after the fetch' => sub {
+	fresh();
+	answer( resolve_doc( doc('nextdata-episode-scienceshow-mp3.trimmed.json') ), 'fetched at T' );
+	is( getEpisodeMeta($SCIENCE)->{seenAt}, $T, 'a network answer: seenAt = its fetch time (now)' );
+
+	# 59 min later the entry has lost its renditions; API.pm still holds the document (1 h)
+	setTime( $T + 59 * 60 );
+	forget_meta($SCIENCE);
+	setEpisodeMeta( $SCIENCE, { path => $SCIENCE_PATH } );
+	@Slim::Networking::SimpleAsyncHTTP::REQUESTS = ();
+	is_deeply( candidates( answer( resolve_id($SCIENCE), 'from the 1 h cache' ) ), [$SCIENCE_MP3], 'plays the cached document' );
+	is( scalar( requests() ), 0, 'the document came from API.pm\'s cache (no request)' );
+	is( getEpisodeMeta($SCIENCE)->{seenAt}, $T, 'seenAt = the fetch time T, not now (T + 59 min)' );
+
+	setTime( $T + 6 * $HOUR - 1 );
+	@Slim::Networking::SimpleAsyncHTTP::REQUESTS = ();
+	answer( resolve_id($SCIENCE), 'just under 6 h after the fetch' );
+	is( scalar( requests() ), 0, 'just under 6 h after the fetch: the shortcut, no request' );
+
+	setTime( $T + 6 * $HOUR );
+	@Slim::Networking::SimpleAsyncHTTP::REQUESTS = ();
+	answer( resolve_id($SCIENCE), '6 h after the fetch' );
+	is_deeply( [ map { $_->{url} } data_requests() ], [ data_url($SCIENCE_PATH) ], '6 h after the fetch: the document is fetched again (it was trusted until T + 6 h 59 min)' );
+	is( getEpisodeMeta($SCIENCE)->{seenAt}, $T + 6 * $HOUR, '... and seenAt is that fetch time' );
+};
+
+subtest 'F7: an hour-old cached search index lookup (API.pm\'s 1 h Algolia cache): seenAt is its fetch time' => sub {
+	my $t = iso('2026-10-20T12:00:00Z');    # inside Classic Drive's streaming window
+	fresh($t);
+	serve( "/listen/programs/x/x/$DRIVE", fixture('ondemand/nextdata-generic-1-404.json'), code => 404 );
+	serve_algolia( fixture('ondemand/algolia-objectid-107174638.json') );
+	answer( resolve_id($DRIVE), 'looked up at t' );
+	is( getEpisodeMeta($DRIVE)->{seenAt}, $t, 'a network answer: seenAt = its fetch time (now)' );
+
+	setTime( $t + 59 * 60 );
+	forget_meta($DRIVE);
+	@Slim::Networking::SimpleAsyncHTTP::REQUESTS = ();
+	is_deeply( candidates( answer( resolve_id($DRIVE), 'again, 59 min later' ) ), [$DRIVE_AAC], 'plays the AAC from the hit' );
+	is( scalar( algolia_requests() ), 0, 'the lookup came from API.pm\'s cache' );
+	is( getEpisodeMeta($DRIVE)->{seenAt}, $t, 'seenAt = the lookup\'s fetch time, not now' );
+};
+
+subtest 'F7: an hour-old cached answer never overwrites newer meta' => sub {
+	# windows O1 closed after the document was fetched stay closed
+	fresh();
+	answer( resolve_doc( doc('nextdata-episode-scienceshow-mp3.trimmed.json') ), 'fetched at T' );
+	forget_meta($SCIENCE);
+	setEpisodeMeta( $SCIENCE, { path => $SCIENCE_PATH, availableTo => $T + 30 * 60, downloadAvailableTo => $T + 30 * 60 } );
+	setTime( $T + 59 * 60 );
+	@Slim::Networking::SimpleAsyncHTTP::REQUESTS = ();
+	is_deeply( candidates( answer( resolve_id($SCIENCE), 'the hour-old document' ) ), [$SCIENCE_MP3], 'the answer itself is the document\'s' );
+	is( scalar( requests() ), 0, '(from API.pm\'s cache, fetched at T)' );
+	my $m = getEpisodeMeta($SCIENCE);
+	is_deeply( [ @$m{qw(availableTo downloadAvailableTo)} ], [ $T + 30 * 60, $T + 30 * 60 ], 'the windows closed at T + 30 min stay closed' );
+	ok( !exists $m->{renditions} && !exists $m->{seenAt}, '... and the older document writes no renditions or seenAt' );
+	is( $m->{title}, $SCIENCE_TITLE, 'the rest of the document is merged as before' );
+
+	# a seed stored while the resolve waited for ABC is kept when the answer is an hour-old lookup
+	my $t = iso('2026-10-20T12:00:00Z');
+	fresh($t);
+	serve_algolia( fixture('ondemand/algolia-objectid-107174638.json') );
+	Plugins::ABCListen::API::algolia(    # the lookup Episode sends, answered and cached at t
+		{
+			query                => '',
+			filters              => join( ' OR ', map {qq{objectID:"coremedia://$_/$DRIVE"}} qw(audioepisode audio audiosegment) ),
+			hitsPerPage          => 1,
+			attributesToRetrieve => [qw(objectID canonicalURL title programTitle programID duration dates mediaRenditions defaultThumbnail)],
+		},
+		sub { }, sub { }, { timeout => 6 },
+	);
+	is( scalar( algolia_requests() ), 1, 'the lookup is in API.pm\'s cache (fetched at t)' );
+
+	setTime( $t + 59 * 60 );
+	serve( "/listen/programs/x/x/$DRIVE", fixture('ondemand/nextdata-generic-1-404.json'), code => 404, defer => 1 );
+	my $c = resolve_id($DRIVE);
+	my $newer = [ { url => "$MEDIA/audio/02/pj/Z/new.aac", mime => 'audio/aac', bitrate => 96 } ];
+	setEpisodeMeta( $DRIVE, { renditions => $newer, availableTo => $t + 86400, downloadAvailableTo => $t + 86400, seenAt => $t + 59 * 60 } );
+	for ( 1 .. 5 ) { last if $c->count; Slim::Networking::SimpleAsyncHTTP->completeDeferred }
+	is_deeply( candidates( answer( $c, 'the generic path fails, then the cached lookup' ) ), [$DRIVE_AAC], 'the answer is the hit\'s' );
+	is( scalar( algolia_requests() ), 1, '(the lookup came from API.pm\'s cache)' );
+	$m = getEpisodeMeta($DRIVE);
+	is_deeply( [ @$m{qw(renditions availableTo downloadAvailableTo seenAt)} ], [ $newer, $t + 86400, $t + 86400, $t + 59 * 60 ], 'the newer renditions, windows and seenAt are kept' );
+	is_deeply( [ @$m{qw(title duration)} ], [ 'Classic Drive', 10799 ], 'the rest of the hit is merged as before' );
+};
+
+subtest 'F7: a restricted document from the 1 h cache closes the windows at its fetch time, not now' => sub {
+	fresh();
+	setEpisodeMeta( $SCIENCE, { path => $SCIENCE_PATH } );
+	serve( $SCIENCE_PATH, edit_doc( sub { $_[0]->{webDistributionRestricted} = JSON::PP::true } ) );
+	is_deeply( answer( resolve_id($SCIENCE), 'restricted at T' ), { error => $RESTRICTED }, 'RESTRICTED' );
+	is_deeply( [ @{ getEpisodeMeta($SCIENCE) }{qw(availableTo downloadAvailableTo)} ], [ $T, $T ], 'closed at T (now, the fetch time)' );
+
+	setTime( $T + 59 * 60 );
+	is_deeply( answer( resolve_id($SCIENCE), 'restricted, from the cache' ), { error => $RESTRICTED }, 'RESTRICTED again' );
+	is( scalar( data_requests() ), 1, '(the second answer came from API.pm\'s cache)' );
+	is_deeply( [ @{ getEpisodeMeta($SCIENCE) }{qw(availableTo downloadAvailableTo)} ], [ $T, $T ], 'still closed at the fetch time T, not at now (T + 59 min)' );
+	is( Plugins::ABCListen::Util::episodeMetaIsNewer( $SCIENCE, $T + 30 * 60 ), 0, 'so a search answer fetched at T + 30 min is newer and may reopen them' );
 };
 
 done_testing();

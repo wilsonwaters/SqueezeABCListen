@@ -10,7 +10,9 @@ package Plugins::ABCListen::Util;
 #   - decodeEntities;
 #   - the URL contract (ai-state/streams.md contract 2): abclisten://live/<SERVICE_ID> and
 #     abclisten://episode/<digits>; liveUrl / episodeUrl / parseUrl;
-#   - the episode metadata cache contract (streams.md contract 3): setEpisodeMeta / getEpisodeMeta.
+#   - the episode metadata cache contract (streams.md contract 3): setEpisodeMeta / getEpisodeMeta,
+#     and (F7) D5's seenAt rule for the writers that seed renditions: episodeSeenAt /
+#     episodeMetaIsNewer / episodeAudioKeys.
 #
 # Owned by the foundation stream: other streams may only append to it (and must say so in their PR).
 
@@ -311,5 +313,59 @@ sub _hasValue {
 sub _metaKey { "episode-meta:$_[0]" }
 
 sub _cache { Slim::Utils::Cache->new(CACHE_NAMESPACE) }
+
+# ---------------------------------------------------------------------------
+# F7: seenAt from the fetch time (contract 3). D5's rule (Audiobooks.pm), shared by every writer
+# that seeds renditions: Search (D3), the episode resolver (O1) and Audiobooks (D5).
+# ---------------------------------------------------------------------------
+
+# O1 (Episode.pm SEEN_MAX_AGE) plays cached renditions without asking ABC while their seenAt is
+# younger than this.
+use constant EPISODE_SEEN_MAX_AGE => 6 * 3600;    # seconds
+
+# The audio data a seenAt vouches for, written together or not at all.
+my @EPISODE_AUDIO_KEYS = qw(renditions availableTo downloadAvailableTo seenAt);
+
+# episodeAudioKeys() -> ('renditions', 'availableTo', 'downloadAvailableTo', 'seenAt')
+sub episodeAudioKeys { @EPISODE_AUDIO_KEYS }
+
+# episodeSeenAt(\%info[, $now]) -> the seenAt to store with the renditions of one API.pm answer,
+# \%info being that answer's success info (contract 5): the answer's fetch time (info at), when
+# the answer is not a stale (last-good) copy and is younger than EPISODE_SEEN_MAX_AGE at $now
+# (default time()); else undef: the renditions are stored without a seenAt, so O1 asks ABC before
+# it trusts them. Never the time the answer was mapped: API.pm serves cached answers up to an hour
+# (Search, episode documents) or a day (Audiobooks) old.
+sub episodeSeenAt {
+	my ( $info, $now ) = @_;
+	return undef unless ref $info eq 'HASH' && !$info->{stale} && _isEpoch( $info->{at} );
+
+	$now = time() unless defined $now;
+	return $now - $info->{at} < EPISODE_SEEN_MAX_AGE ? $info->{at} + 0 : undef;
+}
+
+# episodeMetaIsNewer($id, $at) -> 1 when the episode meta cache holds audio data newer than an
+# answer fetched at $at (an epoch; undef or not a number counts as older than anything dated): the
+# cached seenAt is later than $at, or O1 closed the cached windows (both ends set to the same past
+# moment: a restricted or not yet released episode) later than $at. The answer's renditions,
+# window ends and seenAt (episodeAudioKeys) are then not written: an older answer never overwrites
+# newer audio data. Else 0 (also without an entry). Strictly later (D5 had "not older"): the cache
+# holding this same answer's seenAt (a menu walked again from API.pm's cache) is not newer data, so
+# a re-walk gives the same rows.
+sub episodeMetaIsNewer {
+	my ( $id, $at ) = @_;
+	$at = 0 unless _isEpoch($at);
+
+	my $cached = getEpisodeMeta($id);
+	return 0 unless ref $cached eq 'HASH';
+
+	return 1 if _isEpoch( $cached->{seenAt} ) && $cached->{seenAt} > $at;
+
+	my ( $to, $downloadTo ) = @$cached{qw(availableTo downloadAvailableTo)};
+	return 1 if _isEpoch($to) && _isEpoch($downloadTo) && $to == $downloadTo && $to <= time() && $to > $at;
+
+	return 0;
+}
+
+sub _isEpoch { defined $_[0] && !ref $_[0] && $_[0] =~ /\A[0-9]+(?:\.[0-9]+)?\z/ ? 1 : 0 }
 
 1;

@@ -63,6 +63,13 @@ package Plugins::ABCListen::Search;
 #            whose window opens later is listed but not seeded (the cache has no "from" field),
 #            and nothing of that set is written without renditions (seenAt would vouch for older
 #            renditions). Missing values are left out (they never clobber the cache).
+#            F7 (contract 3, D5's rule in Util): seenAt is the answer's fetch time (API.pm's info
+#            at; answers are cached for an hour), never the time the hits are mapped, and is left
+#            out for a stale (last-good) answer or one 6 h old or older
+#            (Util::episodeSeenAt). An older answer never overwrites newer audio data: when the
+#            meta cache's seenAt is later than the fetch time, or O1 closed the entry's windows
+#            later than it (Util::episodeMetaIsNewer), the hit's renditions, window ends and
+#            seenAt are left out of its row and the cache (the rest is merged as before).
 #
 # Global search: init registers Slim::Menu::GlobalSearch provider 'abclisten', when this LMS has
 # registerInfoProvider (else DEBUG log; the plugin still loads). For a non-empty $tags->{search}
@@ -227,7 +234,7 @@ sub _query {
 				attributesToRetrieve => [@ATTRIBUTES],
 				%{ $group->{params} || {} },
 			},
-			sub { $settle->( { data  => $_[0] } ) },
+			sub { $settle->( { data  => $_[0], info => $_[1] } ) },
 			sub { $settle->( { error => $_[0] } ) },
 			{ ttl => RESULT_TTL },
 		);
@@ -260,7 +267,7 @@ sub _resultItems {
 			next;
 		}
 
-		my $rows = $group->{rows}->( $client, grep { ref $_ eq 'HASH' } @{ $data->{hits} } );
+		my $rows = $group->{rows}->( $client, $result->{info}, grep { ref $_ eq 'HASH' } @{ $data->{hits} } );
 		next unless @$rows;
 
 		push @items, {
@@ -284,7 +291,7 @@ sub _resultItems {
 # Program hits -> programItem rows: each id once, one program's documents merged (D9: D8's rule,
 # ProgramIndex::mergeTwins), repeated titles named by network (OnDemand::_nameRepeats).
 sub _programRows {
-	my ( $client, @hits ) = @_;
+	my ( $client, undef, @hits ) = @_;
 	my ( @refs, %seen );
 
 	for my $hit (@hits) {
@@ -317,17 +324,27 @@ sub _programRows {
 	return Plugins::ABCListen::OnDemand::_nameRepeats( \@rows );
 }
 
+# $info: the answer's API.pm success info (stale, at).
 sub _episodeRows {
-	my ( $client, @hits ) = @_;
+	my ( $client, $info, @hits ) = @_;
 	my ( @rows, %seen );
 	my $now = time();
+
+	# F7: seenAt is the answer's fetch time (the answer may come from the 1 h result cache)
+	$info = {} unless ref $info eq 'HASH';
+	my $seenAt = Plugins::ABCListen::Util::episodeSeenAt( $info, $now );
 
 	for my $hit (@hits) {
 		my ( $type, $id ) = Plugins::ABCListen::API::coreMediaRef( $hit->{objectID} );
 		next unless $type && $AUDIO_TYPE{$type} && !$seen{$id};
 		next if _gone( $hit->{mediaDownloadStatus} ) && _gone( $hit->{mediaStreamingStatus} );
 
-		my $item = Plugins::ABCListen::OnDemand->episodeItem( $client, _episodeMeta( $hit, $type, $id, $now ) ) or next;
+		my $meta = _episodeMeta( $hit, $type, $id, $now, $seenAt );
+
+		# F7: an older answer never overwrites newer audio data (a play's, or a newer answer's)
+		delete @$meta{ Plugins::ABCListen::Util::episodeAudioKeys() } if Plugins::ABCListen::Util::episodeMetaIsNewer( $id, $info->{at} );
+
+		my $item = Plugins::ABCListen::OnDemand->episodeItem( $client, $meta ) or next;
 
 		$seen{$id} = 1;
 		push @rows, $item;
@@ -338,7 +355,7 @@ sub _episodeRows {
 
 # An episode hit -> the contract-3 meta (see the header).
 sub _episodeMeta {
-	my ( $hit, $type, $id, $now ) = @_;
+	my ( $hit, $type, $id, $now, $seenAt ) = @_;
 
 	my $dates = ref $hit->{dates} eq 'HASH' ? $hit->{dates} : {};
 
@@ -363,7 +380,7 @@ sub _episodeMeta {
 		$meta{renditions}          = $renditions;
 		$meta{availableTo}         = _windowEnd( $dates->{mediaStreamingAvailableTo} );
 		$meta{downloadAvailableTo} = _windowEnd( $dates->{mediaDownloadAvailableTo} );
-		$meta{seenAt}              = $now;
+		$meta{seenAt}              = $seenAt;    # F7: the fetch time (undef: left out)
 	}
 
 	return _defined(%meta);

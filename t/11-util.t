@@ -3,6 +3,8 @@
 # input), the local-time display helpers under fixed time zones, decodeEntities (with and without
 # HTML::Entities), the URL contract (streams.md contract 2) and the episode metadata cache
 # contract (streams.md contract 3).
+# F7 (#76): episodeSeenAt (the fetch time of a fresh answer younger than 6 h, else undef) and
+# episodeMetaIsNewer (a later seenAt, or windows closed later; ties are not newer).
 
 use strict;
 use warnings;
@@ -412,6 +414,72 @@ subtest 'episode metadata cache: 30-day TTL, refreshed by every write' => sub {
 	is_deeply( getEpisodeMeta('8'), { id => '8', title => 'Eight', description => 'refreshed' }, 'a later write refreshes the TTL (45 days after the first write)' );
 	advanceTime( 5 * 86400 + 1 );
 	is( getEpisodeMeta('8'), undef, 'expired 30 days after the last write' );
+
+	clearTime();
+};
+
+# ---- F7 (#76): seenAt from the fetch time, D5's rule shared (contract 3) ----
+
+subtest 'F7: episodeSeenAt - the fetch time of a fresh answer younger than 6 h, else undef' => sub {
+	my $now  = 1_792_400_000;
+	my $HOUR = 3600;
+	my $seen = \&Plugins::ABCListen::Util::episodeSeenAt;
+
+	is( Plugins::ABCListen::Util::EPISODE_SEEN_MAX_AGE(), 6 * $HOUR, 'the freshness window is 6 h' );
+	is_deeply( [ Plugins::ABCListen::Util::episodeAudioKeys() ], [qw(renditions availableTo downloadAvailableTo seenAt)], 'the audio keys a seenAt vouches for' );
+
+	is( $seen->( { stale => 0, at => $now }, $now ),                 $now,             'a network answer: now (its fetch time)' );
+	is( $seen->( { stale => 0, at => $now - $HOUR }, $now ),         $now - $HOUR,     'an hour-old cached answer: its fetch time, not now' );
+	is( $seen->( { at => $now - 6 * $HOUR + 1 }, $now ),             $now - 6 * $HOUR + 1, 'just under 6 h old: its fetch time' );
+	is( $seen->( { at => $now - 6 * $HOUR }, $now ),                 undef,            '6 h old: none (O1 would not trust it)' );
+	is( $seen->( { at => $now - 7 * $HOUR }, $now ),                 undef,            '7 h old: none' );
+	is( $seen->( { stale => 1, at => $now - 60 }, $now ),            undef,            'a stale (last-good) copy, however young: none' );
+	is( $seen->( { stale => 0 }, $now ),                             undef,            'no fetch time: none' );
+	is( $seen->( { at => 'yesterday' }, $now ),                      undef,            'a fetch time that is not a number: none' );
+	is( $seen->( { at => [1] }, $now ),                              undef,            'a fetch time that is a ref: none' );
+	is( $seen->( undef, $now ),                                      undef,            'no info hash: none' );
+	is( $seen->( 'info', $now ),                                     undef,            'not a hash: none' );
+	is( $seen->( { at => "$now.5" }, $now + 1 ),                     $now + 0.5,       'a fractional fetch time is a number' );
+
+	setTime($now);
+	is( $seen->( { at => $now - $HOUR } ), $now - $HOUR, 'without $now: time() is used' );
+	clearTime();
+};
+
+subtest 'F7: episodeMetaIsNewer - newer seenAt or windows closed after the fetch; ties are not newer' => sub {
+	resetStubs();
+	my $t0   = 1_792_400_000;
+	my $HOUR = 3600;
+	setTime($t0);
+	my $newer = \&Plugins::ABCListen::Util::episodeMetaIsNewer;
+
+	is( $newer->( '5001', $t0 - $HOUR ), 0, 'no entry: not newer' );
+	is( $newer->( 'x', $t0 ), 0, 'not an episode id: not newer' );
+
+	setEpisodeMeta( '5001', { title => 'No audio data' } );
+	is( $newer->( '5001', $t0 - $HOUR ), 0, 'an entry without seenAt or closed windows: not newer' );
+
+	setEpisodeMeta( '5002', { renditions => [ { url => 'https://example.test/a.mp3' } ], seenAt => $t0 - 1800 } );
+	is( $newer->( '5002', $t0 - $HOUR ),  1, 'seenAt later than an hour-old answer: newer' );
+	is( $newer->( '5002', $t0 - 1800 ),   0, 'seenAt equal to the fetch time (this same answer, walked again): not newer' );
+	is( $newer->( '5002', $t0 ),          0, 'seenAt older than a fresh answer: not newer' );
+	is( $newer->( '5002', undef ),        1, 'unknown fetch time: older than anything dated' );
+	is( $newer->( '5002', 'soon' ),       1, 'a fetch time that is not a number: older than anything dated' );
+
+	# O1 closed the windows (restricted / not yet released): both ends equal and past
+	setEpisodeMeta( '5003', { availableTo => $t0 - 1800, downloadAvailableTo => $t0 - 1800 } );
+	is( $newer->( '5003', $t0 - $HOUR ), 1, 'windows closed after the fetch: newer' );
+	is( $newer->( '5003', $t0 - 1800 ),  0, 'closed at the fetch time: not newer' );
+	is( $newer->( '5003', $t0 - 60 ),    0, 'closed before the fetch: not newer (the answer may reopen them)' );
+
+	setEpisodeMeta( '5004', { availableTo => $t0 - 1800, downloadAvailableTo => $t0 - 1700 } );
+	is( $newer->( '5004', $t0 - $HOUR ), 0, 'two different window ends are not a closure' );
+
+	setEpisodeMeta( '5005', { availableTo => $t0 + $HOUR, downloadAvailableTo => $t0 + $HOUR } );
+	is( $newer->( '5005', $t0 - $HOUR ), 0, 'equal ends in the future are open windows, not a closure' );
+
+	setEpisodeMeta( '5006', { seenAt => 'garbage', availableTo => 'x', downloadAvailableTo => 'x' } );
+	is( $newer->( '5006', $t0 - $HOUR ), 0, 'values that are not numbers: not newer' );
 
 	clearTime();
 };

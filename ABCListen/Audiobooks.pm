@@ -63,9 +63,9 @@ package Plugins::ABCListen::Audiobooks;
 #       Episode.pm's open end (OPEN_END), never undef (the cache merge would keep an end O1 had
 #       closed); renditions and both window ends come only when the hit has http(s) renditions and
 #       neither window opens later. seenAt is the fetch time, and only when the answer is not a
-#       stale (last good) copy and is younger than 6 h (SEEN_MAX_AGE, O1's freshness window): O1
-#       never trusts renditions older than that without asking ABC. Text is entity-decoded and
-#       trimmed.
+#       stale (last good) copy and is younger than 6 h (O1's freshness window): O1 never trusts
+#       renditions older than that without asking ABC (F7: the rule is Util::episodeSeenAt, shared
+#       with Search and Episode). Text is entity-decoded and trimmed.
 #     - Hits are skipped when not a hash or without a parseable objectID, hidden when
 #       mediaDownloadStatus and mediaStreamingStatus are both EXPIRED or NONE (any case; DQ4,
 #       PENDING and missing statuses are kept), each id once (the first hit wins).
@@ -99,9 +99,10 @@ package Plugins::ABCListen::Audiobooks;
 #       abclisten://episode/<id>; opening a row shows O2's episode page. episodeItem writes the
 #       meta cache; if it ever stops storing the seeded keys, they are written here
 #       (Util::setEpisodeMeta), so O1 plays without fetching a page;
-#     - an older answer never overwrites newer audio data: when the meta cache's seenAt is not
-#       older than fetchedAt, or O1 closed the entry's windows (both ends equal, past) at or after
-#       fetchedAt, the ref's renditions, window ends and seenAt are not written;
+#     - an older answer never overwrites newer audio data: when the meta cache's seenAt is later
+#       than fetchedAt, or O1 closed the entry's windows (both ends equal, past) later than
+#       fetchedAt, the ref's renditions, window ends and seenAt are not written (F7: the rule is
+#       Util::episodeMetaIsNewer, shared with Search and Episode; D5 had "not older");
 #     - nothing listed: one PLUGIN_ABCLISTEN_NO_EPISODES text item;
 #     - an error: one text item with the token's text (RATE_LIMITED or LOAD_FAILED);
 #     - a passthrough without a numeric id (a stale or malformed link), the deadline passing, or
@@ -126,7 +127,6 @@ use Plugins::ABCListen::OnDemand;
 use Plugins::ABCListen::Util;
 
 use constant INDEX_TTL       => 86400;            # seconds: one Algolia query per program per day
-use constant SEEN_MAX_AGE    => 6 * 3600;         # seconds: O1 trusts seeded renditions this long (= Episode.pm's)
 use constant MAX_HITS        => 1000;             # Algolia's hitsPerPage maximum
 use constant REQUEST_TIMEOUT => 8;                # seconds (a menu request, as Programs.pm's)
 use constant FEED_DEADLINE   => 12;               # seconds for a feed to answer
@@ -144,7 +144,7 @@ my @ATTRIBUTES = qw(objectID title canonicalURL duration dates mediaRenditions m
 	mediaStreamingStatus programTitle programID);
 
 # The seeded set (contract 3's optional keys), written together.
-my @SEED_KEYS = qw(renditions availableTo downloadAvailableTo seenAt);
+my @SEED_KEYS = Plugins::ABCListen::Util::episodeAudioKeys();
 
 my %AUDIO_TYPE = map { $_ => 1 } qw(audioepisode audio audiosegment);
 my %GONE       = map { $_ => 1 } qw(EXPIRED NONE);
@@ -299,7 +299,7 @@ sub _refs {
 	my $now = time();
 
 	# seenAt vouches for the renditions: only a fresh answer's fetch time, while O1 would trust it
-	my $seenAt = !$stale && defined $at && $now - $at < SEEN_MAX_AGE ? $at : undef;
+	my $seenAt = Plugins::ABCListen::Util::episodeSeenAt( { stale => $stale, at => $at }, $now );
 
 	my ( @refs, %seen );
 	for my $hit ( grep { ref $_ eq 'HASH' } @hits ) {
@@ -523,7 +523,7 @@ sub _rows {
 		$episode{programId}    = $program->{id}    if !defined $episode{programId};
 
 		# an older answer never overwrites audio data stored later (by O1, or a newer answer)
-		delete @episode{@SEED_KEYS} if _cachedIsNewer( $ref->{id}, $result->{fetchedAt} );
+		delete @episode{@SEED_KEYS} if Plugins::ABCListen::Util::episodeMetaIsNewer( $ref->{id}, $result->{fetchedAt} );
 
 		my $item = Plugins::ABCListen::OnDemand->episodeItem( $client, \%episode ) or next;
 		_seed( \%episode );
@@ -537,24 +537,6 @@ sub _rows {
 	}
 
 	return @rows ? \@rows : [ _textItem( $client, NO_EPISODES ) ];
-}
-
-# Does the meta cache hold audio data newer than an answer fetched at $at? Its seenAt is not
-# older, or O1 closed its windows (both ends set to the same past moment, a restricted or not yet
-# released episode) at or after $at. An unknown $at counts as older than anything dated.
-sub _cachedIsNewer {
-	my ( $id, $at ) = @_;
-	$at = 0 unless _isEpoch($at);
-
-	my $cached = Plugins::ABCListen::Util::getEpisodeMeta($id);
-	return 0 unless ref $cached eq 'HASH';
-
-	return 1 if _isEpoch( $cached->{seenAt} ) && $cached->{seenAt} >= $at;
-
-	my ( $to, $downloadTo ) = @$cached{qw(availableTo downloadAvailableTo)};
-	return 1 if _isEpoch($to) && _isEpoch($downloadTo) && $to == $downloadTo && $to <= time() && $to >= $at;
-
-	return 0;
 }
 
 # Make sure the episode meta cache holds the ref's seeded set (episodeItem stores it today).
