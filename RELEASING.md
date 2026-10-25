@@ -209,7 +209,7 @@ and checks the zip on every pull request anyway.
 4. The SHA1 of the file LMS downloads equals `repo.xml`'s `<sha>` and the release asset's:
 
    ```bash
-   V=0.3.0
+   V=1.1.0
    curl -sSL https://raw.githubusercontent.com/wilsonwaters/SqueezeABCListen/main/repo.xml | grep -E '<url>|<sha>'
    curl -sSL -o "raw-$V.zip" "https://raw.githubusercontent.com/wilsonwaters/SqueezeABCListen/release-assets/ABCListen-$V.zip"
    curl -sSL -o "release-$V.zip" "https://github.com/wilsonwaters/SqueezeABCListen/releases/download/v$V/ABCListen-$V.zip"

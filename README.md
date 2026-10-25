@@ -9,11 +9,13 @@ Broadcasting Corporation.
 The plugin adds **ABC listen** to the LMS Radio menu, laid out like ABC's own ABC listen app:
 every ABC live radio station with what's on air, ABC's podcasts and radio programs with their
 episodes, the News, Sport, Kids listen and Audiobooks sections, search, and a list of programs you
-follow. Everything plays on your Squeezebox players, software players and LMS apps. No ABC account
+follow. It works like any other LMS radio source and has been tested with squeezelite players,
+the LMS web interfaces and the Squeezer app. Squeezebox hardware players use the same standard
+LMS menus but haven't been tested yet (see [Compatibility](#compatibility)). No ABC account
 is needed.
 
-This guide describes the plugin as it is on the `main` branch, which becomes version 1.0. See
-[CHANGELOG.md](CHANGELOG.md) for what each released version contains.
+This guide describes the latest release. See [CHANGELOG.md](CHANGELOG.md) for what each version
+contains, and [Updating](#updating) for how to check which version you have.
 
 ## Features
 
@@ -39,7 +41,8 @@ This guide describes the plugin as it is on the `main` branch, which becomes ver
 - **Search** for programs and episodes, also from LMS's own search.
 - **My ABC listen:** follow programs and see their latest episodes in one list. Follows are stored
   in LMS; no ABC login.
-- **Settings:** your home state, and the live stream quality.
+- **Settings:** your home state, and the live stream quality: the standard streams, ABC's HLS
+  streams (192 kbps AAC on the music stations) or ABC's mediahub streams.
 - Standard LMS menus, so the Default and Material web interfaces, Squeezebox players and LMS
   apps all show the same items (see [Compatibility](#compatibility)).
 
@@ -56,9 +59,9 @@ ABC's own apps and website, visit <https://www.abc.net.au/listen>.
 - Lyrion Music Server (or Logitech Media Server) **8.3 or later**. Tested on LMS 9.1.1; see
   [Compatibility](#compatibility).
 - Internet access from the LMS server to the ABC's servers.
-- AAC decoding: the live streams are HE-AAC. Software players such as squeezelite and most
-  apps play them directly; older hardware players need the server to transcode AAC (LMS's
-  `faad` helper; see [Troubleshooting](#troubleshooting)).
+- AAC decoding: the live streams are AAC (HE-AAC at the standard quality). Software players such
+  as squeezelite and most apps play them directly; older hardware players need the server to
+  transcode AAC (LMS's `faad` helper; see [Troubleshooting](#troubleshooting)).
 
 ## Installation
 
@@ -195,14 +198,22 @@ Material) queues every chapter in order.
 
 A program's page shows its description, "Presented by …", its network, the follow rows (see
 [My ABC listen](#my-abc-listen)) and then its episodes, newest first, named with their broadcast
-date and title ("Fri 23 Oct – Mental health and the manosphere"). Long lists end with
-**More episodes…**. Programs use ABC's current titles, such as "Radio National Breakfast" and
-"If You're Listening".
+date and title ("Fri 23 Oct – Mental health and the manosphere"), as one list back to the oldest
+episode ABC lists (its newest 250). Programs use ABC's current titles, such as "Radio National
+Breakfast" and "If You're Listening".
 
 ![A program's page in the Default web interface: All In the Mind's presenter, network and Follow row, then its episodes, newest first, each named with its date and title](docs/images/default-program-episodes.png)
 
+The description at the top of a program's page is kept short: its first paragraph, up to about
+200 characters. When that isn't the whole text, **About this program**, right below it, opens all
+of it. Apps such as Squeezer show the description as a fixed header above the list, so a short
+one leaves room for the episodes. A program with more than 200 rows (most daily programs) shows no
+description at the top and starts with **About this program** instead.
+
 An episode plays from its row. Open it for:
 
+- its synopsis, kept short in the same way, and **About this episode** for the whole text when
+  it is longer;
 - **Play episode**;
 - "Broadcast *date* · *duration*";
 - "Presented by …", the episode's presenters;
@@ -254,6 +265,20 @@ Open **Settings → Advanced → ABC listen**
   example, "Radio National WA" for Western Australia). Not set behaves like New South Wales.
 - **Live stream quality**:
   - **Standard: 56 kbps, works everywhere** (the default): ABC's Icecast HE-AAC streams.
+  - **High quality (HLS)**: ABC's HLS streams, the ones ABC's website plays: 192 kbps AAC on the
+    music stations and 64 kbps on talk stations. The plugin plays them itself; there is nothing
+    else to install.
+    - If a station's HLS stream can't be played (some play only in Australia), the same play
+      falls back to the standard stream by itself, within about 12 seconds.
+    - It also lists the stations ABC streams only in HLS: the Sport Rapid, RLWC Rapid and ABC
+      Cricket streams under Sport, and the Northern Territory, Queensland, South Australia and
+      Western Australia versions of ABC KIDS listen under Kids listen. They have no standard
+      stream to fall back to.
+    - It costs more CPU on the LMS server: LMS itself fetches the audio and passes it on to the
+      player, while a standard stream goes straight to the player. That was about 4–6% of one
+      core on an x86 test server; it hasn't been measured on a Raspberry Pi yet.
+    - The stream runs about 30–40 seconds behind live, as on ABC's website, so Now Playing shows
+      a new song or program about 30–40 seconds before you hear it.
   - **ABC mediahub AAC: higher quality, may only work in Australia**: ABC's own higher-quality
     streams. If one can't be played, the plugin falls back to the standard stream by itself,
     after a short delay.
@@ -291,15 +316,18 @@ tracklist, and the program's follow row.
 
 These come from what ABC publishes, or from LMS:
 
-- **Live streams are 56 kbps HE-AAC by default.** The **ABC mediahub AAC** setting (see
-  [Settings](#settings)) plays ABC's higher-quality streams, which may only work from an
-  Australian internet connection; elsewhere each play falls back to the standard stream after a
-  short delay.
-- **Stations that ABC streams only as HLS aren't listed** (for example Sport Rapid, RLWC Rapid
-  and the cricket streams): LMS can't play HLS without the third-party PlayHLS plugin, and
-  PlayHLS can't play ABC listen's station links. For the same reason the Kids listen time-zone
-  versions are hidden; the main ABC KIDS listen stream plays. Event stations appear only while
-  their event is on.
+- **Live streams are 56 kbps HE-AAC by default.** Choose **High quality (HLS)** (see
+  [Settings](#settings)) for 192 kbps AAC on the music stations; it costs more CPU on the LMS
+  server. **ABC mediahub AAC** may only work from an Australian internet connection; elsewhere
+  each play falls back to the standard stream after a short delay.
+- **Stations that ABC streams only as HLS are listed only with High quality (HLS)**: the Sport
+  Rapid, RLWC Rapid and ABC Cricket streams and the Kids listen time-zone versions. They have no
+  standard stream, so they can't fall back to one; ABC Cricket, and possibly the Rapid streams,
+  may play only in Australia, and ABC Cricket only during matches. Event stations appear only
+  while their event is on.
+- **With High quality (HLS), Now Playing is ahead of the audio.** HLS plays about 30–40 seconds
+  behind live, while song titles and programs come from ABC's live data, so they change about
+  30–40 seconds before you hear the change.
 - **Only the newest 250 episodes** of each program are listed, because that is all ABC lists.
 - **ABC's program index still lists some programs that have stopped**, such as several regional
   "Mornings" programs and some weekend shows. Their newest episodes can be years old and may say
@@ -343,14 +371,17 @@ download files from GitHub's release download links. Since v0.3.0, `repo.xml` po
 raw.githubusercontent.com instead, which works. If you added the repository before that, just
 install or update again: LMS re-reads `repo.xml` (it caches it for about 5 minutes).
 
-**c. The live streams won't play on an older hardware player.** The live streams are HE-AAC.
-Players that can't decode AAC themselves need LMS to convert it with `faad`: open **Settings →
-Advanced → File Types** and make sure the AAC conversions that use `faad` are enabled, then try
-again. Most podcast episodes are MP3, which every player plays.
+**c. The live streams won't play on an older hardware player.** The live streams are AAC
+(HE-AAC at the standard quality). Players that can't decode AAC themselves need LMS to convert
+it with `faad`: open **Settings → Advanced → File Types** and make sure the AAC conversions that
+use `faad` are enabled, then try again. Most podcast episodes are MP3, which every player plays.
 
-**d. A live stream fails to start, or stops.** If you chose **ABC mediahub AAC** under Live
-stream quality, set it back to **Standard** (see [Settings](#settings)): the standard streams
-work everywhere.
+**d. A live stream fails to start, or stops.** If you chose **High quality (HLS)** or **ABC
+mediahub AAC** under Live stream quality, set it back to **Standard** (see
+[Settings](#settings)): the standard streams work everywhere and need the least from your
+server. A station ABC streams only in HLS (a favourite of one, say) then says "This station is
+only streamed in HLS. To play it, set Live stream quality to High quality (HLS) in the ABC
+listen settings."
 
 **e. "This episode is only available in Australia", "ABC doesn't allow this episode to be played
 outside its own apps" or "This episode isn't available to play. ABC offers it for a limited time
@@ -396,11 +427,12 @@ minute and says which part fails; see [Self-test](#self-test).
 
 - **Tested** on LMS **9.1.1** with a squeezelite player, in the Default web interface and in the
   Material skin (6.4.14).
+- **Also tested** on another LMS 9.1.1 server with the Squeezer Android app.
 - **Declared** for LMS **8.3 or later** (`minTarget` 8.3), but not tested on 8.x.
 - **Hardware players and apps:** the plugin uses standard LMS menus, so Squeezebox players
   (Touch, Radio, Boom, Classic, Transporter) and LMS apps show the same menus with the same names.
-  This hasn't been tested on hardware yet. Players without AAC support need LMS's `faad` for
-  the live streams (troubleshooting item c).
+  This hasn't been tested on Squeezebox hardware yet. Players without AAC support need LMS's
+  `faad` for the live streams (troubleshooting item c).
 
 ## Privacy
 
@@ -409,9 +441,10 @@ minute and says which part fails; see [Self-test](#self-test).
   preferences, in the file `plugin/abclisten.prefs` in the LMS preferences folder. Nothing about
   your players or what you play is stored.
 - The plugin talks only to ABC's servers (for menus, images and now-playing data), the
-  content-delivery networks ABC streams its audio from (StreamGuys for the standard live streams,
-  Akamai for episodes and audiobooks, MediaHub Australia for the ABC mediahub quality setting),
-  and ABC's Algolia search service (which runs ABC listen's own search).
+  content-delivery networks ABC streams its audio from (StreamGuys for the standard live streams
+  and the Rapid sport streams, Akamai for episodes, audiobooks and the other HLS live streams,
+  MediaHub Australia for the ABC mediahub quality setting), and ABC's Algolia search service
+  (which runs ABC listen's own search).
 - Nothing is sent to the plugin's author or to anyone else.
 
 ## Self-test
@@ -478,12 +511,23 @@ repository files for about 5 minutes (and GitHub may serve the old file for a fe
 so a new version can take a little while to show up. The changes in each version are listed in
 [CHANGELOG.md](CHANGELOG.md).
 
+To see which version you have, open **Settings → Manage Plugins**: the installed plugins show
+their version after the name, for example "ABC listen (v1.0.0)".
+
 ## Uninstalling
 
 1. In **Settings → Manage Plugins**, untick **ABC listen** and click **Apply**.
 2. Restart LMS when prompted.
 3. Optionally, delete the repository URL from **Additional Repositories** and click **Apply**
    again.
+
+Uninstalling leaves the plugin's settings file behind: `plugin/abclisten.prefs` in the LMS
+preferences folder, with your home state, live stream quality and followed programs. A later
+install picks them up again. The preferences folder is listed under **Settings → Information**
+as Preferences Folder; on Debian, Ubuntu and Raspberry Pi OS it is usually
+`/var/lib/squeezeboxserver/prefs`, so the file is
+`/var/lib/squeezeboxserver/prefs/plugin/abclisten.prefs`. To remove them too, stop LMS, delete
+that file and start LMS again.
 
 ## Development
 
