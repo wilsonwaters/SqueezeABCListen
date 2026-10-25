@@ -13,13 +13,12 @@ v1.0.0 accepted by the stakeholder on pi14 (2026-10-25; #17 closed). Now: v1.1.0
 
 ## Currently in flight
 - v1.1.0 (stakeholder feedback 2026-10-25):
-  - #86 U1 + #90 U2 — review REQUEST_CHANGES: U1 `_cutText` pos() bug (long word); U2 HIGH: Jive/SqueezePlay/jivelite
-    endless reload on >200-row lists (textarea makes `count` differ per chunk; DB.lua drops the store) → no leading
-    textarea above 200 rows; plus failed ABC page (RN Breakfast offset 150) → sub-page retry, stable total, 60 s
-    failure cache; short page ≠ end; clamp test. Implementer fixing.
-    Merge #86 then #90; strings.txt conflict with L6 = keep the U1 section, then L6's.
-  - #89 F9 follow-ups (404 WARN, F7/F8 test gaps, Tracks log line) — implementing.
-  - Queued: #79 R7 docs (README/CHANGELOG for U1/U2/L6/F7/F8, drop More-episodes text + unused token), #72 O9 icons; then system check → 1.1.0 → pi14 re-check.
+  - #90 U2 continuous lists — re-review REQUEST_CHANGES: "Episode unavailable" placeholders for ABC video cards
+    (54 rows over 6 of 71 sampled programs; The Grill 24) → number rows by audio episode across all ≤5 pages; all-500
+    retry storm (5 → 30 requests) → stop after 0/10 fails; tests N8/N13. Implementer fixing; rebase onto main (U1 squashed).
+  - #79 R7 docs + CHANGELOG [Unreleased] for 1.1.0 — implementing (U2 bullets grouped for adjustment).
+  - Queued: #72 O9 icons (after U2: same file); then system check → 1.1.0 → pi14 re-check (CPU in top, Cricket /
+    Grandstand, 30+ min HLS play, Squeezer header + long lists).
   - P3 after 1.1.0: #91 L7 HLS title offset, #81 O5.
 
 ## Interruptions
@@ -36,6 +35,10 @@ v1.0.0 accepted by the stakeholder on pi14 (2026-10-25; #17 closed). Now: v1.1.0
   (fixed), testbed restarted, R2 resumed.
 
 ## Last completions
+- #89 F9 merged (PR #93, squash 62e98b3): Programs quiet opts; Latest 404 → 1 WARN/day; F7/F8 test gaps (13/13 caught);
+  Tracks log line. Orchestrator review: diff read, merged-tree check.sh 895 tests (+U2 trial merge 931 tests).
+- #83 U1 merged (PR #86, squash f6abcd1): short description headers + About row. Review REQUEST_CHANGES (pos() bug,
+  R3 gap) → fixes → re-review APPROVE; merged-tree check.sh 913 tests.
 - #77 R6 merged (PR #92, squash 0980036): drift probe 12 → 19 families (all hard-coded collection ids, recommendations,
   music now.json ×9, section pages, Algolia program index + chapters, station collections; PAPI dropped), breakage
   switches + offline t/89; weekly workflow abc-drift.yml (Sun 19:17 UTC, retry after 5 min, abc-drift issue,
