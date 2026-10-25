@@ -35,7 +35,9 @@ package Plugins::ABCListen::HLS;
 #   * The media playlist is reloaded when the known segments run out: not before its target duration
 #     after a reload that brought new segments, half of it after one that didn't (RFC 8216 6.3.4). After
 #     a failed reload the next try goes through the master playlist again (a new session where the
-#     server puts a session id in the URLs, as StreamGuys' Nimble does for Sport Rapid).
+#     server puts a session id in the URLs, as StreamGuys' Nimble does for Sport Rapid). An empty live
+#     playlist counts as a failed reload; a live playlist with no new segment for STALL_LIMIT (60 s) ends
+#     the stream.
 #   * If the next segment has left the live window (a long pause, a slow network) or the server restarted
 #     its numbering, the stream skips ahead to LIVE_EDGE segments before the end (logged at INFO). After a
 #     failed segment the playlist is reloaded before the retry; a segment that fails twice is skipped, and
@@ -44,8 +46,10 @@ package Plugins::ABCListen::HLS;
 #     EXT-X-ENDLIST once its last segment is read.
 #   * A response shorter than its Content-Length counts as a failed request. A body that isn't a playlist
 #     (or has no AAC variant) ends a preparing stream; a playing one retries it like a failed request.
-#     Encrypted and byte-range playlists end it at once. The demuxers only ever output whole ADTS frames: a
-#     frame cut off with its segment is dropped, and so is a partial TS packet at the end of a segment.
+#     Encrypted and byte-range playlists end it at once. Only a usable media playlist, init segment or
+#     segment resets the failures in a row (not a master playlist alone). The demuxers only ever output
+#     whole ADTS frames: a frame cut off with its segment is dropped at the segment's end, and so is a
+#     partial TS packet.
 #   * close (LMS: stop, track change, power off) drops the buffers at once; a request still in flight is
 #     ignored when it answers (or times out).
 #
@@ -90,6 +94,7 @@ use constant MAX_SKIPS        => 3;             # skipped segments in a row that
 use constant PREPARE_DEADLINE => 12;            # seconds a scan may take (then the next candidate plays)
 use constant PREPARED_TTL     => 60;            # seconds a prepared stream waits for HLS->new
 use constant PREPARED_MAX     => 4;
+use constant STALL_LIMIT      => 60;            # seconds a live playlist may go without a new segment
 
 my $log = logger('plugin.abclisten');
 
@@ -262,6 +267,7 @@ sub _stream {
 		tries      => 0,         # failed attempts at the next segment
 		skips      => 0,         # segments skipped in a row
 		reloadAt   => 0,         # don't reload the playlist before this time
+		advancedAt => undef,     # when the media playlist last gained a segment
 		stale      => 0,         # reload the playlist before the next segment (one failed)
 		ended      => undef,     # why the stream ends (no more requests)
 		closed     => 0,
@@ -368,13 +374,16 @@ sub _loadPlaylist {
 		return $fail->( "byte-range segments not supported ($url)", 1 ) if $playlist->{byteRange};
 
 		my $old = $v->{playlist};
+
+		# an empty live playlist is a failed reload; an empty finished one ends after the known segments
+		if ( !@{ $playlist->{segments} } ) {
+			return $fail->("the playlist has no segments ($url)") unless $old && $playlist->{endList};
+			$playlist = { %$old, endList => 1 };
+		}
+
+		$self->_accepted;
 		$v->{mediaUrl} ||= $url;
 		$v->{stale} = 0;
-
-		if ( !@{ $playlist->{segments} } ) {
-			return $fail->("the playlist has no segments ($url)") unless $old;
-			$playlist = { %$old, endList => $playlist->{endList} };
-		}
 
 		my $last    = $playlist->{segments}->[-1]->{seq};
 		my $changed = !$old || $last > $old->{segments}->[-1]->{seq} || $playlist->{endList};
@@ -382,6 +391,13 @@ sub _loadPlaylist {
 
 		$v->{playlist} = $playlist;
 		$v->{reloadAt} = $started + $wait;
+		$v->{advancedAt} = $started if $changed || !defined $v->{advancedAt};
+
+		# a live playlist that has stopped advancing (a stalled encoder): polling it forever would leave the
+		# player waiting in silence
+		if ( $started - $v->{advancedAt} >= STALL_LIMIT ) {
+			return $self->_end( 'no new segment for ' . STALL_LIMIT . " s ($url)" );
+		}
 
 		main::DEBUGLOG && $log->is_debug && $log->debug( "HLS: $url has segments " . $playlist->{segments}->[0]->{seq} . "-$last" . ( $changed ? '' : ' (unchanged)' ) );
 	}, $fail );
@@ -400,6 +416,7 @@ sub _loadMap {
 
 		return $self->_failed( 'unsupported fragmented MP4 audio: ' . $demux->error . " ($segment->{map})" ) if $demux->error;
 
+		$self->_accepted;
 		$v->{demux}->{fmp4} = $demux;
 		$v->{mapUrl} = $segment->{map};
 	} );
@@ -440,6 +457,7 @@ sub _loadSegment {
 			# not audio (an error page served as a success): a failed segment
 			my $format = defined $segment->{map} ? 'fmp4' : _format($body) or return $failed->("unsupported segment format ($segment->{url})");
 
+			$self->_accepted;
 			$v->{next}  = $segment->{seq} + 1;
 			$v->{tries} = 0;
 			$v->{skips} = 0;
@@ -495,7 +513,9 @@ sub _preparedAudio {
 
 # GET $url; $ok->($body) on success, then the next request is started. A failed request (an HTTP error,
 # a timeout, a body shorter than its Content-Length) calls $fail->($error), by default _failed: it counts
-# towards MAX_FAILURES (the retries back off), and a preparing stream fails at once.
+# towards MAX_FAILURES (the retries back off), and a preparing stream fails at once. Only _accepted (a
+# media playlist, an init segment or a segment that can be used) resets that count, so a master playlist
+# that keeps answering while its media playlist fails can't keep the stream alive.
 sub _get {
 	my ( $self, $url, $timeout, $ok, $fail ) = @_;
 	my $v = _v($self);
@@ -516,9 +536,7 @@ sub _get {
 				return $fail->("$short ($url)");
 			}
 
-			$v->{failures} = 0;
-			$v->{retryAt}  = 0;
-
+			# the handler calls _accepted once the response is usable (a master playlist alone isn't)
 			eval { $ok->($body); $self->_pump unless $v->{closed}; 1 } or $self->_died( "handling $url", $@ );
 		},
 		sub {
@@ -548,6 +566,14 @@ sub _truncated {
 	return undef if defined $coding && $coding !~ /\A\s*(?:identity)?\s*\z/i;
 
 	return length($body) < $length ? sprintf( 'truncated response: %d of %d bytes', length $body, $length ) : undef;
+}
+
+# A usable response: the failures in a row start again.
+sub _accepted {
+	my $v = _v(shift);
+	$v->{failures} = 0;
+	$v->{retryAt}  = 0;
+	return;
 }
 
 # A failed step: a preparing stream fails; a playing one retries later, and ends after MAX_FAILURES
@@ -893,11 +919,13 @@ sub reset {
 	return;
 }
 
-# The end of a segment: a partial packet left over (a truncated segment) is dropped; the stream layout
-# is kept. An incomplete frame is held back until the next PES shows whether it continues.
+# The end of a segment: a partial packet and an incomplete frame left over (a truncated segment) are
+# dropped, so the ADTS stream stays whole frames; the stream layout (PAT, PMT) is kept. Within a segment
+# an incomplete frame is held back for the next PES, which may continue it.
 sub endSegment {
 	my $self = shift;
-	$self->{buf} = '';
+	$self->{buf}   = '';
+	$self->{frame} = '';
 	return;
 }
 
@@ -924,8 +952,7 @@ sub feed {
 
 	substr( $$buf, 0, $at, '' );
 
-	my $out = delete( $self->{ready} ) // '';
-	return $out . Plugins::ABCListen::HLS::_wholeFrames( \$self->{frame} );
+	return Plugins::ABCListen::HLS::_wholeFrames( \$self->{frame} );
 }
 
 # The offset of the next sync byte from $from that is followed by another one a packet later (or is in
@@ -978,13 +1005,6 @@ sub _packet {
 
 		$payload = substr( $payload, 9 + $headerLength );
 		$self->{inPes} = 1;
-
-		# a PES that starts with a frame while an incomplete one is held back: that one was cut off (a
-		# truncated segment); it is dropped, so the ADTS stream stays whole frames
-		if ( length $self->{frame} && $payload =~ /\A\xFF[\xF0\xF1\xF8\xF9]/ ) {
-			$self->{ready} .= Plugins::ABCListen::HLS::_wholeFrames( \$self->{frame} );
-			$self->{frame} = '';
-		}
 	}
 
 	return '' unless $self->{inPes};

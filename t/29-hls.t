@@ -27,7 +27,12 @@
 #     its Content-Length fails; the demuxers output whole ADTS frames only (a cut-off frame and a partial
 #     packet are dropped; the raw PES payloads checked byte for byte; resync on two sync bytes a packet
 #     apart); a huge fMP4 sample count is refused at once; a die handling a response or in the scan fails
-#     the scan, a die during a read ends the stream; the 12 s prepare deadline; sysread's length.
+#     the scan, a die during a read ends the stream; the 12 s prepare deadline; sysread's length;
+#   * PR #88 round 2: only a usable response (a media playlist with segments, an init segment, a segment)
+#     resets the failures in a row, so a media playlist that keeps failing while the master answers (404,
+#     an HTML page, a captive portal, a short body, an empty live playlist) ends the stream after
+#     MAX_FAILURES tries (2, 4, 8 s: about 15 s), as does an fMP4 init segment that breaks mid-play; a live
+#     playlist with no new segment for STALL_LIMIT (60 s) ends it; close kills the prepare deadline.
 # Fixtures (t/data/hls): master-triplejnsw.m3u8 and media-triplejnsw-v0-221.m3u8 as ABC served them on
 # 2026-10-25; triplejnsw-head.ts, the first 40 TS packets (0.2 s of audio) of one triple j segment;
 # sine-*, a synthetic 440 Hz tone made with `ffmpeg -f lavfi -i sine=frequency=440:sample_rate=44100:duration=3
@@ -790,7 +795,7 @@ subtest 'a bad 200 response while playing is retried (not the end); encrypted st
 	drain($stream);
 	$key = 1;
 	advanceTime(1.1);
-	my ( undef, $ret ) = drain($stream);
+	( undef, $ret ) = drain($stream);
 	is( $ret, 0, 'a reload that turns encrypted ends the stream at once' );
 };
 
@@ -850,7 +855,8 @@ subtest 'truncated responses: a body shorter than its Content-Length fails; demu
 	ok( defined $d->{audio}, '... and keeps the stream layout (PMT)' );
 	my $after = $d->feed( sine_ts(1) );
 	is( Plugins::ABCListen::HLS::adtsInfo( $cut1 . $after )->{frames}, Plugins::ABCListen::HLS::adtsInfo($cut1)->{frames} + $alone, '... exactly the whole frames of both' );
-	is( $after, Plugins::ABCListen::HLS::TS->new->feed( sine_ts(1) ), '... the next segment\'s audio exactly as on its own: the cut-off frame was dropped when its first PES began with a frame' );
+	is( $after, Plugins::ABCListen::HLS::TS->new->feed( sine_ts(1) ), '... the next segment\'s audio exactly as on its own: endSegment dropped the cut-off frame too' );
+	is( $d->{frame}, '', '... (no incomplete frame held after endSegment)' );
 
 	my $p = Plugins::ABCListen::HLS::Packed->new;
 	my $adts = Plugins::ABCListen::HLS::TS->new->feed( sine_ts(0) );
@@ -939,6 +945,239 @@ subtest 'sysread returns at most the length asked for' => sub {
 		is( $n, $max, "asked for $max: $max bytes" );
 		is( length $buf, $max, '... in the buffer' );
 	}
+};
+
+# ---- PR #88 round 2: only a usable response resets the failures in a row; stalls end the stream ----
+
+# A live stream: the master playlist, a media playlist that moves on a segment a second, seg<N>.ts. Once it
+# plays, $break->(\%live) may answer the master (live{master}->()) or the media playlist
+# (live{media}->($first, $last)) differently; then the clock runs 1 s at a time for up to 120 s:
+# (seconds until sysread gave 0, or undef; [the URLs requested after the break]; the stream).
+sub live_until_end {
+	my ($break) = @_;
+	my ( $first, $last ) = ( 1, 6 );
+	my %live;
+	Slim::Networking::SimpleAsyncHTTP->addRoute( $MASTER, sub { $live{master} ? $live{master}->() : { code => 200, content => fixture('hls/master-triplejnsw.m3u8') } } );
+	Slim::Networking::SimpleAsyncHTTP->addRoute( $MEDIA, sub { $live{media} ? $live{media}->( $first, $last ) : { code => 200, content => media( $first, $last ) } } );
+	Slim::Networking::SimpleAsyncHTTP->addRoute( qr{\A\Q$BASE\Eseg(\d+)\.ts\z}, sub { my ($n) = $_[0] =~ /seg(\d+)\.ts/; { code => 200, content => sine_ts( $n % 3 ) } } );
+	scan();
+	my $stream = $HLS->new( { url => $MASTER } );
+	drain($stream);
+
+	$break->( \%live );
+	my $before = scalar( my @before = urls() );
+	my $ended;
+	for my $t ( 1 .. 120 ) {
+		$first++;
+		$last++;
+		advanceTime(1);
+		my ( undef, $ret ) = drain($stream);
+		if ( defined $ret && $ret == 0 ) { $ended = $t; last }
+	}
+	my @urls = urls();
+	return ( $ended, [ @urls[ $before .. $#urls ] ], $stream );
+}
+
+sub retries { map { /retrying in (\d+) s/ ? $1 : () } map { $_->{message} } logged('INFO') }
+
+subtest 'a media playlist that keeps failing ends the stream, though the master playlist answers' => sub {
+	my $page = sub { { code => 200, content => "<html><body>Service unavailable</body></html>\n" } };
+	my @cases = (
+		[ 'media playlist 404, master served',                     sub { $_[0]->{media} = sub { { code => 404 } } },                               qr/404 Not Found/ ],
+		[ 'media playlist 200 with an HTML page, master served',   sub { $_[0]->{media} = $page },                                                  qr/not an HLS playlist/ ],
+		[ 'a captive portal: master and media playlist HTML (200)', sub { $_[0]->{media} = $_[0]->{master} = $page },                               qr/not an HLS playlist/ ],
+		[ 'media playlist shorter than its Content-Length',        sub {
+				$_[0]->{media} = sub { my $m = media(@_); { code => 200, content => substr( $m, 0, 40 ), headers => { 'Content-Length' => length $m } } };
+			},
+			qr/truncated response: 40 of \d+ bytes/,
+		],
+		[ 'an empty live media playlist, master served', sub { $_[0]->{media} = sub { { code => 200, content => "#EXTM3U\n#EXT-X-TARGETDURATION:1\n" } } }, qr/the playlist has no segments/ ],
+	);
+
+	for my $case (@cases) {
+		my ( $name, $break, $why ) = @$case;
+		reset_all();
+		my ( $ended, $after, $stream ) = live_until_end($break);
+		ok( $ended && $ended <= 20, "$name: the stream ends, after ${\ ( $ended // 'never (120 s)' ) } s" );
+		is_deeply( [ retries() ], [ 2, 4, 8 ], '... after MAX_FAILURES (4) failed tries in a row, backing off 2, 4, 8 s' );
+		ok( logged_like( INFO => qr/ends after the buffered audio: .*$why/ ), '... the end says why' );
+		is( scalar( grep { $_ eq $MASTER } @$after ), 3, '... each retry went through the master playlist again' );
+		cmp_ok( scalar @$after, '<=', 2 * Plugins::ABCListen::HLS::MAX_FAILURES, '... at most 2 requests a try (' . scalar(@$after) . ' in all)' );
+		my $requests = scalar requests();
+		advanceTime(60);
+		drain($stream);
+		is( scalar requests(), $requests, '... none after the end' );
+		is( scalar( logged('WARN') ) + scalar( logged('ERROR') ), 0, '... no WARN or ERROR' );
+	}
+
+	# one bad media playlist, then good ones: the failures in a row start again
+	reset_all();
+	my $bad = 2;
+	my ($ended) = live_until_end( sub { my $live = shift; $live->{media} = sub { $bad-- > 0 ? { code => 404 } : { code => 200, content => media(@_) } } } );
+	is( $ended, undef, 'two failed reloads, then a good one: still playing 2 min later' );
+	is_deeply( [ retries() ], [ 2, 4 ], '... the count started again after the good one' );
+};
+
+subtest 'fMP4: an init segment that breaks mid-play (a new EXT-X-MAP) ends the stream within the bound' => sub {
+	my $master = 'https://abc-hls.streamguys1.com/hls/sport-sync/playlist.m3u8';
+	my $base   = 'https://abc-hls.streamguys1.com/hls/sport-sync/';
+	my ( $first, $last, $init2, %segFails );
+
+	my $start = sub {
+		reset_all();
+		( $first, $last ) = ( 40, 42 );
+		route( $master, content => qq{#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=66981,CODECS="mp4a.40.2"\naudio.m3u8\n} );
+		Slim::Networking::SimpleAsyncHTTP->addRoute( "${base}audio.m3u8", sub {
+			my $m = "#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-TARGETDURATION:1\n#EXT-X-MEDIA-SEQUENCE:$first\n";
+			for my $n ( $first .. $last ) {
+				# the encoder restarts at segment 45, with a new initialisation segment
+				$m .= "#EXT-X-DISCONTINUITY\n" if $n == 45;
+				$m .= '#EXT-X-MAP:URI="' . ( $n < 45 ? 'init_1.mp4' : 'init_2.mp4' ) . qq{"\n} if $n == $first || $n == 45;
+				$m .= "#EXTINF:1.0,\na_$n.m4s\n";
+			}
+			{ code => 200, content => $m };
+		} );
+		route( "${base}init_1.mp4", file => 'hls/sine-init.mp4' );
+		Slim::Networking::SimpleAsyncHTTP->addRoute( "${base}init_2.mp4", sub { $init2->() } );
+		Slim::Networking::SimpleAsyncHTTP->addRoute( qr{a_(\d+)\.m4s\z}, sub {
+			my ($n) = $_[0] =~ /a_(\d+)\.m4s/;
+			return { code => 404 } if $segFails{$n} && $segFails{$n}--;
+			{ code => 200, content => fixture( 'hls/sine-' . ( $n % 3 ) . '.m4s' ) };
+		} );
+		my ( $track, $error ) = scan($master)->args(0);
+		return $HLS->new( { url => $master } );
+	};
+	my $run = sub {
+		my $stream = shift;
+		for my $t ( 1 .. 120 ) {
+			$first++;
+			$last++;
+			advanceTime(1);
+			my ( undef, $ret ) = drain($stream);
+			return $t if defined $ret && $ret == 0;
+		}
+		return undef;
+	};
+
+	$init2 = sub { { code => 200, content => "<html>Not here</html>\n" } };
+	my $stream = $start->();
+	my $ended  = $run->($stream);
+	ok( $ended && $ended <= 25, "the new init segment is an error page: the stream ends, after ${\ ( $ended // 'never (120 s)' ) } s" );
+	is( scalar( grep {/init_2\.mp4/} urls() ), Plugins::ABCListen::HLS::MAX_FAILURES, '... after MAX_FAILURES (4) tries' );
+	is_deeply( [ retries() ], [ 2, 4, 8 ], '... backing off 2, 4, 8 s' );
+	ok( logged_like( INFO => qr/ends after the buffered audio: unsupported fragmented MP4 audio: no moov box/ ), '... the end says why' );
+	is_deeply( [ map { /a_(\d+)/ ? $1 : () } grep {/\.m4s\z/} urls() ], [ 40 .. 44 ], '... after the segments with the good one' );
+	my $requests = scalar requests();
+	advanceTime(60);
+	drain($stream);
+	is( scalar requests(), $requests, '... none after the end' );
+
+	for my $case ( [ 'a 404', { code => 404 } ], [ 'cut off (Content-Length)', { code => 200, content => substr( fixture('hls/sine-init.mp4'), 0, 100 ), headers => { 'Content-Length' => length fixture('hls/sine-init.mp4') } } ] ) {
+		$init2 = sub { $case->[1] };
+		$ended = $run->( $start->() );
+		ok( $ended && $ended <= 25, "the new init segment is $case->[0]: the stream ends, after ${\ ( $ended // 'never (120 s)' ) } s" );
+		is( scalar( grep {/init_2\.mp4/} urls() ), Plugins::ABCListen::HLS::MAX_FAILURES, '... after MAX_FAILURES (4) tries' );
+	}
+
+	# broken once, then fine: retried, and plays on
+	my $once = 1;
+	$init2 = sub { $once-- > 0 ? { code => 200, content => "<html>Not here</html>\n" } : { code => 200, content => fixture('hls/sine-init.mp4') } };
+	$ended = $run->( $start->() );
+	is( $ended, undef, 'the new init segment broken once: still playing 2 min later' );
+	is( scalar( grep {/init_2\.mp4/} urls() ), 2, '... it was fetched again' );
+	ok( ( grep {/a_45\.m4s/} urls() ), '... and the segments after it played' );
+
+	# broken three times (3 failures in a row), then fine: the good init segment starts the count again, so
+	# its first segment failing once is one failure, not the fourth
+	my $thrice = 3;
+	$init2 = sub { $thrice-- > 0 ? { code => 404 } : { code => 200, content => fixture('hls/sine-init.mp4') } };
+	%segFails = ( 45 => 1 );
+	$ended = $run->( $start->() );
+	is( $ended, undef, 'the new init segment fails 3 times, then its first segment once: still playing 2 min later' );
+	is_deeply( [ retries() ], [ 2, 4, 8, 2 ], '... the good init segment started the count (and the backoff) again' );
+	ok( ( grep { /a_(\d+)\.m4s/ && $1 > 45 } urls() ), '... the segments after 45 played' );
+};
+
+subtest 'a live playlist that stops advancing ends the stream after STALL_LIMIT (60 s); slow ones and pauses play on' => sub {
+	reset_all();
+	my ( $first, $last ) = ( 1, 6 );
+	route_stream( media => sub { media( $first, $last ) } );
+	scan();
+	my $stream = $HLS->new( { url => $MASTER } );
+	drain($stream);
+
+	# the encoder stalls: the playlist answers, unchanged
+	my $ended;
+	for my $t ( 1 .. 120 ) {
+		advanceTime(1);
+		my ( undef, $ret ) = drain($stream);
+		if ( defined $ret && $ret == 0 ) { $ended = $t; last }
+	}
+	ok( $ended && $ended >= 60 && $ended <= 62, "unchanged: the stream ends after ${\ ( $ended // 'never (120 s)' ) } s" );
+	ok( logged_like( INFO => qr/ends after the buffered audio: no new segment for 60 s/ ), '... the end says why' );
+	is( scalar( retries() ), 0, '... not a failure (no retries)' );
+
+	# a new segment every 30 s: plays on
+	reset_all();
+	( $first, $last ) = ( 1, 6 );
+	route_stream( media => sub { media( $first, $last ) } );
+	scan();
+	$stream = $HLS->new( { url => $MASTER } );
+	drain($stream);
+	my $ret;
+	for my $t ( 1 .. 180 ) {
+		$first++, $last++ unless $t % 30;
+		advanceTime(1);
+		( undef, $ret ) = drain($stream);
+		last if defined $ret && $ret == 0;
+	}
+	ok( !( defined $ret && $ret == 0 ), 'a new segment every 30 s: still playing after 3 min' );
+
+	# the server restarts its numbering lower: segments keep arriving, so it isn't a stall
+	reset_all();
+	( $first, $last ) = ( 1000, 1005 );
+	route_stream( media => sub { media( $first, $last ) } );
+	scan();
+	$stream = $HLS->new( { url => $MASTER } );
+	drain($stream);
+	( $first, $last ) = ( 0, 5 );
+	for my $t ( 1 .. 120 ) {
+		$first++;
+		$last++;
+		advanceTime(1);
+		( undef, $ret ) = drain($stream);
+		last if defined $ret && $ret == 0;
+	}
+	ok( !( defined $ret && $ret == 0 ), 'numbering restarted below the old segments: still playing 2 min later' );
+	ok( ( grep {/seg120\.ts\z/} urls() ), '... with the new segments' );
+
+	# not read for 5 minutes (paused), the live window moved on: plays on
+	advanceTime(300);
+	( $first, $last ) = ( $first + 300, $last + 300 );
+	my ($audio);
+	( $audio, $ret ) = drain($stream);
+	ok( length $audio, 'read again after 5 minutes: audio' );
+	ok( !( defined $ret && $ret == 0 ), '... not the end' );
+};
+
+subtest 'close while preparing: the prepare deadline goes too, and nothing answers late' => sub {
+	reset_all();
+	route( $MASTER, file => 'hls/master-triplejnsw.m3u8', defer => 1 );
+	my $preparing;
+	my $c;
+	{
+		no warnings 'redefine';
+		my $orig = \&Plugins::ABCListen::HLS::_stream;
+		local *Plugins::ABCListen::HLS::_stream = sub { $preparing = $orig->(@_) };
+		$c = scan();
+	}
+	is( scalar( Slim::Utils::Timers::pending() ), 1, 'preparing: one timer (the deadline)' );
+	ok( $preparing->close, 'close' );
+	is( scalar( Slim::Utils::Timers::pending() ), 0, '... no timer left' );
+	Slim::Networking::SimpleAsyncHTTP->completeDeferred;
+	advanceTime(30);
+	is( scalar( grep { $_ ne $MASTER } urls() ), 0, '... the late master playlist starts nothing' );
+	is( $HLS->_prepared, 0, '... nothing kept' );
 };
 
 package FakeHTTP;
