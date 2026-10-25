@@ -42,8 +42,14 @@ package Plugins::ABCListen::Episode;
 #     What is fetched is merged into the metadata cache (contract-3 keys; windows as epochs;
 #     renditions as { url, mime, bitrate, fileSize }, fileSize only when ABC gives one). A
 #     restricted or not yet released episode closes the cached windows (availableTo and
-#     downloadAvailableTo = now), so that fallback answers EPISODE_EXPIRED rather than playing
-#     renditions cached earlier.
+#     downloadAvailableTo = now, or the answer's fetch time when that is earlier), so that
+#     fallback answers EPISODE_EXPIRED rather than playing renditions cached earlier.
+#     F7 (contract 3, D5's rule in Util): seenAt is the answer's fetch time (API.pm's info at:
+#     documents and lookups come from a 1 h cache), never the time it was mapped, and is left out
+#     for an answer 6 h old or older (Util::episodeSeenAt), so the 6 h shortcut never trusts
+#     renditions more than 6 h old. An older answer never overwrites newer audio data: when the
+#     cache's seenAt is later than the fetch time, or O1 closed its windows later than it
+#     (Util::episodeMetaIsNewer), the answer's renditions, windows and seenAt are not written.
 #
 #   Bitrates (O6): ABC gives its AAC renditions bitrate 0. An AAC rendition whose bitrate is 0 or
 #     missing gets fileSize x 8 / duration / 1000 kbps (3 decimals; e.g. 353,025,904 B over
@@ -213,7 +219,7 @@ sub _fetch {
 
 	Plugins::ABCListen::API::nextData(
 		$path,
-		sub { _document( $state, $path, shift, $kind ) },
+		sub { $state->{fetched} = $_[1]; _document( $state, $path, $_[0], $kind ) },    # F7: the answer's fetch info
 		sub {
 			my $error = shift;
 			my $why   = "$path failed (" . _message($error) . ')';
@@ -286,7 +292,7 @@ sub _lookup {
 			hitsPerPage          => 1,
 			attributesToRetrieve => [qw(objectID canonicalURL title programTitle programID duration dates mediaRenditions defaultThumbnail)],
 		},
-		sub { _hit( $state, shift ) },
+		sub { $state->{fetched} = $_[1]; _hit( $state, $_[0] ) },    # F7: the answer's fetch info
 		sub { _failed( $state, 'the search index lookup', shift ) },
 		{ timeout => REQUEST_TIMEOUT },
 	);
@@ -336,7 +342,7 @@ sub _found {
 	my ( $state, $episode ) = @_;
 	my $now = _now();
 
-	_remember( $state->{id}, $episode, $now );
+	_remember( $state->{id}, $episode, $now, $state->{fetched} );
 	_answer( $state, _result( $state->{id}, _choose( $episode, $now ) ) );
 
 	return;
@@ -616,24 +622,33 @@ sub _kbps {
 # Merge a fetched episode into the metadata cache. The renditions, their windows and seenAt (what
 # the 6 h shortcut plays from) only when they say what plays: not for a restricted episode or one
 # not released yet (the cache has no field for either), nor without renditions. Such an episode
-# closes the cached windows instead (both = now): renditions cached earlier (e.g. seeded by
-# Search) then answer EPISODE_EXPIRED when a later request fails, instead of playing.
+# closes the cached windows instead (both = now, or the fetch time when earlier): renditions
+# cached earlier (e.g. seeded by Search) then answer EPISODE_EXPIRED when a later request fails,
+# instead of playing. F7: $info is the answer's API.pm success info; seenAt is its fetch time
+# (Util::episodeSeenAt), and none of that audio data is written over newer data
+# (Util::episodeMetaIsNewer).
 sub _remember {
-	my ( $id, $episode, $now ) = @_;
+	my ( $id, $episode, $now, $info ) = @_;
+
+	$info = {} unless ref $info eq 'HASH';
+	my $at = _epoch( $info->{at} );
 
 	my %meta = map { ( $_ => $episode->{$_} ) } @META_KEYS;
 
 	my $notYet = grep { defined $_ && $_ > $now } map { _epoch( $episode->{$_} ) } qw(availableFrom downloadAvailableFrom);
 
 	if ( $episode->{restricted} || $notYet ) {
-		$meta{availableTo} = $meta{downloadAvailableTo} = $now;
+		$meta{availableTo} = $meta{downloadAvailableTo} = defined $at && $at < $now ? $at : $now;
 	}
 	elsif ( @{ $episode->{renditions} } ) {
 		$meta{renditions}          = $episode->{renditions};
 		$meta{availableTo}         = _bound( $episode->{availableTo} );
 		$meta{downloadAvailableTo} = _bound( $episode->{downloadAvailableTo} );
-		$meta{seenAt}              = $now;
+		$meta{seenAt}              = Plugins::ABCListen::Util::episodeSeenAt( $info, $now );
 	}
+
+	# an older answer never overwrites newer audio data (a newer seed, or windows closed since)
+	delete @meta{ Plugins::ABCListen::Util::episodeAudioKeys() } if Plugins::ABCListen::Util::episodeMetaIsNewer( $id, $at );
 
 	Plugins::ABCListen::Util::setEpisodeMeta( $id, \%meta );
 

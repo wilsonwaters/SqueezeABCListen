@@ -23,6 +23,8 @@
 #              -> No episodes available); seenAt is the fetch time (API.pm info at), none after 6 h;
 #              an older answer never overwrites newer audio data in the meta cache; per-program
 #              counts that follow a new answer; an API that answers twice.
+#   F7 (#76):  the seenAt and newer-meta rules are Util's (shared with Search and Episode); a
+#              re-walk of one cached answer gives identical rows.
 #
 # Fixtures (t/data/discovery/, the research {_fixture_note} wrapper stripped; shapes unedited):
 #   algolia-audiobook-chapters.trimmed.json  POST https://<appId>-dsn.algolia.net/1/indexes/listen_prod_all/query
@@ -1038,6 +1040,35 @@ subtest 'strings' => sub {
 	is( string( 'PLUGIN_ABCLISTEN_CHAPTERS_N', 30 ), 'Chapters (30)', 'PLUGIN_ABCLISTEN_CHAPTERS_N' );
 	is( string('PLUGIN_ABCLISTEN_EPISODES'), 'Episodes', 'PLUGIN_ABCLISTEN_EPISODES (O2\'s, reused)' );
 	is( string( 'PLUGIN_ABCLISTEN_EPISODES_N', 41 ), 'Episodes (41)', 'PLUGIN_ABCLISTEN_EPISODES_N' );
+};
+
+# ---- F7 (#76): D5's seenAt rule moved to Util, shared with Search and Episode ----
+
+subtest 'F7: the seenAt and newer-meta rules are Util\'s (shared), not copies; a re-walk keeps its rows' => sub {
+	my ( @seenAt, @newer );
+	{
+		no warnings 'redefine';
+		my ( $seen, $isNewer ) = ( \&Plugins::ABCListen::Util::episodeSeenAt, \&Plugins::ABCListen::Util::episodeMetaIsNewer );
+		local *Plugins::ABCListen::Util::episodeSeenAt      = sub { push @seenAt, [ { %{ $_[0] } }, $_[1] ]; goto &$seen };
+		local *Plugins::ABCListen::Util::episodeMetaIsNewer = sub { push @newer, [@_]; goto &$isNewer };
+
+		fresh();
+		serve_book();
+		feed( $CHAPTERS, undef, {%BOOK} );
+	}
+	is_deeply( $seenAt[0], [ { stale => 0, at => $T0 }, $T0 ], 'chapters(): seenAt from Util::episodeSeenAt with the answer\'s stale flag and fetch time' );
+	is( scalar @newer, 4, 'the feed: Util::episodeMetaIsNewer once per chapter row' );
+	is_deeply( $newer[0], [ '106353760', $T0 ], '... with the chapter id and the fetch time' );
+
+	# the same cached answer walked again: its own seenAt in the cache is not newer data
+	fresh();
+	serve_book();
+	my $first = items_of( feed( $CHAPTERS, undef, {%BOOK} ) );
+	setTime( $T0 + $HOUR );
+	my $again = items_of( feed( $CHAPTERS, undef, {%BOOK} ) );
+	is( scalar algolia_requests(), 1, 'the second walk: from the cache' );
+	is_deeply( $again, $first, 'identical rows (D5 stripped renditions and seenAt from the rows of a re-walk)' );
+	is( $again->[0]->{passthrough}->[0]->{seenAt}, $T0, '... seenAt = the fetch time in both' );
 };
 
 done_testing();

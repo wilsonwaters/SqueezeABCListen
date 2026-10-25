@@ -16,6 +16,10 @@
 # 2 queries per uncached search.
 # Review follow-ups: program hits without a title listed under their path, never merged; one id at
 # two paths listed once.
+# F7 (#76): seenAt is the answer's fetch time (an hour-old cached answer keeps T0, and O1 trusts it
+# until T0 + 6 h); an hour-old answer never overwrites newer meta (a play since, windows closed
+# since) while a newer answer does; a re-walk of one cached answer gives identical rows; stale,
+# 6 h old and undated answers seed renditions without seenAt.
 #
 # Fixtures (t/data/discovery/, raw response bodies as served, the research {_fixture_note, data}
 # wrapper stripped; shapes unedited):
@@ -43,6 +47,7 @@ use Test::More;
 use Encode ();
 use JSON::PP ();
 use POSIX ();
+use Storable ();
 use Time::Local qw(timegm);
 
 use Slim::Utils::Cache;
@@ -1047,6 +1052,130 @@ subtest 'D9: the rules are the A–Z\'s own (ProgramIndex::siteFilter, ProgramIn
 	is( $body{programs}->{filters}, Plugins::ABCListen::ProgramIndex::FILTERS(), '... exactly the A–Z index\'s filter' );
 	like( $body{episodes}->{filters}, qr/\) AND \Q${\ Plugins::ABCListen::ProgramIndex::siteFilter() }\E\z/, 'episodes: the same site clause' );
 	is( Plugins::ABCListen::ProgramIndex->siteFilter, $SEGMENTS, 'siteFilter(): the site and URL segments of the 5 ABC listen sites (class method too)' );
+};
+
+# ---------------------------------------------------------------------------
+# F7 (#76): seenAt is the answer's fetch time; an older answer never overwrites newer meta
+# ---------------------------------------------------------------------------
+
+my $HOUR    = 3600;
+my $POTATO  = '107277436';    # "Breeding potatoes is like herding cats" (the second episode row)
+my $SPACE   = '107277458';    # "Crossing the language barrier ..." (the first episode row)
+my $NEW_MP3 = 'https://mediacore-live-production.akamaized.net/audio/02/pg/Z/new.mp3';
+
+sub forget_meta { Slim::Utils::Cache->new('abclisten')->remove("episode-meta:$_[0]") }
+
+sub episode_rows { group( items_of( search( { search => 'science show' } ) ), 'Episodes' )->{items} }
+
+sub row_meta {
+	my ( $rows, $id ) = @_;
+	my ($row) = grep { $_->{passthrough}->[0]->{id} eq $id } @$rows;
+	return $row ? $row->{passthrough}->[0] : undef;
+}
+
+sub audio_of {
+	my $m = Plugins::ABCListen::Util::getEpisodeMeta(shift) || {};
+	return { map { $_ => $m->{$_} } grep { exists $m->{$_} } qw(renditions availableTo downloadAvailableTo seenAt) };
+}
+
+subtest 'F7: an hour-old cached answer: seenAt is its fetch time (not now); O1 trusts it until 6 h after the fetch' => sub {
+	fresh();
+	serve_science();
+	episode_rows();    # fetched at T0
+	is( Plugins::ABCListen::Util::getEpisodeMeta($POTATO)->{seenAt}, $T0, 'a network answer: seenAt = its fetch time (now)' );
+
+	setTime( $T0 + 59 * 60 );
+	forget_meta($POTATO);
+	my $rows = episode_rows();
+	is( scalar algolia_requests(), 2, 'the answer came from API.pm\'s 1 h cache (no new request)' );
+	is( row_meta( $rows, $POTATO )->{seenAt}, $T0, 'the row: seenAt = the fetch time T0, not now (T0 + 59 min)' );
+	is( Plugins::ABCListen::Util::getEpisodeMeta($POTATO)->{seenAt}, $T0, 'the meta cache: seenAt = T0' );
+
+	setTime( $T0 + 6 * $HOUR - 1 );
+	@Slim::Networking::SimpleAsyncHTTP::REQUESTS = ();
+	my $c = collector();
+	Plugins::ABCListen::Episode->resolve( $POTATO, $c->cb );
+	is( ( $c->args(0) )[0]->{url}, 'https://mediacore-live-production.akamaized.net/audio/02/pg/Z/lv.mp3', 'just under 6 h after the fetch: O1 plays the seeded MP3' );
+	is( scalar requests(), 0, '... without a request' );
+
+	setTime( $T0 + 6 * $HOUR );
+	@Slim::Networking::SimpleAsyncHTTP::REQUESTS = ();
+	Plugins::ABCListen::Episode->resolve( $POTATO, collector()->cb );
+	ok( scalar( requests() ) > 0, '6 h after the fetch: O1 asks ABC first (the seed was trusted until T0 + 6 h 59 min)' );
+};
+
+subtest 'F7: an hour-old cached answer never overwrites newer meta (a play since, windows closed since)' => sub {
+	fresh();
+	serve_science();
+	episode_rows();    # fetched at T0
+
+	# 30 min later O1 played one result (fetched its page) and closed the other's windows
+	setTime( $T0 + 30 * 60 );
+	my $newer = [ { url => $NEW_MP3, mime => 'audio/mpeg', bitrate => 128 } ];
+	my %played = ( renditions => $newer, availableTo => $T0 + 86400, downloadAvailableTo => $T0 + 86400, seenAt => $T0 + 30 * 60 );
+	Plugins::ABCListen::Util::setEpisodeMeta( $POTATO, {%played} );
+	forget_meta($SPACE);
+	Plugins::ABCListen::Util::setEpisodeMeta( $SPACE, { title => 'Before', availableTo => $T0 + 30 * 60, downloadAvailableTo => $T0 + 30 * 60 } );
+
+	setTime( $T0 + 59 * 60 );
+	my $rows = episode_rows();
+	is( scalar algolia_requests(), 2, 'the answer came from API.pm\'s 1 h cache, fetched at T0' );
+
+	is_deeply( audio_of($POTATO), \%played, 'the newer renditions, windows and seenAt are kept' );
+	ok( !exists row_meta( $rows, $POTATO )->{renditions} && !exists row_meta( $rows, $POTATO )->{seenAt}, '... and the row carries none of the older answer\'s' );
+	is( Plugins::ABCListen::Util::getEpisodeMeta($POTATO)->{title}, 'Breeding potatoes is like herding cats', 'the rest of the hit is merged as before' );
+
+	is_deeply( audio_of($SPACE), { availableTo => $T0 + 30 * 60, downloadAvailableTo => $T0 + 30 * 60 }, 'windows closed after the fetch stay closed (no renditions or seenAt written)' );
+	is( Plugins::ABCListen::Util::getEpisodeMeta($SPACE)->{title}, 'Crossing the language barrier teaching astronomy and physics', '... the rest is merged' );
+
+	@Slim::Networking::SimpleAsyncHTTP::REQUESTS = ();
+	my $c = collector();
+	Plugins::ABCListen::Episode->resolve( $POTATO, $c->cb );
+	is( ( $c->args(0) )[0]->{url}, $NEW_MP3, 'O1 plays the newer rendition' );
+	is( scalar requests(), 0, '... from the cache' );
+
+	# an answer fetched after that newer data does write its own
+	setTime( $T0 + 2 * $HOUR );    # the 1 h result cache has expired: a network answer
+	@Slim::Networking::SimpleAsyncHTTP::REQUESTS = ();
+	$rows = episode_rows();
+	is( scalar algolia_requests(), 2, 'a new answer, fetched at T0 + 2 h' );
+	is( audio_of($POTATO)->{seenAt}, $T0 + 2 * $HOUR, 'a newer answer replaces the audio data (seenAt = its fetch time)' );
+	is( audio_of($POTATO)->{renditions}->[0]->{url}, 'https://mediacore-live-production.akamaized.net/audio/02/pg/Z/lv.mp3', '... with its renditions' );
+	is( audio_of($SPACE)->{downloadAvailableTo}, $OPEN_END, '... and reopens windows closed before it was fetched' );
+};
+
+subtest 'F7: a re-walk of the same cached answer gives identical rows (its own seenAt is not newer data)' => sub {
+	fresh();
+	serve_science();
+	my $first = search( { search => 'science show' } );
+	setTime( $T0 + 59 * 60 );
+	my $again = search( { search => 'science show' } );
+	is( scalar algolia_requests(), 2, 'from the cache' );
+	is_deeply( items_of($again), items_of($first), 'the same rows, renditions and seenAt included' );
+	is( row_meta( group( items_of($again), 'Episodes' )->{items}, $POTATO )->{seenAt}, $T0, 'seenAt T0 in both' );
+};
+
+subtest 'F7: a stale (last-good) answer, one 6 h old or older, or one without a fetch time: renditions without seenAt' => sub {
+	my $data = JSON::PP::decode_json( fixture('discovery/algolia-listen_prod_all-query.json') );
+
+	for my $case (
+		[ 'a stale copy fetched a minute ago', { stale => 1, at => $T0 - 60 },          undef ],
+		[ 'an answer fetched 6 h ago',         { stale => 0, at => $T0 - 6 * $HOUR },   undef ],
+		[ 'an answer without a fetch time',    { stale => 0 },                          undef ],
+		[ 'an answer fetched 6 h - 1 s ago',   { stale => 0, at => $T0 - 6 * $HOUR + 1 }, $T0 - 6 * $HOUR + 1 ],
+	) {
+		my ( $name, $info, $want ) = @$case;
+		fresh();
+		no warnings 'redefine';
+		local *Plugins::ABCListen::API::algolia = sub { $_[1]->( Storable::dclone($data), {%$info} ) };
+
+		my $row = row_meta( episode_rows(), $POTATO );
+		ok( $row && $row->{renditions} && $row->{availableTo}, "$name: the row has renditions and windows" );
+		is( $row->{seenAt}, $want, "$name: the row's seenAt" );
+		my $audio = audio_of($POTATO);
+		ok( $audio->{renditions}, "$name: renditions seeded" );
+		is( $audio->{seenAt}, $want, "$name: the cached seenAt" . ( defined $want ? '' : ' (none: O1 asks ABC first)' ) );
+	}
 };
 
 done_testing();
