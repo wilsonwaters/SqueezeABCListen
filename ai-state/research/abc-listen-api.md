@@ -213,7 +213,7 @@ curl -s https://program.abcradio.net.au/api/v1/services.json | jq '.items[]|{ser
 
 | Need | Endpoint | Notes |
 |---|---|---|
-| **A–Z of all audio programs** | Algolia `POST https://1KTWJENJUU-dsn.algolia.net/1/indexes/listen_prod_all/query` body `{"query":"","hitsPerPage":1000,"filters":"contentType:program AND (siteSegment:listen OR siteSegment:triplej OR siteSegment:kidslisten OR siteSegment:triplejunearthed OR siteSegment:pacific)"}` with headers `X-Algolia-Application-Id: 1KTWJENJUU`, `X-Algolia-API-Key: 7c84f3c11388161508d38ef678966728` | 724 hits in one call (Algolia's 1000-hit pagination cap is not exceeded). Fields: `objectID` (`coremedia://program/2885500`), `title`, `canonicalURL`, `description`/`synopsis`/`shortTeaserText`, `programType` (`podcast` 240, `catch-up` 197, `music` 121, `news-briefing` 49, `audiobook` 19, `Music Playlists` 6, null 92), `infoSource` (network, e.g. "ABC Radio National"), `contributors[]` (presenters), `defaultThumbnail{1x1,16x9,3x2,3x4,4x3,9x16}`, `dates`. Sort client-side. Fixture: `algolia-programs-list.json`. |
+| **A–Z of all audio programs** | Algolia `POST https://<appId>-dsn.algolia.net/1/indexes/listen_prod_all/query` body `{"query":"","hitsPerPage":1000,"filters":"contentType:program AND (siteSegment:listen OR siteSegment:triplej OR siteSegment:kidslisten OR siteSegment:triplejunearthed OR siteSegment:pacific)"}` with headers `X-Algolia-Application-Id: <appId>`, `X-Algolia-API-Key: <search-only key, discovered at runtime from /listen/search>` | 724 hits in one call (Algolia's 1000-hit pagination cap is not exceeded). Fields: `objectID` (`coremedia://program/2885500`), `title`, `canonicalURL`, `description`/`synopsis`/`shortTeaserText`, `programType` (`podcast` 240, `catch-up` 197, `music` 121, `news-briefing` 49, `audiobook` 19, `Music Playlists` 6, null 92), `infoSource` (network, e.g. "ABC Radio National"), `contributors[]` (presenters), `defaultThumbnail{1x1,16x9,3x2,3x4,4x3,9x16}`, `dates`. Sort client-side. Fixture: `algolia-programs-list.json`. |
 | Per network "All Programs" | Next data `/_next/data/<buildId>/<network>/programs.json` gives the `ProgramAggregationCollection` id. Page with `https://www.abc.net.au/core-next/api/programAggregationCollection/x?collectionId=<id>&offset=N&size=M` | Network pages (collection id / total): `/listen/radionational/programs` (11474038 / 56, plus Featured 13910480), `/triplej/programs` (8698186 / 37), `/listen/doublej/programs` (9375554 / 17), `/listen/classic/programs` (9104650 / 35), `/listen/jazz/programs` (8794720 / 10), `/listen/country/programs` (Featured 12606644 / 7), `/kidslisten/programs` (9317914 / 34), `/triplejunearthed/programs` (106304964 / 13), local e.g. `/sydney/programs` (8132676 / 19). Items: `cardTitle`, `articleLink`, `contentUri` (`coremedia://program/<id>`; sometimes `coremedia://teaser/<id>`), `cardImagePrepared`, `description`, `presentersPrepared`. Fixture: `bff-programAggregationCollection-rn.json`. |
 | Podcast categories | `/listen/podcasts` page → `Categories` collection 14123152 → 8 category pages `/listen/listenapp/<slug>/<id>` (News & Analysis 104142082, True Crime 104142226, Sport 104142200, Kids & Families 104141842, History 104141924, Society & Culture 104142164, Music 104142058, Conversations & Storytelling 104141814) | Each category page has a `StandardCollection` (`subaggregation`). Load more with `/core-next/api/collection/x?collectionId=<id>&offset=&size=`. Podcasts page MetaCollection 106118844: New & Noteworthy, Most Popular Podcasts, Award Winning Podcasts. |
 | Program details | Next data `/_next/data/<buildId><program path>.json` (e.g. `/listen/programs/scienceshow`) | `heroImageWithCTAPrepared` {`heading`, `uri`: `coremedia://program/<id>`, `heroImagePrepared`, `channelLogoPrepared`, `attributionLinksPrepared` (network)}, `heroDescriptionPrepared` (rich-text descriptor tree: collect `type:"text"` nodes), `presentersPrepared[]`, `programCollectionPrepared` {`id` = **episode collection id**, `programId`, `pagination{total}`, `items[]`}, `programTemplate`, `webDistributionRestricted`. Fixture: `nextdata-program-scienceshow.trimmed.json`. |
@@ -340,7 +340,7 @@ Findings that affect the plan:
 
 Search uses Algolia. Config comes from `/listen/search` page props (component `Search`) and the masthead:
 
-- App id `1KTWJENJUU`, search-only key `7c84f3c11388161508d38ef678966728`.
+- App id `<appId>`, search-only key (not recorded here; read at runtime).
 - Indexes `listen_prod_all` and `listen_prod_all_query_suggestions`.
 - Key ACL (`GET /1/keys/<key>`): `acl:["search"]`, `indexes:["listen_prod_all","listen_prod_all_query_suggestions"]`, **`maxQueriesPerIPPerHour: 400`**. Replica (sorted) indexes are not allowed.
 - The site scopes to listen with filter `siteTitle:"Listen"`. A useful plugin filter: `siteTitle:"Listen" AND (contentType:program OR contentType:audioepisode)`. Add triple j, Kids listen and Pacific `siteTitle`s if wanted.
@@ -348,11 +348,11 @@ Search uses Algolia. Config comes from `/listen/search` page props (component `S
 - Hits include `mediaRenditions[]{url, contentType, bitrate, fileSize, fileName, audioSampleRate}`, `dates{publicationDate, mediaDownloadAvailableFrom/To, mediaStreamingAvailableFrom/To}`, `duration`, `programID`, `programTitle`, `defaultThumbnail{ratios}`, `programDefaultThumbnail`, `title`, `teaserText`, `synopsis` and `canonicalURL`. So Algolia alone can serve search results that are directly playable.
 
 ```sh
-curl -s -X POST 'https://1KTWJENJUU-dsn.algolia.net/1/indexes/listen_prod_all/query' \
-  -H 'X-Algolia-Application-Id: 1KTWJENJUU' -H 'X-Algolia-API-Key: 7c84f3c11388161508d38ef678966728' \
+curl -s -X POST 'https://<appId>-dsn.algolia.net/1/indexes/listen_prod_all/query' \
+  -H 'X-Algolia-Application-Id: <appId>' -H 'X-Algolia-API-Key: <search-only key, discovered at runtime from /listen/search>' \
   -d '{"query":"science","hitsPerPage":20,"filters":"siteTitle:\"Listen\" AND (contentType:program OR contentType:audioepisode)"}'
 # suggestions
-curl -s -X POST 'https://1KTWJENJUU-dsn.algolia.net/1/indexes/listen_prod_all_query_suggestions/query' -H 'X-Algolia-Application-Id: 1KTWJENJUU' -H 'X-Algolia-API-Key: 7c84f3c11388161508d38ef678966728' -d '{"query":"scien"}'
+curl -s -X POST 'https://<appId>-dsn.algolia.net/1/indexes/listen_prod_all_query_suggestions/query' -H 'X-Algolia-Application-Id: <appId>' -H 'X-Algolia-API-Key: <search-only key, discovered at runtime from /listen/search>' -d '{"query":"scien"}'
 ```
 
 Fixture: `algolia-listen_prod_all-query.json`. The key is public and embedded in the page. If it rotates, re-read it from `/listen/search` `__NEXT_DATA__` (`componentProps.client.{appId,apiKey}`, `indexName`).
@@ -394,7 +394,7 @@ Rich-text fields are a `descriptor` tree. Flatten the `type:"text"` nodes in ord
 ## 10. Authentication and what login unlocks
 
 - The mechanism is **Gigya (SAP Customer Data Cloud)**.
-  - `https://login.abc.net.au/js/gigya.js?apikey=3_fA1lYde7bHFw4kAQ_VLT37l-OacxV6xOkYAn0KOPFjrXyrlrovPpV1toELQLABDp` is a CNAME to Gigya data centre `au1` (`x-server: gator-au1-prod`).
+  - `https://login.abc.net.au/js/gigya.js?apikey=<site key>` is a CNAME to Gigya data centre `au1` (`x-server: gator-au1-prod`).
   - Web code calls `gigya.accounts.getJWT`, `accounts.logout` and `sso.getContext`.
   - Profile/preferences backend: `https://mylogin-api.abc.net.au/latest/{verify-login,update-user,update-preferences}` with a Gigya `id_token`. Account UI at `https://account.abc.net.au`.
   - Personalised recommendations use `ABCAccountID`/`ABCGuestID` cookies. A Firebase auth-key endpoint (`/core-next/api/firebase/auth-key`) is used only for polls and quizzes.

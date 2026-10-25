@@ -1,5 +1,5 @@
 {
- "_fixture_note": "POST https://1KTWJENJUU-dsn.algolia.net/1/indexes/listen_prod_all/query {\"query\":\"science show\",\"hitsPerPage\":3,\"facets\":[\"*\"]} (hits trimmed to 2, facets to 6 values)",
+ "_fixture_note": "POST https://<appId>-dsn.algolia.net/1/indexes/listen_prod_all/query {\"query\":\"science show\",\"hitsPerPage\":3,\"facets\":[\"*\"]} (hits trimmed to 2, facets to 6 values)",
  "data": {
   "hits": [
    {
