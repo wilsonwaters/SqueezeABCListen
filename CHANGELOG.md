@@ -35,10 +35,13 @@ also the text of its GitHub Release (see [RELEASING.md](RELEASING.md)).
   info's Episode notes still shows all of it.
 - **One continuous list instead of "More episodes…" pages:**
   - A program's episodes (up to the newest 250, all that ABC lists) and every collection (Home, Podcasts, Browse
-    by category, News, Sport, Kids listen and Audiobooks) are one list each, loaded as you scroll. Lists no
-    longer end in "More…" or "More episodes…"; the Default web interface pages them with its own page links.
+    by category, News, Sport, Kids listen and Audiobooks) are one list each. Lists no longer end in "More…" or
+    "More episodes…"; the Default web interface pages them with its own page links.
+  - **Play all / Add all** on a program queues all its episodes (up to 250), not just the first 50.
+  - Collections no longer list a program twice when ABC has it on two of its pages.
   - Programs with more than 200 rows (most daily programs) show no description at the top of the list. They
-    start with **About this program**, which opens it.
+    start with **About this program**, which opens it. Lists of 100 rows or more always have **About this
+    program**, because some apps (Material, Squeezebox players) don't show the description above long lists.
   - An ABC page that fails to load is tried again in smaller pieces. Episodes that still can't be loaded keep
     their place in the list, as "Couldn't load this from ABC listen. Please try again later." rows.
 - The README now says how to check which version is installed, and where the settings file that uninstalling
